@@ -1,6 +1,7 @@
 import jpeg from 'jpeg-js';
 import {
   createSoilColorAssistUpdatesFromPhotoBase64,
+  createSoilColorAssistUpdatesFromPhotoBase64AtPoint,
   extractMunsellCandidateOptions,
   getNearestMunsellCandidates,
 } from './soil-color-photo-assist';
@@ -40,6 +41,27 @@ describe('soil color photo assist', () => {
     expect(updates.soilColorAssistCandidates).toContain('먼셀값');
     expect(updates.soilColorAssistCandidates).not.toContain('Munsell 값');
   });
+
+  it('samples Munsell candidates from a selected photo point', () => {
+    const base64 = createSplitJpegBase64(
+      { red: 111, green: 87, blue: 61 },
+      { red: 139, green: 128, blue: 88 }
+    );
+
+    const leftUpdates = createSoilColorAssistUpdatesFromPhotoBase64AtPoint(
+      base64,
+      { x: 2000, y: 5000 }
+    );
+    const rightUpdates = createSoilColorAssistUpdatesFromPhotoBase64AtPoint(
+      base64,
+      { x: 8000, y: 5000 }
+    );
+
+    expect(leftUpdates.soilColorAssistCandidates).toContain('사진 선택 지점 20%/50%');
+    expect(leftUpdates.soilColorAssistCandidates).toContain('1: 10YR 4/3');
+    expect(rightUpdates.soilColorAssistCandidates).toContain('사진 선택 지점 80%/50%');
+    expect(rightUpdates.soilColorAssistCandidates).toContain('1: 2.5Y 5/3');
+  });
 });
 
 const createSolidJpegBase64 = (rgb: {
@@ -59,5 +81,28 @@ const createSolidJpegBase64 = (rgb: {
   }
 
   return Buffer.from(jpeg.encode({ data, width, height }, 90).data)
+    .toString('base64');
+};
+
+const createSplitJpegBase64 = (
+  leftRgb: { blue: number; green: number; red: number },
+  rightRgb: { blue: number; green: number; red: number }
+): string => {
+  const width = 24;
+  const height = 12;
+  const data = new Uint8Array(width * height * 4);
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const rgb = x < width / 2 ? leftRgb : rightRgb;
+      const offset = ((y * width) + x) * 4;
+      data[offset] = rgb.red;
+      data[offset + 1] = rgb.green;
+      data[offset + 2] = rgb.blue;
+      data[offset + 3] = 255;
+    }
+  }
+
+  return Buffer.from(jpeg.encode({ data, width, height }, 95).data)
     .toString('base64');
 };

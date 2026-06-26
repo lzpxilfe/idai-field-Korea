@@ -26,12 +26,15 @@ describe('KoreanFieldworkSelectedRecordWorkbench', () => {
   it('runs selected record commands from the tablet workbench', () => {
     const feature = createDoc('feature-1', C.FEATURE, '수혈 1');
     const handleAddChild = jest.fn();
+    const handleAddDocumentOfCategory = jest.fn();
     const handleClearSelection = jest.fn();
     const handleEditDocument = jest.fn();
     const handleOpenMapDocument = jest.fn();
 
     const { getByTestId } = renderWorkbench(feature, {
+      allowedAddCategoryNames: [C.PHOTO, C.SOIL_PROFILE_PHOTO],
       onAddChild: handleAddChild,
+      onAddDocumentOfCategory: handleAddDocumentOfCategory,
       onClearSelection: handleClearSelection,
       onEditDocument: handleEditDocument,
       onOpenMapDocument: handleOpenMapDocument,
@@ -40,11 +43,18 @@ describe('KoreanFieldworkSelectedRecordWorkbench', () => {
     fireEvent.press(getByTestId('selectedRecordOpenMap'));
     fireEvent.press(getByTestId('selectedRecordEdit'));
     fireEvent.press(getByTestId('selectedRecordAddChild'));
+    fireEvent.press(getByTestId('selectedRecordAddPhoto'));
+    fireEvent.press(getByTestId('selectedRecordAddSoilProfilePhoto'));
     fireEvent.press(getByTestId('selectedRecordClear'));
 
     expect(handleOpenMapDocument).toHaveBeenCalledWith(feature);
     expect(handleEditDocument).toHaveBeenCalledWith(feature);
     expect(handleAddChild).toHaveBeenCalledWith(feature);
+    expect(handleAddDocumentOfCategory).toHaveBeenCalledWith(feature, C.PHOTO);
+    expect(handleAddDocumentOfCategory).toHaveBeenCalledWith(
+      feature,
+      C.SOIL_PROFILE_PHOTO
+    );
     expect(handleClearSelection).toHaveBeenCalledTimes(1);
   });
 
@@ -55,7 +65,7 @@ describe('KoreanFieldworkSelectedRecordWorkbench', () => {
       orientationReference: '자북',
     });
 
-    const { getAllByText, getByTestId, getByText } = renderWorkbench(feature);
+    const { getAllByText, getByTestId } = renderWorkbench(feature);
 
     expect(getByTestId('selectedRecordStatusChips')).toBeTruthy();
     expect(getAllByText('수혈').length).toBeGreaterThan(0);

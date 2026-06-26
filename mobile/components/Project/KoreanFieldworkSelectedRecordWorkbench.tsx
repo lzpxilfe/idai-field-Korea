@@ -10,7 +10,10 @@ import {
 } from 'react-native';
 import KoreanFieldworkRecordActionPanel from './KoreanFieldworkRecordActionPanel';
 import KoreanFieldworkRecordContextPanel from './KoreanFieldworkRecordContextPanel';
-import { getKoreanFieldworkCategoryLabel } from './korean-fieldwork-categories';
+import {
+  getKoreanFieldworkCategoryLabel,
+  KOREAN_FIELDWORK_CATEGORIES,
+} from './korean-fieldwork-categories';
 import {
   canReviseKoreanFieldworkIdentifier,
   getKoreanFieldworkFieldIdentifier,
@@ -72,6 +75,12 @@ const KoreanFieldworkSelectedRecordWorkbench: React.FC<
   const statusChips = getKoreanFieldworkRecordStatusChips(document);
   const title = document.resource.identifier || document.resource.id;
   const canReviseIdentifier = canReviseKoreanFieldworkIdentifier(document);
+  const canAddPhoto = allowedAddCategoryNames.includes(
+    KOREAN_FIELDWORK_CATEGORIES.PHOTO
+  );
+  const canAddSoilProfilePhoto = allowedAddCategoryNames.includes(
+    KOREAN_FIELDWORK_CATEGORIES.SOIL_PROFILE_PHOTO
+  );
 
   return (
     <View style={styles.container} testID="selectedRecordWorkbench">
@@ -130,6 +139,28 @@ const KoreanFieldworkSelectedRecordWorkbench: React.FC<
           onPress={() => onAddChild(document)}
           testID="selectedRecordAddChild"
         />
+        {canAddPhoto && (
+          <CommandButton
+            icon="photo-camera"
+            label="사진"
+            onPress={() => onAddDocumentOfCategory(
+              document,
+              KOREAN_FIELDWORK_CATEGORIES.PHOTO
+            )}
+            testID="selectedRecordAddPhoto"
+          />
+        )}
+        {canAddSoilProfilePhoto && (
+          <CommandButton
+            icon="terrain"
+            label="토층사진"
+            onPress={() => onAddDocumentOfCategory(
+              document,
+              KOREAN_FIELDWORK_CATEGORIES.SOIL_PROFILE_PHOTO
+            )}
+            testID="selectedRecordAddSoilProfilePhoto"
+          />
+        )}
       </View>
 
       <TouchableOpacity

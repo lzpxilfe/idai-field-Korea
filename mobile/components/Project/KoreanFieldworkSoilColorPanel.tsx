@@ -172,20 +172,36 @@ const KoreanFieldworkSoilColorPanel: React.FC<KoreanFieldworkSoilColorPanelProps
           />
         )}
         {canRecordPhotoSwatches && (
-          <TextInput
-            autoCapitalize="characters"
-            autoCorrect={false}
-            multiline
-            onChangeText={(value) => onUpdateResourceField(
-              SOIL_COLOR_FIELDS.profileColorSwatches,
-              value
-            )}
-            placeholder={'1: 10YR 4/3 갈색\n2: 10YR 3/2 암회갈색'}
-            placeholderTextColor="#98a2b3"
-            style={[styles.textInput, styles.swatchInput]}
-            testID="soilColorInput_profileColorSwatches"
-            value={getTextValue(resource, SOIL_COLOR_FIELDS.profileColorSwatches)}
-          />
+          <>
+            <TouchableOpacity
+              activeOpacity={0.84}
+              onPress={() => onUpdateResourceField(
+                SOIL_COLOR_FIELDS.profileColorSwatches,
+                appendEmptyNumberedSoilColorRow(
+                  getTextValue(resource, SOIL_COLOR_FIELDS.profileColorSwatches)
+                )
+              )}
+              style={styles.addNumberButton}
+              testID="soilColorAddNumberedSwatch"
+            >
+              <MaterialIcons name="add" size={16} color="#175cd3" />
+              <Text style={styles.addNumberButtonText}>번호 추가</Text>
+            </TouchableOpacity>
+            <TextInput
+              autoCapitalize="characters"
+              autoCorrect={false}
+              multiline
+              onChangeText={(value) => onUpdateResourceField(
+                SOIL_COLOR_FIELDS.profileColorSwatches,
+                value
+              )}
+              placeholder={'1: 10YR 4/3 갈색\n2: 10YR 3/2 암회갈색'}
+              placeholderTextColor="#98a2b3"
+              style={[styles.textInput, styles.swatchInput]}
+              testID="soilColorInput_profileColorSwatches"
+              value={getTextValue(resource, SOIL_COLOR_FIELDS.profileColorSwatches)}
+            />
+          </>
         )}
       </QuickSection>
 
@@ -386,6 +402,28 @@ const appendNumberedMunsellValue = (
   return [...lines, `${nextNumber}: ${munsellValue}`].join('\n');
 };
 
+const appendEmptyNumberedSoilColorRow = (
+  currentValue: string
+): string => {
+  const lines = currentValue
+    .split(/\r?\n/)
+    .map((line) => line.trimEnd())
+    .filter((line) => line.trim().length > 0);
+  const nextNumber = getNextSoilColorRowNumber(lines);
+
+  return [...lines, `${nextNumber}: `].join('\n');
+};
+
+const getNextSoilColorRowNumber = (
+  lines: string[]
+): number => Math.max(
+  0,
+  ...lines.map((line) => {
+    const match = line.match(/^\s*(\d+)\s*:/);
+    return match ? Number.parseInt(match[1], 10) : 0;
+  })
+) + 1;
+
 const getTextValue = (
   resource: NewResource,
   fieldName: string
@@ -450,6 +488,23 @@ const styles = StyleSheet.create({
   },
   optionChipTextActive: {
     color: '#027a48',
+  },
+  addNumberButton: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: '#eff8ff',
+    borderColor: '#b2ddff',
+    borderRadius: 6,
+    borderWidth: 1,
+    flexDirection: 'row',
+    minHeight: 34,
+    paddingHorizontal: 9,
+  },
+  addNumberButtonText: {
+    color: '#175cd3',
+    fontSize: 12,
+    fontWeight: '900',
+    marginLeft: 4,
   },
   textInput: {
     backgroundColor: 'white',

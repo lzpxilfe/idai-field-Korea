@@ -37,6 +37,11 @@ export interface SoilColorPhotoAssistResult {
   status: SoilColorAssistStatus;
 }
 
+export interface SoilColorSamplePoint {
+  x: number;
+  y: number;
+}
+
 export interface SoilColorAssistResourceUpdates {
   soilColorAssistCandidates?: string;
   soilColorAssistStatus?: SoilColorAssistStatus;
@@ -89,6 +94,20 @@ export const createSoilColorAssistUpdatesFromPhotoBase64 = (
   };
 };
 
+export const createSoilColorAssistUpdatesFromPhotoBase64AtPoint = (
+  base64: string | undefined,
+  point: SoilColorSamplePoint
+): SoilColorAssistResourceUpdates => {
+  if (!base64) return {};
+
+  const result = getSoilColorPhotoAssistFromJpegBase64AtPoint(base64, point);
+
+  return {
+    soilColorAssistCandidates: result.formattedCandidates,
+    soilColorAssistStatus: result.status,
+  };
+};
+
 export const getSoilColorPhotoAssistFromJpegBase64 = (
   base64: string
 ): SoilColorPhotoAssistResult => {
@@ -107,13 +126,52 @@ export const getSoilColorPhotoAssistFromJpegBase64 = (
     return {
       averageRgb,
       candidates,
-      formattedCandidates: formatCandidates(averageRgb, candidates),
+      formattedCandidates: formatCandidates(
+        averageRgb,
+        candidates,
+        '사진 중앙부 평균 RGB'
+      ),
       status,
     };
-  } catch (_err) {
+  } catch {
     return {
       candidates: [],
       formattedCandidates: '사진 색상 샘플을 읽지 못했습니다. 먼셀값을 직접 확인하세요.',
+      status: 'lowConfidence',
+    };
+  }
+};
+
+export const getSoilColorPhotoAssistFromJpegBase64AtPoint = (
+  base64: string,
+  point: SoilColorSamplePoint
+): SoilColorPhotoAssistResult => {
+  try {
+    const decoded = jpeg.decode(decodeBase64(base64), {
+      maxMemoryUsageInMB: MAX_DECODE_MEMORY_MB,
+      tolerantDecoding: true,
+      useTArray: true,
+    });
+    const averageRgb = getPointAverageRgb(decoded, point);
+    const candidates = getNearestMunsellCandidates(averageRgb);
+    const status = candidates[0]?.deltaE > LOW_CONFIDENCE_DELTA_E
+      ? 'lowConfidence'
+      : 'candidatesAvailable';
+
+    return {
+      averageRgb,
+      candidates,
+      formattedCandidates: formatCandidates(
+        averageRgb,
+        candidates,
+        getPointSampleLabel(point)
+      ),
+      status,
+    };
+  } catch {
+    return {
+      candidates: [],
+      formattedCandidates: '선택한 사진 지점의 색상 샘플을 읽지 못했습니다. 먼셀값을 직접 확인하세요.',
       status: 'lowConfidence',
     };
   }
@@ -176,15 +234,70 @@ const getCentralAverageRgb = (
   };
 };
 
+const getPointAverageRgb = (
+  image: RawImageData<Uint8Array>,
+  point: SoilColorSamplePoint
+): RgbSample => {
+  const centerX = clamp(
+    Math.round((normalizeSampleCoordinate(point.x) / 10000) * (image.width - 1)),
+    0,
+    image.width - 1
+  );
+  const centerY = clamp(
+    Math.round((normalizeSampleCoordinate(point.y) / 10000) * (image.height - 1)),
+    0,
+    image.height - 1
+  );
+  const radius = Math.max(2, Math.round(Math.min(image.width, image.height) * 0.025));
+  const xStart = Math.max(0, centerX - radius);
+  const xEnd = Math.min(image.width - 1, centerX + radius);
+  const yStart = Math.max(0, centerY - radius);
+  const yEnd = Math.min(image.height - 1, centerY + radius);
+  const pixelCount = Math.max(1, (xEnd - xStart + 1) * (yEnd - yStart + 1));
+  const step = Math.max(1, Math.floor(Math.sqrt(pixelCount / MAX_SAMPLE_COUNT)));
+  let red = 0;
+  let green = 0;
+  let blue = 0;
+  let count = 0;
+
+  for (let y = yStart; y <= yEnd; y += step) {
+    for (let x = xStart; x <= xEnd; x += step) {
+      const offset = ((y * image.width) + x) * 4;
+      red += image.data[offset] ?? 0;
+      green += image.data[offset + 1] ?? 0;
+      blue += image.data[offset + 2] ?? 0;
+      count++;
+    }
+  }
+
+  return {
+    blue: Math.round(blue / count),
+    green: Math.round(green / count),
+    red: Math.round(red / count),
+  };
+};
+
 const formatCandidates = (
   averageRgb: RgbSample,
-  candidates: SoilColorCandidate[]
+  candidates: SoilColorCandidate[],
+  label: string
 ): string => [
-  `사진 중앙부 평균 RGB ${averageRgb.red}/${averageRgb.green}/${averageRgb.blue}`,
+  `${label} ${averageRgb.red}/${averageRgb.green}/${averageRgb.blue}`,
   ...candidates.map((candidate, index) =>
     `${index + 1}: ${candidate.munsell} (${getConfidenceLabel(candidate.confidence)}, 차이 ${candidate.deltaE.toFixed(1)})`
   ),
 ].join('\n');
+
+const getPointSampleLabel = (point: SoilColorSamplePoint): string =>
+  `사진 선택 지점 ${Math.round(normalizeSampleCoordinate(point.x) / 100)}%/${Math.round(normalizeSampleCoordinate(point.y) / 100)}% 평균 RGB`;
+
+const normalizeSampleCoordinate = (value: number): number =>
+  Number.isFinite(value)
+    ? clamp(Math.round(value), 0, 10000)
+    : 0;
+
+const clamp = (value: number, min: number, max: number): number =>
+  Math.max(min, Math.min(max, value));
 
 const decodeBase64 = (base64: string): Uint8Array => {
   const sanitized = base64

@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as FileSystem from 'expo-file-system';
 import {
   CategoryForm,
   Document,
@@ -13,6 +14,10 @@ import useToast from '@/hooks/use-toast';
 
 import Button from '@/components/common/Button';
 import DocumentForm from '@/components/common/forms/DocumentForm';
+import FieldworkPhotoAnnotationPanel, {
+  FIELDWORK_PHOTO_ANNOTATION_FIELDS,
+  FieldworkPhotoSamplePoint,
+} from '@/components/Project/FieldworkPhotoAnnotationPanel';
 import SoilProfileCameraButton, {
   FieldworkPhotoCaptureData,
   PhotoCameraButton,
@@ -37,6 +42,7 @@ import {
   KoreanFieldworkInvestigationModeId,
   loadKoreanFieldworkInvestigationModeId,
 } from '@/components/Project/korean-fieldwork-investigation-mode';
+import { createSoilColorAssistUpdatesFromPhotoBase64AtPoint } from '@/components/Project/soil-color-photo-assist';
 
 const DocumentEdit: React.FC = () => {
   const { showToast } = useToast();
@@ -231,6 +237,7 @@ const DocumentEdit: React.FC = () => {
         resource,
         updatePhotoCapture,
         updateSoilProfileCapture,
+        applyResourceUpdates,
         preferencesContext.preferences.username
       )}
     />
@@ -244,25 +251,54 @@ const renderPhotoResourceActions = (
   resource: Resource,
   updatePhotoCapture: (data: FieldworkPhotoCaptureData) => void,
   updateSoilProfileCapture: (data: SoilProfileCaptureData) => void,
+  updateResourceFields: (updates: Record<string, unknown>) => void,
   username?: string
 ) => {
   if (resource.category === 'Photo') {
+    const imageUri = getStringValue(resource.imageUri ?? resource.fieldworkPhotoUri);
+
     return (
-      <PhotoCameraButton
-        capturedUri={getStringValue(resource.imageUri ?? resource.fieldworkPhotoUri)}
-        onCapture={updatePhotoCapture}
-        username={username}
-      />
+      <View>
+        <PhotoCameraButton
+          capturedUri={imageUri}
+          onCapture={updatePhotoCapture}
+          username={username}
+        />
+        <FieldworkPhotoAnnotationPanel
+          imageUri={imageUri}
+          strokesValue={resource[FIELDWORK_PHOTO_ANNOTATION_FIELDS.photoStrokes]}
+          onUpdateStrokes={(serializedStrokes) => updateResourceFields({
+            [FIELDWORK_PHOTO_ANNOTATION_FIELDS.photoStrokes]: serializedStrokes,
+            [FIELDWORK_PHOTO_ANNOTATION_FIELDS.photoUpdatedAt]: new Date().toISOString(),
+          })}
+        />
+      </View>
     );
   }
 
   if (resource.category === 'SoilProfilePhoto') {
+    const imageUri = getStringValue(resource.soilProfilePhotoUri);
+
     return (
-      <SoilProfileCameraButton
-        capturedUri={getStringValue(resource.soilProfilePhotoUri)}
-        onCapture={updateSoilProfileCapture}
-        username={username}
-      />
+      <View>
+        <SoilProfileCameraButton
+          capturedUri={imageUri}
+          onCapture={updateSoilProfileCapture}
+          username={username}
+        />
+        <FieldworkPhotoAnnotationPanel
+          imageUri={imageUri}
+          title="토층사진 위 펜표시"
+          sampleButtonLabel="토색 찍기"
+          strokesValue={resource[FIELDWORK_PHOTO_ANNOTATION_FIELDS.soilProfileStrokes]}
+          onSamplePoint={(point) =>
+            sampleSoilProfileColor(imageUri, point, updateResourceFields)}
+          onUpdateStrokes={(serializedStrokes) => updateResourceFields({
+            [FIELDWORK_PHOTO_ANNOTATION_FIELDS.soilProfileStrokes]: serializedStrokes,
+            [FIELDWORK_PHOTO_ANNOTATION_FIELDS.soilProfileUpdatedAt]: new Date().toISOString(),
+          })}
+        />
+      </View>
     );
   }
 
@@ -273,6 +309,22 @@ const getStringValue = (value: unknown): string | undefined =>
   typeof value === 'string' && value.trim().length > 0
     ? value
     : undefined;
+
+const sampleSoilProfileColor = async (
+  imageUri: string | undefined,
+  point: FieldworkPhotoSamplePoint,
+  updateResourceFields: (updates: Record<string, unknown>) => void
+) => {
+  if (!imageUri) return;
+
+  const base64 = await FileSystem.readAsStringAsync(imageUri, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+
+  updateResourceFields({
+    ...createSoilColorAssistUpdatesFromPhotoBase64AtPoint(base64, point),
+  });
+};
 
 const getMissingDependencies = (
   dependencies: [boolean, string][]

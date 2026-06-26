@@ -89,6 +89,7 @@ describe('KoreanFieldworkSoilColorPanel', () => {
     expect(getByText('토색 빠른 기록')).toBeTruthy();
     expect(getByText('사진 메모')).toBeTruthy();
 
+    fireEvent.press(getByTestId('soilColorAddNumberedSwatch'));
     fireEvent.press(getByTestId('soilColorOption_10YR 3/2'));
     fireEvent.changeText(
       getByTestId('soilColorInput_profileColorSwatches'),
@@ -104,20 +105,25 @@ describe('KoreanFieldworkSoilColorPanel', () => {
     expect(handleUpdateResourceField).toHaveBeenNthCalledWith(
       1,
       'soilProfileColorSwatches',
-      '1: 10YR 4/3 갈색\n2: 10YR 3/2 암회갈색'
+      '1: 10YR 4/3\n2: '
     );
     expect(handleUpdateResourceField).toHaveBeenNthCalledWith(
       2,
+      'soilProfileColorSwatches',
+      '1: 10YR 4/3 갈색\n2: 10YR 3/2 암회갈색'
+    );
+    expect(handleUpdateResourceField).toHaveBeenNthCalledWith(
+      3,
       'soilColorCaptureCondition',
       'shade'
     );
     expect(handleUpdateResourceField).toHaveBeenNthCalledWith(
-      3,
+      4,
       'soilProfileColorNote',
       '2번은 습윤 상태'
     );
     expect(handleUpdateResourceField).toHaveBeenNthCalledWith(
-      4,
+      5,
       'soilProfileCaptureNote',
       '북벽, 그늘'
     );
