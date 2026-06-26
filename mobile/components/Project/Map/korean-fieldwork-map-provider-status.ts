@@ -10,7 +10,7 @@ export const getKakaoSatelliteBasemapStatusMessage = (
   const hasNativeAppKey = hasValue(mapSettings.kakaoNativeAppKey);
 
   if (hasJavaScriptKey) {
-    return '카카오 지도 JavaScript 키가 저장되어 있습니다. 위성지도 버튼으로 HYBRID(스카이뷰) 선택창을 열고, 찍은 위치를 조사 경계 초안으로 저장할 수 있습니다. 카카오 개발자 콘솔의 JavaScript SDK 도메인에는 https://localhost 를 등록해 주세요.';
+    return '카카오 지도 JavaScript 키가 저장되어 있습니다. 위성지도 버튼으로 HYBRID(스카이뷰) 경계 그리기 화면을 열고, 3개 이상의 꼭짓점을 찍어 조사 경계를 저장할 수 있습니다. Kakao Developers의 JavaScript SDK 도메인에는 http://localhost:8080 과 https://localhost 를 등록해 주세요.';
   }
 
   if (hasNativeAppKey) {

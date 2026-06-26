@@ -38,11 +38,59 @@ export const buildKakaoSatellitePickerHtml = ({
       top: 12px;
       z-index: 10;
     }
+    .toolbar {
+      align-items: center;
+      background: rgba(255, 255, 255, 0.96);
+      border: 1px solid rgba(30, 41, 59, 0.16);
+      border-radius: 6px;
+      bottom: 12px;
+      box-shadow: 0 4px 16px rgba(15, 23, 42, 0.18);
+      box-sizing: border-box;
+      display: flex;
+      gap: 8px;
+      left: 12px;
+      max-width: calc(100% - 24px);
+      padding: 8px;
+      position: absolute;
+      right: 12px;
+      z-index: 10;
+    }
+    .status {
+      color: #1f2937;
+      flex: 1;
+      font: 12px/1.35 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      min-width: 150px;
+    }
+    button {
+      appearance: none;
+      border: 0;
+      border-radius: 4px;
+      color: white;
+      font: 700 13px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      min-height: 38px;
+      padding: 0 12px;
+    }
+    button.secondary {
+      background: #475467;
+    }
+    button.primary {
+      background: #175cd3;
+    }
+    button:disabled {
+      background: #98a2b3;
+      color: #eef2f4;
+    }
   </style>
 </head>
 <body>
   <div id="map"></div>
-  <div class="banner">위성지도를 눌러 조사 경계 초안을 만들 위치를 선택하세요.</div>
+  <div class="banner">위성지도에서 조사 경계 꼭짓점을 차례대로 누르세요. 3개 이상 찍으면 경계를 저장할 수 있습니다.</div>
+  <div class="toolbar">
+    <div id="status" class="status">경계점 0개. 지도를 눌러 첫 점을 추가하세요.</div>
+    <button id="undo" class="secondary" type="button" disabled>되돌리기</button>
+    <button id="reset" class="secondary" type="button" disabled>초기화</button>
+    <button id="save" class="primary" type="button" disabled>경계 저장</button>
+  </div>
   <script>
     function post(type, payload) {
       window.ReactNativeWebView && window.ReactNativeWebView.postMessage(JSON.stringify({
@@ -51,14 +99,26 @@ export const buildKakaoSatellitePickerHtml = ({
       }));
     }
 
+    window.onerror = function(message, source, line, column) {
+      post('error', {
+        message: '카카오 지도 SDK 실행 중 오류가 발생했습니다. JavaScript 키와 http://localhost:8080 또는 https://localhost 도메인 등록을 확인하세요.',
+        detail: String(message || '') + ' ' + String(source || '') + ':' + String(line || '') + ':' + String(column || '')
+      });
+      return false;
+    };
+
     function loadScript() {
       var script = document.createElement('script');
       script.src = 'https://dapi.kakao.com/v2/maps/sdk.js?appkey=${safeKey}&autoload=false';
       script.onload = function() {
+        if (!window.kakao || !kakao.maps || !kakao.maps.load) {
+          post('error', { message: '카카오 지도 SDK가 로드됐지만 지도 객체를 찾지 못했습니다. JavaScript 키 종류와 WebView 도메인 등록을 확인하세요.' });
+          return;
+        }
         kakao.maps.load(initMap);
       };
       script.onerror = function() {
-        post('error', { message: '카카오 지도 스크립트를 불러오지 못했습니다.' });
+        post('error', { message: '카카오 지도 SDK 요청이 거부되었거나 네트워크에서 차단되었습니다. JavaScript 키와 Kakao Developers의 http://localhost:8080 또는 https://localhost 도메인 등록을 확인하세요.' });
       };
       document.head.appendChild(script);
     }
@@ -72,20 +132,103 @@ export const buildKakaoSatellitePickerHtml = ({
         });
         map.setMapTypeId(kakao.maps.MapTypeId.HYBRID);
 
-        var marker = new kakao.maps.Marker({
+        var points = [];
+        var markers = [];
+        var statusEl = document.getElementById('status');
+        var undoEl = document.getElementById('undo');
+        var resetEl = document.getElementById('reset');
+        var saveEl = document.getElementById('save');
+        var outline = new kakao.maps.Polyline({
           map: map,
-          position: center
+          path: [],
+          strokeWeight: 4,
+          strokeColor: '#175cd3',
+          strokeOpacity: 0.95,
+          strokeStyle: 'solid'
+        });
+        var polygon = new kakao.maps.Polygon({
+          map: map,
+          path: [],
+          strokeWeight: 2,
+          strokeColor: '#175cd3',
+          strokeOpacity: 0.95,
+          fillColor: '#60a5fa',
+          fillOpacity: 0.24
         });
 
         kakao.maps.event.addListener(map, 'click', function(mouseEvent) {
-          var latLng = mouseEvent.latLng;
-          marker.setPosition(latLng);
-          post('pick', {
-            latitude: latLng.getLat(),
-            longitude: latLng.getLng()
-          });
+          addPoint(mouseEvent.latLng);
         });
 
+        undoEl.addEventListener('click', undoPoint);
+        resetEl.addEventListener('click', resetPoints);
+        saveEl.addEventListener('click', saveBoundary);
+
+        function addPoint(latLng) {
+          points.push(latLng);
+          markers.push(new kakao.maps.Marker({
+            map: map,
+            position: latLng
+          }));
+          redraw();
+        }
+
+        function undoPoint() {
+          if (points.length === 0) return;
+          points.pop();
+          var marker = markers.pop();
+          marker && marker.setMap(null);
+          redraw();
+        }
+
+        function resetPoints() {
+          points = [];
+          markers.forEach(function(marker) {
+            marker.setMap(null);
+          });
+          markers = [];
+          redraw();
+        }
+
+        function redraw() {
+          outline.setPath(points);
+          polygon.setPath(points.length >= 3 ? points : []);
+          undoEl.disabled = points.length === 0;
+          resetEl.disabled = points.length === 0;
+          saveEl.disabled = points.length < 3;
+          statusEl.textContent = points.length < 3
+            ? '경계점 ' + points.length + '개. 최소 3개가 필요합니다.'
+            : '경계점 ' + points.length + '개. 필요하면 더 찍거나 경계를 저장하세요.';
+        }
+
+        function saveBoundary() {
+          if (points.length < 3) return;
+          var coordinates = points.map(function(point) {
+            return {
+              latitude: point.getLat(),
+              longitude: point.getLng()
+            };
+          });
+          post('boundary', {
+            coordinates: coordinates,
+            center: getCenter(coordinates)
+          });
+        }
+
+        function getCenter(coordinates) {
+          var latitude = 0;
+          var longitude = 0;
+          coordinates.forEach(function(coordinate) {
+            latitude += coordinate.latitude;
+            longitude += coordinate.longitude;
+          });
+          return {
+            latitude: latitude / coordinates.length,
+            longitude: longitude / coordinates.length
+          };
+        }
+
+        redraw();
         post('ready');
       } catch (error) {
         post('error', { message: error && error.message ? error.message : String(error) });

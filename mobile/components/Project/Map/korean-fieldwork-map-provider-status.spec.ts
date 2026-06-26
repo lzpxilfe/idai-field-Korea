@@ -26,6 +26,12 @@ describe('korean-fieldwork-map-provider-status', () => {
     })).toContain('HYBRID(스카이뷰)');
     expect(getKakaoSatelliteBasemapStatusMessage({
       kakaoMapJavaScriptKey: 'js-key',
+    })).toContain('3개 이상의 꼭짓점');
+    expect(getKakaoSatelliteBasemapStatusMessage({
+      kakaoMapJavaScriptKey: 'js-key',
+    })).toContain('http://localhost:8080');
+    expect(getKakaoSatelliteBasemapStatusMessage({
+      kakaoMapJavaScriptKey: 'js-key',
     })).toContain('https://localhost');
   });
 

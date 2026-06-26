@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Modal,
   StyleSheet,
@@ -14,11 +14,16 @@ export interface KakaoSatellitePickedLocation {
   longitude: number;
 }
 
+export interface KakaoSatellitePickedBoundary {
+  center?: KakaoSatellitePickedLocation;
+  coordinates: KakaoSatellitePickedLocation[];
+}
+
 interface KakaoSatellitePickerProps {
   initialLocation?: KakaoSatellitePickedLocation;
   javaScriptKey: string;
   onClose: () => void;
-  onPickLocation: (location: KakaoSatellitePickedLocation) => void;
+  onPickBoundary: (boundary: KakaoSatellitePickedBoundary) => void;
   visible: boolean;
 }
 
@@ -26,17 +31,25 @@ const DEFAULT_LOCATION = {
   latitude: 37.5665,
   longitude: 126.9780,
 };
+const KAKAO_MAP_WEBVIEW_BASE_URLS = [
+  'http://localhost:8080/',
+  'https://localhost/',
+  'http://localhost/',
+];
 
 const KakaoSatellitePicker: React.FC<KakaoSatellitePickerProps> = ({
   initialLocation,
   javaScriptKey,
   onClose,
-  onPickLocation,
+  onPickBoundary,
   visible,
 }) => {
   const [message, setMessage] = useState(
-    '위성지도에서 조사 경계 중심점을 눌러 주세요.'
+    '위성지도에서 조사 경계 꼭짓점을 차례대로 눌러 주세요.'
   );
+  const [baseUrlIndex, setBaseUrlIndex] = useState(0);
+  const webViewBaseUrl =
+    KAKAO_MAP_WEBVIEW_BASE_URLS[baseUrlIndex] ?? KAKAO_MAP_WEBVIEW_BASE_URLS[0];
   const mapHtml = useMemo(
     () => buildKakaoSatellitePickerHtml({
       javaScriptKey,
@@ -46,24 +59,43 @@ const KakaoSatellitePicker: React.FC<KakaoSatellitePickerProps> = ({
     [initialLocation, javaScriptKey]
   );
 
+  useEffect(() => {
+    if (visible) setBaseUrlIndex(0);
+  }, [javaScriptKey, visible]);
+
+  const retryWithNextWebViewOrigin = () => {
+    if (baseUrlIndex >= KAKAO_MAP_WEBVIEW_BASE_URLS.length - 1) return false;
+
+    const nextBaseUrl = KAKAO_MAP_WEBVIEW_BASE_URLS[baseUrlIndex + 1];
+    setMessage(
+      `카카오 지도 SDK가 현재 WebView 출처에서 거부되었습니다. ${nextBaseUrl} 경로로 다시 시도합니다.`
+    );
+    setBaseUrlIndex(baseUrlIndex + 1);
+    return true;
+  };
+
   const onMessage = (event: WebViewMessageEvent) => {
     try {
       const data = JSON.parse(event.nativeEvent.data);
       if (data.type === 'ready') {
-        setMessage('스카이뷰가 열렸습니다. 위치를 누르면 경계 초안이 만들어집니다.');
+        setMessage('카카오 위성지도가 열렸습니다. 경계 꼭짓점을 3개 이상 찍고 저장하세요.');
         return;
       }
 
-      if (data.type === 'pick') {
-        const { latitude, longitude } = data.payload ?? {};
-        if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
-          setMessage('선택한 위치로 조사 경계 초안을 만듭니다.');
-          onPickLocation({ latitude, longitude });
+      if (data.type === 'boundary') {
+        const coordinates = getPickedCoordinates(data.payload?.coordinates);
+        if (coordinates.length >= 3) {
+          setMessage('선택한 꼭짓점으로 조사 경계를 저장합니다.');
+          onPickBoundary({
+            coordinates,
+            center: getPickedLocation(data.payload?.center),
+          });
         }
         return;
       }
 
       if (data.type === 'error') {
+        if (retryWithNextWebViewOrigin()) return;
         setMessage(data.payload?.message ?? '카카오 지도를 불러오지 못했습니다.');
       }
     } catch {
@@ -81,7 +113,7 @@ const KakaoSatellitePicker: React.FC<KakaoSatellitePickerProps> = ({
       <View style={styles.container}>
         <View style={styles.header}>
           <View style={styles.headerText}>
-            <Text style={styles.title}>위성지도에서 경계 찍기</Text>
+            <Text style={styles.title}>위성지도에서 경계 그리기</Text>
             <Text style={styles.message}>{message}</Text>
           </View>
           <TouchableOpacity
@@ -97,8 +129,23 @@ const KakaoSatellitePicker: React.FC<KakaoSatellitePickerProps> = ({
           originWhitelist={['*']}
           javaScriptEnabled
           domStorageEnabled
+          onError={(event) => {
+            if (retryWithNextWebViewOrigin()) return;
+            setMessage(
+              event.nativeEvent.description
+                ? `카카오 지도 WebView 오류: ${event.nativeEvent.description}`
+                : '카카오 지도 WebView를 불러오지 못했습니다.'
+            );
+          }}
+          onHttpError={(event) => {
+            if (retryWithNextWebViewOrigin()) return;
+            setMessage(
+              `카카오 지도 요청이 HTTP ${event.nativeEvent.statusCode} 응답을 받았습니다. JavaScript 키와 http://localhost:8080 또는 https://localhost 도메인 등록을 확인하세요.`
+            );
+          }}
           onMessage={onMessage}
-          source={{ html: mapHtml, baseUrl: 'https://localhost' }}
+          key={webViewBaseUrl}
+          source={{ html: mapHtml, baseUrl: webViewBaseUrl }}
           style={styles.webView}
           testID="kakao-satellite-picker-webview"
         />
@@ -155,3 +202,32 @@ const styles = StyleSheet.create({
 });
 
 export default KakaoSatellitePicker;
+
+const getPickedCoordinates = (value: unknown): KakaoSatellitePickedLocation[] =>
+  Array.isArray(value)
+    ? value.map(getPickedLocation).filter(isPickedLocation)
+    : [];
+
+const getPickedLocation = (
+  value: unknown
+): KakaoSatellitePickedLocation | undefined => {
+  if (typeof value !== 'object' || value === null) return undefined;
+
+  const location = value as Record<string, unknown>;
+  const latitude = location.latitude;
+  const longitude = location.longitude;
+
+  return typeof latitude === 'number'
+    && Number.isFinite(latitude)
+    && typeof longitude === 'number'
+    && Number.isFinite(longitude)
+    ? {
+        latitude,
+        longitude,
+      }
+    : undefined;
+};
+
+const isPickedLocation = (
+  value: KakaoSatellitePickedLocation | undefined
+): value is KakaoSatellitePickedLocation => value !== undefined;

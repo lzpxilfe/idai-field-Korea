@@ -26,6 +26,7 @@ import {
   createSurveyBoundaryDraft as buildSurveyBoundaryDraft,
   MapLocation,
   REFERENCE_BASEMAP_PROVIDER_KAKAO_HYBRID,
+  SurveyBoundaryGeometry,
   SURVEY_BOUNDARY_ACCURACY_DEFAULT,
   SURVEY_BOUNDARY_SOURCE_DEFAULT,
 } from './korean-fieldwork-drafts';
@@ -36,7 +37,9 @@ import {
   getKakaoSatelliteBasemapStatusMessage,
   KAKAO_SATELLITE_BASEMAP_TITLE,
 } from './korean-fieldwork-map-provider-status';
+import { validateKakaoMapJavaScriptKey } from './kakao-map-javascript-key-validation';
 import KakaoSatellitePicker, {
+  KakaoSatellitePickedBoundary,
   KakaoSatellitePickedLocation,
 } from './KakaoSatellitePicker';
 import {
@@ -252,13 +255,6 @@ const Map: React.FC<MapProps> = (props) => {
     return createdDocument;
   };
 
-  const createOperationAndEdit = async () => {
-    const createdDocument = await createOperation();
-    if (!createdDocument) return;
-
-    props.editDocument(createdDocument.resource.id, KOREAN_FIELDWORK_CATEGORIES.OPERATION);
-  };
-
   const createOperationThenSurveyBoundary = async () => {
     const createdDocument = await createOperation();
     if (!createdDocument) return;
@@ -298,8 +294,20 @@ const Map: React.FC<MapProps> = (props) => {
     );
   };
 
-  const showSatelliteBasemapInfo = () => {
-    if (currentMapProviderSettings.kakaoMapJavaScriptKey.trim()) {
+  const showSatelliteBasemapInfo = useCallback(async () => {
+    const javaScriptKey = currentMapProviderSettings.kakaoMapJavaScriptKey.trim();
+    if (javaScriptKey) {
+      const validationResult = await validateKakaoMapJavaScriptKey(javaScriptKey);
+      if (!validationResult.ok) {
+        Alert.alert(
+          KAKAO_SATELLITE_BASEMAP_TITLE,
+          validationResult.message
+            ?? getKakaoSatelliteBasemapStatusMessage(currentMapProviderSettings),
+          [{ text: '확인' }]
+        );
+        return;
+      }
+
       setIsKakaoSatellitePickerOpen(true);
       return;
     }
@@ -309,12 +317,16 @@ const Map: React.FC<MapProps> = (props) => {
       getKakaoSatelliteBasemapStatusMessage(currentMapProviderSettings),
       [{ text: '확인' }]
     );
-  };
+  }, [currentMapProviderSettings]);
+
+  const openSatellitePicker = useCallback(() => {
+    void showSatelliteBasemapInfo();
+  }, [showSatelliteBasemapInfo]);
 
   useEffect(() => {
     if (!props.satellitePickerRequestId) return;
-    showSatelliteBasemapInfo();
-  }, [props.satellitePickerRequestId]);
+    openSatellitePicker();
+  }, [openSatellitePicker, props.satellitePickerRequestId]);
 
   const editPrimaryOperation = () => {
     if (!primaryOperation) return;
@@ -379,10 +391,11 @@ const Map: React.FC<MapProps> = (props) => {
 
   const createSurveyBoundaryForOperation = async (
     operationDoc: Document,
-    boundaryLocation: MapLocation,
+    boundaryLocation?: MapLocation,
     boundaryMetadata?: {
       boundaryAccuracy?: string;
       boundarySource?: string;
+      geometry?: SurveyBoundaryGeometry;
       referenceBasemapProvider?: string;
     }
   ) => {
@@ -408,28 +421,39 @@ const Map: React.FC<MapProps> = (props) => {
     await createSurveyBoundaryForOperation(primaryOperation, location);
   };
 
-  const createSurveyBoundaryFromKakaoSatellite = async (
-    pickedLocation: KakaoSatellitePickedLocation
+  const createSurveyBoundaryFromKakaoSatelliteBoundary = async (
+    pickedBoundary: KakaoSatellitePickedBoundary
   ) => {
-    const projectedLocation = projectWgs84ToMapLocation(pickedLocation);
-    if (!projectedLocation) {
+    const boundaryGeometry =
+      projectKakaoBoundaryToSurveyBoundaryGeometry(pickedBoundary.coordinates);
+    if (!boundaryGeometry) {
       Alert.alert(
-        '위성지도 위치',
-        '선택한 좌표를 지도 좌표로 변환하지 못했습니다.',
+        '위성지도 경계',
+        '선택한 경계 좌표를 지도 좌표로 변환하지 못했습니다.',
         [{ text: '확인' }]
       );
       return;
     }
+    const centerLocation = pickedBoundary.center
+      ? projectWgs84ToMapLocation(pickedBoundary.center)
+      : getBoundaryGeometryCenter(boundaryGeometry);
 
-    setWgs84Location(pickedLocation);
-    setLocation(projectedLocation);
+    setWgs84Location(
+      pickedBoundary.center ?? getWgs84BoundaryCenter(pickedBoundary.coordinates)
+    );
+    if (centerLocation) setLocation(centerLocation);
     setIsKakaoSatellitePickerOpen(false);
+
+    const boundaryMetadata = {
+      ...getKakaoSatelliteBoundaryMetadata(),
+      geometry: boundaryGeometry,
+    };
 
     if (primaryOperation) {
       await createSurveyBoundaryForOperation(
         primaryOperation,
-        projectedLocation,
-        getKakaoSatelliteBoundaryMetadata()
+        centerLocation,
+        boundaryMetadata
       );
       return;
     }
@@ -438,8 +462,8 @@ const Map: React.FC<MapProps> = (props) => {
     if (createdOperation) {
       await createSurveyBoundaryForOperation(
         createdOperation,
-        projectedLocation,
-        getKakaoSatelliteBoundaryMetadata()
+        centerLocation,
+        boundaryMetadata
       );
     }
   };
@@ -535,8 +559,8 @@ const Map: React.FC<MapProps> = (props) => {
         initialLocation={wgs84Location ?? DEFAULT_KAKAO_PICKER_LOCATION}
         javaScriptKey={currentMapProviderSettings.kakaoMapJavaScriptKey}
         onClose={() => setIsKakaoSatellitePickerOpen(false)}
-        onPickLocation={(pickedLocation) => {
-          void createSurveyBoundaryFromKakaoSatellite(pickedLocation);
+        onPickBoundary={(pickedBoundary) => {
+          void createSurveyBoundaryFromKakaoSatelliteBoundary(pickedBoundary);
         }}
         visible={isKakaoSatellitePickerOpen}
       />
@@ -603,7 +627,7 @@ const Map: React.FC<MapProps> = (props) => {
             <Button
               variant="secondary"
               title={startPanelCopy.satelliteActionTitle}
-              onPress={showSatelliteBasemapInfo}
+              onPress={openSatellitePicker}
             />
           </View>
         </View>
@@ -623,7 +647,7 @@ const Map: React.FC<MapProps> = (props) => {
             <Button
               variant="secondary"
               title="위성지도"
-              onPress={showSatelliteBasemapInfo}
+              onPress={openSatellitePicker}
             />
           </View>
         </View>
@@ -643,7 +667,7 @@ const Map: React.FC<MapProps> = (props) => {
           createPenMemoDraft={createPenMemoDraft}
           createSoilProfilePhotoDraft={createSoilProfilePhotoDraft}
           createSurveyBoundaryDraft={createSurveyBoundaryDraft}
-          openSatellitePicker={showSatelliteBasemapInfo}
+          openSatellitePicker={openSatellitePicker}
           markGeometryNeedsAerialAlignment={markGeometryNeedsAerialAlignment}
           markGeometryAdjustedToAerialLayer={markGeometryAdjustedToAerialLayer}
           toggleFeatureWorkflowStep={toggleFeatureWorkflowStep}
@@ -741,6 +765,79 @@ const projectWgs84ToMapLocation = (
 
   return projected;
 };
+
+const projectKakaoBoundaryToSurveyBoundaryGeometry = (
+  coordinates: KakaoSatellitePickedLocation[]
+): SurveyBoundaryGeometry | undefined => {
+  const projectedCoordinates = coordinates
+    .map(projectWgs84ToMapLocation)
+    .filter(isMapLocation);
+
+  if (projectedCoordinates.length < 3) return undefined;
+
+  return {
+    type: 'LineString',
+    coordinates: closeLineString(
+      projectedCoordinates.map((location) => [location.x, location.y])
+    ),
+  };
+};
+
+const closeLineString = (coordinates: number[][]): number[][] => {
+  const [firstCoordinate] = coordinates;
+  const lastCoordinate = coordinates[coordinates.length - 1];
+  if (!firstCoordinate || !lastCoordinate) return coordinates;
+  if (
+    firstCoordinate[0] === lastCoordinate[0]
+    && firstCoordinate[1] === lastCoordinate[1]
+  ) {
+    return coordinates;
+  }
+
+  return [...coordinates, [firstCoordinate[0], firstCoordinate[1]]];
+};
+
+const getBoundaryGeometryCenter = (
+  geometry: SurveyBoundaryGeometry
+): MapLocation | undefined => {
+  const openCoordinates = getOpenLineStringCoordinates(geometry.coordinates);
+  if (openCoordinates.length === 0) return undefined;
+
+  return {
+    x: openCoordinates.reduce((sum, coordinate) => sum + coordinate[0], 0)
+      / openCoordinates.length,
+    y: openCoordinates.reduce((sum, coordinate) => sum + coordinate[1], 0)
+      / openCoordinates.length,
+  };
+};
+
+const getWgs84BoundaryCenter = (
+  coordinates: KakaoSatellitePickedLocation[]
+): KakaoSatellitePickedLocation | undefined => {
+  if (coordinates.length === 0) return undefined;
+
+  return {
+    latitude: coordinates.reduce((sum, coordinate) => sum + coordinate.latitude, 0)
+      / coordinates.length,
+    longitude: coordinates.reduce((sum, coordinate) => sum + coordinate.longitude, 0)
+      / coordinates.length,
+  };
+};
+
+const getOpenLineStringCoordinates = (coordinates: number[][]): number[][] => {
+  if (coordinates.length < 2) return coordinates;
+  const [firstCoordinate] = coordinates;
+  const lastCoordinate = coordinates[coordinates.length - 1];
+
+  return firstCoordinate[0] === lastCoordinate[0]
+    && firstCoordinate[1] === lastCoordinate[1]
+    ? coordinates.slice(0, -1)
+    : coordinates;
+};
+
+const isMapLocation = (
+  location: MapLocation | undefined
+): location is MapLocation => location !== undefined;
 
 const getFeatureCandidateParent = (
   highlightedDoc: Document | undefined,

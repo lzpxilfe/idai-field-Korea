@@ -348,6 +348,44 @@ describe('Korean fieldwork map drafts', () => {
       surveyBoundarySource: SURVEY_BOUNDARY_SOURCE_DEFAULT,
     });
   });
+
+  it('stores drawn Kakao satellite boundaries as closed LineString geometry', () => {
+    const operationDoc = {
+      resource: {
+        id: 'operation-1',
+        category: 'Operation',
+        relations: {},
+      },
+    } as any;
+    const geometry = {
+      type: 'LineString' as const,
+      coordinates: [
+        [1000, 2000],
+        [1100, 2000],
+        [1100, 2100],
+        [1000, 2000],
+      ],
+    };
+
+    const draft = createSurveyBoundaryDraft(
+      operationDoc,
+      undefined,
+      'A구역',
+      {
+        boundaryAccuracy: SURVEY_BOUNDARY_ACCURACY_DEFAULT,
+        boundarySource: SURVEY_BOUNDARY_SOURCE_DEFAULT,
+        geometry,
+        referenceBasemapProvider: REFERENCE_BASEMAP_PROVIDER_KAKAO_HYBRID,
+      }
+    );
+
+    expect(draft.resource).toMatchObject({
+      geometry,
+      referenceBasemapProvider: REFERENCE_BASEMAP_PROVIDER_KAKAO_HYBRID,
+      surveyBoundaryAccuracy: SURVEY_BOUNDARY_ACCURACY_DEFAULT,
+      surveyBoundarySource: SURVEY_BOUNDARY_SOURCE_DEFAULT,
+    });
+  });
 });
 
 const createDocument = (

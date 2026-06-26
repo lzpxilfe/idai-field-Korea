@@ -45,10 +45,16 @@ export const GPS_DRAFT_BOUNDARY_HALF_SIZE_METERS = KOREAN_FIELDWORK_GPS_DRAFT_BO
 
 export type MapLocation = { x: number; y: number };
 
-interface SurveyBoundaryDraftOptions {
+export interface SurveyBoundaryDraftOptions {
   boundaryAccuracy?: string;
   boundarySource?: string;
+  geometry?: SurveyBoundaryGeometry;
   referenceBasemapProvider?: string;
+}
+
+export interface SurveyBoundaryGeometry {
+  type: 'LineString';
+  coordinates: number[][];
 }
 
 interface OperationDraftOptions {
@@ -197,14 +203,16 @@ export const createSurveyBoundaryDraft = (
   options: SurveyBoundaryDraftOptions = {}
 ): NewDocument => {
   const normalizedBoundarySummary = boundarySummary?.trim();
+  const geometry = options.geometry
+    ?? (location ? createGpsDraftBoundaryGeometry(location) : undefined);
 
   return {
     resource: {
       identifier: `survey-boundary-${Date.now()}`,
       category: KOREAN_FIELDWORK_CATEGORIES.SURVEY_BOUNDARY,
       relations: createKoreanFieldworkChildRelations(parentDoc),
-      ...(location ? {
-        geometry: createGpsDraftBoundaryGeometry(location),
+      ...(geometry ? {
+        geometry,
       } : {}),
       ...(normalizedBoundarySummary ? {
         shortDescription: normalizedBoundarySummary,
