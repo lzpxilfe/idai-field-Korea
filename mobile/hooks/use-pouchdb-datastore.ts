@@ -23,33 +23,39 @@ import {
 
 PouchDB.plugin(require('@neighbourhoodie/pouchdb-asyncstorage-adapter').default)
 
-
-
 const usePouchDbDatastore = (project: string): PouchdbDatastore | undefined => {
   const [pouchdbDatastore, setpouchdbDatastore] = useState<PouchdbDatastore>();
 
   useEffect(() => {
+    setpouchdbDatastore(undefined);
+
     if (project.trim().length === 0) {
-      setpouchdbDatastore(undefined);
       return;
     }
 
     let isCancelled = false;
     let activeManager: PouchdbDatastore | undefined;
-    const managerPromise = buildpouchdbDatastore(project).then((manager) => {
-      if (isCancelled) {
-        manager.close();
-        return manager;
-      }
+    const managerPromise = buildpouchdbDatastore(project)
+      .then((manager) => {
+        if (isCancelled) {
+          manager.close();
+          return manager;
+        }
 
-      activeManager = manager;
-      setpouchdbDatastore(manager);
-      return manager;
-    });
+        activeManager = manager;
+        setpouchdbDatastore(manager);
+        return manager;
+      })
+      .catch((error) => {
+        if (!isCancelled) {
+          console.warn(`Could not open project datastore '${project}'.`, error);
+        }
+        return undefined;
+      });
     return () => {
       isCancelled = true;
       managerPromise.then((manager) => {
-        if (activeManager === manager) manager.close();
+        if (manager !== undefined && activeManager === manager) manager.close();
       }).catch(() => undefined);
     };
   }, [project]);
@@ -62,37 +68,25 @@ export default usePouchDbDatastore;
 const buildpouchdbDatastore = async (
   project: string
 ): Promise<PouchdbDatastore> => {
- 
-    const datastore = new PouchdbDatastore(
-      (name: string) => new PouchDB(name),
-      new IdGenerator()
-    );
-    try {
-    const db = await datastore.createDb(
-      project,
-      await createProjectDocument(project),
-      await createConfigurationDocument(project),
-      isSampleProject(project)
-    );
-     db.allDocs({
-      include_docs: true,
-      attachments: true
-    });
-    // result.rows.forEach(row=>console.log(row))
-    // console.log(result.rows)
-     } catch (error) {
-    console.log(error)
-    throw error
+  const datastore = new PouchdbDatastore(
+    (name: string) => new PouchDB(name),
+    new IdGenerator()
+  );
+
+  await datastore.createDb(
+    project,
+    await createProjectDocument(project),
+    await createConfigurationDocument(project),
+    isSampleProject(project)
+  );
+  
+  if (isSampleProject(project)) {
+    const loader = new SampleDataLoaderBase('en');
+    await loader.go(datastore.getDb(), 'test');
   }
-  
-    if (isSampleProject(project)) {
-      const loader = new SampleDataLoaderBase('en');
-      await loader.go(datastore.getDb(), 'test');
-    }
-    datastore.setupChangesEmitter();
-    return datastore;
- 
-  
+
+  datastore.setupChangesEmitter();
+  return datastore;
 };
 
 const createProjectDocument = async (project: string) => {

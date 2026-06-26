@@ -4,6 +4,7 @@ import { BaseFieldDefinition, BaseSubfieldDefinition } from './base-field-defini
 export interface CustomFieldDefinition extends BaseFieldDefinition {
 
     mandatory?: boolean;
+    editable?: boolean;
 
     // For relation fields
     range?: string[];
@@ -20,6 +21,6 @@ export module CustomFieldDefinition {
 
 
 export const VALID_CUSTOM_FIELD_PROPERTIES = [
-    'inputType', 'mandatory', 'constraintIndexed', 'references', 'semanticReferences', 'condition', 'subfields',
+    'inputType', 'mandatory', 'editable', 'constraintIndexed', 'references', 'semanticReferences', 'condition', 'subfields',
     'range', 'inverse', 'dateConfiguration', 'geometryTypes'
 ];

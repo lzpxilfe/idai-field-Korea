@@ -140,6 +140,10 @@ function applyFieldChanges(field: TransientFieldDefinition, changedField: Custom
         field.mandatory = changedField.mandatory;
     }
 
+    if (changedField.editable !== undefined) {
+        field.editable = changedField.editable;
+    }
+
     if (changedField.constraintIndexed !== undefined) {
         field.constraintIndexed = changedField.constraintIndexed;
     }

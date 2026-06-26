@@ -3048,6 +3048,50 @@ describe('buildRawProjectConfiguration', () => {
     });
 
 
+    it('allow changing editable via custom form', () => {
+
+        const builtInCategories: Map<BuiltInCategoryDefinition> = {
+            A: {
+                supercategory: true,
+                userDefinedSubcategoriesAllowed: true,
+                fields: {
+                    field1: { inputType: 'input' },
+                    field2: { inputType: 'input' }
+                },
+                minimalForm: {
+                    groups: []
+                }
+            }
+        };
+
+        const customForms: Map<CustomFormDefinition> = {
+            A: {
+                fields: {}
+            },
+            C: {
+                parent: 'A',
+                fields: {
+                    field1: { editable: false },
+                    field2: { editable: true }
+                },
+                groups: [{ name: Groups.STEM, fields: ['field1', 'field2'] }]
+            }
+        };
+
+        const result = buildRaw(
+            builtInCategories,
+            {},
+            {},
+            customForms
+        );
+
+        expect(result['C'].groups[0].fields[0].name).toEqual('field1');
+        expect(result['C'].groups[0].fields[0].editable).toBe(false);
+        expect(result['C'].groups[0].fields[1].name).toEqual('field2');
+        expect(result['C'].groups[0].fields[1].editable).toBe(true);
+    });
+
+
     it('allow setting identifier prefix', () => {
 
         const builtInCategories: Map<BuiltInCategoryDefinition> = {
