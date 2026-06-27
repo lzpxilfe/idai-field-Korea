@@ -36,6 +36,7 @@ interface MapBottomSheetProps {
   createPenMemoDraft: () => void;
   createSoilProfilePhotoDraft: () => void;
   createSurveyBoundaryDraft: () => void;
+  openBoundaryFileImport: () => void;
   openSatellitePicker: () => void;
   markGeometryNeedsAerialAlignment: () => void;
   markGeometryAdjustedToAerialLayer: () => void;
@@ -66,6 +67,7 @@ const MapBottomSheet: React.FC<MapBottomSheetProps> = ({
   createPenMemoDraft,
   createSoilProfilePhotoDraft,
   createSurveyBoundaryDraft,
+  openBoundaryFileImport,
   openSatellitePicker,
   markGeometryNeedsAerialAlignment,
   markGeometryAdjustedToAerialLayer,
@@ -109,9 +111,17 @@ const MapBottomSheet: React.FC<MapBottomSheetProps> = ({
         <Button
           style={styles.button}
           variant="secondary"
-          title="위성지도"
+          title="지도 선택"
           onPress={openSatellitePicker}
           icon={<MaterialIcons name="satellite-alt" size={iconSize} />}
+        />
+        <Button
+          style={styles.button}
+          variant="secondary"
+          title="SHP/DXF"
+          onPress={openBoundaryFileImport}
+          icon={<MaterialIcons name="folder-open" size={iconSize} />}
+          testID="mapBoundaryFileImportButton"
         />
         <Button
           style={[styles.button, styles.focusBtn]}

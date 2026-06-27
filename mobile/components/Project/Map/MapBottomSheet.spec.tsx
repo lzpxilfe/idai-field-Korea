@@ -71,9 +71,20 @@ describe('MapBottomSheet', () => {
       createBottomSheet({ openSatellitePicker })
     );
 
-    fireEvent.press(getByText('위성지도'));
+    fireEvent.press(getByText('지도 선택'));
 
     expect(openSatellitePicker).toHaveBeenCalled();
+  });
+
+  it('opens the boundary file import from the visible map action panel', () => {
+    const openBoundaryFileImport = jest.fn();
+    const { getByTestId } = render(
+      createBottomSheet({ openBoundaryFileImport })
+    );
+
+    fireEvent.press(getByTestId('mapBoundaryFileImportButton'));
+
+    expect(openBoundaryFileImport).toHaveBeenCalled();
   });
 });
 
@@ -94,6 +105,7 @@ const createBottomSheet = (
     createPenMemoDraft={jest.fn()}
     createSoilProfilePhotoDraft={jest.fn()}
     createSurveyBoundaryDraft={jest.fn()}
+    openBoundaryFileImport={jest.fn()}
     openSatellitePicker={jest.fn()}
     markGeometryNeedsAerialAlignment={jest.fn()}
     markGeometryAdjustedToAerialLayer={jest.fn()}

@@ -12,6 +12,41 @@ jest.mock('react-native-webview', () => {
 });
 
 describe('KakaoSatellitePicker', () => {
+  it('passes the selected Kakao map type with picked boundaries', () => {
+    const onPickBoundary = jest.fn();
+    const { getByTestId } = render(
+      <KakaoSatellitePicker
+        initialLocation={{ latitude: 36.45, longitude: 127.12 }}
+        javaScriptKey="js-key"
+        onClose={jest.fn()}
+        onPickBoundary={onPickBoundary}
+        visible
+      />
+    );
+
+    act(() => {
+      fireEvent(getByTestId('kakao-satellite-picker-webview'), 'message', {
+        nativeEvent: {
+          data: JSON.stringify({
+            type: 'boundary',
+            payload: {
+              mapTypeId: 'ROADMAP',
+              coordinates: [
+                { latitude: 36.45, longitude: 127.12 },
+                { latitude: 36.46, longitude: 127.13 },
+                { latitude: 36.47, longitude: 127.14 },
+              ],
+            },
+          }),
+        },
+      });
+    });
+
+    expect(onPickBoundary).toHaveBeenCalledWith(expect.objectContaining({
+      mapTypeId: 'ROADMAP',
+    }));
+  });
+
   it('opens a public Kakao map fallback when every SDK origin is rejected', () => {
     const { getByTestId, getByText } = render(
       <KakaoSatellitePicker

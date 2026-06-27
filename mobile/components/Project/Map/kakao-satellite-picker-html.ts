@@ -2,18 +2,23 @@ interface KakaoSatellitePickerHtmlOptions {
   javaScriptKey: string;
   latitude: number;
   longitude: number;
+  mapTypeId?: KakaoMapTypeId;
   webViewBaseUrl?: string;
 }
+
+export type KakaoMapTypeId = 'ROADMAP' | 'SKYVIEW' | 'HYBRID';
 
 export const buildKakaoSatellitePickerHtml = ({
   javaScriptKey,
   latitude,
   longitude,
+  mapTypeId = 'HYBRID',
   webViewBaseUrl,
 }: KakaoSatellitePickerHtmlOptions): string => {
   const safeKey = encodeURIComponent(javaScriptKey.trim());
   const safeLatitude = Number.isFinite(latitude) ? latitude : 37.5665;
   const safeLongitude = Number.isFinite(longitude) ? longitude : 126.9780;
+  const safeMapTypeId = getSafeMapTypeId(mapTypeId);
   const safeWebViewBaseUrl = JSON.stringify(webViewBaseUrl ?? '');
 
   return `<!doctype html>
@@ -39,6 +44,19 @@ export const buildKakaoSatellitePickerHtml = ({
       position: absolute;
       right: 12px;
       top: 12px;
+      z-index: 10;
+    }
+    .map-type-control {
+      background: rgba(255, 255, 255, 0.96);
+      border: 1px solid rgba(30, 41, 59, 0.16);
+      border-radius: 6px;
+      box-shadow: 0 4px 16px rgba(15, 23, 42, 0.16);
+      display: flex;
+      gap: 6px;
+      left: 12px;
+      padding: 6px;
+      position: absolute;
+      top: 66px;
       z-index: 10;
     }
     .toolbar {
@@ -79,6 +97,18 @@ export const buildKakaoSatellitePickerHtml = ({
     button.primary {
       background: #175cd3;
     }
+    button.map-type {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      color: #1f2937;
+      min-height: 32px;
+      padding: 0 9px;
+    }
+    button.map-type.active {
+      background: #24495d;
+      border-color: #24495d;
+      color: white;
+    }
     button:disabled {
       background: #98a2b3;
       color: #eef2f4;
@@ -87,7 +117,12 @@ export const buildKakaoSatellitePickerHtml = ({
 </head>
 <body>
   <div id="map"></div>
-  <div class="banner">위성지도에서 조사 경계 꼭짓점을 차례대로 누르세요. 3개 이상 찍으면 경계를 저장할 수 있습니다.</div>
+  <div class="map-type-control">
+    <button id="mapTypeRoadmap" class="map-type" data-map-type="ROADMAP" type="button">일반</button>
+    <button id="mapTypeSkyview" class="map-type" data-map-type="SKYVIEW" type="button">위성</button>
+    <button id="mapTypeHybrid" class="map-type" data-map-type="HYBRID" type="button">하이브리드</button>
+  </div>
+  <div class="banner">지도에서 조사 경계 꼭짓점을 차례대로 누르세요. 3개 이상 찍으면 경계를 저장할 수 있습니다.</div>
   <div class="toolbar">
     <div id="status" class="status">경계점 0개. 지도를 눌러 첫 점을 추가하세요.</div>
     <button id="undo" class="secondary" type="button" disabled>되돌리기</button>
@@ -137,7 +172,8 @@ export const buildKakaoSatellitePickerHtml = ({
           center: center,
           level: 3
         });
-        map.setMapTypeId(kakao.maps.MapTypeId.HYBRID);
+        var currentMapType = '${safeMapTypeId}';
+        map.setMapTypeId(kakao.maps.MapTypeId[currentMapType]);
 
         var points = [];
         var markers = [];
@@ -145,6 +181,9 @@ export const buildKakaoSatellitePickerHtml = ({
         var undoEl = document.getElementById('undo');
         var resetEl = document.getElementById('reset');
         var saveEl = document.getElementById('save');
+        var mapTypeButtons = Array.prototype.slice.call(
+          document.querySelectorAll('[data-map-type]')
+        );
         var outline = new kakao.maps.Polyline({
           map: map,
           path: [],
@@ -170,6 +209,23 @@ export const buildKakaoSatellitePickerHtml = ({
         undoEl.addEventListener('click', undoPoint);
         resetEl.addEventListener('click', resetPoints);
         saveEl.addEventListener('click', saveBoundary);
+        mapTypeButtons.forEach(function(button) {
+          button.addEventListener('click', function() {
+            setMapType(button.getAttribute('data-map-type'));
+          });
+        });
+
+        function setMapType(nextMapType) {
+          if (!kakao.maps.MapTypeId[nextMapType]) return;
+          currentMapType = nextMapType;
+          map.setMapTypeId(kakao.maps.MapTypeId[currentMapType]);
+          mapTypeButtons.forEach(function(button) {
+            button.className = button.getAttribute('data-map-type') === currentMapType
+              ? 'map-type active'
+              : 'map-type';
+          });
+          post('mapType', { mapTypeId: currentMapType });
+        }
 
         function addPoint(latLng) {
           points.push(latLng);
@@ -218,7 +274,8 @@ export const buildKakaoSatellitePickerHtml = ({
           });
           post('boundary', {
             coordinates: coordinates,
-            center: getCenter(coordinates)
+            center: getCenter(coordinates),
+            mapTypeId: currentMapType
           });
         }
 
@@ -236,6 +293,7 @@ export const buildKakaoSatellitePickerHtml = ({
         }
 
         redraw();
+        setMapType(currentMapType);
         post('ready');
       } catch (error) {
         post('error', { message: error && error.message ? error.message : String(error) });
@@ -246,4 +304,10 @@ export const buildKakaoSatellitePickerHtml = ({
   </script>
 </body>
 </html>`;
+};
+
+const getSafeMapTypeId = (mapTypeId: KakaoMapTypeId): KakaoMapTypeId => {
+  return ['ROADMAP', 'SKYVIEW', 'HYBRID'].includes(mapTypeId)
+    ? mapTypeId
+    : 'HYBRID';
 };

@@ -26,8 +26,11 @@ import {
   createSurveyBoundaryDraft as buildSurveyBoundaryDraft,
   MapLocation,
   REFERENCE_BASEMAP_PROVIDER_KAKAO_HYBRID,
+  REFERENCE_BASEMAP_PROVIDER_KAKAO_ROADMAP,
+  REFERENCE_BASEMAP_PROVIDER_KAKAO_SKYVIEW,
   SurveyBoundaryGeometry,
   SURVEY_BOUNDARY_ACCURACY_DEFAULT,
+  SURVEY_BOUNDARY_ACCURACY_IMPORTED_REFERENCE,
   SURVEY_BOUNDARY_SOURCE_DEFAULT,
 } from './korean-fieldwork-drafts';
 import {
@@ -56,6 +59,11 @@ import {
 import MapBottomSheet from './MapBottomSheet';
 import { KoreanFieldworkInvestigationModeId } from '../korean-fieldwork-investigation-mode';
 import { isKoreanFieldworkChecklistRecord } from '../korean-fieldwork-quick-record';
+import BoundaryFileImportModal from './BoundaryFileImportModal';
+import {
+  ImportedBoundaryFile,
+  importBoundaryFileFromPath,
+} from './boundary-file-import';
 
 const FEATURE_GEOMETRY_EDIT_STATUS_NEEDS_AERIAL_ALIGNMENT = 'needsAerialAlignment';
 const FEATURE_GEOMETRY_EDIT_STATUS_ADJUSTED_TO_AERIAL_LAYER = 'adjustedToAerialLayer';
@@ -65,13 +73,13 @@ const DEFAULT_KAKAO_PICKER_LOCATION = {
   latitude: 37.5665,
   longitude: 126.9780,
 };
-const BOUNDARY_FILE_IMPORT_SYNC_DETAIL =
-  'SHP/DXF/CSV는 데스크톱 가져오기에서 불러온 뒤 동기화하면 태블릿 지도에서도 조사 경계로 보입니다. 태블릿에서는 현장에서 GPS 임시 경계나 위성지도 위치를 바로 보태세요.';
 
-const getKakaoSatelliteBoundaryMetadata = () => ({
+const getKakaoSatelliteBoundaryMetadata = (
+  mapTypeId?: KakaoSatellitePickedBoundary['mapTypeId']
+) => ({
   boundaryAccuracy: SURVEY_BOUNDARY_ACCURACY_DEFAULT,
   boundarySource: SURVEY_BOUNDARY_SOURCE_DEFAULT,
-  referenceBasemapProvider: REFERENCE_BASEMAP_PROVIDER_KAKAO_HYBRID,
+  referenceBasemapProvider: getReferenceBasemapProviderForKakaoMapType(mapTypeId),
 });
 
 // define projection standards
@@ -100,6 +108,7 @@ interface MapProps {
   investigationModeId?: KoreanFieldworkInvestigationModeId;
   boundarySummary?: string;
   satellitePickerRequestId?: number;
+  boundaryFileImportRequestId?: number;
 }
 
 const Map: React.FC<MapProps> = (props) => {
@@ -110,6 +119,7 @@ const Map: React.FC<MapProps> = (props) => {
   const [location, setLocation] = useState<MapLocation>();
   const [wgs84Location, setWgs84Location] = useState<KakaoSatellitePickedLocation>();
   const [isKakaoSatellitePickerOpen, setIsKakaoSatellitePickerOpen] = useState(false);
+  const [isBoundaryFileImportOpen, setIsBoundaryFileImportOpen] = useState(false);
   const currentMapProviderSettings = preferences.preferences.mapProviderSettings;
 
   const [
@@ -286,13 +296,18 @@ const Map: React.FC<MapProps> = (props) => {
     );
   };
 
-  const showBoundaryFileImportInfo = () => {
-    Alert.alert(
-      'SHP/DXF/CSV 가져오기',
-      BOUNDARY_FILE_IMPORT_SYNC_DETAIL,
-      [{ text: '확인' }]
-    );
-  };
+  const openBoundaryFileImport = useCallback(() => {
+    if (!config?.getCategory(KOREAN_FIELDWORK_CATEGORIES.SURVEY_BOUNDARY)) {
+      Alert.alert(
+        'SHP/DXF 경계 가져오기',
+        '조사 경계 문서 유형을 사용할 수 없어 파일을 가져올 수 없습니다.',
+        [{ text: '확인' }]
+      );
+      return;
+    }
+
+    setIsBoundaryFileImportOpen(true);
+  }, [config]);
 
   const showSatelliteBasemapInfo = useCallback(async () => {
     const javaScriptKey = currentMapProviderSettings.kakaoMapJavaScriptKey.trim();
@@ -327,6 +342,11 @@ const Map: React.FC<MapProps> = (props) => {
     if (!props.satellitePickerRequestId) return;
     openSatellitePicker();
   }, [openSatellitePicker, props.satellitePickerRequestId]);
+
+  useEffect(() => {
+    if (!props.boundaryFileImportRequestId) return;
+    openBoundaryFileImport();
+  }, [openBoundaryFileImport, props.boundaryFileImportRequestId]);
 
   const editPrimaryOperation = () => {
     if (!primaryOperation) return;
@@ -397,16 +417,58 @@ const Map: React.FC<MapProps> = (props) => {
       boundarySource?: string;
       geometry?: SurveyBoundaryGeometry;
       referenceBasemapProvider?: string;
-    }
+    },
+    boundarySummary: string | undefined = props.boundarySummary
   ) => {
     if (!config?.getCategory(KOREAN_FIELDWORK_CATEGORIES.SURVEY_BOUNDARY)) return;
 
     const createdDocument = await props.repository.create(
-      buildSurveyBoundaryDraft(operationDoc, boundaryLocation, props.boundarySummary, boundaryMetadata)
+      buildSurveyBoundaryDraft(operationDoc, boundaryLocation, boundarySummary, boundaryMetadata)
     );
 
     setHighlightedDoc(createdDocument);
     props.editDocument(createdDocument.resource.id, KOREAN_FIELDWORK_CATEGORIES.SURVEY_BOUNDARY);
+  };
+
+  const createSurveyBoundaryFromImportedFile = async (
+    importedBoundary: ImportedBoundaryFile
+  ) => {
+    const centerLocation =
+      importedBoundary.center ?? getBoundaryGeometryCenter(importedBoundary.geometry);
+    if (centerLocation) setLocation(centerLocation);
+
+    const operationDoc = primaryOperation ?? await createOperation();
+    if (!operationDoc) {
+      throw new Error('조사 구역을 만들 수 없어 경계를 저장하지 못했습니다.');
+    }
+
+    const importSummary = getImportedBoundarySummary(
+      importedBoundary,
+      props.boundarySummary
+    );
+    await createSurveyBoundaryForOperation(
+      operationDoc,
+      centerLocation,
+      {
+        boundaryAccuracy: SURVEY_BOUNDARY_ACCURACY_IMPORTED_REFERENCE,
+        boundarySource: importedBoundary.boundarySource,
+        geometry: importedBoundary.geometry,
+        referenceBasemapProvider: importedBoundary.referenceBasemapProvider,
+      },
+      importSummary
+    );
+
+    setIsBoundaryFileImportOpen(false);
+    Alert.alert(
+      'SHP/DXF 경계 가져오기',
+      `${importedBoundary.fileName} 파일에서 ${importedBoundary.coordinateCount}개 좌표를 조사 경계로 저장했습니다.`,
+      [{ text: '확인' }]
+    );
+  };
+
+  const importBoundaryFile = async (filePath: string) => {
+    const importedBoundary = await importBoundaryFileFromPath(filePath);
+    await createSurveyBoundaryFromImportedFile(importedBoundary);
   };
 
   const createSurveyBoundaryDraft = async () => {
@@ -428,7 +490,7 @@ const Map: React.FC<MapProps> = (props) => {
       projectKakaoBoundaryToSurveyBoundaryGeometry(pickedBoundary.coordinates);
     if (!boundaryGeometry) {
       Alert.alert(
-        '위성지도 경계',
+        '지도 경계',
         '선택한 경계 좌표를 지도 좌표로 변환하지 못했습니다.',
         [{ text: '확인' }]
       );
@@ -445,7 +507,7 @@ const Map: React.FC<MapProps> = (props) => {
     setIsKakaoSatellitePickerOpen(false);
 
     const boundaryMetadata = {
-      ...getKakaoSatelliteBoundaryMetadata(),
+      ...getKakaoSatelliteBoundaryMetadata(pickedBoundary.mapTypeId),
       geometry: boundaryGeometry,
     };
 
@@ -564,6 +626,11 @@ const Map: React.FC<MapProps> = (props) => {
         }}
         visible={isKakaoSatellitePickerOpen}
       />
+      <BoundaryFileImportModal
+        onClose={() => setIsBoundaryFileImportOpen(false)}
+        onImport={importBoundaryFile}
+        visible={isBoundaryFileImportOpen}
+      />
       {shouldRenderInteractiveMap && documentToWorldMatrix && screenToWorldMatrix && (
         <GLMap
           setHighlightedDocId={setHighlightedDocFromId}
@@ -622,7 +689,8 @@ const Map: React.FC<MapProps> = (props) => {
             <Button
               variant="secondary"
               title={startPanelCopy.fileImportActionTitle}
-              onPress={showBoundaryFileImportInfo}
+              onPress={openBoundaryFileImport}
+              testID="boundaryFileImportStartButton"
             />
             <Button
               variant="secondary"
@@ -646,7 +714,7 @@ const Map: React.FC<MapProps> = (props) => {
           <View style={styles.quickSatelliteAction}>
             <Button
               variant="secondary"
-              title="위성지도"
+              title="지도 선택"
               onPress={openSatellitePicker}
             />
           </View>
@@ -667,6 +735,7 @@ const Map: React.FC<MapProps> = (props) => {
           createPenMemoDraft={createPenMemoDraft}
           createSoilProfilePhotoDraft={createSoilProfilePhotoDraft}
           createSurveyBoundaryDraft={createSurveyBoundaryDraft}
+          openBoundaryFileImport={openBoundaryFileImport}
           openSatellitePicker={openSatellitePicker}
           markGeometryNeedsAerialAlignment={markGeometryNeedsAerialAlignment}
           markGeometryAdjustedToAerialLayer={markGeometryAdjustedToAerialLayer}
@@ -747,6 +816,26 @@ const styles = StyleSheet.create({
 });
 
 export default Map;
+
+function getReferenceBasemapProviderForKakaoMapType(
+  mapTypeId?: KakaoSatellitePickedBoundary['mapTypeId']
+): string {
+  if (mapTypeId === 'ROADMAP') return REFERENCE_BASEMAP_PROVIDER_KAKAO_ROADMAP;
+  if (mapTypeId === 'SKYVIEW') return REFERENCE_BASEMAP_PROVIDER_KAKAO_SKYVIEW;
+
+  return REFERENCE_BASEMAP_PROVIDER_KAKAO_HYBRID;
+}
+
+function getImportedBoundarySummary(
+  importedBoundary: ImportedBoundaryFile,
+  boundarySummary?: string
+): string {
+  const baseSummary = boundarySummary?.trim();
+  const importSummary =
+    `${importedBoundary.fileName} (${importedBoundary.coordinateSystem}, ${importedBoundary.coordinateCount}점)`;
+
+  return baseSummary ? `${baseSummary} - ${importSummary}` : importSummary;
+}
 
 const projectWgs84ToMapLocation = (
   location: KakaoSatellitePickedLocation

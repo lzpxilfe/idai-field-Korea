@@ -49,6 +49,8 @@ const DocumentsMap: React.FC<DocumentsMapProps> = ({
   const [isDeleteModelOpen, setIsDeleteModelOpen] = useState<boolean>(false);
   const [highlightedDoc, setHighlightedDoc] = useState<Document>();
   const [satellitePickerRequestId, setSatellitePickerRequestId] = useState(0);
+  const [boundaryFileImportRequestId, setBoundaryFileImportRequestId] =
+    useState(0);
   // TODO: configure expo router to load params
   const params = useGlobalSearchParams();
 
@@ -113,6 +115,10 @@ const DocumentsMap: React.FC<DocumentsMapProps> = ({
 
   const openSatellitePicker = useCallback(() => {
     setSatellitePickerRequestId((value) => value + 1);
+  }, []);
+
+  const openBoundaryFileImport = useCallback(() => {
+    setBoundaryFileImportRequestId((value) => value + 1);
   }, []);
 
   const closeAddModal = () => setIsAddModalOpen(false);
@@ -207,10 +213,17 @@ const DocumentsMap: React.FC<DocumentsMapProps> = ({
       />
       <View style={styles.visibleMapActions}>
         <Button
-          title="위성지도"
+          title="지도 선택"
           variant="secondary"
           onPress={openSatellitePicker}
           icon={<MaterialIcons name="satellite-alt" size={18} />}
+          style={styles.visibleMapActionButton}
+        />
+        <Button
+          title="SHP/DXF"
+          variant="secondary"
+          onPress={openBoundaryFileImport}
+          icon={<MaterialIcons name="folder-open" size={18} />}
           style={styles.visibleMapActionButton}
         />
       </View>
@@ -237,6 +250,7 @@ const DocumentsMap: React.FC<DocumentsMapProps> = ({
           investigationModeId={investigationModeId}
           boundarySummary={boundarySummary}
           satellitePickerRequestId={satellitePickerRequestId}
+          boundaryFileImportRequestId={boundaryFileImportRequestId}
         />
       </View>
     </View>
@@ -253,6 +267,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#eef2f4',
     borderBottomColor: '#d7e0e7',
     borderBottomWidth: 1,
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'flex-end',
     paddingHorizontal: 12,
     paddingVertical: 8,
   },

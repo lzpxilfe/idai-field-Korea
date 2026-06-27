@@ -56,7 +56,7 @@ const SettingsScreen: React.FC = () => {
   const [hasMapProviderInteraction, setHasMapProviderInteraction] =
     useState(false);
   const hasProjectSetupInteractionRef = useRef(false);
-  const [isLoadingProjectSettings, setIsLoadingProjectSettings] = useState(false);
+  const [, setIsLoadingProjectSettings] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const repositoryUsername = preferences.preferences.username.trim();
   const projectDatastore = usePouchDbDatastore(
@@ -357,7 +357,7 @@ const SettingsScreen: React.FC = () => {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>지도 API 키</Text>
             <Text style={styles.sectionText}>
-              카카오는 기능별 키가 다릅니다. REST 키는 주소·좌표용이고, 태블릿 위성지도는 JavaScript 키 WebView 경로를 우선 사용합니다.
+              카카오는 기능별 키가 다릅니다. REST 키는 주소·좌표용이고, 태블릿 지도 배경 선택은 JavaScript 키 WebView 경로를 우선 사용합니다.
             </Text>
             <Input
               label="카카오 Local REST 키"
@@ -368,7 +368,7 @@ const SettingsScreen: React.FC = () => {
               }}
               autoCapitalize="none"
               autoCorrect={false}
-              helpText="주소 검색과 좌표 변환에 사용합니다. 위성지도 표시용 키는 아닙니다."
+              helpText="주소 검색과 좌표 변환에 사용합니다. 지도 배경 표시용 키는 아닙니다."
               testID="settings-kakao-local-rest-api-key-input"
               style={styles.input}
             />
@@ -381,7 +381,7 @@ const SettingsScreen: React.FC = () => {
               }}
               autoCapitalize="none"
               autoCorrect={false}
-              helpText="WebView로 카카오 HYBRID(스카이뷰) 지도를 붙일 때 사용합니다."
+              helpText="WebView로 카카오 일반지도, 위성지도, 하이브리드를 선택해 경계를 찍을 때 사용합니다."
               testID="settings-kakao-map-javascript-key-input"
               style={styles.input}
             />
@@ -394,7 +394,7 @@ const SettingsScreen: React.FC = () => {
               }}
               autoCapitalize="none"
               autoCorrect={false}
-              helpText="네이티브 지도 연동용으로 보관합니다. 현재 위성지도 경계 찍기는 JavaScript 키를 우선 사용합니다."
+              helpText="네이티브 지도 연동용으로 보관합니다. 현재 카카오 지도 경계 찍기는 JavaScript 키를 우선 사용합니다."
               testID="settings-kakao-native-app-key-input"
               style={styles.input}
             />

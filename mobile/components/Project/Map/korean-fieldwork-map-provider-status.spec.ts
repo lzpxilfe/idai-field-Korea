@@ -5,7 +5,7 @@ import {
 
 describe('korean-fieldwork-map-provider-status', () => {
   it('names the satellite basemap alert', () => {
-    expect(KAKAO_SATELLITE_BASEMAP_TITLE).toBe('위성지도 연결');
+    expect(KAKAO_SATELLITE_BASEMAP_TITLE).toBe('카카오 지도 연결');
   });
 
   it('explains that a Kakao REST key is for local APIs, not map display', () => {
@@ -23,7 +23,7 @@ describe('korean-fieldwork-map-provider-status', () => {
   it('recognizes a stored Kakao JavaScript map key', () => {
     expect(getKakaoSatelliteBasemapStatusMessage({
       kakaoMapJavaScriptKey: 'js-key',
-    })).toContain('HYBRID(스카이뷰)');
+    })).toContain('일반지도, 위성지도, 하이브리드');
     expect(getKakaoSatelliteBasemapStatusMessage({
       kakaoMapJavaScriptKey: 'js-key',
     })).toContain('3개 이상의 꼭짓점');
@@ -41,6 +41,6 @@ describe('korean-fieldwork-map-provider-status', () => {
     })).toContain('JavaScript 키 WebView 경로를 우선 사용');
     expect(getKakaoSatelliteBasemapStatusMessage({
       kakaoNativeAppKey: 'native-key',
-    })).toContain('데스크톱에서 가져온 뒤 동기화');
+    })).toContain('태블릿 파일 경로');
   });
 });

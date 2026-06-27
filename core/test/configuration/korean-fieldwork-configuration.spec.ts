@@ -505,11 +505,15 @@ describe('KoreanFieldwork project configuration', () => {
             .values[KOREAN_FIELDWORK_REFERENCE_BASEMAP_PROVIDER_DEFAULT]).toBeDefined();
         expect(valuelists['KoreanFieldwork-referenceBasemapProvider'].values.googleRoadmap).toBeDefined();
         expect(valuelists['KoreanFieldwork-referenceBasemapProvider'].values.googleSatellite).toBeDefined();
+        expect(valuelists['KoreanFieldwork-referenceBasemapProvider'].values.kakaoRoadmap).toBeDefined();
+        expect(valuelists['KoreanFieldwork-referenceBasemapProvider'].values.kakaoSkyview).toBeDefined();
         expect(valuelists['KoreanFieldwork-referenceBasemapProvider'].values.kakaoHybrid).toBeDefined();
         expect(valuelistLanguages.projects.ko['KoreanFieldwork-surveyBoundarySource']
             .values.manualBasemapTrace.label).toBe('배경지도 수동 추적');
         expect(valuelistLanguages.projects.ko['KoreanFieldwork-referenceBasemapProvider']
-            .values.kakaoHybrid.label).toBe('카카오 위성지도');
+            .values.kakaoRoadmap.label).toBe('카카오 일반지도');
+        expect(valuelistLanguages.projects.ko['KoreanFieldwork-referenceBasemapProvider']
+            .values.kakaoHybrid.label).toBe('카카오 하이브리드');
         expect(valuelistLanguages.projects.en['KoreanFieldwork-referenceBasemapProvider']
             .values.googleRoadmap.label).toBe('Google Maps road map');
         expect(languages.ko.categories.SurveyBoundary.label).toBe('조사경계');

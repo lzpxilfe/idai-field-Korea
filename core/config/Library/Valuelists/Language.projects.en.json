@@ -15905,6 +15905,8 @@
       "googleRoadmap": { "label": "Google Maps road map" },
       "googleSatellite": { "label": "Google Maps satellite" },
       "googleHybrid": { "label": "Google Maps hybrid" },
+      "kakaoRoadmap": { "label": "Kakao Maps road map" },
+      "kakaoSkyview": { "label": "Kakao Maps satellite" },
       "kakaoHybrid": { "label": "Kakao Maps hybrid" },
       "customWmts": { "label": "Custom WMTS/TMS" },
       "importedRasterLayer": { "label": "Imported raster layer" },

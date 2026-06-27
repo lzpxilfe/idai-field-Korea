@@ -7,7 +7,10 @@ import {
   View,
 } from 'react-native';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
-import { buildKakaoSatellitePickerHtml } from './kakao-satellite-picker-html';
+import {
+  buildKakaoSatellitePickerHtml,
+  KakaoMapTypeId,
+} from './kakao-satellite-picker-html';
 
 export interface KakaoSatellitePickedLocation {
   latitude: number;
@@ -17,6 +20,7 @@ export interface KakaoSatellitePickedLocation {
 export interface KakaoSatellitePickedBoundary {
   center?: KakaoSatellitePickedLocation;
   coordinates: KakaoSatellitePickedLocation[];
+  mapTypeId?: KakaoMapTypeId;
 }
 
 interface KakaoSatellitePickerProps {
@@ -52,7 +56,7 @@ const KakaoSatellitePicker: React.FC<KakaoSatellitePickerProps> = ({
   const latitude = initialLocation?.latitude ?? DEFAULT_LOCATION.latitude;
   const longitude = initialLocation?.longitude ?? DEFAULT_LOCATION.longitude;
   const [message, setMessage] = useState(
-    '위성지도에서 조사 경계 꼭짓점을 차례대로 눌러 주세요.'
+    '지도에서 조사 경계 꼭짓점을 차례대로 눌러 주세요.'
   );
   const [baseUrlIndex, setBaseUrlIndex] = useState(0);
   const [isPublicMapFallbackOpen, setIsPublicMapFallbackOpen] = useState(false);
@@ -98,7 +102,7 @@ const KakaoSatellitePicker: React.FC<KakaoSatellitePickerProps> = ({
     try {
       const data = JSON.parse(event.nativeEvent.data);
       if (data.type === 'ready') {
-        setMessage('카카오 위성지도가 열렸습니다. 경계 꼭짓점을 3개 이상 찍고 저장하세요.');
+        setMessage('카카오 지도가 열렸습니다. 지도 종류를 고르고 경계 꼭짓점을 3개 이상 찍어 저장하세요.');
         return;
       }
 
@@ -109,6 +113,7 @@ const KakaoSatellitePicker: React.FC<KakaoSatellitePickerProps> = ({
           onPickBoundary({
             coordinates,
             center: getPickedLocation(data.payload?.center),
+            mapTypeId: getPickedMapTypeId(data.payload?.mapTypeId),
           });
         }
         return;
@@ -137,7 +142,7 @@ const KakaoSatellitePicker: React.FC<KakaoSatellitePickerProps> = ({
       <View style={styles.container}>
         <View style={styles.header}>
           <View style={styles.headerText}>
-            <Text style={styles.title}>위성지도에서 경계 그리기</Text>
+            <Text style={styles.title}>카카오 지도에서 경계 그리기</Text>
             <Text style={styles.message}>{message}</Text>
           </View>
           <TouchableOpacity
@@ -295,3 +300,11 @@ const getPickedLocation = (
 const isPickedLocation = (
   value: KakaoSatellitePickedLocation | undefined
 ): value is KakaoSatellitePickedLocation => value !== undefined;
+
+const getPickedMapTypeId = (
+  value: unknown
+): KakaoMapTypeId | undefined => {
+  return value === 'ROADMAP' || value === 'SKYVIEW' || value === 'HYBRID'
+    ? value
+    : undefined;
+};
