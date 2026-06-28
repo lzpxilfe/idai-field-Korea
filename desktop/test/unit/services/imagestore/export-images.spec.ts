@@ -65,6 +65,9 @@ describe('exportImages', () => {
                     soilProfilePhotoAnnotationStrokes:
                         '{"version":1,"strokes":[{"points":[{"x":20,"y":30},{"x":40,"y":50}]}]}',
                     soilProfilePhotoAnnotationUpdatedAt: '2026-06-23T08:35:00.000Z',
+                    soilColorAssistCandidates: '10YR 4/3; 10YR 5/4',
+                    soilProfileColorSwatches:
+                        '[{"munsell":"10YR 4/3","hex":"#806642","source":"tablet-eyedropper"}]',
                     fieldworkImageUploadStatus: 'uploaded',
                     fieldworkImageUploadedAt: '2026-06-23T08:33:00.000Z',
                     fieldworkImageUploadedUri: 'file:///tablet/DCIM/tablet-photo-1.jpg',
@@ -267,6 +270,9 @@ describe('exportImages', () => {
                             soilProfilePhotoAnnotationStrokes:
                                 '{"version":1,"strokes":[{"points":[{"x":20,"y":30},{"x":40,"y":50}]}]}',
                             soilProfilePhotoAnnotationUpdatedAt: '2026-06-23T08:35:00.000Z',
+                            soilColorAssistCandidates: '10YR 4/3; 10YR 5/4',
+                            soilProfileColorSwatches:
+                                '[{"munsell":"10YR 4/3","hex":"#806642","source":"tablet-eyedropper"}]',
                             fieldworkImageUploadStatus: 'uploaded',
                             fieldworkImageUploadedAt: '2026-06-23T08:33:00.000Z',
                             fieldworkImageUploadedUri: 'file:///tablet/DCIM/tablet-photo-1.jpg',
@@ -310,6 +316,8 @@ describe('exportImages', () => {
                 'fieldworkPhotoAnnotationStrokes,fieldworkPhotoAnnotationUpdatedAt,soilProfileAnnotationStrokes,soilProfilePhotoAnnotationStrokes,soilProfilePhotoAnnotationUpdatedAt'
             );
             expect(writtenCsv).toContain('legacy-soil-outline');
+            expect(writtenCsv).toContain('10YR 4/3; 10YR 5/4');
+            expect(writtenCsv).toContain('tablet-eyedropper');
             expect(writtenCsv).toContain('2026-06-23T08:34:00.000Z');
             expect(writtenCsv).toContain('2026-06-23T08:35:00.000Z');
             expect(writtenCsv).toContain('linkedToFeature');
@@ -329,7 +337,9 @@ describe('exportImages', () => {
             expect(writtenReadme).toContain('Field Hub SHA-256 일치: true');
             expect(writtenReadme).toContain('photoAnnotations: present');
             expect(writtenReadme).toContain('soilProfilePhotoAnnotations: present');
-            expect(writtenReadme).toContain('P-001.jpg: Photo/P-001 (photo-1); 관련 기록: depicts:Feature/수혈 1(feature-1); showsBoundary:SurveyBoundary/B-001(boundary-1); 태블릿 MD5 일치: true; 태블릿 크기 일치: true; Field Hub SHA-256 일치: true');
+            expect(writtenReadme).toContain('soilColorCandidates: present');
+            expect(writtenReadme).toContain('soilColorSwatches: present');
+            expect(writtenReadme).toContain('P-001.jpg: Photo/P-001 (photo-1); 관련 기록: depicts:Feature/수혈 1(feature-1); showsBoundary:SurveyBoundary/B-001(boundary-1); 태블릿 MD5 일치: true; 태블릿 크기 일치: true; Field Hub SHA-256 일치: true; photoAnnotations: present; soilProfilePhotoAnnotations: present; soilColorCandidates: present; soilColorSwatches: present');
         } finally {
             isoStringSpy.mockRestore();
         }

@@ -776,6 +776,12 @@ function getReadmeImageLine(entry: FieldworkImageExportManifestEntry): string {
         hasAnnotationValue(entry.fieldContext.soilProfileAnnotationStrokes)
             || hasAnnotationValue(entry.fieldContext.soilProfilePhotoAnnotationStrokes)
             ? 'soilProfilePhotoAnnotations: present'
+            : '',
+        hasAnnotationValue(entry.fieldContext.soilColorAssistCandidates)
+            ? 'soilColorCandidates: present'
+            : '',
+        hasAnnotationValue(entry.fieldContext.soilProfileColorSwatches)
+            ? 'soilColorSwatches: present'
             : ''
     ].filter(hasExportableValue).join('; ');
 
