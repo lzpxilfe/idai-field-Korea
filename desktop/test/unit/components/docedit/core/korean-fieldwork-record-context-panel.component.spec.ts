@@ -275,7 +275,9 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
             penMemoReviewedTranscript: [
                 '[관찰 내용] 북쪽 경계에서 소토 확인.',
                 '[해석] 폐기층 가능성 있음.',
-                '[다음 작업] 사진 보강 후 단면 정리.'
+                '[다음 작업] 사진 보강 후 단면 정리.',
+                '[손그림 메모] 총 1획, 점 2개',
+                '[손그림 좌표] {"version":1,"strokes":[{"points":[{"x":10,"y":20},{"x":40,"y":50}]}]}'
             ].join('\n')
         });
         const component = createComponent({
@@ -301,6 +303,7 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
         expect(feature.resource.description).toContain('기존 기록.');
         expect(feature.resource.description).toContain('[메모 ');
         expect(feature.resource.description).toContain('관찰: 북쪽 경계에서 소토 확인.');
+        expect(feature.resource.description).toContain('손그림: 손그림 메모 1획/2점.');
         expect(feature.resource.description).toContain('해석: 폐기층 가능성 있음.');
         expect(feature.resource.description).toContain('다음 작업: 사진 보강 후 단면 정리.');
         expect(feature.resource.description.match(/\[메모/g)).toHaveLength(1);

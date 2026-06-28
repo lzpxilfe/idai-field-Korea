@@ -1562,7 +1562,7 @@ const getKoreanFieldworkNotebookContinuationInput = (
   focus: KoreanFieldworkNotebookContinuationFocus | undefined
 ): KoreanFieldworkFieldNoteInput => removeEmptyFieldNoteInputValues(
   trimFieldNoteInput({
-    observation: entry.input.observation || entry.detail,
+    observation: getNotebookContinuationObservation(entry),
     interpretation: entry.input.interpretation,
     nextWork: getNotebookContinuationNextWork(entry, focus),
     evidenceNumbers: entry.input.evidenceNumbers || entry.evidenceNumbers,
@@ -1579,6 +1579,13 @@ const getNotebookContinuationNextWork = (
       '사진·도면·스케치·유물·시료 번호를 이어서 확인.'
     )
     : entry.input.nextWork || entry.nextWork;
+
+const getNotebookContinuationObservation = (
+  entry: KoreanFieldworkNotebookEntry
+): string => mergeFieldNoteValue(
+  entry.input.observation || entry.detail,
+  entry.handwritingSummaryLabel
+);
 
 const getNotebookContinuationSourceLabel = (
   entry: KoreanFieldworkNotebookEntry,

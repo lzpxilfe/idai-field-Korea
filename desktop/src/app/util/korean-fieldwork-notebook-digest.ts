@@ -166,7 +166,7 @@ export function getKoreanFieldworkNotebookContinuationSeed(
         id: entry.id,
         sourceLabel: getNotebookContinuationSourceLabel(entry, focus),
         input: trimFieldNoteInput({
-            observation: entry.input.observation || entry.detail,
+            observation: getNotebookContinuationObservation(entry),
             interpretation: entry.input.interpretation,
             nextWork: getNotebookContinuationNextWork(entry, focus),
             evidenceNumbers: entry.input.evidenceNumbers || entry.evidenceNumbers
@@ -565,6 +565,12 @@ function getNotebookContinuationNextWork(
             '사진·도면·스케치·유물·시료 번호를 이어서 확인.'
         )
         : entry.input.nextWork || entry.nextWork;
+}
+
+
+function getNotebookContinuationObservation(entry: KoreanFieldworkNotebookEntry): string {
+
+    return mergeFieldNoteValue(entry.input.observation || entry.detail, entry.handwritingSummaryLabel);
 }
 
 

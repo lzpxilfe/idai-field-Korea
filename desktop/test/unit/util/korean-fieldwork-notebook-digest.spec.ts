@@ -114,6 +114,11 @@ describe('korean-fieldwork-notebook-digest', () => {
             handwritingPointCount: 2,
             handwritingSummaryLabel: '손그림 메모 1획/2점.'
         });
+        expect(getKoreanFieldworkNotebookContinuationSeed(entry)).toMatchObject({
+            input: {
+                observation: '바닥면에서 원형 윤곽 확인.\n손그림 메모 1획/2점.'
+            }
+        });
     });
 
 

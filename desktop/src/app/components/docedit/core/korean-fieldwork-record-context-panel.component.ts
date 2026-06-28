@@ -776,6 +776,10 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
         const lines = [
             `[${entry.sourceLabel} ${entry.dateLabel}]`,
             this.getNotebookAppendLine('관찰', entry.input.observation || entry.detail),
+            this.getNotebookAppendLine(
+                '손그림',
+                entry.input.observation ? entry.handwritingSummaryLabel : undefined
+            ),
             this.getNotebookAppendLine('해석', entry.input.interpretation),
             this.getNotebookAppendLine('다음 작업', entry.nextWork),
             this.getNotebookAppendLine(
