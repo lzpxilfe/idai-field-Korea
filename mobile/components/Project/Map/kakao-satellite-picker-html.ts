@@ -186,7 +186,12 @@ export const buildKakaoSatellitePickerHtml = ({
           level: 3
         });
         var currentMapType = '${safeMapTypeId}';
-        map.setMapTypeId(kakao.maps.MapTypeId[currentMapType]);
+        var kakaoMapTypeIds = {
+          ROADMAP: kakao.maps.MapTypeId.ROADMAP,
+          SKYVIEW: kakao.maps.MapTypeId.SKYVIEW,
+          HYBRID: kakao.maps.MapTypeId.HYBRID
+        };
+        map.setMapTypeId(kakaoMapTypeIds[currentMapType]);
 
         var points = [];
         var markers = [];
@@ -229,9 +234,9 @@ export const buildKakaoSatellitePickerHtml = ({
         });
 
         function setMapType(nextMapType) {
-          if (!kakao.maps.MapTypeId[nextMapType]) return;
+          if (!kakaoMapTypeIds[nextMapType]) return;
           currentMapType = nextMapType;
-          map.setMapTypeId(kakao.maps.MapTypeId[currentMapType]);
+          map.setMapTypeId(kakaoMapTypeIds[currentMapType]);
           mapTypeButtons.forEach(function(button) {
             button.className = button.getAttribute('data-map-type') === currentMapType
               ? 'map-type active'

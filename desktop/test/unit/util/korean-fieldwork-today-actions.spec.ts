@@ -17,11 +17,11 @@ describe('korean-fieldwork-today-actions', () => {
         expect(tasks[0]).toMatchObject({
             id: 'start-operation',
             title: '조사 경계부터 만들기',
-            detail: '지도에서 GPS 임시 경계, SHP/DXF/GeoJSON/CSV, 지도 선택 기준 중 하나로 조사 경계를 먼저 잡아야 기록 흐름이 이어집니다.',
+            detail: '지도에서 GPS 임시 경계, SHP/DXF/CSV, 위성지도 중 하나로 조사 경계를 먼저 잡아야 기록 흐름이 이어집니다.',
             action: { type: 'openMap' },
             actionLabel: '지도 열기',
             secondaryAction: { type: 'openImport' },
-            secondaryActionDetail: 'SHP/DXF/GeoJSON/CSV는 데스크톱 가져오기에서 불러온 뒤 동기화하면 태블릿 지도에서도 조사 경계로 보입니다.',
+            secondaryActionDetail: 'SHP/DXF/CSV는 데스크톱 가져오기에서 불러온 뒤 동기화하면 태블릿 지도에서도 조사 경계로 보입니다.',
             secondaryActionLabel: '경계 가져오기'
         });
     });
@@ -43,11 +43,11 @@ describe('korean-fieldwork-today-actions', () => {
             'create-detected-feature'
         ]);
         expect(tasks[1].detail).toBe(
-            'GPS 임시 경계, 가져온 SHP/DXF/GeoJSON/CSV, 지도 선택 기준 중 무엇으로 확정했는지 조사 경계 기록에 남기세요.'
+            'GPS 임시 경계, 가져온 SHP/DXF/CSV, 위성지도 기준 중 무엇으로 확정했는지 조사 경계 기록에 남기세요.'
         );
         expect(tasks[1]).toMatchObject({
             secondaryAction: { type: 'openImport' },
-            secondaryActionDetail: 'SHP/DXF/GeoJSON/CSV는 데스크톱 가져오기에서 불러온 뒤 동기화하면 태블릿 지도에서도 조사 경계로 보입니다.',
+            secondaryActionDetail: 'SHP/DXF/CSV는 데스크톱 가져오기에서 불러온 뒤 동기화하면 태블릿 지도에서도 조사 경계로 보입니다.',
             secondaryActionLabel: '파일 가져오기'
         });
         expect(tasks[0].action).toEqual({

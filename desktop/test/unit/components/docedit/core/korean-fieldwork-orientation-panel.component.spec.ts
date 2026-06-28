@@ -44,7 +44,7 @@ describe('KoreanFieldworkOrientationPanelComponent', () => {
     });
 
 
-    it('defaults the orientation reference to magnetic north when a quadrant is selected', () => {
+    it('builds a middle-degree bearing and defaults the reference to magnetic north', () => {
 
         component.document = { resource: { category: 'Feature' } } as any;
         component.fieldDefinitions = [
@@ -52,11 +52,15 @@ describe('KoreanFieldworkOrientationPanelComponent', () => {
             { name: 'orientationReference', editable: true }
         ] as any;
 
-        component.applyOrientationPreset('N-W');
+        component.setBearingStart('N');
+        component.setBearingEnd('W');
+        component.setBearingDegrees('37');
 
-        expect(component.document.resource.longAxisOrientation).toBe('N-W');
+        expect(component.document.resource.longAxisOrientation).toBe('N-37°-W');
         expect(component.document.resource.orientationReference).toBe('자북');
-        expect(component.isOrientationPresetActive('N-W')).toBe(true);
+        expect(component.getBearingStart()).toBe('N');
+        expect(component.getBearingDegrees()).toBe('37');
+        expect(component.getBearingEnd()).toBe('W');
     });
 
 

@@ -52,7 +52,10 @@ describe('korean-fieldwork-map-provider-settings', () => {
         })).toContain('일반지도, 위성지도, 하이브리드');
         expect(getKoreanFieldworkSatelliteMapProviderNotice({
             kakaoMapJavaScriptKey: 'js-key'
-        })).toContain('동기화된 경계 기준과 SHP/DXF/GeoJSON/CSV 가져오기 경계');
+        })).toContain('JavaScript 키 WebView 경로를 우선 사용');
+        expect(getKoreanFieldworkSatelliteMapProviderNotice({
+            kakaoMapJavaScriptKey: 'js-key'
+        })).toContain('SHP/DXF/CSV 경계를 가져와 같은 프로젝트로 동기화');
 
         expect(hasKoreanFieldworkSatelliteMapDisplayKey({
             kakaoNativeAppKey: 'native-key'
@@ -62,6 +65,6 @@ describe('korean-fieldwork-map-provider-settings', () => {
         })).toContain('Native App 키');
         expect(getKoreanFieldworkSatelliteMapProviderNotice({
             kakaoNativeAppKey: 'native-key'
-        })).toContain('태블릿에서 만든 경계를 동기화');
+        })).toContain('SHP/DXF/CSV 경계를 가져와 같은 프로젝트로 동기화');
     });
 });

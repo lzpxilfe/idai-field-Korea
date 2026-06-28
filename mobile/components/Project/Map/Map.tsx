@@ -72,6 +72,8 @@ const DEFAULT_KAKAO_PICKER_LOCATION = {
   latitude: 37.5665,
   longitude: 126.9780,
 };
+const BOUNDARY_IMPORT_SYNC_DETAIL =
+  'SHP/DXF/CSV는 데스크톱 가져오기에서 불러온 뒤 동기화하면 태블릿 지도에서도 조사 경계로 보입니다. 태블릿에서는 현장에서 GPS 임시 경계나 위성지도 위치를 바로 보태세요.';
 
 const getKakaoSatelliteBoundaryMetadata = (
   mapTypeId?: KakaoSatellitePickedBoundary['mapTypeId']
@@ -298,8 +300,8 @@ const Map: React.FC<MapProps> = (props) => {
   const openBoundaryFileImport = useCallback(() => {
     if (!config?.getCategory(KOREAN_FIELDWORK_CATEGORIES.SURVEY_BOUNDARY)) {
       Alert.alert(
-        'SHP/DXF 경계 가져오기',
-        '조사 경계 문서 유형을 사용할 수 없어 파일을 가져올 수 없습니다.',
+        'SHP/DXF/CSV 경계 가져오기',
+        `조사 경계 문서 유형을 사용할 수 없어 파일을 가져올 수 없습니다. ${BOUNDARY_IMPORT_SYNC_DETAIL}`,
         [{ text: '확인' }]
       );
       return;
@@ -448,7 +450,7 @@ const Map: React.FC<MapProps> = (props) => {
 
     setIsBoundaryFileImportOpen(false);
     Alert.alert(
-      'SHP/DXF 경계 가져오기',
+      'SHP/DXF/CSV 경계 가져오기',
       `${importedBoundary.fileName} 파일에서 ${importedBoundary.coordinateCount}개 좌표를 조사 경계로 저장했습니다.`,
       [{ text: '확인' }]
     );

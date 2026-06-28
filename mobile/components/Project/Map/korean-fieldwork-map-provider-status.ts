@@ -10,11 +10,11 @@ export const getKakaoSatelliteBasemapStatusMessage = (
   const hasNativeAppKey = hasValue(mapSettings.kakaoNativeAppKey);
 
   if (hasJavaScriptKey) {
-    return '카카오 지도 JavaScript 키가 저장되어 있습니다. 지도 화면에서 일반지도, 위성지도, 하이브리드를 선택한 뒤 3개 이상의 꼭짓점을 찍어 조사 경계를 저장할 수 있습니다. SDK가 막히면 지도 화면에 표시되는 WebView 출처를 Kakao Developers의 JavaScript SDK 도메인에 등록해 주세요.';
+    return '카카오 지도 JavaScript 키가 저장되어 있습니다. 태블릿 지도는 JavaScript 키 WebView 경로를 우선 사용합니다. 지도 화면에서 일반지도, 위성지도, 하이브리드를 선택한 뒤 3개 이상의 꼭짓점을 찍어 조사 경계를 저장할 수 있습니다. SDK가 막히면 지도 화면에 표시되는 WebView 출처를 Kakao Developers의 JavaScript SDK 도메인에 등록해 주세요. SHP/DXF/CSV는 데스크톱에서 가져온 뒤 동기화하세요.';
   }
 
   if (hasNativeAppKey) {
-    return '카카오 Native App 키가 저장되어 있습니다. 현재 태블릿 지도는 JavaScript 키 WebView 경로를 우선 사용합니다. Native 키는 앱 설정에 보관하고, SHP/DXF 경계는 태블릿 파일 경로에서도 바로 가져올 수 있습니다.';
+    return '카카오 Native App 키가 저장되어 있습니다. 현재 태블릿 지도는 JavaScript 키 WebView 경로를 우선 사용합니다. Native 키는 앱 설정에 보관하고, SHP/DXF/CSV는 데스크톱에서 가져온 뒤 동기화하세요.';
   }
 
   if (hasLocalRestKey) {

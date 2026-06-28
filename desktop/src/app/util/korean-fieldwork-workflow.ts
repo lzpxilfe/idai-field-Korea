@@ -170,14 +170,14 @@ function getBoundaryNextDetail(boundarySummary: string|undefined, operationCount
 
     const hasOperation = operationCount > 0;
     if (boundarySummary && hasOperation) {
-        return `${boundarySummary} 기준만 있음. 지도에서 GPS 임시 경계를 만들거나 SHP/DXF/GeoJSON/CSV·지도 선택 기준으로 확정하세요.`;
+        return `${boundarySummary} 기준만 있음. 지도에서 GPS 임시 경계를 만들거나 SHP/DXF/CSV·위성지도 기준으로 확정하세요.`;
     }
     if (boundarySummary) {
-        return `${boundarySummary} 기준만 있음. 지도에서 조사 경계를 만들거나 SHP/DXF/GeoJSON/CSV·지도 선택 기준으로 확정하세요.`;
+        return `${boundarySummary} 기준만 있음. 지도에서 조사 경계를 만들거나 SHP/DXF/CSV·위성지도 기준으로 확정하세요.`;
     }
-    if (hasOperation) return '지도에서 GPS 임시 경계를 만들거나 SHP/DXF/GeoJSON/CSV·지도 선택 기준으로 구역을 기록하세요.';
+    if (hasOperation) return '지도에서 GPS 임시 경계를 만들거나 SHP/DXF/CSV·위성지도 기준으로 구역을 기록하세요.';
 
-    return '지도에서 조사 경계를 만들거나 SHP/DXF/GeoJSON/CSV·지도 선택 기준으로 구역을 기록하세요.';
+    return '지도에서 조사 경계를 만들거나 SHP/DXF/CSV·위성지도 기준으로 구역을 기록하세요.';
 }
 
 

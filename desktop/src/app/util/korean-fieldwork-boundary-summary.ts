@@ -2,6 +2,7 @@ import { Document } from 'idai-field-core';
 
 
 const SURVEY_BOUNDARY_CATEGORY = 'SurveyBoundary';
+const KAKAO_SATELLITE_BOUNDARY_METHOD_LABEL = '카카오 위성지도 기준';
 
 const BOUNDARY_SOURCE_LABELS: Readonly<Record<string, string>> = {
     csvImport: 'CSV 가져오기',
@@ -70,6 +71,9 @@ export function getKoreanFieldworkBoundaryMethodLabel(document: Document): strin
     const provider = normalizeText(document.resource.referenceBasemapProvider);
     const providerLabel = provider ? BOUNDARY_BASEMAP_PROVIDER_LABELS[provider] : undefined;
 
+    if (source === 'manualBasemapTrace' && provider === 'kakaoSkyview') {
+        return KAKAO_SATELLITE_BOUNDARY_METHOD_LABEL;
+    }
     if (source === 'manualBasemapTrace' && isKakaoMapProvider(provider) && providerLabel) {
         return `${providerLabel} 기준`;
     }

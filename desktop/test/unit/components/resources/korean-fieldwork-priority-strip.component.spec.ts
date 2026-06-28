@@ -479,7 +479,7 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
         const targetStep = component.getWorkflowSteps().find(step => step.id === 'targets')!;
 
         expect(boundaryStep.secondaryActionDetail).toBe(
-            'SHP/DXF/GeoJSON/CSV는 데스크톱 가져오기에서 불러온 뒤 동기화하면 태블릿 지도에서도 조사 경계로 보입니다.'
+            'SHP/DXF/CSV는 데스크톱 가져오기에서 불러온 뒤 동기화하면 태블릿 지도에서도 조사 경계로 보입니다.'
         );
 
         await component.runWorkflowStep(projectStep);
@@ -530,7 +530,7 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
             id: 'start-operation',
             action: { type: 'openMap' },
             secondaryAction: { type: 'openImport' },
-            secondaryActionDetail: 'SHP/DXF/GeoJSON/CSV는 데스크톱 가져오기에서 불러온 뒤 동기화하면 태블릿 지도에서도 조사 경계로 보입니다.',
+            secondaryActionDetail: 'SHP/DXF/CSV는 데스크톱 가져오기에서 불러온 뒤 동기화하면 태블릿 지도에서도 조사 경계로 보입니다.',
             secondaryActionLabel: '경계 가져오기'
         });
         expect(component.canRunPriorityTaskSecondaryAction(task)).toBe(true);

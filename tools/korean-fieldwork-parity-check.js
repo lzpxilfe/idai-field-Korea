@@ -212,11 +212,14 @@ const featureRows = [
       'mobile/components/Project/KoreanFieldworkHierarchyBoard.tsx',
       'mobile/components/Project/korean-fieldwork-hierarchy.ts',
       'mobile/components/Project/KoreanFieldworkProgressBoard.tsx',
+      'mobile/components/Project/KoreanFieldworkOverviewChart.tsx',
       'mobile/components/Project/KoreanFieldworkUnitMatrix.tsx',
+      'mobile/components/Project/korean-fieldwork-overview-chart.ts',
       'mobile/components/Project/korean-fieldwork-closeout.ts'
     ],
     desktop: [
       'desktop/src/app/util/korean-fieldwork-hierarchy.ts',
+      'desktop/src/app/util/korean-fieldwork-overview-chart.ts',
       'desktop/src/app/util/korean-fieldwork-progress-board.ts',
       'desktop/src/app/util/korean-fieldwork-unit-matrix.ts',
       'desktop/src/app/util/korean-fieldwork-closeout.ts'
@@ -225,7 +228,9 @@ const featureRows = [
       'mobile/components/Project/KoreanFieldworkHierarchyBoard.spec.tsx',
       'mobile/components/Project/korean-fieldwork-hierarchy.spec.ts',
       'mobile/components/Project/KoreanFieldworkProgressBoard.spec.tsx',
+      'mobile/components/Project/KoreanFieldworkOverviewChart.spec.tsx',
       'mobile/components/Project/KoreanFieldworkUnitMatrix.spec.tsx',
+      'mobile/components/Project/korean-fieldwork-overview-chart.spec.ts',
       'mobile/components/Project/korean-fieldwork-progress.spec.ts',
       'mobile/components/Project/korean-fieldwork-unit-matrix.spec.ts',
       'mobile/components/Project/korean-fieldwork-closeout.spec.ts',
@@ -233,6 +238,7 @@ const featureRows = [
     ],
     desktopTests: [
       'desktop/test/unit/util/korean-fieldwork-hierarchy.spec.ts',
+      'desktop/test/unit/util/korean-fieldwork-overview-chart.spec.ts',
       'desktop/test/unit/util/korean-fieldwork-progress-board.spec.ts',
       'desktop/test/unit/util/korean-fieldwork-unit-matrix.spec.ts',
       'desktop/test/unit/util/korean-fieldwork-closeout.spec.ts',

@@ -11,7 +11,8 @@ describe('buildKakaoSatellitePickerHtml', () => {
     expect(html).toContain('dapi.kakao.com/v2/maps/sdk.js');
     expect(html).toContain('appkey=js%20key%2Fwith%20spaces');
     expect(html).toContain("var currentMapType = 'HYBRID'");
-    expect(html).toContain('kakao.maps.MapTypeId[currentMapType]');
+    expect(html).toContain('kakao.maps.MapTypeId.HYBRID');
+    expect(html).toContain('map.setMapTypeId(kakaoMapTypeIds[currentMapType])');
     expect(html).toContain('new kakao.maps.LatLng(36.12, 127.45)');
   });
 
@@ -26,7 +27,7 @@ describe('buildKakaoSatellitePickerHtml', () => {
     expect(html).toContain('data-map-type="ROADMAP"');
     expect(html).toContain('data-map-type="SKYVIEW"');
     expect(html).toContain("var currentMapType = 'ROADMAP'");
-    expect(html).toContain('map.setMapTypeId(kakao.maps.MapTypeId[currentMapType])');
+    expect(html).toContain('map.setMapTypeId(kakaoMapTypeIds[currentMapType])');
     expect(html).toContain('mapTypeId: currentMapType');
   });
 

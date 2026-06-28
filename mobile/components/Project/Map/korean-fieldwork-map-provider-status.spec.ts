@@ -26,6 +26,12 @@ describe('korean-fieldwork-map-provider-status', () => {
     })).toContain('일반지도, 위성지도, 하이브리드');
     expect(getKakaoSatelliteBasemapStatusMessage({
       kakaoMapJavaScriptKey: 'js-key',
+    })).toContain('JavaScript 키 WebView 경로를 우선 사용');
+    expect(getKakaoSatelliteBasemapStatusMessage({
+      kakaoMapJavaScriptKey: 'js-key',
+    })).toContain('SHP/DXF/CSV는 데스크톱에서 가져온 뒤 동기화');
+    expect(getKakaoSatelliteBasemapStatusMessage({
+      kakaoMapJavaScriptKey: 'js-key',
     })).toContain('3개 이상의 꼭짓점');
     expect(getKakaoSatelliteBasemapStatusMessage({
       kakaoMapJavaScriptKey: 'js-key',
@@ -41,6 +47,6 @@ describe('korean-fieldwork-map-provider-status', () => {
     })).toContain('JavaScript 키 WebView 경로를 우선 사용');
     expect(getKakaoSatelliteBasemapStatusMessage({
       kakaoNativeAppKey: 'native-key',
-    })).toContain('태블릿 파일 경로');
+    })).toContain('SHP/DXF/CSV는 데스크톱에서 가져온 뒤 동기화');
   });
 });

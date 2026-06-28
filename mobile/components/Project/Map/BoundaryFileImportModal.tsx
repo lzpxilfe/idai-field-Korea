@@ -69,7 +69,7 @@ const BoundaryFileImportModal: React.FC<BoundaryFileImportModalProps> = ({
             <View style={styles.header}>
               <View style={styles.titleRow}>
                 <MaterialIcons name="folder-open" size={22} color="#24495d" />
-                <Text style={styles.title}>SHP/DXF 경계 가져오기</Text>
+                <Text style={styles.title}>SHP/DXF/CSV 경계 가져오기</Text>
               </View>
               <Button
                 icon={<Ionicons name="close-outline" size={18} />}

@@ -94,6 +94,10 @@ const KakaoSatellitePicker: React.FC<KakaoSatellitePickerProps> = ({
     return true;
   };
 
+  const onPickLocation = (boundary: KakaoSatellitePickedBoundary) => {
+    onPickBoundary(boundary);
+  };
+
   const onMessage = (event: WebViewMessageEvent) => {
     try {
       const data = JSON.parse(event.nativeEvent.data);
@@ -106,7 +110,7 @@ const KakaoSatellitePicker: React.FC<KakaoSatellitePickerProps> = ({
         const coordinates = getPickedCoordinates(data.payload?.coordinates);
         if (coordinates.length >= 3) {
           setMessage('선택한 꼭짓점으로 조사 경계를 저장합니다.');
-          onPickBoundary({
+          onPickLocation({
             coordinates,
             center: getPickedLocation(data.payload?.center),
             mapTypeId: getPickedMapTypeId(data.payload?.mapTypeId),

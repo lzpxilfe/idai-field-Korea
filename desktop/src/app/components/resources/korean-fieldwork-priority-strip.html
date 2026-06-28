@@ -59,7 +59,7 @@
 
         <div class="korean-fieldwork-overview-block">
             <div class="korean-fieldwork-overview-block-header">
-                <span>조사 단위</span>
+                <span>전체 유구 현황</span>
                 <span>{{getOverviewInvestigationSubtitle()}}</span>
             </div>
             <div class="korean-fieldwork-overview-track">
@@ -69,7 +69,7 @@
                       [style.flex]="getOverviewSegmentFlex(segment)"></span>
                 <span *ngIf="getOverviewVisibleSegments(getOverviewInvestigationSegments()).length === 0"
                       class="korean-fieldwork-overview-empty-track">
-                    조사 단위 없음
+                    유구 현황 없음
                 </span>
             </div>
             <div class="korean-fieldwork-overview-legend">

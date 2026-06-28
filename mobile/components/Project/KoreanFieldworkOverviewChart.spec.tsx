@@ -41,7 +41,7 @@ describe('KoreanFieldworkOverviewChart', () => {
     );
 
     expect(getByText('유적·유구 차트')).toBeTruthy();
-    expect(getByText('조사 단위')).toBeTruthy();
+    expect(getByText('전체 유구 현황')).toBeTruthy();
     expect(getByText('유구·피트 진행')).toBeTruthy();
     expect(getByText('조사구역 1 / 수혈 1 · 기록 2')).toBeTruthy();
 
