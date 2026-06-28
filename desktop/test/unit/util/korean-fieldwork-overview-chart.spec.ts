@@ -54,8 +54,8 @@ describe('korean-fieldwork-overview-chart', () => {
         expect(data.featureCount).toBe(2);
         expect(data.featureSegmentCount).toBe(1);
         expect(data.checklistDone).toBe(4);
-        expect(data.checklistTotal).toBe(24);
-        expect(data.checklistPercent).toBe(17);
+        expect(data.checklistTotal).toBe(27);
+        expect(data.checklistPercent).toBe(15);
         expect(data.investigationSegments.find(segment =>
             segment.id === 'operation'
         )).toMatchObject({
@@ -85,7 +85,8 @@ describe('korean-fieldwork-overview-chart', () => {
         const trench = createDoc('trench-1', 'Trench', 'T1', {}, {
             featureInvestigationChecklist: [
                 'trenchSoilCleaned',
-                'trenchFeatureChecked'
+                'trenchPitOpened',
+                'trenchOverviewPhotoTaken'
             ]
         });
 
@@ -95,9 +96,9 @@ describe('korean-fieldwork-overview-chart', () => {
             'trialTrench'
         );
 
-        expect(data.checklistDone).toBe(2);
+        expect(data.checklistDone).toBe(3);
         expect(data.checklistTotal).toBe(9);
-        expect(data.checklistPercent).toBe(22);
+        expect(data.checklistPercent).toBe(33);
     });
 });
 

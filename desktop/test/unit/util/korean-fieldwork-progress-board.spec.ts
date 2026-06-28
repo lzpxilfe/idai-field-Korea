@@ -15,28 +15,56 @@ describe('korean-fieldwork-progress-board', () => {
             createDocument('feature-open', 'Feature', {
                 relations: { liesWithin: ['trench-1'] },
                 featureRecordingStatus: 'candidate',
-                featureInvestigationChecklist: ['firstExposurePhoto']
+                featureInvestigationChecklist: ['preInvestigationPhotoTaken']
             }),
             createDocument('feature-done', 'Feature', {
                 relations: { liesWithin: ['trench-1'] },
                 featureRecordingStatus: 'confirmed',
-                featureInvestigationChecklist: ['completionPhotoTaken']
+                featureInvestigationChecklist: COMPLETE_FEATURE_CHECKLIST,
+                fieldRecordQuality: ['immediateRecording'],
+                recordCreationTiming: 'duringFieldwork',
+                verificationState: 'observedInField'
+            }),
+            createDocument('soil-profile-photo-1', 'SoilProfilePhoto', {
+                relations: { depicts: ['feature-done'] }
             }),
             createDocument('photo-1', 'Photo', {
                 relations: { depicts: ['feature-done'] }
             })
         ] as any);
 
-        expect(items[0]).toMatchObject({
+        expect(items.find(item => item.documentId === 'feature-open')).toMatchObject({
             documentId: 'feature-open',
-            stage: '조사',
-            tone: 'warning',
-            actionLabel: '기록 열기'
+            tone: 'warning'
         });
         expect(items.find(item => item.documentId === 'feature-done')).toMatchObject({
             stage: '마감',
             tone: 'success',
-            evidenceCount: 1
+            evidenceCount: 2
+        });
+    });
+
+
+    it('keeps confirmed tablet records in investigation until all workflow steps are checked', () => {
+
+        const items = makeKoreanFieldworkProgressItems([
+            createDocument('feature-1', 'Feature', {
+                featureRecordingStatus: 'confirmed',
+                featureInvestigationChecklist: [
+                    'preInvestigationPhotoTaken',
+                    'penMemoReviewed'
+                ]
+            }),
+            createDocument('photo-1', 'Photo', {
+                relations: { depicts: ['feature-1'] }
+            })
+        ] as any);
+
+        expect(items.find(item => item.documentId === 'feature-1')).toMatchObject({
+            tone: 'warning',
+            evidenceCount: 1,
+            checklistDone: 2,
+            checklistTotal: 9
         });
     });
 
@@ -111,3 +139,15 @@ const createDocument = (id: string, category: string, fields: any = {}) => ({
         ...fields
     }
 });
+
+const COMPLETE_FEATURE_CHECKLIST = [
+    'preInvestigationPhotoTaken',
+    'inProgressPhotoTaken',
+    'soilProfilePhotoLinked',
+    'measuredDrawingCompleted',
+    'preRecoveryFindPhotoTaken',
+    'findsRecovered',
+    'samplesCollected',
+    'penMemoReviewed',
+    'completionPhotoTaken'
+];

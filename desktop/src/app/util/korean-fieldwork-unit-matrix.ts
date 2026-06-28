@@ -13,6 +13,10 @@ import {
     canCreateKoreanFieldworkChildRecord,
     getKoreanFieldworkContinuationActions
 } from './korean-fieldwork-document-drafts';
+import {
+    countKoreanFieldworkChecklistDone,
+    getKoreanFieldworkChecklistSteps
+} from './korean-fieldwork-checklist';
 
 
 export type KoreanFieldworkUnitMatrixTone = 'danger'|'warning'|'info'|'success'|'neutral';
@@ -60,30 +64,6 @@ const CATEGORY_LABELS: Readonly<Record<string, string>> = {
     Operation: '조사 구역 기록',
     Trench: '트렌치'
 };
-
-const DEFAULT_CHECKLIST_STEPS = [
-    'preInvestigationPhotoTaken',
-    'inProgressPhotoTaken',
-    'soilProfilePhotoLinked',
-    'measuredDrawingCompleted',
-    'preRecoveryFindPhotoTaken',
-    'findsRecovered',
-    'samplesCollected',
-    'completionPhotoTaken'
-];
-
-const TRIAL_TRENCH_CHECKLIST_STEPS = [
-    'trenchSoilCleaned',
-    'trenchFeatureChecked',
-    'trenchPhotoTaken',
-    'trenchDrawingCompleted',
-    'trenchSoilProfilePhotoLinked',
-    'trenchLayerRecorded',
-    'trenchFindsChecked',
-    'trenchSamplesChecked',
-    'completionPhotoTaken'
-];
-
 
 export function makeKoreanFieldworkUnitMatrixItems(documents: Document[],
                                                    projectDocument: Document|undefined,
@@ -151,11 +131,10 @@ function makeUnitMatrixItem(document: Document,
         + evidenceBundle.drawings.length
         + evidenceBundle.finds.length
         + evidenceBundle.samples.length;
-    const checklistSteps = getChecklistSteps(document.resource.category, investigationMode);
+    const checklistSteps = getKoreanFieldworkChecklistSteps(document.resource.category, investigationMode);
     const checklistTotal = checklistSteps.length;
     const checklistDone = checklistTotal > 0
-        ? getStringArray(document.resource.featureInvestigationChecklist)
-            .filter(value => checklistSteps.includes(value)).length
+        ? countKoreanFieldworkChecklistDone(document, checklistSteps)
         : 0;
     const nextChildCategoryName = getNextChildCategoryName(
         document.resource.category,
@@ -302,18 +281,6 @@ function canCreateCategory(categoryName: string,
 }
 
 
-function getChecklistSteps(categoryName: string, investigationMode: string|undefined): string[] {
-
-    if (categoryName === 'Trench' && investigationMode === 'trialTrench') {
-        return TRIAL_TRENCH_CHECKLIST_STEPS;
-    }
-
-    return categoryName === 'Feature' || categoryName === 'FeatureSegment'
-        ? DEFAULT_CHECKLIST_STEPS
-        : [];
-}
-
-
 function getChildrenByParentId(documents: Document[],
                                documentsById: Map<string, Document>): Map<string, Document[]> {
 
@@ -418,12 +385,4 @@ function compareFeatureOverviewItems(itemA: KoreanFieldworkUnitMatrixItem,
 
     return (itemA.parentPath ?? '').localeCompare(itemB.parentPath ?? '', 'ko')
         || itemA.identifier.localeCompare(itemB.identifier, 'ko');
-}
-
-
-function getStringArray(value: unknown): string[] {
-
-    return Array.isArray(value)
-        ? value.filter(item => typeof item === 'string')
-        : [];
 }

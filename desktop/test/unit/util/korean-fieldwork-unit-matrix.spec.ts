@@ -37,7 +37,7 @@ describe('korean-fieldwork-unit-matrix', () => {
             evidenceCount: 1,
             issueCount: 1,
             checklistDone: 1,
-            checklistTotal: 8,
+            checklistTotal: 9,
             nextChildCategoryName: 'FeatureSegment',
             photoCategoryName: 'Photo',
             tone: 'warning'
@@ -71,7 +71,7 @@ describe('korean-fieldwork-unit-matrix', () => {
             relations: { liesWithin: ['operation-1'] },
             featureInvestigationChecklist: [
                 'trenchSoilCleaned',
-                'trenchFeatureChecked'
+                'trenchPitOpened'
             ]
         });
         const project = createDocument('project', 'Project', {
@@ -117,7 +117,7 @@ describe('korean-fieldwork-unit-matrix', () => {
             identifier: 'feature-1',
             statusLabel: '조사 중',
             evidenceLabel: '근거자료 1',
-            nextActionLabel: '조사 과정 1/8'
+            nextActionLabel: '조사 과정 1/9'
         });
     });
 });

@@ -1,5 +1,8 @@
 import { Document } from 'idai-field-core';
 import { KoreanFieldworkTodayStats } from './korean-fieldwork-today-stats';
+import {
+    getKoreanFieldworkChecklistMetrics
+} from './korean-fieldwork-checklist';
 
 
 export type KoreanFieldworkOverviewTone = 'neutral'|'info'|'success'|'warning'|'danger';
@@ -66,30 +69,6 @@ const FEATURE_WORKFLOW_CATEGORIES = new Set<string>([
     C.FEATURE_SEGMENT
 ]);
 
-const DEFAULT_CHECKLIST_STEPS = [
-    'preInvestigationPhotoTaken',
-    'inProgressPhotoTaken',
-    'soilProfilePhotoLinked',
-    'measuredDrawingCompleted',
-    'preRecoveryFindPhotoTaken',
-    'findsRecovered',
-    'samplesCollected',
-    'completionPhotoTaken'
-];
-
-const TRIAL_TRENCH_CHECKLIST_STEPS = [
-    'trenchSoilCleaned',
-    'trenchFeatureChecked',
-    'trenchPhotoTaken',
-    'trenchDrawingCompleted',
-    'trenchSoilProfilePhotoLinked',
-    'trenchLayerRecorded',
-    'trenchFindsChecked',
-    'trenchSamplesChecked',
-    'completionPhotoTaken'
-];
-
-
 export function getKoreanFieldworkOverviewChartData(
         stats: KoreanFieldworkTodayStats,
         documents: Document[],
@@ -110,7 +89,7 @@ export function getKoreanFieldworkOverviewChartData(
     const featureWorkflowDocuments = documents.filter(document =>
         FEATURE_WORKFLOW_CATEGORIES.has(document.resource.category)
     );
-    const checklistStats = getChecklistStats(documents, investigationMode);
+    const checklistStats = getKoreanFieldworkChecklistMetrics(documents, investigationMode);
     const checklistPercent = checklistStats.total > 0
         ? Math.round((checklistStats.done / checklistStats.total) * 100)
         : 0;
@@ -198,45 +177,6 @@ function getCategoryCounts(documents: Document[]): Map<string, number> {
 }
 
 
-function getChecklistStats(
-        documents: Document[],
-        investigationMode?: string
-): { done: number; total: number } {
-
-    return documents.reduce((stats, document) => {
-        const checklistStepValues = getChecklistStepValues(
-            document.resource.category,
-            investigationMode
-        );
-        if (checklistStepValues.length === 0) return stats;
-
-        return {
-            done: stats.done + getChecklistDoneCount(document, checklistStepValues),
-            total: stats.total + checklistStepValues.length
-        };
-    }, { done: 0, total: 0 });
-}
-
-
-function getChecklistStepValues(categoryName: string, investigationMode?: string): string[] {
-
-    if (categoryName === C.TRENCH && investigationMode === 'trialTrench') {
-        return TRIAL_TRENCH_CHECKLIST_STEPS;
-    }
-
-    return categoryName === C.FEATURE || categoryName === C.FEATURE_SEGMENT
-        ? DEFAULT_CHECKLIST_STEPS
-        : [];
-}
-
-
-function getChecklistDoneCount(document: Document, checklistStepValues: string[]): number {
-
-    return getStringArray(getResource(document).featureInvestigationChecklist)
-        .filter(value => checklistStepValues.includes(value)).length;
-}
-
-
 function buildFeatureStatusSegments(documents: Document[]): KoreanFieldworkOverviewSegment[] {
 
     const total = documents.length;
@@ -299,12 +239,4 @@ function getChecklistTone(percent: number, total: number): KoreanFieldworkOvervi
 function getResource(document: Document): Record<string, unknown> {
 
     return document.resource as unknown as Record<string, unknown>;
-}
-
-
-function getStringArray(value: unknown): string[] {
-
-    return Array.isArray(value)
-        ? value.filter((entry): entry is string => typeof entry === 'string')
-        : [];
 }

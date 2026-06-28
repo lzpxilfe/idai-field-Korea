@@ -438,6 +438,7 @@ const classifiedSupportSourceGroups = [
   {
     reason: 'desktop shared utilities consumed by feature-row panels',
     files: [
+      'desktop/src/app/util/korean-fieldwork-checklist.ts',
       'desktop/src/app/util/korean-fieldwork-closeout-actions.ts',
       'desktop/src/app/util/korean-fieldwork-document-drafts.ts',
       'desktop/src/app/util/korean-fieldwork-draft-defaults.ts',
@@ -3123,6 +3124,22 @@ function validateProgressModeAwareness() {
   const desktopSource = 'desktop/src/app/util/korean-fieldwork-progress-board.ts';
   const tabletText = readTextFile(tabletSource);
   const desktopText = readTextFile(desktopSource);
+  const desktopChecklistText = readTextFile('desktop/src/app/util/korean-fieldwork-checklist.ts');
+  const desktopChecklistSpecText = readTextFile('desktop/test/unit/util/korean-fieldwork-checklist.spec.ts');
+  const desktopOverviewText = readTextFile('desktop/src/app/util/korean-fieldwork-overview-chart.ts');
+  const desktopUnitMatrixText = readTextFile('desktop/src/app/util/korean-fieldwork-unit-matrix.ts');
+  const desktopProgressSpecText = readTextFile('desktop/test/unit/util/korean-fieldwork-progress-board.spec.ts');
+  const tabletTrialTrenchChecklistValues = [
+    'trenchSoilCleaned',
+    'trenchFeatureChecked',
+    'trenchPitOpened',
+    'trenchPitProfileDrawn',
+    'trenchOverviewPhotoTaken',
+    'trenchObliquePhotoTaken',
+    'soilProfilePhotoLinked',
+    'inProgressPhotoTaken',
+    'penMemoReviewed'
+  ];
   const excavationDetail = '제토 뒤 확인한 유구를 조사 경계 안에 먼저 기록하세요.';
   const excavationAction = '유구 기록';
 
@@ -3149,6 +3166,27 @@ function validateProgressModeAwareness() {
     if (!source.text.includes(excavationAction)) {
       findings.push(`${source.label} progress board missing excavation feature action`);
     }
+  }
+  for (const value of tabletTrialTrenchChecklistValues) {
+    if (!desktopChecklistText.includes(`'${value}'`)) {
+      findings.push(`desktop checklist utility must count tablet trial-trench step ${value}`);
+    }
+  }
+  if (!desktopText.includes('getKoreanFieldworkChecklistMetrics([document, ...descendants], investigationMode)')) {
+    findings.push('desktop progress board must use shared tablet checklist metrics across scoped descendants');
+  }
+  if (!desktopOverviewText.includes('getKoreanFieldworkChecklistMetrics(documents, investigationMode)')) {
+    findings.push('desktop overview chart must use shared tablet checklist metrics');
+  }
+  if (!desktopUnitMatrixText.includes('getKoreanFieldworkChecklistSteps(document.resource.category, investigationMode)')) {
+    findings.push('desktop unit matrix must use shared tablet checklist steps');
+  }
+  if (!desktopChecklistSpecText.includes('uses the tablet trial-trench checklist values on desktop')
+      || !desktopChecklistSpecText.includes('includes pen memo review in feature checklist totals')) {
+    findings.push('desktop checklist tests must cover tablet trial-trench values and PenMemo review totals');
+  }
+  if (!desktopProgressSpecText.includes('keeps confirmed tablet records in investigation until all workflow steps are checked')) {
+    findings.push('desktop progress board tests must keep partial tablet workflow checks out of closeout');
   }
 
   return findings;

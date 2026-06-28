@@ -1,4 +1,8 @@
 import { buildEvidenceBundle, Document } from 'idai-field-core';
+import {
+    getKoreanFieldworkChecklistMetrics,
+    isKoreanFieldworkChecklistRecord
+} from './korean-fieldwork-checklist';
 
 
 export type KoreanFieldworkProgressTone = 'success'|'warning'|'info'|'danger'|'neutral';
@@ -85,19 +89,15 @@ function makeProgressItem(document: Document,
         + evidenceBundle.finds.length
         + evidenceBundle.samples.length;
     const issueCount = evidenceBundle.issues.length;
-    const checklistValues = getStringArray(document.resource.featureInvestigationChecklist);
-    const checklistTotal = checklistValues.length > 0 || isFeatureLike(document)
-        ? checklistValues.length
-        : 0;
-    const checklistDone = checklistValues.filter(value => value !== 'pendingDecision').length;
+    const checklistMetrics = getKoreanFieldworkChecklistMetrics([document, ...descendants], investigationMode);
     const stage = getStage(
         document,
         children,
         descendants,
         issueCount,
         evidenceCount,
-        checklistDone,
-        checklistTotal,
+        checklistMetrics.done,
+        checklistMetrics.total,
         investigationMode
     );
 
@@ -112,8 +112,8 @@ function makeProgressItem(document: Document,
         childCount: children.filter(child => PROGRESS_CATEGORIES.has(child.resource.category)).length,
         evidenceCount,
         issueCount,
-        checklistDone,
-        checklistTotal
+        checklistDone: checklistMetrics.done,
+        checklistTotal: checklistMetrics.total
     };
 }
 
@@ -169,7 +169,8 @@ function getStage(document: Document,
         );
     }
 
-    if (isOpenFeatureRecord(document) || (checklistTotal > 0 && checklistDone < checklistTotal)) {
+    if (isWorkflowChecklistDocument(document, investigationMode)
+            && (isOpenFeatureRecord(document) || checklistDone < checklistTotal)) {
         return toStage(
             '조사',
             isOpenFeatureRecord(document) ? 'warning' : 'info',
@@ -329,9 +330,8 @@ function isFeatureLike(document: Document): boolean {
 }
 
 
-function getStringArray(value: unknown): string[] {
+function isWorkflowChecklistDocument(document: Document,
+                                     investigationMode?: string): boolean {
 
-    return Array.isArray(value)
-        ? value.filter(item => typeof item === 'string')
-        : [];
+    return isKoreanFieldworkChecklistRecord(document.resource.category, investigationMode);
 }

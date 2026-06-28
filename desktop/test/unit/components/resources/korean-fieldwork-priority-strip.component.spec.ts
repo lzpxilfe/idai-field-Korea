@@ -307,7 +307,7 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
             '진행',
             '확인 필요'
         ]);
-        expect(component.getOverviewFooterLabel()).toBe('과정 0/8 · 확인 1 · 필수 0');
+        expect(component.getOverviewFooterLabel()).toBe('과정 0/9 · 확인 1 · 필수 0');
 
         component.setActivePanel('records');
 
