@@ -111,6 +111,7 @@ describe('exportImages', () => {
                             featureRecordingStatus: 'confirmed',
                             featureInvestigationChecklist: ['completionPhotoTaken'],
                             longAxisOrientation: 'N-E 23',
+                            shortAxisOrientation: 'N-W 67',
                             geometry: { type: 'Point', coordinates: [1, 2] },
                             internalDraftNote: 'not exported'
                         }
@@ -238,6 +239,7 @@ describe('exportImages', () => {
                                     featureRecordingStatus: 'confirmed',
                                     featureInvestigationChecklist: ['completionPhotoTaken'],
                                     longAxisOrientation: 'N-E 23',
+                                    shortAxisOrientation: 'N-W 67',
                                     geometry: { type: 'Point', coordinates: [1, 2] }
                                 }
                             },

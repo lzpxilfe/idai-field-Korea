@@ -39,6 +39,7 @@ export const FIELDWORK_QUICK_FIELDS = {
   orientationReference: 'orientationReference',
   period: 'period',
   quality: 'fieldRecordQuality',
+  shortAxisOrientation: 'shortAxisOrientation',
   verification: 'verificationState',
   timing: 'recordCreationTiming',
 } as const;
@@ -212,7 +213,10 @@ export const getKoreanFieldworkQuickRecordAvailability = (
     featureStatus: FEATURE_CATEGORIES.has(resource.category)
       && fieldNames.has(FIELDWORK_QUICK_FIELDS.featureStatus),
     axisOrientation: AXIS_ORIENTATION_CATEGORIES.has(resource.category)
-      && fieldNames.has(FIELDWORK_QUICK_FIELDS.longAxisOrientation),
+      && (
+        fieldNames.has(FIELDWORK_QUICK_FIELDS.longAxisOrientation)
+        || fieldNames.has(FIELDWORK_QUICK_FIELDS.shortAxisOrientation)
+      ),
     period: resource.category === C.FEATURE
       && fieldNames.has(FIELDWORK_QUICK_FIELDS.period),
     quality: FIELDWORK_RECORD_CATEGORIES.has(resource.category)

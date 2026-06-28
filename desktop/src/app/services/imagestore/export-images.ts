@@ -173,6 +173,7 @@ const RELATED_DOCUMENT_CONTEXT_FIELDS: string[] = [
     'surveyBoundaryNote',
     'referenceBasemapProvider',
     'longAxisOrientation',
+    'shortAxisOrientation',
     'orientationReference',
     'orientationNote',
     'interpretationArgument',

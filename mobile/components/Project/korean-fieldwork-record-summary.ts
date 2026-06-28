@@ -150,7 +150,7 @@ export const getKoreanFieldworkRecordStatusChips = (
     ?? getKoreanFieldworkFeatureTypeLabelFromInterpretationType(
       resource.featureInterpretationType
     );
-  const axisOrientationChip = getLongAxisOrientationChip(resource);
+  const axisOrientationChip = getAxisOrientationChip(resource);
 
   pushProjectSetupChips(chips, resource);
   if (featureTypeLabel) chips.push({ label: featureTypeLabel, tone: 'info' });
@@ -201,25 +201,39 @@ const pushProjectSetupChips = (
 const shortenChipText = (value: string, maxLength: number): string =>
   value.length > maxLength ? `${value.slice(0, maxLength - 1)}…` : value;
 
-const getLongAxisOrientationChip = (
+const getAxisOrientationChip = (
   resource: Record<string, unknown>
 ): KoreanFieldworkStatusChip | undefined => {
-  const value = resource[FIELDWORK_QUICK_FIELDS.longAxisOrientation];
+  const longAxisValue = getNormalizedOrientationValue(
+    resource[FIELDWORK_QUICK_FIELDS.longAxisOrientation]
+  );
+  const shortAxisValue = getNormalizedOrientationValue(
+    resource[FIELDWORK_QUICK_FIELDS.shortAxisOrientation]
+  );
+  if (!longAxisValue && !shortAxisValue) return undefined;
+
+  const referenceValue = getTextResourceValue(
+    resource[FIELDWORK_QUICK_FIELDS.orientationReference]
+  );
+  const axisLabel = [
+    longAxisValue ? `장축 ${longAxisValue}` : undefined,
+    shortAxisValue ? `단축 ${shortAxisValue}` : undefined,
+  ].filter(Boolean).join(' / ');
+  const label = referenceValue
+    ? `${axisLabel} · ${referenceValue}`
+    : axisLabel;
+
+  return { label, tone: 'info' };
+};
+
+const getNormalizedOrientationValue = (value: unknown): string | undefined => {
   if (typeof value !== 'string') return undefined;
 
   const trimmedValue = value.trim();
   if (trimmedValue.length === 0) return undefined;
 
-  const normalizedValue = normalizeKoreanFieldworkLongAxisOrientation(trimmedValue)
+  return normalizeKoreanFieldworkLongAxisOrientation(trimmedValue)
     || trimmedValue.replace(/\s+/g, ' ');
-  const referenceValue = getTextResourceValue(
-    resource[FIELDWORK_QUICK_FIELDS.orientationReference]
-  );
-  const label = referenceValue
-    ? `장축 ${normalizedValue} · ${referenceValue}`
-    : `장축 ${normalizedValue}`;
-
-  return { label, tone: 'info' };
 };
 
 const getTextResourceValue = (value: unknown): string | undefined => {

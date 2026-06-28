@@ -411,6 +411,48 @@ describe('KoreanFieldworkQuickRecordPanel', () => {
     );
   });
 
+  it('updates the short-axis orientation with the same middle-degree builder', () => {
+    const handleUpdateResourceField = jest.fn();
+    const { getByTestId, getByText } = render(
+      <KoreanFieldworkQuickRecordPanel
+        category={createCategoryForm([
+          FIELDWORK_QUICK_FIELDS.longAxisOrientation,
+          FIELDWORK_QUICK_FIELDS.shortAxisOrientation,
+          FIELDWORK_QUICK_FIELDS.orientationReference,
+        ])}
+        resource={createResource(C.FEATURE, {
+          longAxisOrientation: 'N-23°-E',
+          shortAxisOrientation: '',
+          orientationReference: '',
+        })}
+        onUpdateResourceField={handleUpdateResourceField}
+        onUpdateResourceFields={(updates) =>
+          Object.entries(updates).forEach(([fieldName, value]) =>
+            handleUpdateResourceField(fieldName, value)
+          )}
+      />
+    );
+
+    expect(getByText('장축·단축 방위')).toBeTruthy();
+    expect(getByText('단축')).toBeTruthy();
+
+    fireEvent.press(getByTestId('quickRecordShortAxisEnd_W'));
+    expect(handleUpdateResourceField).not.toHaveBeenCalled();
+
+    fireEvent.changeText(getByTestId('quickRecordShortAxisDegreeInput'), '67');
+
+    expect(handleUpdateResourceField).toHaveBeenNthCalledWith(
+      1,
+      FIELDWORK_QUICK_FIELDS.shortAxisOrientation,
+      'N-67°-W'
+    );
+    expect(handleUpdateResourceField).toHaveBeenNthCalledWith(
+      2,
+      FIELDWORK_QUICK_FIELDS.orientationReference,
+      '자북'
+    );
+  });
+
   it('normalizes common long-axis orientation text on edit completion', () => {
     const handleUpdateResourceField = jest.fn();
     const { getByTestId, getByText } = render(

@@ -14,7 +14,8 @@ type Direction = 'N'|'S'|'E'|'W';
 const ORIENTATION_FIELDS = {
     longAxisOrientation: 'longAxisOrientation',
     orientationNote: 'orientationNote',
-    orientationReference: 'orientationReference'
+    orientationReference: 'orientationReference',
+    shortAxisOrientation: 'shortAxisOrientation'
 };
 
 const DIRECTION_LABELS: { [direction in Direction]: string } = {
@@ -72,10 +73,14 @@ export class KoreanFieldworkOrientationPanelComponent {
     private bearingDraftDegrees = '';
     private bearingDraftEnd: Direction = 'E';
     private bearingDraftStart: Direction = 'N';
+    private shortBearingDraftDegrees = '';
+    private shortBearingDraftEnd: Direction = 'W';
+    private shortBearingDraftStart: Direction = 'N';
 
     public shouldShow(): boolean {
 
-        return this.hasField(ORIENTATION_FIELDS.longAxisOrientation);
+        return this.hasField(ORIENTATION_FIELDS.longAxisOrientation)
+            || this.hasField(ORIENTATION_FIELDS.shortAxisOrientation);
     }
 
 
@@ -115,6 +120,13 @@ export class KoreanFieldworkOrientationPanelComponent {
     }
 
 
+    public setShortAxisOrientation(value: string) {
+
+        this.setValue(ORIENTATION_FIELDS.shortAxisOrientation, value);
+        this.ensureMagneticNorthReference(value);
+    }
+
+
     public getBearingStart(): Direction {
 
         return this.parseLongAxisOrientation(
@@ -146,6 +158,40 @@ export class KoreanFieldworkOrientationPanelComponent {
         )?.degrees;
 
         return degrees === undefined ? this.bearingDraftDegrees : degrees.toString();
+    }
+
+
+    public getShortBearingStart(): Direction {
+
+        return this.parseLongAxisOrientation(
+            this.getValue(ORIENTATION_FIELDS.shortAxisOrientation)
+        )?.start ?? this.shortBearingDraftStart;
+    }
+
+
+    public getShortBearingEnd(): Direction {
+
+        const parsedOrientation = this.parseLongAxisOrientation(
+            this.getValue(ORIENTATION_FIELDS.shortAxisOrientation)
+        );
+        const start = parsedOrientation?.start ?? this.shortBearingDraftStart;
+        const end = parsedOrientation?.end;
+
+        return end && this.getCompatibleBearingEnds(start).includes(end)
+            ? end
+            : this.getCompatibleBearingEnds(start).includes(this.shortBearingDraftEnd)
+                ? this.shortBearingDraftEnd
+                : this.getCompatibleBearingEnds(start)[0];
+    }
+
+
+    public getShortBearingDegrees(): string {
+
+        const degrees = this.parseLongAxisOrientation(
+            this.getValue(ORIENTATION_FIELDS.shortAxisOrientation)
+        )?.degrees;
+
+        return degrees === undefined ? this.shortBearingDraftDegrees : degrees.toString();
     }
 
 
@@ -184,6 +230,33 @@ export class KoreanFieldworkOrientationPanelComponent {
     }
 
 
+    public setShortBearingStart(start: Direction) {
+
+        const currentEnd = this.getShortBearingEnd();
+        const end = this.getCompatibleBearingEnds(start).includes(currentEnd)
+            ? currentEnd
+            : this.getCompatibleBearingEnds(start)[0];
+
+        this.applyShortBearingDraft(start, this.getShortBearingDegrees(), end);
+    }
+
+
+    public setShortBearingEnd(end: Direction) {
+
+        this.applyShortBearingDraft(this.getShortBearingStart(), this.getShortBearingDegrees(), end);
+    }
+
+
+    public setShortBearingDegrees(value: string) {
+
+        this.applyShortBearingDraft(
+            this.getShortBearingStart(),
+            value.replace(/\D/g, ''),
+            this.getShortBearingEnd()
+        );
+    }
+
+
     public normalizeOrientation() {
 
         const currentValue = this.getValue(ORIENTATION_FIELDS.longAxisOrientation);
@@ -191,6 +264,19 @@ export class KoreanFieldworkOrientationPanelComponent {
 
         if (normalizedValue !== currentValue.trim()) {
             this.setLongAxisOrientation(normalizedValue);
+        } else {
+            this.ensureMagneticNorthReference(normalizedValue);
+        }
+    }
+
+
+    public normalizeShortOrientation() {
+
+        const currentValue = this.getValue(ORIENTATION_FIELDS.shortAxisOrientation);
+        const normalizedValue = this.normalizeLongAxisOrientation(currentValue);
+
+        if (normalizedValue !== currentValue.trim()) {
+            this.setShortAxisOrientation(normalizedValue);
         } else {
             this.ensureMagneticNorthReference(normalizedValue);
         }
@@ -207,9 +293,27 @@ export class KoreanFieldworkOrientationPanelComponent {
     }
 
 
+    public getShortOrientationHint(): string {
+
+        const value = this.getValue(ORIENTATION_FIELDS.shortAxisOrientation);
+        if (!value.trim()) return '자북 기준 예: N-W, N-67°-W, 북에서 서쪽으로 67도';
+
+        return this.describeLongAxisOrientation(value, '단축')
+            ?? '형식 확인: 자북 기준 N-W, N-67°-W, 북에서 서쪽으로 67도';
+    }
+
+
     public isOrientationInvalid(): boolean {
 
         const value = this.getValue(ORIENTATION_FIELDS.longAxisOrientation);
+
+        return value.trim().length > 0 && !this.parseLongAxisOrientation(value);
+    }
+
+
+    public isShortOrientationInvalid(): boolean {
+
+        const value = this.getValue(ORIENTATION_FIELDS.shortAxisOrientation);
 
         return value.trim().length > 0 && !this.parseLongAxisOrientation(value);
     }
@@ -225,7 +329,8 @@ export class KoreanFieldworkOrientationPanelComponent {
     }
 
 
-    public describeLongAxisOrientation(value: string): string|undefined {
+    public describeLongAxisOrientation(value: string,
+                                       axisLabel: '장축'|'단축' = '장축'): string|undefined {
 
         const parsedOrientation = this.parseLongAxisOrientation(value);
         if (!parsedOrientation) return undefined;
@@ -234,7 +339,7 @@ export class KoreanFieldworkOrientationPanelComponent {
             + `${DIRECTION_LABELS[parsedOrientation.start]}에서 `
             + `${DIRECTION_LABELS[parsedOrientation.end]}쪽으로 `
             + (parsedOrientation.degrees === undefined
-                ? '기운 장축'
+                ? `기운 ${axisLabel}`
                 : `${parsedOrientation.degrees}°`);
     }
 
@@ -361,6 +466,21 @@ export class KoreanFieldworkOrientationPanelComponent {
         if (!this.isValidDegrees(degrees)) return;
 
         this.setLongAxisOrientation(`${start}-${degrees}°-${end}`);
+    }
+
+
+    private applyShortBearingDraft(start: Direction, degreesValue: string, end: Direction) {
+
+        this.shortBearingDraftStart = start;
+        this.shortBearingDraftDegrees = degreesValue;
+        this.shortBearingDraftEnd = end;
+
+        if (!degreesValue.trim()) return;
+
+        const degrees = Number(degreesValue);
+        if (!this.isValidDegrees(degrees)) return;
+
+        this.setShortAxisOrientation(`${start}-${degrees}°-${end}`);
     }
 
 

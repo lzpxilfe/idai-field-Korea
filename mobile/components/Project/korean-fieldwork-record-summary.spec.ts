@@ -130,6 +130,19 @@ describe('Korean fieldwork record summary', () => {
     });
   });
 
+  it('keeps long- and short-axis orientation visible in one status chip', () => {
+    const feature = createDoc('feature-1', C.FEATURE, '수혈 1', {}, {
+      longAxisOrientation: 'N-23°-E',
+      shortAxisOrientation: 'N-67°-W',
+      orientationReference: '자북',
+    });
+
+    expect(getKoreanFieldworkRecordStatusChips(feature)).toContainEqual({
+      label: '장축 N-23°-E / 단축 N-67°-W · 자북',
+      tone: 'info',
+    });
+  });
+
   it('keeps project setup visible on operation records', () => {
     const operation = createDoc('operation-1', C.OPERATION, '조사기준 1', {}, {
       projectInvestigationMode: 'trialTrench',

@@ -85,6 +85,7 @@ const KOREAN_FIELDWORK_CONTEXT_FIELDS = [
     'featureRecordingStatus',
     'fieldRecordQuality',
     'longAxisOrientation',
+    'shortAxisOrientation',
     'projectBoundarySummary',
     'projectInvestigationMode',
     'referenceBasemapProvider',
@@ -231,7 +232,7 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
         if (!resource) return [];
 
         const chips: ContextChip[] = [];
-        const orientationChip = this.getLongAxisOrientationChip(resource);
+        const orientationChip = this.getAxisOrientationChip(resource);
 
         this.pushProjectSetupChips(chips, resource);
         this.pushSurveyBoundaryChips(chips, resource);
@@ -1061,21 +1062,34 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
     }
 
 
-    private getLongAxisOrientationChip(resource: any): ContextChip|undefined {
+    private getAxisOrientationChip(resource: any): ContextChip|undefined {
 
-        const value = typeof resource.longAxisOrientation === 'string'
-            ? resource.longAxisOrientation.trim().replace(/\s+/g, ' ')
-            : '';
-        if (!value) return undefined;
+        const longAxisValue = this.normalizeAxisOrientationValue(resource.longAxisOrientation);
+        const shortAxisValue = this.normalizeAxisOrientationValue(resource.shortAxisOrientation);
+        const axisLabels = [
+            longAxisValue ? `장축 ${longAxisValue}` : undefined,
+            shortAxisValue ? `단축 ${shortAxisValue}` : undefined
+        ].filter((label): label is string => label !== undefined);
+        if (axisLabels.length === 0) return undefined;
 
         const referenceValue = typeof resource.orientationReference === 'string'
             ? resource.orientationReference.trim()
             : '';
+        const label = axisLabels.join(' / ');
 
         return {
-            label: referenceValue ? `장축 ${value} · ${referenceValue}` : `장축 ${value}`,
+            label: referenceValue ? `${label} · ${referenceValue}` : label,
             tone: 'info'
         };
+    }
+
+
+    private normalizeAxisOrientationValue(value: unknown): string|undefined {
+
+        if (typeof value !== 'string') return undefined;
+
+        const normalizedValue = value.trim().replace(/\s+/g, ' ');
+        return normalizedValue.length > 0 ? normalizedValue : undefined;
     }
 
 

@@ -64,6 +64,29 @@ describe('KoreanFieldworkOrientationPanelComponent', () => {
     });
 
 
+    it('builds short-axis bearings with the same middle-degree notation', () => {
+
+        component.document = { resource: { category: 'Feature' } } as any;
+        component.fieldDefinitions = [
+            { name: 'shortAxisOrientation', editable: true },
+            { name: 'orientationReference', editable: true }
+        ] as any;
+
+        expect(component.shouldShow()).toBe(true);
+
+        component.setShortBearingStart('N');
+        component.setShortBearingEnd('W');
+        component.setShortBearingDegrees('67');
+
+        expect(component.document.resource.shortAxisOrientation).toBe('N-67°-W');
+        expect(component.document.resource.orientationReference).toBe('자북');
+        expect(component.getShortBearingStart()).toBe('N');
+        expect(component.getShortBearingDegrees()).toBe('67');
+        expect(component.getShortBearingEnd()).toBe('W');
+        expect(component.getShortOrientationHint()).toBe('N-67°-W = 북에서 서쪽으로 67°');
+    });
+
+
     it('defaults the orientation reference to magnetic north when a bearing is typed', () => {
 
         component.document = { resource: { category: 'Feature' } } as any;

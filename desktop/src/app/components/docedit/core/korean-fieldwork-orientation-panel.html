@@ -1,47 +1,95 @@
 <div *ngIf="shouldShow()" class="korean-fieldwork-orientation-panel">
     <div class="korean-fieldwork-orientation-header">
         <span class="mdi mdi-compass-outline"></span>
-        <span>장축 방위</span>
+        <span>장축·단축 방위</span>
     </div>
 
-    <input class="form-control korean-fieldwork-orientation-input"
-           [class.is-invalid]="isOrientationInvalid()"
-           [ngModel]="getValue(fields.longAxisOrientation)"
-           (ngModelChange)="setLongAxisOrientation($event)"
-           (blur)="normalizeOrientation()"
-           placeholder="N-E 또는 N-23°-E">
+    <div *ngIf="hasField(fields.longAxisOrientation)"
+         class="korean-fieldwork-orientation-section">
+        <div class="korean-fieldwork-orientation-label">장축</div>
+        <input class="form-control korean-fieldwork-orientation-input"
+               [class.is-invalid]="isOrientationInvalid()"
+               [ngModel]="getValue(fields.longAxisOrientation)"
+               (ngModelChange)="setLongAxisOrientation($event)"
+               (blur)="normalizeOrientation()"
+               placeholder="N-E 또는 N-23°-E">
 
-    <div class="korean-fieldwork-bearing-builder">
-        <div class="korean-fieldwork-orientation-chip-row">
-            <button *ngFor="let direction of cardinalDirections"
-                    type="button"
-                    class="btn korean-fieldwork-orientation-chip"
-                    [class.active]="getBearingStart() === direction"
-                    (click)="setBearingStart(direction)">
-                {{direction}}
-            </button>
+        <div class="korean-fieldwork-bearing-builder">
+            <div class="korean-fieldwork-orientation-chip-row">
+                <button *ngFor="let direction of cardinalDirections"
+                        type="button"
+                        class="btn korean-fieldwork-orientation-chip"
+                        [class.active]="getBearingStart() === direction"
+                        (click)="setBearingStart(direction)">
+                    {{direction}}
+                </button>
+            </div>
+            <input class="form-control korean-fieldwork-bearing-degree-input"
+                   type="number"
+                   min="0"
+                   max="90"
+                   [ngModel]="getBearingDegrees()"
+                   (ngModelChange)="setBearingDegrees($event)"
+                   placeholder="각도">
+            <div class="korean-fieldwork-orientation-chip-row">
+                <button *ngFor="let direction of getCompatibleBearingEnds(getBearingStart())"
+                        type="button"
+                        class="btn korean-fieldwork-orientation-chip"
+                        [class.active]="getBearingEnd() === direction"
+                        (click)="setBearingEnd(direction)">
+                    {{direction}}
+                </button>
+            </div>
         </div>
-        <input class="form-control korean-fieldwork-bearing-degree-input"
-               type="number"
-               min="0"
-               max="90"
-               [ngModel]="getBearingDegrees()"
-               (ngModelChange)="setBearingDegrees($event)"
-               placeholder="각도">
-        <div class="korean-fieldwork-orientation-chip-row">
-            <button *ngFor="let direction of getCompatibleBearingEnds(getBearingStart())"
-                    type="button"
-                    class="btn korean-fieldwork-orientation-chip"
-                    [class.active]="getBearingEnd() === direction"
-                    (click)="setBearingEnd(direction)">
-                {{direction}}
-            </button>
+
+        <div class="korean-fieldwork-orientation-hint"
+             [class.invalid]="isOrientationInvalid()">
+            {{getOrientationHint()}}
         </div>
     </div>
 
-    <div class="korean-fieldwork-orientation-hint"
-         [class.invalid]="isOrientationInvalid()">
-        {{getOrientationHint()}}
+    <div *ngIf="hasField(fields.shortAxisOrientation)"
+         class="korean-fieldwork-orientation-section">
+        <div class="korean-fieldwork-orientation-label">단축</div>
+        <input class="form-control korean-fieldwork-orientation-input"
+               [class.is-invalid]="isShortOrientationInvalid()"
+               [ngModel]="getValue(fields.shortAxisOrientation)"
+               (ngModelChange)="setShortAxisOrientation($event)"
+               (blur)="normalizeShortOrientation()"
+               placeholder="N-W 또는 N-67°-W">
+
+        <div class="korean-fieldwork-bearing-builder">
+            <div class="korean-fieldwork-orientation-chip-row">
+                <button *ngFor="let direction of cardinalDirections"
+                        type="button"
+                        class="btn korean-fieldwork-orientation-chip"
+                        [class.active]="getShortBearingStart() === direction"
+                        (click)="setShortBearingStart(direction)">
+                    {{direction}}
+                </button>
+            </div>
+            <input class="form-control korean-fieldwork-bearing-degree-input"
+                   type="number"
+                   min="0"
+                   max="90"
+                   [ngModel]="getShortBearingDegrees()"
+                   (ngModelChange)="setShortBearingDegrees($event)"
+                   placeholder="각도">
+            <div class="korean-fieldwork-orientation-chip-row">
+                <button *ngFor="let direction of getCompatibleBearingEnds(getShortBearingStart())"
+                        type="button"
+                        class="btn korean-fieldwork-orientation-chip"
+                        [class.active]="getShortBearingEnd() === direction"
+                        (click)="setShortBearingEnd(direction)">
+                    {{direction}}
+                </button>
+            </div>
+        </div>
+
+        <div class="korean-fieldwork-orientation-hint"
+             [class.invalid]="isShortOrientationInvalid()">
+            {{getShortOrientationHint()}}
+        </div>
     </div>
 
     <div *ngIf="hasField(fields.orientationNote)"

@@ -106,6 +106,29 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
     });
 
 
+    it('combines long- and short-axis orientation values in one status chip', () => {
+
+        const feature = createDocument('feature-1', 'Feature', 'F1', {}, {
+            longAxisOrientation: 'N-23\u00B0-E',
+            shortAxisOrientation: 'N-67\u00B0-W',
+            orientationReference: '\uC790\uBD81'
+        });
+        const component = createComponent({
+            find: jest.fn().mockResolvedValue({ documents: [feature] })
+        });
+        component.document = feature as any;
+        component.fieldDefinitions = [
+            field('longAxisOrientation'),
+            field('shortAxisOrientation')
+        ] as any;
+
+        expect(component.getStatusChips()).toContainEqual({
+            label: '\uC7A5\uCD95 N-23\u00B0-E / \uB2E8\uCD95 N-67\u00B0-W \u00B7 \uC790\uBD81',
+            tone: 'info'
+        });
+    });
+
+
     it('counts directly attached tablet photos in record evidence metrics', async () => {
 
         const feature = createDocument('feature-1', 'Feature', 'F1', {}, {
