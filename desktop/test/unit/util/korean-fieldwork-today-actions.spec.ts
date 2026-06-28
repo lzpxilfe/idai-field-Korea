@@ -143,6 +143,70 @@ describe('korean-fieldwork-today-actions', () => {
     });
 
 
+    it('keeps desktop priority tasks scoped to the selected trench', () => {
+
+        const operation = createDocument('operation-1', 'Operation', '조사구역 1');
+        const firstTrench = createDocument('trench-1', 'Trench', 'Trench 1', {
+            isRecordedIn: ['operation-1']
+        });
+        const selectedTrench = createDocument('trench-2', 'Trench', 'Trench 2', {
+            isRecordedIn: ['operation-1']
+        });
+        const tasks = makeKoreanFieldworkPriorityTasks(
+            [
+                operation,
+                firstTrench,
+                selectedTrench,
+                createDocument('daily-1', 'DailyLog', '오늘 일지'),
+                createDocument('boundary-1', 'SurveyBoundary', 'A구역')
+            ] as any,
+            createDocument('project', 'Project') as any,
+            createConfig() as any,
+            5,
+            selectedTrench as any
+        );
+
+        expect(tasks.find(task => task.id === 'create-detected-feature')?.action).toEqual({
+            type: 'createDocument',
+            parentDocumentId: 'trench-2',
+            categoryName: 'Feature'
+        });
+    });
+
+
+    it('keeps trial trench soil-photo tasks scoped to the selected trench', () => {
+
+        const operation = createDocument('operation-1', 'Operation', '조사구역 1');
+        const firstTrench = createDocument('trench-1', 'Trench', 'Trench 1', {
+            isRecordedIn: ['operation-1']
+        });
+        const selectedTrench = createDocument('trench-2', 'Trench', 'Trench 2', {
+            isRecordedIn: ['operation-1']
+        });
+        const tasks = makeKoreanFieldworkPriorityTasks(
+            [
+                operation,
+                firstTrench,
+                selectedTrench,
+                createDocument('daily-1', 'DailyLog', '오늘 일지'),
+                createDocument('boundary-1', 'SurveyBoundary', 'A구역')
+            ] as any,
+            createDocument('project', 'Project', 'project', {}, {
+                projectInvestigationMode: 'trialTrench'
+            }) as any,
+            createConfig() as any,
+            5,
+            selectedTrench as any
+        );
+
+        expect(tasks.find(task => task.id === 'create-trench-profile-photo')?.action).toEqual({
+            type: 'createDocument',
+            parentDocumentId: 'trench-2',
+            categoryName: 'SoilProfilePhoto'
+        });
+    });
+
+
     it('guides existing root records into an operation before adding more fieldwork', () => {
 
         const feature = createDocument('feature-1', 'Feature', '유구 1');

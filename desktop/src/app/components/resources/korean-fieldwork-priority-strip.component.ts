@@ -1221,8 +1221,15 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
             const scopeSummary = stats
                 ? makeKoreanFieldworkScopeSummary(documents, projectDocument, stats.openIssueCount)
                 : undefined;
+            const priorityTaskScopeDocument = this.getHierarchyScopeDocument();
             const priorityTasks = stats
-                ? makeKoreanFieldworkPriorityTasks(documents, projectDocument, this.projectConfiguration)
+                ? makeKoreanFieldworkPriorityTasks(
+                    documents,
+                    projectDocument,
+                    this.projectConfiguration,
+                    5,
+                    priorityTaskScopeDocument
+                )
                 : [];
             const investigationMode = getKoreanFieldworkProjectResourceValue(
                 projectDocument,

@@ -67,7 +67,8 @@ export function makeKoreanFieldworkPriorityTasks(
         documents: Document[],
         projectDocument: Document|undefined,
         projectConfiguration: ProjectConfiguration,
-        maxTasks: number = 5
+        maxTasks: number = 5,
+        scopeParent?: Document
 ): KoreanFieldworkPriorityTask[] {
 
     const summary = getKoreanFieldworkTodaySummary(documents);
@@ -75,7 +76,7 @@ export function makeKoreanFieldworkPriorityTasks(
         projectDocument,
         KOREAN_FIELDWORK_PROJECT_INVESTIGATION_MODE_FIELD
     );
-    const targets = getActionTargets(documents);
+    const targets = getActionTargets(documents, investigationMode, scopeParent);
     const tasks: KoreanFieldworkPriorityTask[] = [];
     const nonProjectDocumentCount = documents.filter(document => document.resource.id !== 'project').length;
 
@@ -113,10 +114,10 @@ export function makeKoreanFieldworkPriorityTasks(
 
     switch (investigationMode) {
         case 'trialTrench':
-            appendTrialTrenchTasks(tasks, documents, targets, projectConfiguration);
+            appendTrialTrenchTasks(tasks, documents, targets, projectConfiguration, scopeParent);
             break;
         case 'excavation':
-            appendExcavationTasks(tasks, documents, targets, projectConfiguration);
+            appendExcavationTasks(tasks, documents, targets, projectConfiguration, scopeParent);
             break;
         default:
             appendGenericTasks(tasks, documents, targets, projectConfiguration);
@@ -204,12 +205,14 @@ function appendGenericTasks(tasks: KoreanFieldworkPriorityTask[],
 function appendTrialTrenchTasks(tasks: KoreanFieldworkPriorityTask[],
                                 documents: Document[],
                                 targets: ActionTargets,
-                                projectConfiguration: ProjectConfiguration) {
+                                projectConfiguration: ProjectConfiguration,
+                                scopeParent?: Document) {
 
     if (!targets.primaryOperation) return;
 
     const documentsById = toDocumentIndex(documents);
-    const trench = getFirstDocumentByCategory(documents, C.TRENCH);
+    const trench = getScopedDocumentByCategory(documents, C.TRENCH, scopeParent)
+        ?? getFirstDocumentByCategory(documents, C.TRENCH);
 
     if (!trench) {
         pushCreateTask(tasks, targets.primaryOperation, C.TRENCH, projectConfiguration, {
@@ -290,13 +293,17 @@ function appendTrialTrenchTasks(tasks: KoreanFieldworkPriorityTask[],
 function appendExcavationTasks(tasks: KoreanFieldworkPriorityTask[],
                                documents: Document[],
                                targets: ActionTargets,
-                               projectConfiguration: ProjectConfiguration) {
+                               projectConfiguration: ProjectConfiguration,
+                               scopeParent?: Document) {
 
     if (!targets.primaryOperation) return;
 
     const documentsById = toDocumentIndex(documents);
-    const featureParent = getFirstDocumentByCategory(documents, C.TRENCH) ?? targets.primaryOperation;
-    const feature = getFirstDocumentByCategory(documents, C.FEATURE);
+    const featureParent = getScopedDocumentByCategory(documents, C.TRENCH, scopeParent)
+        ?? getFirstDocumentByCategory(documents, C.TRENCH)
+        ?? targets.primaryOperation;
+    const feature = getScopedDocumentByCategory(documents, C.FEATURE, scopeParent)
+        ?? getFirstDocumentByCategory(documents, C.FEATURE);
 
     if (!feature) {
         pushCreateTask(tasks, featureParent, C.FEATURE, projectConfiguration, {
@@ -366,20 +373,51 @@ interface ActionTargets {
     featureDraftParent?: Document;
 }
 
-function getActionTargets(documents: Document[]): ActionTargets {
+function getActionTargets(documents: Document[],
+                          investigationMode: string|undefined,
+                          scopeParent?: Document): ActionTargets {
 
     const primaryOperation = getFirstDocumentByCategory(documents, C.OPERATION);
+    const scopedDocuments = getScopedDocuments(documents, scopeParent);
+    const featureCandidateDocuments = scopeParent ? scopedDocuments : documents;
 
     return {
         primaryOperation,
-        featureCandidate: documents.find(document =>
+        featureCandidate: featureCandidateDocuments.find(document =>
             document.resource.category === C.FEATURE
             && document.resource.featureRecordingStatus === 'candidate'
         ),
-        featureDraftParent: getFirstDocumentByCategory(documents, C.TRENCH)
-            ?? getFirstDocumentByCategory(documents, C.FEATURE_GROUP)
-            ?? primaryOperation
+        featureDraftParent: getFeatureDraftParent(
+            documents,
+            primaryOperation,
+            investigationMode,
+            scopeParent,
+            scopedDocuments
+        )
     };
+}
+
+
+function getFeatureDraftParent(documents: Document[],
+                               primaryOperation: Document|undefined,
+                               investigationMode: string|undefined,
+                               scopeParent: Document|undefined,
+                               scopedDocuments: Document[]): Document|undefined {
+
+    if (scopeParent?.resource?.category === C.TRENCH
+            || scopeParent?.resource?.category === C.FEATURE_GROUP) {
+        return getCurrentDocumentState(documents, scopeParent);
+    }
+
+    const scopedTrench = getFirstDocumentByCategory(scopedDocuments, C.TRENCH);
+    if (scopedTrench) return scopedTrench;
+
+    if (investigationMode === 'trialTrench') return undefined;
+
+    return getFirstDocumentByCategory(scopedDocuments, C.FEATURE_GROUP)
+        ?? getFirstDocumentByCategory(documents, C.TRENCH)
+        ?? getFirstDocumentByCategory(documents, C.FEATURE_GROUP)
+        ?? primaryOperation;
 }
 
 
@@ -442,6 +480,41 @@ function getFirstDocumentByCategory(documents: Document[],
 }
 
 
+function getScopedDocumentByCategory(documents: Document[],
+                                     categoryName: string,
+                                     scopeParent?: Document): Document|undefined {
+
+    if (!scopeParent) return undefined;
+
+    const currentScopeParent = getCurrentDocumentState(documents, scopeParent);
+    if (currentScopeParent.resource.category === categoryName) return currentScopeParent;
+
+    return getFirstDocumentByCategory(getScopedDocuments(documents, currentScopeParent), categoryName);
+}
+
+
+function getScopedDocuments(documents: Document[],
+                            scopeParent?: Document): Document[] {
+
+    if (!scopeParent?.resource?.id) return documents;
+
+    const currentScopeParent = getCurrentDocumentState(documents, scopeParent);
+    const documentsById = toDocumentIndex(documents);
+
+    return documents.filter(document =>
+        document.resource.id === currentScopeParent.resource.id
+        || isDocumentDescendantOfScope(document, currentScopeParent, documentsById)
+    );
+}
+
+
+function getCurrentDocumentState(documents: Document[],
+                                 document: Document): Document {
+
+    return documents.find(candidate => candidate.resource.id === document.resource.id) ?? document;
+}
+
+
 function getFirstDirectChildByCategory(parentDocument: Document,
                                        categoryName: string,
                                        documents: Document[],
@@ -460,6 +533,28 @@ function hasDirectChildCategory(parentDocument: Document,
                                 documentsById: Map<string, Document>): boolean {
 
     return !!getFirstDirectChildByCategory(parentDocument, categoryName, documents, documentsById);
+}
+
+
+function isDocumentDescendantOfScope(document: Document,
+                                     scopeParent: Document,
+                                     documentsById: Map<string, Document>): boolean {
+
+    if (document.resource.id === scopeParent.resource.id) return true;
+
+    const visitedIds = new Set<string>([document.resource.id]);
+    let currentDocument = document;
+
+    for (let depth = 0; depth < 8; depth++) {
+        const parent = getPrimaryParent(currentDocument, documentsById);
+        if (!parent || visitedIds.has(parent.resource.id)) return false;
+        if (parent.resource.id === scopeParent.resource.id) return true;
+
+        visitedIds.add(parent.resource.id);
+        currentDocument = parent;
+    }
+
+    return false;
 }
 
 

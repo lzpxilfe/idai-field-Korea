@@ -1511,6 +1511,56 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
     });
 
 
+    it('uses the selected hierarchy scope for desktop priority task drafts', async () => {
+
+        const operation = createDocument('operation-1', 'Operation');
+        const firstTrench = createDocument('trench-1', 'Trench', {}, {
+            isRecordedIn: ['operation-1']
+        });
+        const selectedTrench = createDocument('trench-2', 'Trench', {}, {
+            isRecordedIn: ['operation-1']
+        });
+        const datastore = {
+            find: jest.fn().mockResolvedValue({
+                documents: [
+                    createDocument('project', 'Project'),
+                    operation,
+                    firstTrench,
+                    selectedTrench,
+                    createDocument('daily-1', 'DailyLog', {}, {
+                        isRecordedIn: ['operation-1']
+                    }),
+                    createDocument('boundary-1', 'SurveyBoundary', {}, {
+                        isRecordedIn: ['operation-1']
+                    })
+                ]
+            }),
+            get: jest.fn().mockResolvedValue(selectedTrench)
+        };
+        const component = createComponent(
+            datastore,
+            createActionProjectConfiguration(),
+            { jumpToResource: jest.fn() },
+            {
+                deselect: jest.fn(),
+                setMode: jest.fn(),
+                getSelectedDocument: jest.fn().mockReturnValue(selectedTrench)
+            }
+        );
+
+        await component.refresh();
+
+        const task = component.getPriorityTasks()
+            .find(priorityTask => priorityTask.id === 'create-detected-feature')!;
+
+        expect(task.action).toEqual({
+            type: 'createDocument',
+            parentDocumentId: 'trench-2',
+            categoryName: 'Feature'
+        });
+    });
+
+
     it('opens notebook follow-up targets', async () => {
 
         const feature = createDocument('feature-1', 'Feature');
