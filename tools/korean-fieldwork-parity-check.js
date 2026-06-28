@@ -132,6 +132,7 @@ const featureRows = [
     id: 'soil-color',
     title: 'Soil profile photo and Munsell review',
     tablet: [
+      'mobile/components/Project/FieldworkPhotoAnnotationPanel.tsx',
       'mobile/components/Project/SoilProfileCameraButton.tsx',
       'mobile/components/Project/KoreanFieldworkSoilColorPanel.tsx',
       'mobile/components/Project/soil-color-photo-assist.ts'
@@ -142,6 +143,7 @@ const featureRows = [
       'desktop/src/app/util/korean-fieldwork-soil-color-photo-assist.ts'
     ],
     tabletTests: [
+      'mobile/components/Project/FieldworkPhotoAnnotationPanel.spec.tsx',
       'mobile/components/Project/SoilProfileCameraButton.spec.ts',
       'mobile/components/Project/KoreanFieldworkSoilColorPanel.spec.tsx',
       'mobile/components/Project/soil-color-photo-assist.spec.ts'

@@ -217,6 +217,7 @@ function getMobileFieldworkTestPaths() {
     /KakaoSatellitePicker\.spec\.tsx$/,
     /kakao-satellite-picker-html\.spec\.ts$/,
     /MapBottomSheet\.spec\.tsx$/,
+    /FieldworkPhotoAnnotationPanel\.spec\.tsx$/,
     /soil-color-photo-assist\.spec\.ts$/,
     /SoilProfileCameraButton\.spec\.ts$/,
     /Document(Add|Edit)\.spec\.tsx$/,
