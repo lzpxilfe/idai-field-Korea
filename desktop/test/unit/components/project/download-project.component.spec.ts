@@ -135,6 +135,33 @@ describe('DownloadProjectComponent', () => {
     });
 
 
+    it('downloads directly attached fieldwork photo originals by record id', async () => {
+
+        await (component as any).loadImageBatch(
+            {
+                'feature-1': makeFileInfo(ImageVariant.ORIGINAL)
+            },
+            ['feature-1'],
+            5,
+            [{ upload: true, download: true, variant: ImageVariant.ORIGINAL }]
+        );
+
+        expect(remoteImageStore.getDataUsingCredentials).toHaveBeenCalledWith(
+            'https://field.example',
+            'secret',
+            'feature-1',
+            ImageVariant.ORIGINAL,
+            'fieldwork'
+        );
+        expect(imageStore.store).toHaveBeenCalledWith(
+            'feature-1',
+            Buffer.from('image'),
+            'fieldwork',
+            ImageVariant.ORIGINAL
+        );
+    });
+
+
     it('waits for every in-flight batch download before retrying a failed batch', async () => {
 
         const pendingDownload = createDeferred<Buffer>();

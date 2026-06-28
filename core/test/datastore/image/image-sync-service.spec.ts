@@ -61,6 +61,54 @@ describe('ImageSyncService', () => {
     });
 
 
+    it('downloads directly attached fieldwork photo originals by record id', async done => {
+
+        const featurePhotoData = Buffer.from('feature original photo');
+        const imageStore = new MemoryImageStore(project);
+        const remoteImageStore = new MemoryRemoteImageStore({
+            'feature-1': makeFileInfo(ImageVariant.ORIGINAL, featurePhotoData.length)
+        }, {
+            [ImageVariant.ORIGINAL]: {
+                'feature-1': featurePhotoData
+            }
+        });
+        const service = new ImageSyncService(
+            imageStore as any,
+            remoteImageStore as any,
+            makeDatastore() as any
+        );
+        (service as any).longIntervalDuration = 1000 * 60 * 60;
+
+        spyOn(console, 'log');
+        spyOn(console, 'error');
+
+        try {
+            service.startSync({
+                download: true,
+                upload: false,
+                variant: ImageVariant.ORIGINAL
+            });
+
+            await waitFor(() => service.getStatus()[ImageVariant.ORIGINAL] === SyncStatus.InSync);
+
+            expect(remoteImageStore.getData).toHaveBeenCalledWith(
+                'feature-1',
+                ImageVariant.ORIGINAL,
+                project
+            );
+            expect((await imageStore.getData('feature-1', ImageVariant.ORIGINAL, project)).toString())
+                .toBe('feature original photo');
+            expect(console.error).not.toHaveBeenCalled();
+
+            service.stopAllSyncing();
+            done();
+        } catch (err) {
+            service.stopAllSyncing();
+            done.fail(err);
+        }
+    });
+
+
     it('redacts credentials from image synchronization error messages', () => {
 
         const message = ImageSyncService.getSanitizedErrorMessage({

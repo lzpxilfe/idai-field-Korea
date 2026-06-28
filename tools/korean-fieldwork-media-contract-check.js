@@ -20,6 +20,7 @@ const FIELDWORK_IMAGE_UPLOAD_AUDIT_FIELDS = [
 
 const files = {
   coreImageStore: readTextFile('core/src/datastore/image/image-store.ts'),
+  coreImageSyncSpec: readTextFile('core/test/datastore/image/image-sync-service.spec.ts'),
   coreImageIndex: readTextFile('core/src/datastore/image/index.ts'),
   coreFieldHubFileUrl: readTextFile('core/src/datastore/image/field-hub-file-url.ts'),
   coreFieldHubFileUrlSpec: readTextFile('core/test/datastore/image/field-hub-file-url.spec.ts'),
@@ -760,6 +761,7 @@ function checkDesktopImageExportContract() {
 
 function checkDesktopDownloadContract() {
   const source = files.desktopDownload;
+  const coreImageSyncSpec = files.coreImageSyncSpec;
 
   requireIncludes(
     source,
@@ -775,6 +777,16 @@ function checkDesktopDownloadContract() {
     source,
     'this.remoteImageStore.getDataUsingCredentials',
     'desktop project download must fetch images through the Field Hub remote image store'
+  );
+  requireIncludes(
+    coreImageSyncSpec,
+    'downloads directly attached fieldwork photo originals by record id',
+    'core image sync tests must prove direct fieldwork record photo originals are pulled by record id'
+  );
+  requireIncludes(
+    coreImageSyncSpec,
+    "'feature-1'",
+    'core image sync tests must use a non-Image fieldwork record id as the file id'
   );
   requireIncludes(
     source,
@@ -1453,6 +1465,11 @@ function checkContractCoverage() {
     files.desktopDownloadSpec,
     'downloads remote originals and generates local thumbnails when Field Hub has no thumbnail variant',
     'desktop download tests must cover original fallback and thumbnail generation'
+  );
+  requireIncludes(
+    files.desktopDownloadSpec,
+    'downloads directly attached fieldwork photo originals by record id',
+    'desktop project download tests must cover direct fieldwork photo originals by record id'
   );
   requireIncludes(
     files.coreReadinessSpec,
