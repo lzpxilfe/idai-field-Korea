@@ -61,6 +61,14 @@
                      [attr.aria-label]="sketchPreview.label">
                     <path [attr.d]="sketchPreview.path"></path>
                 </svg>
+                <span *ngIf="canApplyEvidenceInsight(insight)"
+                      class="korean-fieldwork-record-context-evidence-insight-actions">
+                    <button type="button"
+                            class="korean-fieldwork-record-context-evidence-insight-action apply"
+                            (click)="applyEvidenceInsight(insight)">
+                        {{getEvidenceInsightApplyTargetLabel(insight)}}에 반영
+                    </button>
+                </span>
             </span>
         </div>
     </div>

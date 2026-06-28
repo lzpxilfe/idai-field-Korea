@@ -311,6 +311,69 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
     });
 
 
+    it('appends tablet soil-photo Munsell candidates to the current record narrative once', async () => {
+
+        const feature = createDocument('feature-1', 'Feature', 'F1', {}, {
+            description: '기존 토층 관찰.'
+        });
+        const soilProfilePhoto = createDocument('soil-photo-1', 'SoilProfilePhoto', 'SP1', {
+            depicts: ['feature-1']
+        }, {
+            soilColorAssistStatus: 'candidatesAvailable',
+            soilColorAssistCandidates: [
+                '사진 중앙부 평균 RGB 111/87/61',
+                '1: 10YR 4/3 (높음, 차이 0.0)',
+                '2: 7.5YR 4/3 (보통, 차이 2.1)'
+            ].join('\n'),
+            soilProfileColorSwatches: '1: 10YR 4/3',
+            soilProfileColorNote: '조명 보정 필요.',
+            soilProfileCaptureNote: '오전 확산광.'
+        });
+        const component = createComponent({
+            find: jest.fn().mockResolvedValue({
+                documents: [feature, soilProfilePhoto]
+            })
+        });
+        const handleChanged = jest.fn();
+        component.onChanged.subscribe(handleChanged);
+        component.document = feature as any;
+        component.fieldDefinitions = [
+            field('featureRecordingStatus'),
+            textField('description', '설명')
+        ] as any;
+
+        await component.ngOnChanges();
+
+        const [insight] = component.getEvidenceInsights();
+        expect(insight).toMatchObject({
+            id: 'soilColor:soil-photo-1',
+            label: '토색 후보',
+            detail: 'SP1 · 먼셀 후보 10YR 4/3, 7.5YR 4/3',
+            appendText: [
+                '[토층사진 SP1]',
+                '토색 후보: 10YR 4/3, 7.5YR 4/3',
+                '토색 번호: 1: 10YR 4/3',
+                '토색 메모: 조명 보정 필요.',
+                '촬영 조건: 오전 확산광.'
+            ].join('\n')
+        });
+        expect(component.canApplyEvidenceInsight(insight)).toBe(true);
+        expect(component.getEvidenceInsightApplyTargetLabel(insight)).toBe('설명');
+
+        component.applyEvidenceInsight(insight);
+        component.applyEvidenceInsight(insight);
+
+        expect(feature.resource.description).toContain('기존 토층 관찰.');
+        expect(feature.resource.description).toContain('[토층사진 SP1]');
+        expect(feature.resource.description).toContain('토색 후보: 10YR 4/3, 7.5YR 4/3');
+        expect(feature.resource.description).toContain('토색 번호: 1: 10YR 4/3');
+        expect(feature.resource.description).toContain('토색 메모: 조명 보정 필요.');
+        expect(feature.resource.description).toContain('촬영 조건: 오전 확산광.');
+        expect(feature.resource.description.match(/\[토층사진 SP1\]/g)).toHaveLength(1);
+        expect(handleChanged).toHaveBeenCalledTimes(1);
+    });
+
+
     it('creates continuation records with inherited operation context', async () => {
 
         jest.spyOn(Date, 'now').mockReturnValue(1700000000000);

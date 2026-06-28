@@ -71,6 +71,7 @@ interface EvidenceMetric extends ContextMetric {
 }
 
 interface EvidenceInsight {
+    appendText?: string;
     detail: string;
     id: string;
     label: string;
@@ -420,9 +421,23 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
         !!this.getNotebookAppendTargetField(entry);
 
 
+    public canApplyEvidenceInsight = (insight: EvidenceInsight) =>
+        !!this.getEvidenceInsightAppendTargetField(insight);
+
+
     public getNotebookEntryApplyTargetLabel(entry: KoreanFieldworkNotebookEntry): string {
 
         const fieldName = this.getNotebookAppendTargetField(entry);
+        if (!fieldName) return '기록';
+
+        const field = this.getField(fieldName);
+        return field ? this.labels.get(field) : fieldName;
+    }
+
+
+    public getEvidenceInsightApplyTargetLabel(insight: EvidenceInsight): string {
+
+        const fieldName = this.getEvidenceInsightAppendTargetField(insight);
         if (!fieldName) return '기록';
 
         const field = this.getField(fieldName);
@@ -445,6 +460,22 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
 
         const currentValue = this.getStringResourceFieldValue(targetField);
         const nextValue = this.appendNotebookText(currentValue, this.getNotebookAppendText(entry));
+        if (currentValue === nextValue) return;
+
+        this.document.resource[targetField] = nextValue;
+        this.onChanged.emit();
+    }
+
+
+    public applyEvidenceInsight(insight: EvidenceInsight) {
+
+        if (!this.document?.resource || !insight.appendText) return;
+
+        const targetField = this.getEvidenceInsightAppendTargetField(insight);
+        if (!targetField) return;
+
+        const currentValue = this.getStringResourceFieldValue(targetField);
+        const nextValue = this.appendNotebookText(currentValue, insight.appendText);
         if (currentValue === nextValue) return;
 
         this.document.resource[targetField] = nextValue;
@@ -697,15 +728,23 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
 
         const reviewPhotos = getKoreanFieldworkReviewPhotoDocuments(this.document, bundle);
         const reviewSoilProfilePhotos = getKoreanFieldworkReviewSoilProfilePhotoDocuments(this.document, bundle);
+        const canAppendSoilColorInsight = !!this.getNarrativeAppendTargetField();
         const soilColorInsights = getSoilColorCandidateSummaries(reviewSoilProfilePhotos)
-            .map(summary => ({
-                detail: `${this.getDocumentLabel(summary.document)} · ${summary.label}`,
-                id: `soilColor:${summary.document.resource.id}`,
-                label: '토색 후보',
-                tone: summary.document.resource.soilColorAssistStatus === 'lowConfidence'
-                    ? 'warning' as const
-                    : 'info' as const
-            }));
+            .map(summary => {
+                const insight: EvidenceInsight = {
+                    detail: `${this.getDocumentLabel(summary.document)} · ${summary.label}`,
+                    id: `soilColor:${summary.document.resource.id}`,
+                    label: '토색 후보',
+                    tone: summary.document.resource.soilColorAssistStatus === 'lowConfidence'
+                        ? 'warning' as const
+                        : 'info' as const
+                };
+                const appendText = this.getSoilColorInsightAppendText(summary);
+
+                return canAppendSoilColorInsight && appendText
+                    ? { ...insight, appendText }
+                    : insight;
+            });
         const penMemoSketchInsights = getPenMemoSketchSummaries(bundle.penMemos)
             .map(summary => ({
                 detail: summary.pendingTranscription
@@ -756,6 +795,18 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
 
     private getNotebookAppendTargetField(_: KoreanFieldworkNotebookEntry): string|undefined {
 
+        return this.getNarrativeAppendTargetField();
+    }
+
+
+    private getEvidenceInsightAppendTargetField(insight: EvidenceInsight): string|undefined {
+
+        return insight.appendText ? this.getNarrativeAppendTargetField() : undefined;
+    }
+
+
+    private getNarrativeAppendTargetField(): string|undefined {
+
         return NOTEBOOK_APPEND_TARGET_FIELDS.find(fieldName => this.isEditableTextField(fieldName));
     }
 
@@ -789,6 +840,25 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
         ].filter((line): line is string => !!line && line.length > 0);
 
         return lines.join('\n');
+    }
+
+
+    private getSoilColorInsightAppendText(summary: { candidates: string[]; document: Document }): string {
+
+        const documentLabel = this.getDocumentLabel(summary.document);
+        const candidates = summary.candidates.slice(0, 3).join(', ');
+        const swatches = this.getNonEmptyDocumentStringField(summary.document, 'soilProfileColorSwatches');
+        const colorNote = this.getNonEmptyDocumentStringField(summary.document, 'soilProfileColorNote');
+        const captureNote = this.getNonEmptyDocumentStringField(summary.document, 'soilProfileCaptureNote');
+        const lines = [
+            `[토층사진 ${documentLabel}]`,
+            this.getNotebookAppendLine('토색 후보', candidates),
+            this.getNotebookAppendLine('토색 번호', swatches),
+            this.getNotebookAppendLine('토색 메모', colorNote),
+            this.getNotebookAppendLine('촬영 조건', captureNote)
+        ].filter((line): line is string => !!line && line.length > 0);
+
+        return lines.length > 1 ? lines.join('\n') : '';
     }
 
 
@@ -830,6 +900,16 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
         const value = this.document?.resource?.[fieldName];
 
         return typeof value === 'string' ? value : '';
+    }
+
+
+    private getNonEmptyDocumentStringField(document: Document, fieldName: string): string|undefined {
+
+        const value = document.resource[fieldName];
+        if (typeof value !== 'string') return undefined;
+
+        const trimmedValue = value.trim();
+        return trimmedValue && trimmedValue !== '[]' ? trimmedValue : undefined;
     }
 
 

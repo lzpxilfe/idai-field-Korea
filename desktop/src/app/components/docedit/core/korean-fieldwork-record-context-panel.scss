@@ -195,6 +195,38 @@ korean-fieldwork-record-context-panel {
     overflow-wrap: anywhere;
   }
 
+  .korean-fieldwork-record-context-evidence-insight-actions {
+    align-items: center;
+    display: flex;
+    gap: 5px;
+    justify-content: flex-end;
+    margin-top: 3px;
+  }
+
+  .korean-fieldwork-record-context-evidence-insight-action {
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid #d0d5dd;
+    border-radius: 4px;
+    color: #475467;
+    display: inline-flex;
+    font-size: 11px;
+    font-weight: 800;
+    gap: 3px;
+    line-height: 1;
+    min-height: 24px;
+    padding: 3px 6px;
+
+    &.apply {
+      border-color: #bbf7d0;
+      color: #2f5f4a;
+    }
+
+    &:hover {
+      background: #f2f4f7;
+    }
+  }
+
   .korean-fieldwork-record-context-sketch-preview {
     background: #ffffff;
     border: 1px solid rgba(52, 64, 84, 0.18);
