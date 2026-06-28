@@ -129,6 +129,28 @@ describe('KoreanFieldworkSoilColorPanel', () => {
     );
   });
 
+  it('uses the next largest numbered row when adding soil profile swatches', () => {
+    const handleUpdateResourceFields = jest.fn();
+    const { getByTestId } = render(
+      <KoreanFieldworkSoilColorPanel
+        category={createCategoryForm([
+          'soilProfileColorSwatches',
+        ])}
+        resource={createResource(C.SOIL_PROFILE_PHOTO, {
+          soilProfileColorSwatches: '1: 10YR 4/3\n3: 10YR 5/4',
+        })}
+        onUpdateResourceField={jest.fn()}
+        onUpdateResourceFields={handleUpdateResourceFields}
+      />
+    );
+
+    fireEvent.press(getByTestId('soilColorOption_7.5YR 4/4'));
+
+    expect(handleUpdateResourceFields).toHaveBeenCalledWith({
+      soilProfileColorSwatches: '1: 10YR 4/3\n3: 10YR 5/4\n4: 7.5YR 4/4',
+    });
+  });
+
   it('lets users accept photo-derived Munsell candidates', () => {
     const handleUpdateResourceField = jest.fn();
     const handleUpdateResourceFields = jest.fn();

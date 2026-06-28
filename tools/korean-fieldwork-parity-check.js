@@ -3012,6 +3012,9 @@ function validateSoilColorReviewWorkflow() {
     if (!text.includes('soilProfileColorSwatches')) {
       findings.push(`${source.label} must store reviewed numbered Munsell swatches`);
     }
+    if (!text.includes('appendEmptyNumberedSoilColorRow')) {
+      findings.push(`${source.label} must support adding an empty numbered soil color row`);
+    }
   }
 
   for (const source of panelTemplates) {
@@ -3053,6 +3056,10 @@ function validateSoilColorReviewWorkflow() {
     }
     if (!text.includes('soilProfileColorSwatches')) {
       findings.push(`${source.label} must cover reviewed numbered Munsell swatches`);
+    }
+    if (!text.includes('next largest numbered row')
+        && !text.includes('next empty numbered swatch row')) {
+      findings.push(`${source.label} must cover next-number soil color row insertion`);
     }
   }
 

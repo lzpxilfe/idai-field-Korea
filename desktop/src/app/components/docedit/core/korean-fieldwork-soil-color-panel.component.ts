@@ -118,6 +118,17 @@ export class KoreanFieldworkSoilColorPanelComponent {
     }
 
 
+    public addEmptyNumberedSwatch() {
+
+        if (!this.canRecordPhotoSwatches()) return;
+
+        this.setValue(
+            SOIL_COLOR_FIELDS.profileColorSwatches,
+            this.appendEmptyNumberedSoilColorRow(this.getValue(SOIL_COLOR_FIELDS.profileColorSwatches))
+        );
+    }
+
+
     public applyAssistCandidate(value: string) {
 
         if (this.canRecordLayerMunsell()) {
@@ -170,13 +181,38 @@ export class KoreanFieldworkSoilColorPanelComponent {
     private appendNumberedMunsellValue(currentValue: string, value: string): string {
 
         const lines: string[] = currentValue
-            .split('\n')
+            .split(/\r?\n/)
             .map(line => line.trim())
             .filter(line => line.length > 0);
 
-        lines.push(`${lines.length + 1}: ${value}`);
+        lines.push(`${this.getNextSoilColorRowNumber(lines)}: ${value}`);
 
         return lines.join('\n');
+    }
+
+
+    private appendEmptyNumberedSoilColorRow(currentValue: string): string {
+
+        const lines: string[] = currentValue
+            .split(/\r?\n/)
+            .map(line => line.trimEnd())
+            .filter(line => line.trim().length > 0);
+
+        lines.push(`${this.getNextSoilColorRowNumber(lines)}: `);
+
+        return lines.join('\n');
+    }
+
+
+    private getNextSoilColorRowNumber(lines: string[]): number {
+
+        return Math.max(
+            0,
+            ...lines.map(line => {
+                const match = line.match(/^\s*(\d+)\s*:/);
+                return match ? Number.parseInt(match[1], 10) : 0;
+            })
+        ) + 1;
     }
 
 

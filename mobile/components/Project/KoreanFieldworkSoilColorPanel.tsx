@@ -397,7 +397,7 @@ const appendNumberedMunsellValue = (
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean);
-  const nextNumber = lines.length + 1;
+  const nextNumber = getNextSoilColorRowNumber(lines);
 
   return [...lines, `${nextNumber}: ${munsellValue}`].join('\n');
 };

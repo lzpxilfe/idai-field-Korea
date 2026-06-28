@@ -56,6 +56,27 @@ korean-fieldwork-soil-color-panel {
     margin-top: 8px;
   }
 
+  .korean-fieldwork-soil-color-add-row {
+    align-items: center;
+    background: #fff;
+    border: 1px solid #b8cff6;
+    border-radius: 14px;
+    color: #175cd3;
+    display: inline-flex;
+    font-size: 13px;
+    font-weight: 700;
+    gap: 4px;
+    line-height: 1.1;
+    margin-top: 8px;
+    padding: 5px 10px;
+
+    &:hover {
+      background: #eff6ff;
+      border-color: #84adff;
+      color: #1849a9;
+    }
+  }
+
   .korean-fieldwork-soil-color-textarea {
     min-height: 82px;
   }

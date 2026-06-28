@@ -22,6 +22,14 @@
                (ngModelChange)="setLayerMunsell($event)"
                placeholder="예: 10YR 4/3">
 
+        <button *ngIf="canRecordPhotoSwatches()"
+                type="button"
+                class="btn korean-fieldwork-soil-color-add-row"
+                (click)="addEmptyNumberedSwatch()">
+            <span class="mdi mdi-plus"></span>
+            <span>번호 추가</span>
+        </button>
+
         <textarea *ngIf="canRecordPhotoSwatches()"
                   class="form-control korean-fieldwork-soil-color-textarea"
                   [ngModel]="getValue(fields.profileColorSwatches)"

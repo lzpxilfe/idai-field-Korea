@@ -35,6 +35,21 @@ describe('KoreanFieldworkSoilColorPanelComponent', () => {
     });
 
 
+    it('exposes the desktop numbered soil color row add control', () => {
+
+        const template = fs.readFileSync(
+            path.resolve(
+                __dirname,
+                '../../../../../src/app/components/docedit/core/korean-fieldwork-soil-color-panel.html'
+            ),
+            'utf8'
+        );
+
+        expect(template).toContain('addEmptyNumberedSwatch()');
+        expect(template).toContain('번호 추가');
+    });
+
+
     it('records manual layer Munsell values and marks assist status as manually recorded', () => {
 
         component.document = { resource: { category: 'Layer' } } as any;
@@ -94,6 +109,38 @@ describe('KoreanFieldworkSoilColorPanelComponent', () => {
         component.applyMunsellPreset('10YR 3/2');
 
         expect(component.document.resource.soilProfileColorSwatches).toBe('1: 10YR 4/3\n2: 10YR 3/2');
+    });
+
+
+    it('adds the next empty numbered swatch row for desktop soil profile review', () => {
+
+        const emittedStates: Array<Record<string, unknown>> = [];
+        component.document = {
+            resource: {
+                category: 'SoilProfilePhoto',
+                soilProfileColorSwatches: '1: 10YR 4/3\n3: 10YR 5/4'
+            }
+        } as any;
+        component.fieldDefinitions = [
+            { name: 'soilProfileColorSwatches', editable: true }
+        ] as any;
+        component.onChanged.subscribe(() => emittedStates.push({ ...component.document.resource }));
+
+        component.addEmptyNumberedSwatch();
+        component.applyMunsellPreset('7.5YR 4/4');
+
+        expect(component.document.resource.soilProfileColorSwatches)
+            .toBe('1: 10YR 4/3\n3: 10YR 5/4\n4:\n5: 7.5YR 4/4');
+        expect(emittedStates).toEqual([
+            {
+                category: 'SoilProfilePhoto',
+                soilProfileColorSwatches: '1: 10YR 4/3\n3: 10YR 5/4\n4: '
+            },
+            {
+                category: 'SoilProfilePhoto',
+                soilProfileColorSwatches: '1: 10YR 4/3\n3: 10YR 5/4\n4:\n5: 7.5YR 4/4'
+            }
+        ]);
     });
 
 
