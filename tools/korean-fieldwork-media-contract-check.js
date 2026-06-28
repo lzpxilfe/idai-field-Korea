@@ -641,6 +641,21 @@ function checkDesktopImageExportContract() {
   );
   requireIncludes(
     source,
+    "'surveyBoundarySource'",
+    'desktop image export manifest must preserve tablet-imported SurveyBoundary source metadata'
+  );
+  requireIncludes(
+    source,
+    "'surveyBoundaryAccuracy'",
+    'desktop image export manifest must preserve tablet-imported SurveyBoundary accuracy metadata'
+  );
+  requireIncludes(
+    source,
+    "'referenceBasemapProvider'",
+    'desktop image export manifest must preserve tablet SurveyBoundary basemap provenance'
+  );
+  requireIncludes(
+    source,
     'RELATED_DOCUMENT_CONTEXT_FIELDS',
     'desktop image export manifest must whitelist related record context fields'
   );
@@ -1421,6 +1436,21 @@ function checkContractCoverage() {
     exportImagesSpec,
     'featureType=pit',
     'desktop image export tests must assert readable related record context in the CSV manifest'
+  );
+  requireIncludes(
+    exportImagesSpec,
+    'showsBoundary:SurveyBoundary/B-001(boundary-1)',
+    'desktop image export tests must assert readable related SurveyBoundary summaries in the CSV manifest'
+  );
+  requireIncludes(
+    exportImagesSpec,
+    'surveyBoundarySource=geoJsonImport',
+    'desktop image export tests must assert tablet-imported SurveyBoundary source context in the CSV manifest'
+  );
+  requireIncludes(
+    exportImagesSpec,
+    'referenceBasemapProvider=importedVectorLayer',
+    'desktop image export tests must assert tablet-imported SurveyBoundary basemap context in the CSV manifest'
   );
   requireIncludes(
     exportImagesSpec,

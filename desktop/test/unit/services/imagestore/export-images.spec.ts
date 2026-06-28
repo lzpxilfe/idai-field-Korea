@@ -53,6 +53,7 @@ describe('exportImages', () => {
                     originalFilename: 'tablet-photo-1.jpg',
                     relations: {
                         depicts: ['feature-1'],
+                        showsBoundary: ['boundary-1'],
                         isRecordedIn: []
                     },
                     fieldworkPhotoUri: 'file:///tablet/DCIM/tablet-photo-1.jpg',
@@ -109,6 +110,27 @@ describe('exportImages', () => {
                             longAxisOrientation: 'N-E 23',
                             geometry: { type: 'Point', coordinates: [1, 2] },
                             internalDraftNote: 'not exported'
+                        }
+                    },
+                    'boundary-1': {
+                        id: 'boundary-1',
+                        identifier: 'B-001',
+                        category: 'SurveyBoundary',
+                        resource: {
+                            id: 'boundary-1',
+                            identifier: 'B-001',
+                            category: 'SurveyBoundary',
+                            relations: {
+                                liesWithin: ['operation-1']
+                            },
+                            shortDescription: 'boundary.geojson (EPSG:4326, 5 points)',
+                            surveyBoundaryType: 'excavationLimit',
+                            surveyBoundarySource: 'geoJsonImport',
+                            surveyBoundaryAccuracy: 'importedReference',
+                            surveyBoundaryNote: 'tablet imported boundary',
+                            referenceBasemapProvider: 'importedVectorLayer',
+                            geometry: { type: 'LineString', coordinates: [[1, 2], [3, 4]] },
+                            internalBoundaryReview: 'not exported'
                         }
                     }
                 },
@@ -194,7 +216,8 @@ describe('exportImages', () => {
                         fieldHubStoredSha256MatchesSourceFile: true,
                         originalFilename: 'tablet-photo-1.jpg',
                         relations: {
-                            depicts: ['feature-1']
+                            depicts: ['feature-1'],
+                            showsBoundary: ['boundary-1']
                         },
                         relatedDocuments: [
                             {
@@ -213,6 +236,24 @@ describe('exportImages', () => {
                                     featureInvestigationChecklist: ['completionPhotoTaken'],
                                     longAxisOrientation: 'N-E 23',
                                     geometry: { type: 'Point', coordinates: [1, 2] }
+                                }
+                            },
+                            {
+                                relation: 'showsBoundary',
+                                id: 'boundary-1',
+                                identifier: 'B-001',
+                                category: 'SurveyBoundary',
+                                recordRelations: {
+                                    liesWithin: ['operation-1']
+                                },
+                                recordContext: {
+                                    shortDescription: 'boundary.geojson (EPSG:4326, 5 points)',
+                                    surveyBoundaryType: 'excavationLimit',
+                                    surveyBoundarySource: 'geoJsonImport',
+                                    surveyBoundaryAccuracy: 'importedReference',
+                                    surveyBoundaryNote: 'tablet imported boundary',
+                                    referenceBasemapProvider: 'importedVectorLayer',
+                                    geometry: { type: 'LineString', coordinates: [[1, 2], [3, 4]] }
                                 }
                             }
                         ],
@@ -258,11 +299,12 @@ describe('exportImages', () => {
             );
             expect(writtenCsv).toContain(`,${expectedMd5},${expectedSha256},true,true,true,true,true,481516,${expectedMd5},${expectedSha256}\n`);
             expect(writtenCsv).toContain(
-                'photo-1,P-001,Photo,P-001.jpg,481516,tablet-photo-1.jpg,depicts:feature-1,depicts:Feature/수혈 1(feature-1)'
+                'photo-1,P-001,Photo,P-001.jpg,481516,tablet-photo-1.jpg,depicts:feature-1; showsBoundary:boundary-1,depicts:Feature/수혈 1(feature-1); showsBoundary:SurveyBoundary/B-001(boundary-1)'
             );
             expect(writtenCsv).toContain('featureType=pit');
             expect(writtenCsv).toContain('relations=liesWithin:operation-1');
             expect(JSON.stringify(writtenManifest)).not.toContain('internalDraftNote');
+            expect(JSON.stringify(writtenManifest)).not.toContain('internalBoundaryReview');
             expect(writtenCsv).toContain('originalPhoto; webOrServerBackup; backupVerified');
             expect(writtenCsv).toContain(
                 'fieldworkPhotoAnnotationStrokes,fieldworkPhotoAnnotationUpdatedAt,soilProfileAnnotationStrokes,soilProfilePhotoAnnotationStrokes,soilProfilePhotoAnnotationUpdatedAt'
@@ -271,6 +313,10 @@ describe('exportImages', () => {
             expect(writtenCsv).toContain('2026-06-23T08:34:00.000Z');
             expect(writtenCsv).toContain('2026-06-23T08:35:00.000Z');
             expect(writtenCsv).toContain('linkedToFeature');
+            expect(writtenCsv).toContain('showsBoundary:SurveyBoundary/B-001(boundary-1)');
+            expect(writtenCsv).toContain('surveyBoundarySource=geoJsonImport');
+            expect(writtenCsv).toContain('surveyBoundaryAccuracy=importedReference');
+            expect(writtenCsv).toContain('referenceBasemapProvider=importedVectorLayer');
             expect(writtenReadme).toContain('한국 현장조사 이미지 인계 메모');
             expect(writtenReadme).toContain('조사 방식(projectInvestigationMode): trialTrench');
             expect(writtenReadme).toContain('Field Desktop version(desktopAppVersion): 3.8.0-test');
@@ -283,7 +329,7 @@ describe('exportImages', () => {
             expect(writtenReadme).toContain('Field Hub SHA-256 일치: true');
             expect(writtenReadme).toContain('photoAnnotations: present');
             expect(writtenReadme).toContain('soilProfilePhotoAnnotations: present');
-            expect(writtenReadme).toContain('P-001.jpg: Photo/P-001 (photo-1); 관련 기록: depicts:Feature/수혈 1(feature-1); 태블릿 MD5 일치: true; 태블릿 크기 일치: true; Field Hub SHA-256 일치: true');
+            expect(writtenReadme).toContain('P-001.jpg: Photo/P-001 (photo-1); 관련 기록: depicts:Feature/수혈 1(feature-1); showsBoundary:SurveyBoundary/B-001(boundary-1); 태블릿 MD5 일치: true; 태블릿 크기 일치: true; Field Hub SHA-256 일치: true');
         } finally {
             isoStringSpy.mockRestore();
         }
