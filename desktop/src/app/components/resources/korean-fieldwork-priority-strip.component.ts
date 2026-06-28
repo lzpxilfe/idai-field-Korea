@@ -336,7 +336,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
 
     public returnToInvestigationOverview() {
 
-        this.setActivePanel('workflow');
+        this.setActivePanel('overview');
     }
 
     public hasScopeSummary = () => this.scopeSummary !== undefined;

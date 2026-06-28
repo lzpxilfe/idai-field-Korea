@@ -314,6 +314,14 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
 
         expect(component.isPanelActive('records')).toBe(true);
 
+        component.returnToInvestigationOverview();
+
+        expect(component.isPanelActive('overview')).toBe(true);
+
+        component.setActivePanel('records');
+
+        expect(component.isPanelActive('records')).toBe(true);
+
         component.notebookDigest = undefined;
         component.setActivePanel('notebook');
 
