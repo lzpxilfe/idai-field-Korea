@@ -3507,10 +3507,16 @@ function validateRecordActionEvidencePriority() {
       || !desktopRecordEvidenceText.includes('C.FIND_COLLECTION')) {
     findings.push('tablet and desktop record evidence chips must expose direct photos on Find/FindCollection/Sample records');
   }
-  if (!mobileRecordEvidenceSpecText.includes('keeps direct tablet photos visible on find and sample records')
-      || !desktopRecordEvidenceSpecText.includes('keeps direct tablet photos visible on find and sample records')
+  if (!mobileRecordEvidenceSpecText.includes('keeps direct tablet photos visible on find, find collection, and sample records')
+      || !desktopRecordEvidenceSpecText.includes('keeps direct tablet photos visible on find, find collection, and sample records')
       || !desktopRecordContextSpecText.includes('shows direct tablet photos on desktop find records')) {
     findings.push('tablet and desktop record evidence tests must cover direct tablet photos on Find/Sample records');
+  }
+  if (!mobileRecordEvidenceSpecText.includes('find collection')
+      || !mobileRecordEvidenceSpecText.includes('fieldworkPhotoUri: \'file:///tablet/photos/find-collection-1.jpg\'')
+      || !desktopRecordEvidenceSpecText.includes('find collection')
+      || !desktopRecordEvidenceSpecText.includes('fieldworkPhotoUri: \'file:///tablet/photos/find-collection-1.jpg\'')) {
+    findings.push('tablet and desktop record evidence tests must cover direct tablet photos on FindCollection records');
   }
   for (const [label, text] of [
     ['tablet record evidence source', mobileRecordEvidenceText],

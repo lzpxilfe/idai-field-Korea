@@ -113,9 +113,12 @@ describe('Korean fieldwork record evidence', () => {
     )).toEqual([]);
   });
 
-  it('keeps direct tablet photos visible on find and sample records', () => {
+  it('keeps direct tablet photos visible on find, find collection, and sample records', () => {
     const find = createDoc('find-1', C.FIND, '유물 1', {}, {
       fieldworkPhotoUri: 'file:///tablet/photos/find-1.jpg',
+    });
+    const findCollection = createDoc('find-collection-1', C.FIND_COLLECTION, '유물군 1', {}, {
+      fieldworkPhotoUri: 'file:///tablet/photos/find-collection-1.jpg',
     });
     const sample = createDoc('sample-1', C.SAMPLE, '시료 1', {}, {
       fieldworkPhotoUri: 'file:///tablet/photos/sample-1.jpg',
@@ -128,6 +131,11 @@ describe('Korean fieldwork record evidence', () => {
       tone: 'filled',
       createCategoryName: C.PHOTO,
       documents: [find],
+    });
+    expect(getKoreanFieldworkEvidenceChips(findCollection, [findCollection])[0]).toMatchObject({
+      id: 'photos',
+      count: 1,
+      documents: [findCollection],
     });
     expect(getKoreanFieldworkEvidenceChips(sample, [sample])[0]).toMatchObject({
       id: 'photos',

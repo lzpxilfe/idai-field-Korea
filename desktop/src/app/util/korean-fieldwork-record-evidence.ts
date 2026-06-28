@@ -27,6 +27,7 @@ const C = {
     FEATURE_GROUP: 'FeatureGroup',
     FEATURE_SEGMENT: 'FeatureSegment',
     FIND: 'Find',
+    FIND_COLLECTION: 'FindCollection',
     LAYER: 'Layer',
     OPERATION: 'Operation',
     PEN_MEMO: 'PenMemo',
