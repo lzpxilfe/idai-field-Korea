@@ -1,6 +1,7 @@
 import {
     extractMunsellCandidateOptions,
-    getMunsellCandidateSummaryLabel
+    getMunsellCandidateSummaryLabel,
+    getSoilColorSampleSourceLabel
 } from '../../../src/app/util/korean-fieldwork-soil-color-candidates';
 
 
@@ -27,5 +28,19 @@ describe('korean-fieldwork-soil-color-candidates', () => {
         )).toBe('먼셀 후보 10YR 4/3, 7.5YR 4/3');
 
         expect(getMunsellCandidateSummaryLabel('사진 색상 샘플을 읽지 못했습니다.')).toBe('');
+    });
+
+
+    it('keeps tablet eyedropper sample locations visible for desktop review', () => {
+
+        expect(getSoilColorSampleSourceLabel([
+            '사진 선택 지점 20%/50% 평균 RGB 111/87/61',
+            '1: 10YR 4/3 (높음, 차이 0.0)'
+        ].join('\n'))).toBe('사진 선택 지점 20%/50% 평균 RGB 111/87/61');
+
+        expect(getSoilColorSampleSourceLabel([
+            '사진 중앙부 평균 RGB 111/87/61',
+            '1: 10YR 4/3 (높음, 차이 0.0)'
+        ].join('\n'))).toBe('사진 중앙부 평균 RGB 111/87/61');
     });
 });

@@ -3000,6 +3000,14 @@ function validateSoilColorReviewWorkflow() {
   const desktopWorkbenchSpecText = readTextFile('desktop/test/unit/util/korean-fieldwork-workbench.spec.ts');
   const desktopCandidateText = readTextFile('desktop/src/app/util/korean-fieldwork-soil-color-candidates.ts');
   const desktopCandidateSpecText = readTextFile('desktop/test/unit/util/korean-fieldwork-soil-color-candidates.spec.ts');
+  const desktopEvidenceReviewText = readTextFile('desktop/src/app/util/korean-fieldwork-evidence-review.ts');
+  const desktopEvidenceReviewSpecText = readTextFile('desktop/test/unit/util/korean-fieldwork-evidence-review.spec.ts');
+  const desktopRecordContextPanelText = readTextFile(
+    'desktop/src/app/components/docedit/core/korean-fieldwork-record-context-panel.component.ts'
+  );
+  const desktopRecordContextPanelSpecText = readTextFile(
+    'desktop/test/unit/components/docedit/core/korean-fieldwork-record-context-panel.component.spec.ts'
+  );
 
   for (const source of panelSources) {
     const text = readTextFile(source.filePath);
@@ -3083,6 +3091,23 @@ function validateSoilColorReviewWorkflow() {
   }
   if (!desktopSoilColorPanelSpecText.includes('shared Munsell candidate parser')) {
     findings.push('desktop soil color panel test must cover the shared Munsell candidate parser');
+  }
+  if (!desktopCandidateText.includes('getSoilColorSampleSourceLabel')
+      || !desktopCandidateText.includes('SOIL_COLOR_SAMPLE_SOURCE_PATTERN')
+      || !desktopCandidateSpecText.includes('tablet eyedropper sample locations')) {
+    findings.push('desktop soil color candidate parser must preserve tablet eyedropper sample locations');
+  }
+  if (!desktopSoilColorPanelText.includes('getAssistSampleSourceLabel')
+      || !readTextFile('desktop/src/app/components/docedit/core/korean-fieldwork-soil-color-panel.html')
+        .includes('korean-fieldwork-soil-color-sample-source')
+      || !desktopSoilColorPanelSpecText.includes('tablet eyedropper sample locations')) {
+    findings.push('desktop soil color panel must show tablet eyedropper sample locations next to candidates');
+  }
+  if (!desktopEvidenceReviewText.includes('sampleSourceLabel')
+      || !desktopEvidenceReviewSpecText.includes('sampleSourceLabel')
+      || !desktopRecordContextPanelText.includes('샘플 위치')
+      || !desktopRecordContextPanelSpecText.includes('샘플 위치')) {
+    findings.push('desktop evidence review must carry tablet eyedropper sample locations into review and narrative append text');
   }
 
   for (const source of assistGenerators) {

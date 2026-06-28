@@ -353,7 +353,11 @@ describe('korean-fieldwork-evidence-review', () => {
 
         const summaries = getSoilColorCandidateSummaries([
             createDocument('soil-photo-1', 'SoilProfilePhoto', {
-                soilColorAssistCandidates: '1: 10YR 4/3 (높음)\n2: 7.5YR 4/3 (보통)'
+                soilColorAssistCandidates: [
+                    '사진 선택 지점 20%/50% 평균 RGB 111/87/61',
+                    '1: 10YR 4/3 (높음)',
+                    '2: 7.5YR 4/3 (보통)'
+                ].join('\n')
             }),
             createDocument('soil-photo-empty', 'SoilProfilePhoto', {
                 soilColorAssistCandidates: '사진 색상 샘플을 읽지 못했습니다.'
@@ -366,7 +370,8 @@ describe('korean-fieldwork-evidence-review', () => {
                 document: expect.objectContaining({
                     resource: expect.objectContaining({ id: 'soil-photo-1' })
                 }),
-                label: '먼셀 후보 10YR 4/3, 7.5YR 4/3'
+                label: '먼셀 후보 10YR 4/3, 7.5YR 4/3 · 사진 선택 지점 20%/50% 평균 RGB 111/87/61',
+                sampleSourceLabel: '사진 선택 지점 20%/50% 평균 RGB 111/87/61'
             })
         ]);
     });

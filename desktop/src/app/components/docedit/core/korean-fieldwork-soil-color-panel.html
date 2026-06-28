@@ -44,6 +44,11 @@
                   [ngModel]="getValue(fields.assistCandidates)"
                   (ngModelChange)="setAssistCandidates($event)"
                   placeholder="사진에서 읽은 먼셀 후보가 여기에 표시됩니다"></textarea>
+        <div *ngIf="getAssistSampleSourceLabel()"
+             class="korean-fieldwork-soil-color-sample-source">
+            <span class="mdi mdi-eyedropper-variant"></span>
+            <span>{{getAssistSampleSourceLabel()}}</span>
+        </div>
         <div *ngIf="getAssistCandidateOptions().length > 0"
              class="korean-fieldwork-soil-color-chip-row">
             <button *ngFor="let option of getAssistCandidateOptions()"

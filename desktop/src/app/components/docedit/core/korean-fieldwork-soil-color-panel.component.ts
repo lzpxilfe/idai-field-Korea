@@ -1,7 +1,8 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { Document, Field } from 'idai-field-core';
 import {
-    extractMunsellCandidateOptions
+    extractMunsellCandidateOptions,
+    getSoilColorSampleSourceLabel
 } from '../../../util/korean-fieldwork-soil-color-candidates';
 
 
@@ -157,6 +158,12 @@ export class KoreanFieldworkSoilColorPanelComponent {
     public getAssistCandidateOptions(): string[] {
 
         return extractMunsellCandidateOptions(this.getValue(SOIL_COLOR_FIELDS.assistCandidates));
+    }
+
+
+    public getAssistSampleSourceLabel(): string {
+
+        return getSoilColorSampleSourceLabel(this.getValue(SOIL_COLOR_FIELDS.assistCandidates));
     }
 
 

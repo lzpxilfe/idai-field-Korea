@@ -851,7 +851,9 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
     }
 
 
-    private getSoilColorInsightAppendText(summary: { candidates: string[]; document: Document }): string {
+    private getSoilColorInsightAppendText(
+            summary: { candidates: string[]; document: Document; sampleSourceLabel?: string }
+    ): string {
 
         const documentLabel = this.getDocumentLabel(summary.document);
         const candidates = summary.candidates.slice(0, 3).join(', ');
@@ -861,6 +863,7 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
         const lines = [
             `[토층사진 ${documentLabel}]`,
             this.getNotebookAppendLine('토색 후보', candidates),
+            this.getNotebookAppendLine('샘플 위치', summary.sampleSourceLabel),
             this.getNotebookAppendLine('토색 번호', swatches),
             this.getNotebookAppendLine('토색 메모', colorNote),
             this.getNotebookAppendLine('촬영 조건', captureNote)

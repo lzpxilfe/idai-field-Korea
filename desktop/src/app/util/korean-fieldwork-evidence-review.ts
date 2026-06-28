@@ -4,7 +4,11 @@ import {
     EvidenceBundle,
     KoreanFieldworkReadinessIssue
 } from 'idai-field-core';
-import { extractMunsellCandidateOptions, getMunsellCandidateSummaryLabel } from './korean-fieldwork-soil-color-candidates';
+import {
+    extractMunsellCandidateOptions,
+    getMunsellCandidateSummaryLabel,
+    getSoilColorSampleSourceLabel
+} from './korean-fieldwork-soil-color-candidates';
 
 export interface KoreanFieldworkEvidenceReview extends EvidenceBundle {
     hasOpenIssues: boolean;
@@ -56,6 +60,7 @@ export interface KoreanFieldworkSoilColorCandidateSummary {
     candidates: string[];
     document: Document;
     label: string;
+    sampleSourceLabel?: string;
 }
 
 const FIELDWORK_PHOTO_ANNOTATION_FIELD = 'fieldworkPhotoAnnotationStrokes';
@@ -196,11 +201,16 @@ export function getSoilColorCandidateSummaries(
     return soilProfilePhotos.flatMap(document => {
         const candidates = extractMunsellCandidateOptions(document.resource.soilColorAssistCandidates);
         if (candidates.length === 0) return [];
+        const label = getMunsellCandidateSummaryLabel(document.resource.soilColorAssistCandidates);
+        const sampleSourceLabel = getSoilColorSampleSourceLabel(document.resource.soilColorAssistCandidates);
 
         return [{
             candidates,
             document,
-            label: getMunsellCandidateSummaryLabel(document.resource.soilColorAssistCandidates)
+            label: sampleSourceLabel
+                ? `${label} · ${sampleSourceLabel}`
+                : label,
+            ...(sampleSourceLabel ? { sampleSourceLabel } : {})
         }];
     });
 }

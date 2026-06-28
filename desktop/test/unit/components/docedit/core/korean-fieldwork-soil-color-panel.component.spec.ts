@@ -29,6 +29,7 @@ describe('KoreanFieldworkSoilColorPanelComponent', () => {
         expect(template).not.toContain('Munsell 값');
         expect(template).toContain('사진 판독 후보');
         expect(template).toContain('사진에서 읽은 먼셀 후보');
+        expect(template).toContain('getAssistSampleSourceLabel()');
         expect(template).toContain('토색 메모');
         expect(template).toContain('보정판 위치');
         expect(template).not.toContain('보정표');
@@ -185,6 +186,27 @@ describe('KoreanFieldworkSoilColorPanelComponent', () => {
         ] as any;
 
         expect(component.getAssistCandidateOptions()).toEqual(['10YR 4/3', 'GLEY 1 5/N']);
+    });
+
+
+    it('shows tablet eyedropper sample locations next to desktop photo candidates', () => {
+
+        component.document = {
+            resource: {
+                category: 'SoilProfilePhoto',
+                soilColorAssistCandidates: [
+                    '사진 선택 지점 20%/50% 평균 RGB 111/87/61',
+                    '1: 10YR 4/3 (높음)'
+                ].join('\n')
+            }
+        } as any;
+        component.fieldDefinitions = [
+            { name: 'soilProfileColorSwatches', editable: true },
+            { name: 'soilColorAssistCandidates', editable: true }
+        ] as any;
+
+        expect(component.getAssistSampleSourceLabel())
+            .toBe('사진 선택 지점 20%/50% 평균 RGB 111/87/61');
     });
 
 
