@@ -86,6 +86,7 @@ function makeProgressItem(document: Document,
     const evidenceCount = evidenceBundle.photos.length
         + evidenceBundle.soilProfilePhotos.length
         + evidenceBundle.drawings.length
+        + evidenceBundle.penMemos.length
         + evidenceBundle.finds.length
         + evidenceBundle.samples.length;
     const issueCount = evidenceBundle.issues.length;

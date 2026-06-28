@@ -51,6 +51,7 @@ const EVIDENCE_CHIP_IDS = new Set<string>([
   'photos',
   'soilProfilePhotos',
   'drawings',
+  'sketches',
   'finds',
   'samples',
 ]);
@@ -61,6 +62,11 @@ const PREFERRED_EVIDENCE_ACTION_IDS = [
   'drawings',
   'finds',
   'samples',
+];
+
+const OPEN_EVIDENCE_ACTION_IDS = [
+  ...PREFERRED_EVIDENCE_ACTION_IDS,
+  'sketches',
 ];
 
 export type KoreanFieldworkRecordActionType = 'createDocument'|'openDocument';
@@ -264,7 +270,7 @@ const getMissingEvidenceAction = (
 const getOpenEvidenceAction = (
   evidenceChips: ReturnType<typeof getKoreanFieldworkEvidenceChips>
 ): KoreanFieldworkRecordActionItem | undefined => {
-  const filledChip = PREFERRED_EVIDENCE_ACTION_IDS
+  const filledChip = OPEN_EVIDENCE_ACTION_IDS
     .map((chipId) => evidenceChips.find((chip) => chip.id === chipId))
     .find((chip) => chip && chip.documents.length > 0);
   const [document] = filledChip?.documents ?? [];

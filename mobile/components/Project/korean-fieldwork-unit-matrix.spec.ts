@@ -98,6 +98,43 @@ describe('Korean fieldwork unit matrix', () => {
     });
   });
 
+  it('counts sketch memos in the feature overview evidence label', () => {
+    const feature = createDoc('feature-1', C.FEATURE, '수혈 1', {}, {
+      featureRecordingStatus: 'confirmed',
+      featureInvestigationChecklist: [
+        'preInvestigationPhotoTaken',
+        'inProgressPhotoTaken',
+        'soilProfilePhotoLinked',
+        'measuredDrawingCompleted',
+        'preRecoveryFindPhotoTaken',
+        'findsRecovered',
+        'samplesCollected',
+        'penMemoReviewed',
+        'completionPhotoTaken',
+      ],
+      fieldRecordQuality: ['immediateRecording'],
+      recordCreationTiming: 'duringFieldwork',
+      verificationState: 'observedInField',
+    });
+    const memo = createDoc('memo-1', C.PEN_MEMO, '스케치 메모 1', {
+      depicts: ['feature-1'],
+    }, {
+      penMemoStrokes: '{"version":1,"strokes":[{"points":[{"x":10,"y":20}]}]}',
+      penMemoTranscriptionStatus: 'reviewed',
+    });
+
+    const items = getKoreanFieldworkFeatureOverviewItems(
+      createSummary([]),
+      [feature, memo]
+    );
+
+    expect(items[0]).toMatchObject({
+      id: 'feature-1',
+      evidenceCount: 1,
+      evidenceLabel: '약도·스케치 1',
+    });
+  });
+
   it('limits the matrix to the current fieldwork scope', () => {
     const operation = createDoc('operation-1', C.OPERATION, '조사구역 1');
     const trench = createDoc('trench-1', C.TRENCH, 'T1', {

@@ -129,6 +129,7 @@ function makeUnitMatrixItem(document: Document,
     const evidenceCount = evidenceBundle.photos.length
         + evidenceBundle.soilProfilePhotos.length
         + evidenceBundle.drawings.length
+        + evidenceBundle.penMemos.length
         + evidenceBundle.finds.length
         + evidenceBundle.samples.length;
     const checklistSteps = getKoreanFieldworkChecklistSteps(document.resource.category, investigationMode);

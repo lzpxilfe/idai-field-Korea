@@ -41,6 +41,7 @@ const EVIDENCE_CHIP_IDS = new Set<string>([
   'photos',
   'soilProfilePhotos',
   'drawings',
+  'sketches',
   'finds',
   'samples',
 ]);

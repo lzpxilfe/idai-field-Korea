@@ -182,6 +182,42 @@ describe('Korean fieldwork progress', () => {
         },
       ]);
   });
+
+  it('counts tablet sketch memos as fieldwork evidence', () => {
+    const feature = createDoc('feature-1', C.FEATURE, '수혈 1', {}, {
+      featureRecordingStatus: 'confirmed',
+      featureInvestigationChecklist: [
+        'preInvestigationPhotoTaken',
+        'inProgressPhotoTaken',
+        'soilProfilePhotoLinked',
+        'measuredDrawingCompleted',
+        'preRecoveryFindPhotoTaken',
+        'findsRecovered',
+        'samplesCollected',
+        'penMemoReviewed',
+        'completionPhotoTaken',
+      ],
+      fieldRecordQuality: ['immediateRecording'],
+      recordCreationTiming: 'duringFieldwork',
+      verificationState: 'observedInField',
+    });
+    const memo = createDoc('memo-1', C.PEN_MEMO, '스케치 메모 1', {
+      depicts: ['feature-1'],
+    }, {
+      penMemoStrokes: '{"version":1,"strokes":[{"points":[{"x":10,"y":20}]}]}',
+      penMemoTranscriptionStatus: 'reviewed',
+    });
+
+    expect(getKoreanFieldworkProgressItems(createSummary([]), [feature, memo]))
+      .toMatchObject([
+        {
+          id: 'feature-1',
+          metrics: {
+            evidenceCount: 1,
+          },
+        },
+      ]);
+  });
 });
 
 const createDoc = (

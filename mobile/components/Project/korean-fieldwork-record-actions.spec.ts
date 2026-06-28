@@ -124,6 +124,33 @@ describe('Korean fieldwork record actions', () => {
       document: photo,
     }));
   });
+
+  it('counts and opens existing sketch memo evidence', () => {
+    const feature = createDoc('feature-1', C.FEATURE, '수혈 1', {}, {
+      fieldRecordQuality: ['immediateRecording'],
+      recordCreationTiming: 'duringFieldwork',
+    });
+    const memo = createDoc('memo-1', C.PEN_MEMO, '스케치 메모 1', {
+      depicts: ['feature-1'],
+    }, {
+      penMemoStrokes: '{"version":1,"strokes":[{"points":[{"x":10,"y":20}]}]}',
+      penMemoTranscriptionStatus: 'reviewed',
+    });
+
+    const summary = getKoreanFieldworkRecordActionSummary(
+      feature,
+      [feature, memo],
+      []
+    );
+
+    expect(summary.evidenceCount).toBe(1);
+    expect(summary.actions).toContainEqual(expect.objectContaining({
+      id: 'open-sketches',
+      type: 'openDocument',
+      label: '약도·스케치 열기',
+      document: memo,
+    }));
+  });
 });
 
 const createDoc = (

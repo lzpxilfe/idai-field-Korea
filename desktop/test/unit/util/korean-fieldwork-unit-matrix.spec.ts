@@ -64,6 +64,45 @@ describe('korean-fieldwork-unit-matrix', () => {
     });
 
 
+    it('counts tablet sketch memos as feature overview evidence', () => {
+
+        const feature = createDocument('feature-1', 'Feature', {
+            featureRecordingStatus: 'confirmed',
+            featureInvestigationChecklist: [
+                'preInvestigationPhotoTaken',
+                'inProgressPhotoTaken',
+                'soilProfilePhotoLinked',
+                'measuredDrawingCompleted',
+                'preRecoveryFindPhotoTaken',
+                'findsRecovered',
+                'samplesCollected',
+                'penMemoReviewed',
+                'completionPhotoTaken'
+            ],
+            fieldRecordQuality: ['immediateRecording'],
+            recordCreationTiming: 'duringFieldwork',
+            verificationState: 'observedInField'
+        });
+        const memo = createDocument('memo-1', 'PenMemo', {
+            relations: { depicts: ['feature-1'] },
+            penMemoStrokes: '{"version":1,"strokes":[{"points":[{"x":10,"y":20}]}]}',
+            penMemoTranscriptionStatus: 'reviewed'
+        });
+
+        const items = makeKoreanFieldworkFeatureOverviewItems(
+            [feature, memo],
+            createDocument('project', 'Project'),
+            createProjectConfiguration()
+        );
+
+        expect(items[0]).toMatchObject({
+            id: 'feature-1',
+            evidenceCount: 1,
+            evidenceLabel: '근거자료 1'
+        });
+    });
+
+
     it('tracks trench process checks in trial trench mode', () => {
 
         const operation = createDocument('operation-1', 'Operation');

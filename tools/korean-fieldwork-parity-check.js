@@ -3155,11 +3155,15 @@ function validateProgressModeAwareness() {
   const desktopSource = 'desktop/src/app/util/korean-fieldwork-progress-board.ts';
   const tabletText = readTextFile(tabletSource);
   const desktopText = readTextFile(desktopSource);
+  const tabletProgressSpecText = readTextFile('mobile/components/Project/korean-fieldwork-progress.spec.ts');
   const desktopChecklistText = readTextFile('desktop/src/app/util/korean-fieldwork-checklist.ts');
   const desktopChecklistSpecText = readTextFile('desktop/test/unit/util/korean-fieldwork-checklist.spec.ts');
   const desktopOverviewText = readTextFile('desktop/src/app/util/korean-fieldwork-overview-chart.ts');
   const desktopUnitMatrixText = readTextFile('desktop/src/app/util/korean-fieldwork-unit-matrix.ts');
   const desktopProgressSpecText = readTextFile('desktop/test/unit/util/korean-fieldwork-progress-board.spec.ts');
+  const tabletUnitMatrixText = readTextFile('mobile/components/Project/korean-fieldwork-unit-matrix.ts');
+  const tabletUnitMatrixSpecText = readTextFile('mobile/components/Project/korean-fieldwork-unit-matrix.spec.ts');
+  const desktopUnitMatrixSpecText = readTextFile('desktop/test/unit/util/korean-fieldwork-unit-matrix.spec.ts');
   const tabletWorkbenchText = readTextFile('mobile/components/Project/korean-fieldwork-workbench.ts');
   const tabletWorkbenchPanelText = readTextFile('mobile/components/Project/KoreanFieldworkWorkbenchPanel.tsx');
   const tabletWorkbenchSpecText = readTextFile('mobile/components/Project/korean-fieldwork-workbench.spec.ts');
@@ -3241,6 +3245,18 @@ function validateProgressModeAwareness() {
   if (!desktopProgressSpecText.includes('keeps confirmed tablet records in investigation until all workflow steps are checked')) {
     findings.push('desktop progress board tests must keep partial tablet workflow checks out of closeout');
   }
+  if (!tabletText.includes("'sketches'")
+      || !tabletUnitMatrixText.includes("'sketches'")
+      || !desktopText.includes('+ evidenceBundle.penMemos.length')
+      || !desktopUnitMatrixText.includes('+ evidenceBundle.penMemos.length')) {
+    findings.push('tablet and desktop progress/unit evidence counts must include tablet PenMemo sketch evidence');
+  }
+  if (!tabletProgressSpecText.includes('counts tablet sketch memos as fieldwork evidence')
+      || !tabletUnitMatrixSpecText.includes('counts sketch memos in the feature overview evidence label')
+      || !desktopProgressSpecText.includes('counts tablet sketch memos as evidence in desktop progress')
+      || !desktopUnitMatrixSpecText.includes('counts tablet sketch memos as feature overview evidence')) {
+    findings.push('tablet and desktop progress/unit tests must cover PenMemo sketch evidence counts');
+  }
   if (!tabletWorkbenchSpecText.includes('counts pen memo review as a tablet workflow step')
       || !tabletWorkbenchSpecText.includes('uses the investigation mode to surface trial-trench workflow progress')) {
     findings.push('tablet workbench tests must cover PenMemo review and trial-trench progress');
@@ -3317,6 +3333,10 @@ function validateRecordActionEvidencePriority() {
   const mobileFieldNotePanelSpecText = readTextFile(
     'mobile/components/Project/KoreanFieldworkFieldNotePanel.spec.tsx'
   );
+  const mobileRecordActionText = readTextFile(mobileSource);
+  const mobileRecordActionSpecText = readTextFile(
+    'mobile/components/Project/korean-fieldwork-record-actions.spec.ts'
+  );
   const desktopRecordActionText = readTextFile(desktopSource);
   const desktopRecordActionSpecText = readTextFile(
     'desktop/test/unit/util/korean-fieldwork-record-actions.spec.ts'
@@ -3351,6 +3371,11 @@ function validateRecordActionEvidencePriority() {
     findings.push(
       `tablet missing-evidence priority mismatch: ${mobileChipIds.join(',')}`
     );
+  }
+  if (!mobileRecordActionText.includes('OPEN_EVIDENCE_ACTION_IDS')
+      || !mobileRecordActionText.includes("'sketches'")
+      || !mobileRecordActionSpecText.includes('counts and opens existing sketch memo evidence')) {
+    findings.push('tablet record actions must count existing PenMemo sketches and offer them as openable evidence');
   }
   if (!desktopRecordActionText.includes('makeKoreanFieldworkEvidenceReview')) {
     findings.push('desktop record actions must use expanded evidence review issues, including tablet PenMemo transcription backlog');

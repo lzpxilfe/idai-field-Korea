@@ -69,6 +69,29 @@ describe('korean-fieldwork-progress-board', () => {
     });
 
 
+    it('counts tablet sketch memos as evidence in desktop progress', () => {
+
+        const items = makeKoreanFieldworkProgressItems([
+            createDocument('feature-1', 'Feature', {
+                featureRecordingStatus: 'confirmed',
+                featureInvestigationChecklist: COMPLETE_FEATURE_CHECKLIST,
+                fieldRecordQuality: ['immediateRecording'],
+                recordCreationTiming: 'duringFieldwork',
+                verificationState: 'observedInField'
+            }),
+            createDocument('memo-1', 'PenMemo', {
+                relations: { depicts: ['feature-1'] },
+                penMemoStrokes: '{"version":1,"strokes":[{"points":[{"x":10,"y":20}]}]}',
+                penMemoTranscriptionStatus: 'reviewed'
+            })
+        ] as any);
+
+        expect(items.find(item => item.documentId === 'feature-1')).toMatchObject({
+            evidenceCount: 1
+        });
+    });
+
+
     it('marks feature parent ranges without feature children as investigation work', () => {
 
         const [item] = makeKoreanFieldworkProgressItems([
