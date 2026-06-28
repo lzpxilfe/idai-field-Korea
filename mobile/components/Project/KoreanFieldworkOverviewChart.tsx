@@ -243,6 +243,8 @@ const metricIcon = (
       return 'account-tree';
     case 'feature':
       return 'add-location-alt';
+    case 'evidence':
+      return 'collections';
     case 'process':
       return 'playlist-add-check';
     case 'review':
@@ -353,8 +355,9 @@ const styles = StyleSheet.create({
   },
   metricRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     marginHorizontal: -4,
-    marginTop: 10,
+    marginTop: 6,
   },
   metricCard: {
     alignItems: 'center',
@@ -362,7 +365,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     flex: 1,
     marginHorizontal: 4,
+    marginTop: 4,
     minHeight: 82,
+    minWidth: 96,
     paddingHorizontal: 5,
     paddingVertical: 7,
   },

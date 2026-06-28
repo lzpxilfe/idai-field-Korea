@@ -28,6 +28,7 @@ describe('KoreanFieldworkOverviewChart', () => {
     }, {
       featureRecordingStatus: 'candidate',
       featureInvestigationChecklist: ['preInvestigationPhotoTaken'],
+      fieldworkPhotoUri: 'file:///tablet/photos/feature-1.jpg',
     });
     const handleReturn = jest.fn();
 
@@ -44,6 +45,9 @@ describe('KoreanFieldworkOverviewChart', () => {
     expect(getByText('전체 유구 현황')).toBeTruthy();
     expect(getByText('유구·피트 진행')).toBeTruthy();
     expect(getByText('조사구역 1 / 수혈 1 · 기록 2')).toBeTruthy();
+    expect(getByText('자료')).toBeTruthy();
+    expect(getByText('사진 1 · 도면/메모 0 · 유물/시료 0')).toBeTruthy();
+    expect(getByText('collections')).toBeTruthy();
 
     fireEvent.press(getByTestId('fieldworkOverviewReturnToInvestigation'));
     fireEvent.press(getByTestId('overviewSegment_operation'));

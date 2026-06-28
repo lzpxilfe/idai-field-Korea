@@ -34,6 +34,11 @@ export interface KoreanFieldworkOverviewChartData {
     featureCount: number;
     featureSegmentCount: number;
     featureWorkflowCount: number;
+    evidenceCount: number;
+    photoEvidenceCount: number;
+    drawingCount: number;
+    penMemoCount: number;
+    findSampleCount: number;
     checklistDone: number;
     checklistTotal: number;
     checklistPercent: number;
@@ -45,10 +50,20 @@ export interface KoreanFieldworkOverviewChartData {
 }
 
 const C = {
+    DAILY_LOG: 'DailyLog',
+    DRAWING: 'Drawing',
     FEATURE: 'Feature',
     FEATURE_GROUP: 'FeatureGroup',
     FEATURE_SEGMENT: 'FeatureSegment',
+    FIELD_RECORD_QUALITY_REVIEW: 'FieldRecordQualityReview',
+    FIND: 'Find',
+    FIND_COLLECTION: 'FindCollection',
+    LAYER: 'Layer',
     OPERATION: 'Operation',
+    PEN_MEMO: 'PenMemo',
+    PHOTO: 'Photo',
+    SAMPLE: 'Sample',
+    SOIL_PROFILE_PHOTO: 'SoilProfilePhoto',
     SURVEY: 'Survey',
     SURVEY_BOUNDARY: 'SurveyBoundary',
     TRENCH: 'Trench'
@@ -68,6 +83,31 @@ const FEATURE_WORKFLOW_CATEGORIES = new Set<string>([
     C.FEATURE,
     C.FEATURE_SEGMENT
 ]);
+
+const EVIDENCE_DOCUMENT_CATEGORIES = [
+    C.FIND,
+    C.FIND_COLLECTION,
+    C.SAMPLE,
+    C.PHOTO,
+    C.SOIL_PROFILE_PHOTO,
+    C.DRAWING,
+    C.PEN_MEMO
+];
+
+const DIRECT_FIELDWORK_PHOTO_CATEGORIES = new Set<string>([
+    C.DAILY_LOG,
+    C.FEATURE,
+    C.FEATURE_GROUP,
+    C.FEATURE_SEGMENT,
+    C.FIELD_RECORD_QUALITY_REVIEW,
+    C.LAYER,
+    C.OPERATION,
+    C.SURVEY,
+    C.SURVEY_BOUNDARY,
+    C.TRENCH
+]);
+
+const DIRECT_FIELDWORK_PHOTO_URI_FIELDS = ['fieldworkPhotoUri', 'imageUri', 'fileUri'];
 
 export function getKoreanFieldworkOverviewChartData(
         stats: KoreanFieldworkTodayStats,
@@ -89,6 +129,17 @@ export function getKoreanFieldworkOverviewChartData(
     const featureWorkflowDocuments = documents.filter(document =>
         FEATURE_WORKFLOW_CATEGORIES.has(document.resource.category)
     );
+    const directPhotoCount = countDirectFieldworkPhotoEvidenceDocuments(documents);
+    const photoEvidenceCount = (categoryCounts.get(C.PHOTO) ?? 0)
+        + (categoryCounts.get(C.SOIL_PROFILE_PHOTO) ?? 0)
+        + directPhotoCount;
+    const drawingCount = categoryCounts.get(C.DRAWING) ?? 0;
+    const penMemoCount = categoryCounts.get(C.PEN_MEMO) ?? 0;
+    const findSampleCount = (categoryCounts.get(C.FIND) ?? 0)
+        + (categoryCounts.get(C.FIND_COLLECTION) ?? 0)
+        + (categoryCounts.get(C.SAMPLE) ?? 0);
+    const evidenceCount = countCategoryGroup(categoryCounts, EVIDENCE_DOCUMENT_CATEGORIES)
+        + directPhotoCount;
     const checklistStats = getKoreanFieldworkChecklistMetrics(documents, investigationMode);
     const checklistPercent = checklistStats.total > 0
         ? Math.round((checklistStats.done / checklistStats.total) * 100)
@@ -105,6 +156,11 @@ export function getKoreanFieldworkOverviewChartData(
         featureCount,
         featureSegmentCount,
         featureWorkflowCount: featureWorkflowDocuments.length,
+        evidenceCount,
+        photoEvidenceCount,
+        drawingCount,
+        penMemoCount,
+        findSampleCount,
         checklistDone: checklistStats.done,
         checklistTotal: checklistStats.total,
         checklistPercent,
@@ -124,6 +180,13 @@ export function getKoreanFieldworkOverviewChartData(
                 value: featureCount,
                 detail: `유구군 ${featureGroupCount} · 피트 ${featureSegmentCount}`,
                 tone: featureCount > 0 ? 'success' : 'neutral'
+            },
+            {
+                id: 'evidence',
+                label: '자료',
+                value: evidenceCount,
+                detail: `사진 ${photoEvidenceCount} · 도면/메모 ${drawingCount + penMemoCount} · 유물/시료 ${findSampleCount}`,
+                tone: evidenceCount > 0 ? 'info' : 'neutral'
             },
             {
                 id: 'process',
@@ -174,6 +237,30 @@ function getCategoryCounts(documents: Document[]): Map<string, number> {
         );
         return counts;
     }, new Map<string, number>());
+}
+
+
+function countCategoryGroup(categoryCounts: Map<string, number>, categories: string[]): number {
+
+    return categories.reduce(
+        (count, category) => count + (categoryCounts.get(category) ?? 0),
+        0
+    );
+}
+
+
+function countDirectFieldworkPhotoEvidenceDocuments(documents: Document[]): number {
+
+    return documents.filter(document =>
+        DIRECT_FIELDWORK_PHOTO_CATEGORIES.has(String(document.resource.category))
+        && DIRECT_FIELDWORK_PHOTO_URI_FIELDS.some(fieldName => hasTextValue(document.resource[fieldName]))
+    ).length;
+}
+
+
+function hasTextValue(value: unknown): boolean {
+
+    return typeof value === 'string' && value.trim().length > 0;
 }
 
 

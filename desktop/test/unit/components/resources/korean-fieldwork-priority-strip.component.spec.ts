@@ -304,6 +304,7 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
         expect(component.getOverviewMetrics().map(metric => metric.label)).toEqual([
             '조사',
             '유구',
+            '자료',
             '진행',
             '확인 필요'
         ]);

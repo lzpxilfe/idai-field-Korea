@@ -80,6 +80,38 @@ describe('korean-fieldwork-overview-chart', () => {
     });
 
 
+    it('counts tablet evidence documents and directly attached fieldwork photos', () => {
+
+        const documents = [
+            createDoc('feature-1', 'Feature', '수혈 1', {}, {
+                fieldworkPhotoUri: 'file:///tablet/photos/feature-1.jpg'
+            }),
+            createDoc('photo-1', 'Photo', '사진 1', {}, {
+                fieldworkPhotoUri: 'file:///tablet/photos/photo-1.jpg'
+            }),
+            createDoc('drawing-1', 'Drawing', '도면 1'),
+            createDoc('memo-1', 'PenMemo', '메모 1'),
+            createDoc('find-1', 'Find', '유물 1', {}, {
+                fieldworkPhotoUri: 'file:///tablet/photos/find-1.jpg'
+            })
+        ];
+
+        const data = getKoreanFieldworkOverviewChartData(createStats(), documents);
+
+        expect(data.evidenceCount).toBe(5);
+        expect(data.photoEvidenceCount).toBe(2);
+        expect(data.drawingCount).toBe(1);
+        expect(data.penMemoCount).toBe(1);
+        expect(data.findSampleCount).toBe(1);
+        expect(data.metrics.find(metric => metric.id === 'evidence')).toMatchObject({
+            label: '자료',
+            value: 5,
+            detail: '사진 2 · 도면/메모 2 · 유물/시료 1',
+            tone: 'info'
+        });
+    });
+
+
     it('includes trench checklist progress for trial trench investigations', () => {
 
         const trench = createDoc('trench-1', 'Trench', 'T1', {}, {

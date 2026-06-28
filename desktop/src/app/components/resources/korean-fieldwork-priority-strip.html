@@ -47,10 +47,11 @@
                  class="korean-fieldwork-overview-metric"
                  [ngClass]="getOverviewToneClass(metric.tone)">
                 <span class="mdi korean-fieldwork-overview-metric-icon"
-                      [class.mdi-family-tree]="metric.id === 'investigation'"
-                      [class.mdi-map-marker-plus-outline]="metric.id === 'feature'"
-                      [class.mdi-playlist-check]="metric.id === 'process'"
-                      [class.mdi-alert-circle-outline]="metric.id === 'review'"></span>
+                       [class.mdi-family-tree]="metric.id === 'investigation'"
+                       [class.mdi-map-marker-plus-outline]="metric.id === 'feature'"
+                       [class.mdi-image-multiple-outline]="metric.id === 'evidence'"
+                       [class.mdi-playlist-check]="metric.id === 'process'"
+                       [class.mdi-alert-circle-outline]="metric.id === 'review'"></span>
                 <span class="korean-fieldwork-overview-metric-value">{{metric.value}}</span>
                 <span class="korean-fieldwork-overview-metric-label">{{metric.label}}</span>
                 <span class="korean-fieldwork-overview-metric-detail">{{metric.detail}}</span>
