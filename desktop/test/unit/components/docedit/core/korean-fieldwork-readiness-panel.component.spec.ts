@@ -192,9 +192,23 @@ describe('KoreanFieldworkReadinessPanelComponent', () => {
                 label: '먼셀 후보 10YR 4/3'
             })
         ]);
+        expect(component.getSoilColorCandidateSummaryLabels()).toEqual([
+            'soil-photo-1 · 먼셀 후보 10YR 4/3'
+        ]);
         expect(component.getMissingEvidenceLabels()).toEqual(['검토 기록', '야장 전사']);
         expect(component.getPenMemoTranscriptionSummaryLabels()).toEqual([
             'memo-1 · 태블릿 손글씨 원자료 · 스케치 메모 1획/1점.'
+        ]);
+        expect(component.getPenMemoTranscriptionInsights()).toEqual([
+            {
+                documentLabel: 'memo-1',
+                label: '태블릿 손글씨 원자료 · 스케치 메모 1획/1점.',
+                sketchPreview: {
+                    label: '스케치 메모 1획/1점.',
+                    path: 'M 30 8 L 34 8 M 32 6 L 32 10',
+                    viewBox: '0 0 120 72'
+                }
+            }
         ]);
         expect(component.getEvidenceReviewStatusLabel()).toBe('보완 필요');
         const penMemoIssue = component.issues.find(issue =>

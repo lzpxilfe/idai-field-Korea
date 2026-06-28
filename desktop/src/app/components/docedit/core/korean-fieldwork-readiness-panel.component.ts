@@ -13,7 +13,9 @@ import {
 } from '../../../util/korean-fieldwork-draft-defaults';
 import {
     KoreanFieldworkEvidenceReview,
-    makeKoreanFieldworkEvidenceReview
+    KoreanFieldworkPenMemoSketchPreview,
+    makeKoreanFieldworkEvidenceReview,
+    getPenMemoSketchPreview
 } from '../../../util/korean-fieldwork-evidence-review';
 import { DoceditComponent } from '../docedit.component';
 
@@ -39,6 +41,12 @@ interface EvidenceCreationAction {
 interface SafeResolutionTarget {
     document: Document;
     updates: { [fieldName: string]: unknown };
+}
+
+interface ReadinessPenMemoTranscriptionInsight {
+    documentLabel: string;
+    label: string;
+    sketchPreview?: KoreanFieldworkPenMemoSketchPreview;
 }
 
 
@@ -157,6 +165,19 @@ export class KoreanFieldworkReadinessPanelComponent implements OnChanges {
         this.evidenceReview?.penMemoTranscriptionSummaries.map(summary =>
             `${this.getDocumentLabel(summary.document)} · ${summary.label}`
         ) ?? [];
+
+    public getSoilColorCandidateSummaryLabels = () =>
+        this.evidenceReview?.soilColorCandidateSummaries.map(summary =>
+            `${this.getDocumentLabel(summary.document)} · ${summary.label}`
+        ) ?? [];
+
+
+    public getPenMemoTranscriptionInsights = (): ReadinessPenMemoTranscriptionInsight[] =>
+        this.evidenceReview?.penMemoTranscriptionSummaries.map(summary => ({
+            documentLabel: this.getDocumentLabel(summary.document),
+            label: summary.label,
+            sketchPreview: getPenMemoSketchPreview(summary.document.resource.penMemoStrokes)
+        })) ?? [];
 
 
     public getEvidenceReviewStatusLabel(): string {
