@@ -2,6 +2,7 @@ import {
     getPenMemoSketchPreview,
     getPenMemoSketchSummaries,
     getPhotoAnnotationSketchPreview,
+    getPhotoAnnotationSummaryLabel,
     getPhotoAnnotationSummaries,
     getPenMemoTranscriptionSummaryLabel,
     getPendingPenMemoTranscriptionDocuments,
@@ -212,6 +213,57 @@ describe('korean-fieldwork-evidence-review', () => {
             ] as any
         ).photoAnnotationSummaries.map(summary => summary.document.resource.id))
             .toEqual(['photo-annotated', 'soil-photo-annotated']);
+    });
+
+
+    it('keeps tablet photo annotation update times visible for desktop review panels', () => {
+
+        const photoStrokes = '{"version":1,"strokes":[{"points":[{"x":1000,"y":1000},{"x":5000,"y":5000}]}]}';
+        const soilProfilePhotoStrokes = '{"version":1,"strokes":[{"points":[{"x":2000,"y":3000}]}]}';
+        const photoLabel = getPhotoAnnotationSummaryLabel(photoStrokes);
+        const soilProfilePhotoLabel = getPhotoAnnotationSummaryLabel(soilProfilePhotoStrokes);
+
+        const summaries = getPhotoAnnotationSummaries([
+            createDocument('photo-annotated', 'Photo', {
+                fieldworkPhotoAnnotationStrokes: photoStrokes,
+                fieldworkPhotoAnnotationUpdatedAt: '2026-06-23T08:34:00.000Z'
+            })
+        ] as any, [
+            createDocument('soil-photo-annotated', 'SoilProfilePhoto', {
+                soilProfilePhotoAnnotationStrokes: soilProfilePhotoStrokes,
+                soilProfilePhotoAnnotationUpdatedAt: '2026-06-23T08:35:00.000Z'
+            }),
+            createDocument('soil-photo-legacy', 'SoilProfilePhoto', {
+                soilProfileAnnotationStrokes: '[[{"x":1,"y":2}]]',
+                soilProfilePhotoAnnotationUpdatedAt: '2026-06-23T08:36:00.000Z'
+            })
+        ] as any);
+
+        expect(summaries.map(summary => ({
+            id: summary.document.resource.id,
+            label: summary.label,
+            previewLabel: summary.preview.label,
+            updatedAt: summary.updatedAt
+        }))).toEqual([
+            {
+                id: 'photo-annotated',
+                label: `${photoLabel} · 수정 2026-06-23T08:34:00.000Z`,
+                previewLabel: photoLabel,
+                updatedAt: '2026-06-23T08:34:00.000Z'
+            },
+            {
+                id: 'soil-photo-annotated',
+                label: `${soilProfilePhotoLabel} · 수정 2026-06-23T08:35:00.000Z`,
+                previewLabel: soilProfilePhotoLabel,
+                updatedAt: '2026-06-23T08:35:00.000Z'
+            },
+            {
+                id: 'soil-photo-legacy',
+                label: getPhotoAnnotationSummaryLabel('[[{"x":1,"y":2}]]'),
+                previewLabel: getPhotoAnnotationSummaryLabel('[[{"x":1,"y":2}]]'),
+                updatedAt: undefined
+            }
+        ]);
     });
 
 

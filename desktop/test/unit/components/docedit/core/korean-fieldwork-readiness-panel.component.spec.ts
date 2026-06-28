@@ -5,6 +5,7 @@ jest.mock('src/app/electron/electron', () => ({
 import {
     KoreanFieldworkReadinessPanelComponent
 } from '../../../../../src/app/components/docedit/core/korean-fieldwork-readiness-panel.component';
+import { getPhotoAnnotationSummaryLabel } from '../../../../../src/app/util/korean-fieldwork-evidence-review';
 
 
 describe('KoreanFieldworkReadinessPanelComponent', () => {
@@ -314,6 +315,33 @@ describe('KoreanFieldworkReadinessPanelComponent', () => {
                 sourceLabel: '사진 표시'
             }
         ]);
+    });
+
+
+    it('keeps tablet photo annotation update times visible in readiness insights', async () => {
+
+        const photoStrokes = '{"version":1,"strokes":[{"points":[{"x":1000,"y":1000},{"x":5000,"y":5000}]}]}';
+        const annotatedPhoto = createRelatedDocument('photo-1', 'Photo', {}, {
+            fieldworkPhotoAnnotationStrokes: photoStrokes,
+            fieldworkPhotoAnnotationUpdatedAt: '2026-06-23T08:34:00.000Z'
+        });
+        const component = createComponent({
+            find: jest.fn().mockResolvedValue({
+                documents: [annotatedPhoto]
+            })
+        });
+        component.document = annotatedPhoto as any;
+        component.fieldDefinitions = [
+            { name: 'fieldworkPhotoAnnotationStrokes' },
+            { name: 'fieldworkPhotoAnnotationUpdatedAt' }
+        ] as any;
+
+        await component.refreshIssues();
+
+        const [insight] = component.getPhotoAnnotationInsights();
+        const annotationLabel = getPhotoAnnotationSummaryLabel(photoStrokes);
+        expect(insight.label).toBe(`${annotationLabel} · 수정 2026-06-23T08:34:00.000Z`);
+        expect(insight.sketchPreview.label).toBe(annotationLabel);
     });
 
 

@@ -5,6 +5,7 @@ jest.mock('src/app/electron/electron', () => ({
 import {
     KoreanFieldworkRecordContextPanelComponent
 } from '../../../../../src/app/components/docedit/core/korean-fieldwork-record-context-panel.component';
+import { getPhotoAnnotationSummaryLabel } from '../../../../../src/app/util/korean-fieldwork-evidence-review';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -612,6 +613,47 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
                 tone: 'info'
             }
         ]);
+    });
+
+
+    it('shows tablet photo annotation update times in record context insights', async () => {
+
+        const photoStrokes = '{"version":1,"strokes":[{"points":[{"x":1000,"y":1000},{"x":5000,"y":5000}]}]}';
+        const soilProfilePhotoStrokes = '{"version":1,"strokes":[{"points":[{"x":2000,"y":3000}]}]}';
+        const feature = createDocument('feature-1', 'Feature', 'F1', {}, {
+            featureRecordingStatus: 'investigating'
+        });
+        const photo = createDocument('photo-1', 'Photo', 'P1', {
+            depicts: ['feature-1']
+        }, {
+            fieldworkPhotoAnnotationStrokes: photoStrokes,
+            fieldworkPhotoAnnotationUpdatedAt: '2026-06-23T08:34:00.000Z'
+        });
+        const soilProfilePhoto = createDocument('soil-photo-1', 'SoilProfilePhoto', 'SP1', {
+            depicts: ['feature-1']
+        }, {
+            soilProfilePhotoAnnotationStrokes: soilProfilePhotoStrokes,
+            soilProfilePhotoAnnotationUpdatedAt: '2026-06-23T08:35:00.000Z'
+        });
+        const component = createComponent({
+            find: jest.fn().mockResolvedValue({
+                documents: [feature, photo, soilProfilePhoto]
+            })
+        });
+        component.document = feature as any;
+        component.fieldDefinitions = [
+            field('featureRecordingStatus')
+        ] as any;
+
+        await component.ngOnChanges();
+
+        const insights = component.getEvidenceInsights();
+        expect(insights[0].detail).toContain(getPhotoAnnotationSummaryLabel(photoStrokes));
+        expect(insights[0].detail).toContain('수정 2026-06-23T08:34:00.000Z');
+        expect(insights[1].detail).toContain(getPhotoAnnotationSummaryLabel(soilProfilePhotoStrokes));
+        expect(insights[1].detail).toContain('수정 2026-06-23T08:35:00.000Z');
+        expect(insights[0].sketchPreview?.label).toBe(getPhotoAnnotationSummaryLabel(photoStrokes));
+        expect(insights[1].sketchPreview?.label).toBe(getPhotoAnnotationSummaryLabel(soilProfilePhotoStrokes));
     });
 
 

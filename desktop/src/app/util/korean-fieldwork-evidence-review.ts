@@ -35,6 +35,7 @@ export interface KoreanFieldworkPhotoAnnotationSummary {
     label: string;
     preview: KoreanFieldworkPenMemoSketchPreview;
     source: 'photo'|'soilProfilePhoto';
+    updatedAt?: string;
 }
 
 interface KoreanFieldworkPenMemoPoint {
@@ -58,10 +59,12 @@ export interface KoreanFieldworkSoilColorCandidateSummary {
 }
 
 const FIELDWORK_PHOTO_ANNOTATION_FIELD = 'fieldworkPhotoAnnotationStrokes';
+const FIELDWORK_PHOTO_ANNOTATION_UPDATED_AT_FIELD = 'fieldworkPhotoAnnotationUpdatedAt';
 const SOIL_PROFILE_PHOTO_ANNOTATION_FIELDS = [
     'soilProfilePhotoAnnotationStrokes',
     'soilProfileAnnotationStrokes'
 ];
+const SOIL_PROFILE_PHOTO_ANNOTATION_UPDATED_AT_FIELD = 'soilProfilePhotoAnnotationUpdatedAt';
 
 export function makeKoreanFieldworkEvidenceReview(
         rootDocument: Document,
@@ -291,7 +294,15 @@ function getMissingEvidenceKinds(bundle: EvidenceBundle,
 
 function hasTextValue(value: unknown): boolean {
 
-    return typeof value === 'string' && value.trim().length > 0;
+    return !!getTextValue(value);
+}
+
+
+function getTextValue(value: unknown): string|undefined {
+
+    const text = typeof value === 'string' ? value.trim() : '';
+
+    return text.length > 0 ? text : undefined;
 }
 
 
@@ -312,13 +323,40 @@ function getPhotoAnnotationSummary(
     const value = document.resource[fieldName];
     const preview = getPhotoAnnotationSketchPreview(value);
     if (!preview) return [];
+    const updatedAt = getPhotoAnnotationUpdatedAt(document, fieldName, source);
 
     return [{
         document,
-        label: preview.label,
+        label: getPhotoAnnotationReviewLabel(preview.label, updatedAt),
         preview,
-        source
+        source,
+        ...(updatedAt ? { updatedAt } : {})
     }];
+}
+
+
+function getPhotoAnnotationReviewLabel(annotationLabel: string, updatedAt: string|undefined): string {
+
+    return [
+        annotationLabel,
+        updatedAt ? `수정 ${updatedAt}` : ''
+    ].filter(label => label.trim().length > 0).join(' · ');
+}
+
+
+function getPhotoAnnotationUpdatedAt(
+        document: Document,
+        fieldName: string,
+        source: KoreanFieldworkPhotoAnnotationSummary['source']
+): string|undefined {
+
+    if (source === 'photo') {
+        return getTextValue(document.resource[FIELDWORK_PHOTO_ANNOTATION_UPDATED_AT_FIELD]);
+    }
+
+    return fieldName === 'soilProfilePhotoAnnotationStrokes'
+        ? getTextValue(document.resource[SOIL_PROFILE_PHOTO_ANNOTATION_UPDATED_AT_FIELD])
+        : undefined;
 }
 
 
