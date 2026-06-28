@@ -49,6 +49,11 @@ const featureRows = [
     title: 'Map provider keys and satellite boundary readiness',
     tablet: [
       'mobile/app/(tabs)/SettingsScreen.tsx',
+      'mobile/components/Project/Map/BoundaryFileImportModal.tsx',
+      'mobile/components/Project/Map/KakaoSatellitePicker.tsx',
+      'mobile/components/Project/Map/MapBottomSheet.tsx',
+      'mobile/components/Project/Map/boundary-file-import.ts',
+      'mobile/components/Project/Map/kakao-satellite-picker-html.ts',
       'mobile/components/Project/Map/korean-fieldwork-map-provider-status.ts',
       'mobile/components/Project/Map/korean-fieldwork-map-start-panel.ts',
       'mobile/hooks/use-preferences.ts',
@@ -66,6 +71,11 @@ const featureRows = [
     ],
     tabletTests: [
       'mobile/test/screens/SettingsScreen.spec.tsx',
+      'mobile/components/Project/Map/BoundaryFileImportModal.spec.tsx',
+      'mobile/components/Project/Map/KakaoSatellitePicker.spec.tsx',
+      'mobile/components/Project/Map/MapBottomSheet.spec.tsx',
+      'mobile/components/Project/Map/boundary-file-import.spec.ts',
+      'mobile/components/Project/Map/kakao-satellite-picker-html.spec.ts',
       'mobile/components/Project/Map/korean-fieldwork-map-provider-status.spec.ts',
       'mobile/components/Project/Map/korean-fieldwork-map-start-panel.spec.ts',
       'mobile/hooks/use-preferences.spec.ts'
@@ -1426,6 +1436,12 @@ function validateProjectSettingsCompleteness() {
   const mobileKakaoSatellitePickerHtmlSpecText = readTextFile(
     'mobile/components/Project/Map/kakao-satellite-picker-html.spec.ts'
   );
+  const mobileBoundaryFileImportModalText = readTextFile(
+    'mobile/components/Project/Map/BoundaryFileImportModal.tsx'
+  );
+  const mobileBoundaryFileImportModalSpecText = readTextFile(
+    'mobile/components/Project/Map/BoundaryFileImportModal.spec.tsx'
+  );
   const desktopSettingsText = readTextFile('desktop/src/app/components/settings/settings.component.ts');
   const desktopSettingsTemplateText = readTextFile('desktop/src/app/components/settings/settings.html');
   const desktopSettingsStyleText = readTextFile('desktop/src/app/components/settings/settings.scss');
@@ -1657,6 +1673,27 @@ function validateProjectSettingsCompleteness() {
 
   if (!mobilePackageText.includes('react-native-webview')) {
     findings.push('tablet package missing react-native-webview for Kakao satellite picker');
+  }
+  if (!mobilePackageText.includes('expo-document-picker')) {
+    findings.push('tablet package missing expo-document-picker for tablet SHP/DXF file selection');
+  }
+  for (const token of [
+    'DocumentPicker.getDocumentAsync',
+    'boundaryFileImportPickButton',
+    'copyToCacheDirectory: true'
+  ]) {
+    if (!mobileBoundaryFileImportModalText.includes(token)) {
+      findings.push(`tablet boundary import modal missing document picker flow: ${token}`);
+    }
+  }
+  for (const token of [
+    'submits a file selected from the tablet document picker',
+    'boundaryFileImportPickButton',
+    'file:///storage/emulated/0/Download/boundary.shp'
+  ]) {
+    if (!mobileBoundaryFileImportModalSpecText.includes(token)) {
+      findings.push(`tablet boundary import modal test missing document picker behavior: ${token}`);
+    }
   }
   for (const token of [
     'KakaoSatellitePicker',

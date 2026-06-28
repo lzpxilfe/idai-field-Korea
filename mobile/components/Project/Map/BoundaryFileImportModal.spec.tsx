@@ -7,6 +7,10 @@ import {
 import React from 'react';
 import BoundaryFileImportModal from './BoundaryFileImportModal';
 
+jest.mock('expo-document-picker', () => ({
+  getDocumentAsync: jest.fn(),
+}));
+
 jest.mock('@/components/common/Button', () => {
   const React = require('react');
   const { Pressable, Text } = require('react-native');
@@ -34,7 +38,13 @@ jest.mock('@/components/common/Button', () => {
   };
 });
 
+const DocumentPicker = require('expo-document-picker');
+
 describe('BoundaryFileImportModal', () => {
+  beforeEach(() => {
+    DocumentPicker.getDocumentAsync.mockReset();
+  });
+
   it('submits the typed local file path', async () => {
     const onImport = jest.fn().mockResolvedValue(undefined);
     const { getByTestId } = render(
@@ -56,6 +66,43 @@ describe('BoundaryFileImportModal', () => {
     await waitFor(() => {
       expect(onImport).toHaveBeenCalledWith(
         '/storage/emulated/0/Download/boundary.dxf'
+      );
+    });
+  });
+
+  it('submits a file selected from the tablet document picker', async () => {
+    DocumentPicker.getDocumentAsync.mockResolvedValue({
+      canceled: false,
+      assets: [{
+        name: 'boundary.shp',
+        uri: 'file:///storage/emulated/0/Download/boundary.shp',
+      }],
+    });
+    const onImport = jest.fn().mockResolvedValue(undefined);
+    const { getByTestId } = render(
+      <BoundaryFileImportModal
+        onClose={jest.fn()}
+        onImport={onImport}
+        visible
+      />
+    );
+
+    act(() => {
+      fireEvent.press(getByTestId('boundaryFileImportPickButton'));
+    });
+
+    await waitFor(() => {
+      expect(getByTestId('boundaryFileImportPathInput').props.value)
+        .toBe('file:///storage/emulated/0/Download/boundary.shp');
+    });
+
+    act(() => {
+      fireEvent.press(getByTestId('boundaryFileImportSubmitButton'));
+    });
+
+    await waitFor(() => {
+      expect(onImport).toHaveBeenCalledWith(
+        'file:///storage/emulated/0/Download/boundary.shp'
       );
     });
   });

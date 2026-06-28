@@ -1,4 +1,5 @@
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import * as DocumentPicker from 'expo-document-picker';
 import React, { useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -27,10 +28,33 @@ const BoundaryFileImportModal: React.FC<BoundaryFileImportModalProps> = ({
   const [errorMessage, setErrorMessage] = useState<string>();
   const [isImporting, setIsImporting] = useState(false);
 
+  const pickBoundaryFile = async () => {
+    setErrorMessage(undefined);
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        copyToCacheDirectory: true,
+        multiple: false,
+        type: [
+          'application/geo+json',
+          'application/json',
+          'application/octet-stream',
+          'application/x-esri-shape',
+          'application/dxf',
+          'image/vnd.dxf',
+          'text/plain',
+          '*/*',
+        ],
+      });
+      if (!result.canceled) setFilePath(result.assets[0]?.uri ?? '');
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
+    }
+  };
+
   const submitImport = async () => {
     const normalizedPath = filePath.trim();
     if (!normalizedPath) {
-      setErrorMessage('태블릿 안의 .shp 또는 .dxf 파일 경로를 입력하세요.');
+      setErrorMessage('태블릿에서 .shp, .dxf, .geojson 파일을 선택하거나 파일 경로를 입력하세요.');
       return;
     }
 
@@ -69,7 +93,7 @@ const BoundaryFileImportModal: React.FC<BoundaryFileImportModalProps> = ({
             <View style={styles.header}>
               <View style={styles.titleRow}>
                 <MaterialIcons name="folder-open" size={22} color="#24495d" />
-                <Text style={styles.title}>SHP/DXF/CSV 경계 가져오기</Text>
+                <Text style={styles.title}>SHP/DXF/GeoJSON 경계 가져오기</Text>
               </View>
               <Button
                 icon={<Ionicons name="close-outline" size={18} />}
@@ -79,8 +103,7 @@ const BoundaryFileImportModal: React.FC<BoundaryFileImportModalProps> = ({
               />
             </View>
             <Text style={styles.description}>
-              현재 지도에 남아 있지 않은 건물, 구 지형, 발굴 전 도면은
-              태블릿 파일 경로에서 불러온 벡터 경계를 기준으로 저장합니다.
+              태블릿 안의 경계 파일을 선택하거나 파일 경로를 입력해 조사 경계로 저장합니다.
             </Text>
             <TextInput
               autoCapitalize="none"
@@ -92,9 +115,18 @@ const BoundaryFileImportModal: React.FC<BoundaryFileImportModalProps> = ({
               testID="boundaryFileImportPathInput"
               value={filePath}
             />
+            <View style={styles.pickRow}>
+              <Button
+                icon={<MaterialIcons name="folder-open" size={18} />}
+                isDisabled={isImporting}
+                onPress={() => { void pickBoundaryFile(); }}
+                testID="boundaryFileImportPickButton"
+                title="파일 선택"
+                variant="secondary"
+              />
+            </View>
             <Text style={styles.helpText}>
-              .shp, .dxf, .geojson을 지원합니다. .prj가 같은 폴더에 있으면
-              좌표계를 함께 읽습니다.
+              .shp, .dxf, .geojson을 지원합니다. .prj 좌표계 파일까지 함께 쓰려면 같은 폴더의 경로를 직접 입력하세요.
             </Text>
             {errorMessage && (
               <Text
@@ -189,6 +221,10 @@ const styles = StyleSheet.create({
   },
   keyboardAvoider: {
     flex: 1,
+  },
+  pickRow: {
+    alignItems: 'flex-start',
+    marginTop: 8,
   },
   title: {
     color: '#20313a',

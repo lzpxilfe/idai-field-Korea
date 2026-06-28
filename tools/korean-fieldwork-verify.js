@@ -212,6 +212,11 @@ function getMobileFieldworkTestPaths() {
   const patterns = [
     /KoreanFieldwork.*\.spec\.(ts|tsx)$/,
     /korean-fieldwork.*\.spec\.ts$/,
+    /BoundaryFileImportModal\.spec\.tsx$/,
+    /boundary-file-import\.spec\.ts$/,
+    /KakaoSatellitePicker\.spec\.tsx$/,
+    /kakao-satellite-picker-html\.spec\.ts$/,
+    /MapBottomSheet\.spec\.tsx$/,
     /soil-color-photo-assist\.spec\.ts$/,
     /SoilProfileCameraButton\.spec\.ts$/,
     /Document(Add|Edit)\.spec\.tsx$/,
