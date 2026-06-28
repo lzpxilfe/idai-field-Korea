@@ -107,6 +107,40 @@ describe('korean-fieldwork-record-actions', () => {
     });
 
 
+    it('opens existing tablet evidence records before neutral follow-up drafts', () => {
+
+        const feature = createDoc('feature-1', 'Feature');
+        const memo = createDoc('memo-1', 'PenMemo', {
+            depicts: ['feature-1']
+        }, {
+            penMemoReviewedTranscript: '바닥면 정리 완료.',
+            penMemoStrokes: '{"version":1,"strokes":[{"points":[{"x":10,"y":20}]}]}',
+            penMemoTranscriptionStatus: 'reviewed'
+        });
+        const actions = makeKoreanFieldworkRecordActions(
+            feature,
+            [feature, memo],
+            createConfig({
+                'PenMemo:Feature': ['depicts']
+            })
+        );
+
+        expect(actions[0]).toMatchObject({
+            id: 'open-PenMemo-memo-1',
+            type: 'openDocument',
+            label: '야장 메모 열기',
+            detail: '1건의 야장 메모 근거가 연결되어 있습니다.',
+            documentId: 'memo-1',
+            tone: 'success'
+        });
+        expect(actions[1]).toMatchObject({
+            id: 'create-PenMemo',
+            type: 'createDocument',
+            tone: 'neutral'
+        });
+    });
+
+
     it('surfaces tablet handwriting PenMemo transcription as a related record check', () => {
 
         const feature = createDoc('feature-1', 'Feature');

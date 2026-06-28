@@ -3432,6 +3432,12 @@ function validateRecordActionEvidencePriority() {
   if (!desktopRecordActionText.includes('makeKoreanFieldworkEvidenceReview')) {
     findings.push('desktop record actions must use expanded evidence review issues, including tablet PenMemo transcription backlog');
   }
+  if (!desktopRecordActionText.includes('OPEN_EVIDENCE_CATEGORIES')
+      || !desktopRecordActionText.includes("'PenMemo'")
+      || !desktopRecordActionText.includes('getOpenEvidenceAction(linkedDocuments)')
+      || !desktopRecordActionSpecText.includes('opens existing tablet evidence records before neutral follow-up drafts')) {
+    findings.push('desktop record actions must expose existing tablet evidence records as openable actions');
+  }
   if (!desktopRecordActionSpecText.includes('tablet handwriting PenMemo transcription')
       || !desktopRecordActionSpecText.includes('스케치 메모 1획/1점')
       || !desktopRecordActionSpecText.includes('pen-memo-handwriting-transcription')) {

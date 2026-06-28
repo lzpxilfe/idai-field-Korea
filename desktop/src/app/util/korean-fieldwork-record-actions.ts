@@ -36,6 +36,11 @@ const PREFERRED_EVIDENCE_CATEGORIES = [
     'Sample'
 ];
 
+const OPEN_EVIDENCE_CATEGORIES = [
+    ...PREFERRED_EVIDENCE_CATEGORIES,
+    'PenMemo'
+];
+
 const LINK_RELATIONS = [
     'liesWithin',
     'depicts',
@@ -84,6 +89,9 @@ export function makeKoreanFieldworkRecordActions(
 
     const evidenceAction = getMissingEvidenceAction(linkedDocuments, continuationActions);
     if (evidenceAction) actions.push(toCreateAction(evidenceAction, document, 'warning'));
+
+    const openEvidenceAction = getOpenEvidenceAction(linkedDocuments);
+    if (openEvidenceAction) actions.push(openEvidenceAction);
 
     continuationActions
         .filter(action => !isExistingStructureAction(document, linkedDocuments, action))
@@ -143,6 +151,33 @@ function getMissingEvidenceAction(linkedDocuments: Document[],
                 linkedDocument.resource.category === action.categoryName
         )
     );
+}
+
+
+function getOpenEvidenceAction(linkedDocuments: Document[]): KoreanFieldworkRecordActionItem|undefined {
+
+    const evidenceEntry = OPEN_EVIDENCE_CATEGORIES
+        .map(categoryName => ({
+            categoryName,
+            documents: linkedDocuments.filter(document =>
+                document.resource.category === categoryName
+            )
+        }))
+        .find(entry => entry.documents.length > 0);
+    const [document] = evidenceEntry?.documents ?? [];
+    if (!evidenceEntry || !document) return undefined;
+
+    const categoryLabel = getCategoryLabel(evidenceEntry.categoryName);
+
+    return {
+        id: `open-${evidenceEntry.categoryName}-${document.resource.id}`,
+        type: 'openDocument',
+        label: `${categoryLabel} 열기`,
+        detail: `${evidenceEntry.documents.length}건의 ${categoryLabel} 근거가 연결되어 있습니다.`,
+        icon: getCreateIcon(document.resource.category),
+        tone: 'success',
+        documentId: document.resource.id
+    };
 }
 
 
