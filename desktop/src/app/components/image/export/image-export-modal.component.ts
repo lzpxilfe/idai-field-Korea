@@ -30,6 +30,7 @@ type NamingOption = 'identifier'|'originalFilename';
 
 const DIRECT_FIELDWORK_PHOTO_CATEGORIES = new Set([
     'DailyLog',
+    'Drawing',
     'Feature',
     'FeatureGroup',
     'FeatureSegment',
@@ -38,12 +39,19 @@ const DIRECT_FIELDWORK_PHOTO_CATEGORIES = new Set([
     'FindCollection',
     'Layer',
     'Operation',
+    'Photo',
     'Sample',
+    'SoilProfilePhoto',
     'Survey',
     'SurveyBoundary',
     'Trench'
 ]);
-const DIRECT_FIELDWORK_PHOTO_URI_FIELDS = ['fieldworkPhotoUri', 'imageUri', 'fileUri'];
+const DIRECT_FIELDWORK_PHOTO_URI_FIELDS = [
+    'fieldworkPhotoUri',
+    'soilProfilePhotoUri',
+    'imageUri',
+    'fileUri'
+];
 
 
 /**

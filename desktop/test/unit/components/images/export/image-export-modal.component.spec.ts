@@ -146,10 +146,34 @@ describe('ImageExportModalComponent', () => {
                 relations: {}
             }
         } as any;
+        const soilProfilePhotoDocument = {
+            resource: {
+                id: 'soil-profile-photo-1',
+                identifier: 'SP-001',
+                category: 'SoilProfilePhoto',
+                soilProfilePhotoUri: 'file:///tablet/DCIM/soil-profile-1.jpg',
+                relations: {
+                    depicts: ['feature-1']
+                }
+            }
+        } as any;
+        const drawingDocument = {
+            resource: {
+                id: 'drawing-1',
+                identifier: 'DR-001',
+                category: 'Drawing',
+                fileUri: 'content://tablet/drawings/drawing-1.jpg',
+                relations: {
+                    depicts: ['feature-1']
+                }
+            }
+        } as any;
         const datastore = {
             find: jest.fn(async () => ({
                 documents: [
                     featureDocument,
+                    soilProfilePhotoDocument,
+                    drawingDocument,
                     skippedFeatureDocument,
                     {
                         resource: {
@@ -165,6 +189,9 @@ describe('ImageExportModalComponent', () => {
             get: jest.fn(async (id: string) => {
                 if (id === 'project') {
                     return { resource: { id: 'project', category: 'Project', relations: {} } };
+                }
+                if (id === 'feature-1') {
+                    return featureDocument;
                 }
                 if (id === 'trench-1') {
                     return {
@@ -182,7 +209,9 @@ describe('ImageExportModalComponent', () => {
         };
         const imageStore = {
             getFileInfos: jest.fn(async () => ({
-                'feature-1': { deleted: false, types: [], variants: [] }
+                'drawing-1': { deleted: false, types: [], variants: [] },
+                'feature-1': { deleted: false, types: [], variants: [] },
+                'soil-profile-photo-1': { deleted: false, types: [], variants: [] }
             }))
         };
         const imageDocument = {
@@ -208,11 +237,17 @@ describe('ImageExportModalComponent', () => {
         expect(datastore.get).toHaveBeenCalledWith('trench-1');
         expect(exportImages).toHaveBeenCalledWith(
             imageStore,
-            [imageDocument, featureDocument],
+            [imageDocument, featureDocument, soilProfilePhotoDocument, drawingDocument],
             'C:/export',
             'fieldwork',
             false,
             {
+                'feature-1': {
+                    id: 'feature-1',
+                    identifier: 'F-001',
+                    category: 'Feature',
+                    resource: featureDocument.resource
+                },
                 'trench-1': {
                     id: 'trench-1',
                     identifier: 'TR-1',
