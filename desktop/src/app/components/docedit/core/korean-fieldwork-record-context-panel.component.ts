@@ -47,6 +47,7 @@ import {
     KoreanFieldworkRecordActionItem,
     makeKoreanFieldworkRecordActions
 } from '../../../util/korean-fieldwork-record-actions';
+import { getKoreanFieldworkBoundaryMethodLabel } from '../../../util/korean-fieldwork-boundary-summary';
 import { getKoreanFieldworkEvidenceChips } from '../../../util/korean-fieldwork-record-evidence';
 import { getKoreanFieldworkInvestigationModeOption } from '../../../util/korean-fieldwork-project-setup';
 import { DoceditComponent } from '../docedit.component';
@@ -82,8 +83,12 @@ const KOREAN_FIELDWORK_CONTEXT_FIELDS = [
     'longAxisOrientation',
     'projectBoundarySummary',
     'projectInvestigationMode',
+    'referenceBasemapProvider',
     'recordCreationTiming',
     'soilColorAssistStatus',
+    'surveyBoundaryAccuracy',
+    'surveyBoundaryNote',
+    'surveyBoundarySource',
     'verificationState'
 ];
 
@@ -222,6 +227,7 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
         const orientationChip = this.getLongAxisOrientationChip(resource);
 
         this.pushProjectSetupChips(chips, resource);
+        this.pushSurveyBoundaryChips(chips, resource);
         if (orientationChip) chips.push(orientationChip);
         this.pushMappedChip(chips, resource.featureRecordingStatus, FEATURE_RECORDING_STATUS_LABELS);
         this.pushFeatureAttributeChip(chips);
@@ -855,6 +861,47 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
                 tone: 'success'
             });
         }
+    }
+
+
+    private pushSurveyBoundaryChips(chips: ContextChip[], resource: any) {
+
+        if (resource.category !== 'SurveyBoundary') return;
+
+        const importDetailLabel = this.getSurveyBoundaryImportDetailLabel(resource);
+        const boundaryDetailLabel = importDetailLabel
+            ?? this.getTextResourceValue(resource.shortDescription)
+            ?? this.getTextResourceValue(resource.surveyBoundaryNote);
+        const methodLabel = getKoreanFieldworkBoundaryMethodLabel(this.document);
+
+        if (importDetailLabel) {
+            chips.push({
+                label: `가져온 경계 ${this.shortenChipText(importDetailLabel, 34)}`,
+                tone: 'success'
+            });
+        } else if (boundaryDetailLabel) {
+            chips.push({
+                label: `경계 ${this.shortenChipText(boundaryDetailLabel, 34)}`,
+                tone: 'success'
+            });
+        }
+        if (methodLabel) chips.push({ label: methodLabel, tone: 'info' });
+    }
+
+
+    private getSurveyBoundaryImportDetailLabel(resource: any): string|undefined {
+
+        const source = this.getTextResourceValue(resource.surveyBoundarySource);
+        if (source !== 'shpImport' && source !== 'dxfImport' && source !== 'geoJsonImport') return undefined;
+
+        const boundaryLabel = this.getTextResourceValue(resource.shortDescription)
+            ?? this.getTextResourceValue(resource.surveyBoundaryNote);
+        const importSeparator = ' - ';
+        const importDetailStart = boundaryLabel?.lastIndexOf(importSeparator) ?? -1;
+
+        return importDetailStart >= 0
+            ? boundaryLabel?.slice(importDetailStart + importSeparator.length).trim()
+            : boundaryLabel;
     }
 
 

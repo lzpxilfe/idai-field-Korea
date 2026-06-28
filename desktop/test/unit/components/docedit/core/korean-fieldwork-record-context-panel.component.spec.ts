@@ -176,6 +176,35 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
     });
 
 
+    it('keeps tablet imported boundary file details visible on desktop boundary records', async () => {
+
+        const boundary = createDocument('boundary-1', 'SurveyBoundary', 'B1', {}, {
+            shortDescription: 'A구역 - boundary.geojson (EPSG:4326, 5점)',
+            surveyBoundaryAccuracy: 'importedReference',
+            surveyBoundarySource: 'geoJsonImport',
+            referenceBasemapProvider: 'importedVectorLayer'
+        });
+        const component = createComponent({
+            find: jest.fn().mockResolvedValue({ documents: [boundary] })
+        });
+        component.document = boundary as any;
+        component.fieldDefinitions = [
+            field('shortDescription'),
+            field('surveyBoundaryAccuracy'),
+            field('surveyBoundarySource'),
+            field('referenceBasemapProvider')
+        ] as any;
+
+        await component.ngOnChanges();
+
+        expect(component.shouldShow()).toBe(true);
+        expect(component.getStatusChips()).toEqual([
+            { label: '가져온 경계 boundary.geojson (EPSG:4326, 5점)', tone: 'success' },
+            { label: 'GeoJSON 가져오기 · 가져온 참고자료', tone: 'info' }
+        ]);
+    });
+
+
     it('renders parent scope with included-location wording', () => {
 
         const template = fs.readFileSync(

@@ -2036,6 +2036,16 @@ function validateProjectInvestigationModeWording() {
       || !desktopRecordContextPanelSpecText.includes('경계 1구역 북쪽 능선부터 남쪽 농로…')) {
     findings.push('desktop record context panel test must cover tablet project setup chips on Operation records with tablet wording');
   }
+  if (!desktopRecordContextPanelText.includes('pushSurveyBoundaryChips')
+      || !desktopRecordContextPanelText.includes('getKoreanFieldworkBoundaryMethodLabel')
+      || !desktopRecordContextPanelText.includes('surveyBoundarySource')) {
+    findings.push('desktop record context panel must keep tablet imported boundary details visible on SurveyBoundary records');
+  }
+  if (!desktopRecordContextPanelSpecText.includes('keeps tablet imported boundary file details visible on desktop boundary records')
+      || !desktopRecordContextPanelSpecText.includes('가져온 경계 boundary.geojson (EPSG:4326, 5점)')
+      || !desktopRecordContextPanelSpecText.includes('GeoJSON 가져오기 · 가져온 참고자료')) {
+    findings.push('desktop record context panel test must cover tablet imported boundary file details on SurveyBoundary records');
+  }
   for (const { label, text } of mobileFieldFlowWordingSources) {
     for (const forbiddenTerm of ['조사 기준', '기록 기준', '작업 단위', '조사 단위', '현장단위']) {
       if (text.includes(forbiddenTerm)) {
