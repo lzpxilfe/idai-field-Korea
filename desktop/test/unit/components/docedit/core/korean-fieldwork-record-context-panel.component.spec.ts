@@ -151,6 +151,29 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
     });
 
 
+    it('shows direct tablet photos on desktop find records', async () => {
+
+        const find = createDocument('find-1', 'Find', 'FIND1', {}, {
+            fieldworkPhotoUri: 'file:///tablet/photos/find-1.jpg',
+            recordCreationTiming: 'duringInvestigation'
+        });
+        const component = createComponent({
+            find: jest.fn().mockResolvedValue({ documents: [find] })
+        });
+        component.document = find as any;
+        component.fieldDefinitions = [
+            field('recordCreationTiming')
+        ] as any;
+
+        await component.ngOnChanges();
+
+        expect(component.shouldShow()).toBe(true);
+        expect(component.getEvidenceMetrics()).toEqual(expect.arrayContaining([
+            { id: 'photos', label: '사진', count: 1, canCreate: false }
+        ]));
+    });
+
+
     it('warns when a selected feature type has no core attributes recorded', async () => {
 
         const feature = createDocument('feature-1', 'Feature', 'F1', {}, {

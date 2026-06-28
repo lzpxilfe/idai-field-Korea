@@ -45,6 +45,13 @@ const EVIDENCE_TARGET_CATEGORIES = [
     C.LAYER
 ];
 
+const PHOTO_ATTACHMENT_TARGET_CATEGORIES = [
+    ...EVIDENCE_TARGET_CATEGORIES,
+    C.FIND,
+    C.FIND_COLLECTION,
+    C.SAMPLE
+];
+
 const EVIDENCE_DEFINITIONS: EvidenceDefinition[] = [
     {
         id: 'featureSegments',
@@ -63,7 +70,7 @@ const EVIDENCE_DEFINITIONS: EvidenceDefinition[] = [
         id: 'photos',
         label: '사진',
         getDocuments: bundle => bundle.photos,
-        categories: EVIDENCE_TARGET_CATEGORIES,
+        categories: PHOTO_ATTACHMENT_TARGET_CATEGORIES,
         createCategoryName: C.PHOTO
     },
     {
@@ -107,7 +114,9 @@ const EVIDENCE_DEFINITIONS: EvidenceDefinition[] = [
 export function getKoreanFieldworkEvidenceChips(document: Document,
                                                 documents: Document[]): KoreanFieldworkEvidenceChip[] {
 
-    if (!EVIDENCE_TARGET_CATEGORIES.includes(document.resource.category)) return [];
+    if (!EVIDENCE_DEFINITIONS.some(definition =>
+        definition.categories.includes(document.resource.category)
+    )) return [];
 
     const bundle = buildEvidenceBundle(document, documents);
 

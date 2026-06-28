@@ -3472,6 +3472,17 @@ function validateRecordActionEvidencePriority() {
       || !desktopRecordEvidenceSpecText.includes('keeps non-structural evidence records compact')) {
     findings.push('desktop record evidence tests must mirror tablet evidence-chip coverage');
   }
+  if (!mobileRecordEvidenceText.includes('PHOTO_ATTACHMENT_TARGET_CATEGORIES')
+      || !mobileRecordEvidenceText.includes('C.FIND_COLLECTION')
+      || !desktopRecordEvidenceText.includes('PHOTO_ATTACHMENT_TARGET_CATEGORIES')
+      || !desktopRecordEvidenceText.includes('C.FIND_COLLECTION')) {
+    findings.push('tablet and desktop record evidence chips must expose direct photos on Find/FindCollection/Sample records');
+  }
+  if (!mobileRecordEvidenceSpecText.includes('keeps direct tablet photos visible on find and sample records')
+      || !desktopRecordEvidenceSpecText.includes('keeps direct tablet photos visible on find and sample records')
+      || !desktopRecordContextSpecText.includes('shows direct tablet photos on desktop find records')) {
+    findings.push('tablet and desktop record evidence tests must cover direct tablet photos on Find/Sample records');
+  }
   for (const [label, text] of [
     ['tablet record evidence source', mobileRecordEvidenceText],
     ['desktop record evidence source', desktopRecordEvidenceText]
