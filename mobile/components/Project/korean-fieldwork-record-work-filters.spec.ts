@@ -103,6 +103,44 @@ describe('Korean fieldwork record work filters', () => {
       .toBe(false);
   });
 
+  it('uses the Korean fieldwork date for tablet today filtering', () => {
+    const previousTimeZone = process.env.TZ;
+    process.env.TZ = 'UTC';
+
+    try {
+      const now = new Date('2026-06-23T14:30:00.000Z');
+      const beforeKoreanMidnight = createDocument(
+        'before-korean-midnight',
+        C.FEATURE,
+        {},
+        '2026-06-23T14:10:00.000Z'
+      );
+      const afterKoreanMidnight = createDocument(
+        'after-korean-midnight',
+        C.FEATURE,
+        {},
+        '2026-06-23T15:10:00.000Z'
+      );
+
+      expect(matchesKoreanFieldworkRecordWorkFilter(
+        beforeKoreanMidnight,
+        'today',
+        [],
+        {},
+        now
+      )).toBe(true);
+      expect(matchesKoreanFieldworkRecordWorkFilter(
+        afterKoreanMidnight,
+        'today',
+        [],
+        {},
+        now
+      )).toBe(false);
+    } finally {
+      restoreTimeZone(previousTimeZone);
+    }
+  });
+
   it('counts records for tablet work filter chips', () => {
     const now = new Date('2026-06-23T10:00:00+09:00');
     const documents = [
@@ -151,3 +189,11 @@ const createDocument = (
     ? [{ user: 'tester', date: modifiedDate }]
     : [],
 } as unknown as Document);
+
+const restoreTimeZone = (previousTimeZone: string | undefined) => {
+  if (previousTimeZone === undefined) {
+    delete process.env.TZ;
+  } else {
+    process.env.TZ = previousTimeZone;
+  }
+};

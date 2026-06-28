@@ -35,6 +35,39 @@ describe('korean-fieldwork-notebook-digest', () => {
     });
 
 
+    it('uses the Korean fieldwork date for desktop daily notebook digests', () => {
+
+        const previousTimeZone = process.env.TZ;
+        process.env.TZ = 'UTC';
+
+        try {
+            const feature = createDoc('feature-1', 'Feature', 'F-1');
+            const memo = createDoc('memo-1', 'PenMemo', 'M-1', {
+                penMemoReviewedTranscript: '[다음 작업] 자정 직후 단면 사진 보강.',
+                relations: { depicts: ['feature-1'] }
+            });
+            const dailyLog = createDoc('daily-log-1', 'DailyLog', '6월 24일 작업일지');
+            const justAfterKoreanMidnight = new Date('2026-06-23T15:05:00.000Z');
+
+            memo.created.date = justAfterKoreanMidnight;
+            memo.modified = [{ user: 'tester', date: justAfterKoreanMidnight }];
+            dailyLog.created.date = justAfterKoreanMidnight;
+            dailyLog.modified = [{ user: 'tester', date: justAfterKoreanMidnight }];
+
+            const digest = makeKoreanFieldworkDailyNotebookDigest(
+                [feature, memo, dailyLog] as any,
+                justAfterKoreanMidnight
+            );
+
+            expect(digest.dateLabel).toBe('2026-06-24');
+            expect(digest.entries.map(entry => entry.sourceDocument.resource.id)).toEqual(['memo-1']);
+            expect(digest.dailyLogDocuments.map(document => document.resource.id)).toEqual(['daily-log-1']);
+        } finally {
+            restoreTimeZone(previousTimeZone);
+        }
+    });
+
+
     it('creates notebook entries from daily log blocks and resolves target labels', () => {
 
         const feature = createDoc('feature-1', 'Feature', 'F-1');
@@ -306,3 +339,12 @@ const createDoc = (
     created: { user: 'tester', date: new Date('2026-06-24T08:00:00') },
     modified: [{ user: 'tester', date: new Date('2026-06-24T08:00:00') }]
 });
+
+function restoreTimeZone(previousTimeZone: string|undefined): void {
+
+    if (previousTimeZone === undefined) {
+        delete process.env.TZ;
+    } else {
+        process.env.TZ = previousTimeZone;
+    }
+}

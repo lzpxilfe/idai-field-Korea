@@ -59,6 +59,7 @@ interface KoreanFieldworkNotebookHandwritingStroke {
 const PEN_MEMO_CATEGORY = 'PenMemo';
 const DAILY_LOG_CATEGORY = 'DailyLog';
 const RECORD_FIELD_NOTE_SOURCE_LABEL = '기록 메모';
+const KOREAN_FIELDWORK_TIME_ZONE_OFFSET_MINUTES = 9 * 60;
 
 const EVIDENCE_NUMBER_CATEGORIES = new Set([
     'Photo',
@@ -789,7 +790,19 @@ function normalizeDateValue(value: unknown): Date|undefined {
 
 function formatDate(date: Date): string {
 
-    return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+    const koreaDate = getKoreanFieldworkDate(date);
+
+    return [
+        koreaDate.getUTCFullYear(),
+        pad2(koreaDate.getUTCMonth() + 1),
+        pad2(koreaDate.getUTCDate())
+    ].join('-');
+}
+
+
+function getKoreanFieldworkDate(date: Date): Date {
+
+    return new Date(date.getTime() + KOREAN_FIELDWORK_TIME_ZONE_OFFSET_MINUTES * 60 * 1000);
 }
 
 

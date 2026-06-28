@@ -171,6 +171,46 @@ describe('korean-fieldwork-record-work-filters', () => {
     });
 
 
+    it('uses the Korean fieldwork date for desktop today filtering', () => {
+
+        const previousTimeZone = process.env.TZ;
+        process.env.TZ = 'UTC';
+
+        try {
+            const now = new Date('2026-06-23T14:30:00.000Z');
+            const beforeKoreanMidnight = createDocument(
+                'before-korean-midnight',
+                'Feature',
+                {},
+                '2026-06-23T14:10:00.000Z'
+            );
+            const afterKoreanMidnight = createDocument(
+                'after-korean-midnight',
+                'Feature',
+                {},
+                '2026-06-23T15:10:00.000Z'
+            );
+
+            expect(matchesKoreanFieldworkRecordWorkFilter(
+                beforeKoreanMidnight,
+                'today',
+                [],
+                {},
+                now
+            )).toBe(true);
+            expect(matchesKoreanFieldworkRecordWorkFilter(
+                afterKoreanMidnight,
+                'today',
+                [],
+                {},
+                now
+            )).toBe(false);
+        } finally {
+            restoreTimeZone(previousTimeZone);
+        }
+    });
+
+
     it('counts desktop record work groups without counting evidence documents as records', () => {
 
         const now = new Date('2026-06-24T10:00:00+09:00');
@@ -225,3 +265,12 @@ const createDocument = (
         ? [{ user: 'tester', date: modifiedDate }]
         : []
 });
+
+function restoreTimeZone(previousTimeZone: string|undefined): void {
+
+    if (previousTimeZone === undefined) {
+        delete process.env.TZ;
+    } else {
+        process.env.TZ = previousTimeZone;
+    }
+}

@@ -18,6 +18,7 @@ import {
 import { getKoreanFieldworkEvidenceChips } from './korean-fieldwork-record-evidence';
 
 const C = KOREAN_FIELDWORK_CATEGORIES;
+const KOREAN_FIELDWORK_TIME_ZONE_OFFSET_MINUTES = 9 * 60;
 const FEATURE_PROGRESS_CATEGORIES = new Set<string>([
   C.FEATURE,
   C.FEATURE_GROUP,
@@ -1910,11 +1911,24 @@ const getTimestamp = (document: Document): number => {
   return 0;
 };
 
-const formatDate = (date: Date): string =>
-  `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+const formatDate = (date: Date): string => {
+  const koreaDate = getKoreanFieldworkDate(date);
 
-const formatTime = (date: Date): string =>
-  `${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
+  return [
+    koreaDate.getUTCFullYear(),
+    pad2(koreaDate.getUTCMonth() + 1),
+    pad2(koreaDate.getUTCDate()),
+  ].join('-');
+};
+
+const formatTime = (date: Date): string => {
+  const koreaDate = getKoreanFieldworkDate(date);
+
+  return `${pad2(koreaDate.getUTCHours())}:${pad2(koreaDate.getUTCMinutes())}`;
+};
+
+const getKoreanFieldworkDate = (date: Date): Date =>
+  new Date(date.getTime() + KOREAN_FIELDWORK_TIME_ZONE_OFFSET_MINUTES * 60 * 1000);
 
 const pad2 = (value: number): string => value.toString().padStart(2, '0');
 

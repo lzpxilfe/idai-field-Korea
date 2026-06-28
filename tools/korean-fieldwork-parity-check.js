@@ -3363,6 +3363,18 @@ function validateRecordActionEvidencePriority() {
   const desktopRecordWorkFilterSpecText = readTextFile(
     'desktop/test/unit/util/korean-fieldwork-record-work-filters.spec.ts'
   );
+  const mobileRecordWorkFilterText = readTextFile(
+    'mobile/components/Project/korean-fieldwork-record-work-filters.ts'
+  );
+  const mobileRecordWorkFilterSpecText = readTextFile(
+    'mobile/components/Project/korean-fieldwork-record-work-filters.spec.ts'
+  );
+  const desktopNotebookDigestText = readTextFile(
+    'desktop/src/app/util/korean-fieldwork-notebook-digest.ts'
+  );
+  const desktopNotebookDigestSpecText = readTextFile(
+    'desktop/test/unit/util/korean-fieldwork-notebook-digest.spec.ts'
+  );
   const desktopDocumentDraftText = readTextFile(desktopDocumentDraftSource);
   const desktopDocumentDraftSpecText = readTextFile(desktopDocumentDraftSpec);
   const mobileDraftContinuationText = readTextFile(mobileDraftContinuationSource);
@@ -3459,6 +3471,23 @@ function validateRecordActionEvidencePriority() {
   }
   if (!desktopRecordWorkFilterSpecText.includes('uses shared evidence chips for missing-evidence decisions')) {
     findings.push('desktop record work filter tests must cover shared evidence-chip missing-evidence decisions');
+  }
+  for (const [label, text] of [
+    ['tablet record work filter', mobileRecordWorkFilterText],
+    ['desktop record work filter', desktopRecordWorkFilterText],
+    ['tablet field notes', mobileFieldNotesText],
+    ['desktop daily notebook digest', desktopNotebookDigestText]
+  ]) {
+    if (!text.includes('KOREAN_FIELDWORK_TIME_ZONE_OFFSET_MINUTES')
+        || !text.includes('getUTCFullYear')) {
+      findings.push(`${label} must use the fixed Korean fieldwork date instead of the device-local date`);
+    }
+  }
+  if (!mobileRecordWorkFilterSpecText.includes('uses the Korean fieldwork date for tablet today filtering')
+      || !desktopRecordWorkFilterSpecText.includes('uses the Korean fieldwork date for desktop today filtering')
+      || !mobileFieldNotesSpecText.includes('uses the Korean fieldwork date for tablet memos and daily logs')
+      || !desktopNotebookDigestSpecText.includes('uses the Korean fieldwork date for desktop daily notebook digests')) {
+    findings.push('tablet and desktop date tests must cover Korean fieldwork dates outside the device timezone');
   }
   if (!desktopRecordContextTemplateText.includes('자료 확인')) {
     findings.push('desktop record context panel must render evidence metric heading');

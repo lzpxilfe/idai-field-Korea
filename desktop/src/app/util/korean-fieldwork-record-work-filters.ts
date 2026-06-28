@@ -43,7 +43,7 @@ const REVIEW_VERIFICATION_STATES = new Set([
     'needsRecheck',
     'pendingDecision'
 ]);
-const KOREAN_FIELDWORK_TIME_ZONE = 'Asia/Seoul';
+const KOREAN_FIELDWORK_TIME_ZONE_OFFSET_MINUTES = 9 * 60;
 
 
 export function getKoreanFieldworkRecordWorkDocuments(documents: Document[]): Document[] {
@@ -169,15 +169,19 @@ function isSameLocalDate(dateA: Date, dateB: Date): boolean {
 
 function getKoreanFieldworkDateKey(date: Date): string {
 
-    const parts = new Intl.DateTimeFormat('en-US', {
-        timeZone: KOREAN_FIELDWORK_TIME_ZONE,
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-    }).formatToParts(date);
-    const byType = new Map(parts.map(part => [part.type, part.value]));
+    const koreaDate = new Date(date.getTime() + KOREAN_FIELDWORK_TIME_ZONE_OFFSET_MINUTES * 60 * 1000);
 
-    return `${byType.get('year')}-${byType.get('month')}-${byType.get('day')}`;
+    return [
+        koreaDate.getUTCFullYear(),
+        pad2(koreaDate.getUTCMonth() + 1),
+        pad2(koreaDate.getUTCDate())
+    ].join('-');
+}
+
+
+function pad2(value: number): string {
+
+    return value.toString().padStart(2, '0');
 }
 
 

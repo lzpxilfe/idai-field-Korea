@@ -37,6 +37,7 @@ const REVIEW_VERIFICATION_STATES = new Set([
   'needsRecheck',
   'pendingDecision',
 ]);
+const KOREAN_FIELDWORK_TIME_ZONE_OFFSET_MINUTES = 9 * 60;
 
 export const getKoreanFieldworkRecordWorkFilterCounts = (
   documents: Document[],
@@ -136,9 +137,21 @@ const toDate = (value: unknown): Date | undefined => {
 };
 
 const isSameLocalDate = (dateA: Date, dateB: Date): boolean =>
-  dateA.getFullYear() === dateB.getFullYear()
-  && dateA.getMonth() === dateB.getMonth()
-  && dateA.getDate() === dateB.getDate();
+  getKoreanFieldworkDateKey(dateA) === getKoreanFieldworkDateKey(dateB);
+
+const getKoreanFieldworkDateKey = (date: Date): string => {
+  const koreaDate = new Date(
+    date.getTime() + KOREAN_FIELDWORK_TIME_ZONE_OFFSET_MINUTES * 60 * 1000
+  );
+
+  return [
+    koreaDate.getUTCFullYear(),
+    pad2(koreaDate.getUTCMonth() + 1),
+    pad2(koreaDate.getUTCDate()),
+  ].join('-');
+};
+
+const pad2 = (value: number): string => value.toString().padStart(2, '0');
 
 const isTrackedValue = (
   value: unknown,

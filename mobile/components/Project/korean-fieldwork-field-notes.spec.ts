@@ -832,6 +832,48 @@ describe('korean-fieldwork-field-notes', () => {
     });
   });
 
+  it('uses the Korean fieldwork date for tablet memos and daily logs', () => {
+    const previousTimeZone = process.env.TZ;
+    process.env.TZ = 'UTC';
+
+    try {
+      const operation = createDoc('operation-1', C.OPERATION, 'A 구역');
+      const feature = createDoc('feature-1', C.FEATURE, '수혈 1');
+      const justAfterKoreanMidnight = new Date('2026-06-23T15:05:00.000Z');
+
+      const memoDraft = createKoreanFieldworkRecordMemoDraft(
+        feature,
+        '자정 직후 확인한 단면을 메모.',
+        fakeConfig,
+        justAfterKoreanMidnight
+      );
+      const dailyLogDraft = createKoreanFieldworkDailyLogDraft(
+        operation,
+        feature,
+        '자정 직후 단면 사진을 보강.',
+        fakeConfig,
+        justAfterKoreanMidnight
+      );
+      const todayDailyLog = createDoc('daily-log-today', C.DAILY_LOG, '6월 24일 일지', {
+        relations: { isRecordedIn: [operation.resource.id] },
+        date: '2026-06-24',
+      });
+
+      expect(memoDraft.resource.date).toBe('2026-06-24');
+      expect(dailyLogDraft.resource.date).toBe('2026-06-24');
+      expect(dailyLogDraft.resource.shortDescription).toBe('2026-06-24 작업일지');
+      expect(dailyLogDraft.resource.description)
+        .toBe('00:05 수혈 1 - 자정 직후 단면 사진을 보강.');
+      expect(getKoreanFieldworkDailyLogForOperation(
+        operation,
+        [todayDailyLog],
+        justAfterKoreanMidnight
+      )).toBe(todayDailyLog);
+    } finally {
+      restoreTimeZone(previousTimeZone);
+    }
+  });
+
   it('summarizes linked memos and daily logs for the selected record', () => {
     const operation = createDoc('operation-1', C.OPERATION, 'A 구역');
     const feature = createDoc('feature-1', C.FEATURE, '수혈 1');
@@ -896,3 +938,11 @@ const createDoc = (
     ...extraResource,
   },
 });
+
+const restoreTimeZone = (previousTimeZone: string | undefined) => {
+  if (previousTimeZone === undefined) {
+    delete process.env.TZ;
+  } else {
+    process.env.TZ = previousTimeZone;
+  }
+};
