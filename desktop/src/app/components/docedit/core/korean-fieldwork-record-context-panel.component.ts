@@ -79,6 +79,7 @@ const KOREAN_FIELDWORK_CONTEXT_FIELDS = [
     'featureRecordingStatus',
     'fieldRecordQuality',
     'longAxisOrientation',
+    'projectBoundarySummary',
     'projectInvestigationMode',
     'recordCreationTiming',
     'soilColorAssistStatus',
@@ -87,6 +88,7 @@ const KOREAN_FIELDWORK_CONTEXT_FIELDS = [
 
 const KOREAN_FIELDWORK_CONTEXT_CATEGORIES = new Set<string>([
     'Operation',
+    'Project',
     'Trench',
     'FeatureGroup',
     'Feature',
@@ -149,6 +151,13 @@ const GEOMETRY_EDIT_STATUS_LABELS: Readonly<Record<string, ContextChip>> = {
     needsAerialAlignment: { label: '항공 보정', tone: 'warning' },
     alignedToAerialMap: { label: '항공 보정됨', tone: 'success' },
     measured: { label: '실측', tone: 'success' }
+};
+
+const PROJECT_INVESTIGATION_MODE_LABELS: Readonly<Record<string, string>> = {
+    trialTrench: '\uc2dc\uad74\u00b7\ud45c\ubcf8\uc870\uc0ac',
+    excavation: '\ubc1c\uad74\uc870\uc0ac',
+    surfaceSurvey: '\uc9c0\ud45c\uc870\uc0ac',
+    watchingBrief: '\ucc38\uad00\u00b7\uc785\ud68c\uc870\uc0ac'
 };
 
 
@@ -219,6 +228,7 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
         const chips: ContextChip[] = [];
         const orientationChip = this.getLongAxisOrientationChip(resource);
 
+        this.pushProjectSetupChips(chips, resource);
         if (orientationChip) chips.push(orientationChip);
         this.pushMappedChip(chips, resource.featureRecordingStatus, FEATURE_RECORDING_STATUS_LABELS);
         this.pushFeatureAttributeChip(chips);
@@ -835,6 +845,53 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
     private getField(fieldName: string): Field|undefined {
 
         return this.fieldDefinitions?.find(field => field.name === fieldName);
+    }
+
+
+    private pushProjectSetupChips(chips: ContextChip[], resource: any) {
+
+        if (resource.category !== 'Operation' && resource.category !== 'Project') return;
+
+        const modeLabel = typeof resource.projectInvestigationMode === 'string'
+            ? PROJECT_INVESTIGATION_MODE_LABELS[resource.projectInvestigationMode]
+            : undefined;
+        const boundarySummary = this.getTextResourceValue(resource.projectBoundarySummary);
+
+        if (modeLabel) chips.push({ label: `\uc870\uc0ac ${modeLabel}`, tone: 'info' });
+        if (boundarySummary) {
+            chips.push({
+                label: `\uacbd\uacc4 ${this.shortenChipText(boundarySummary, 18)}`,
+                tone: 'success'
+            });
+        }
+    }
+
+
+    private shortenChipText(value: string, maxLength: number): string {
+
+        return value.length > maxLength
+            ? `${value.slice(0, maxLength - 1)}...`
+            : value;
+    }
+
+
+    private getTextResourceValue(value: unknown): string|undefined {
+
+        if (typeof value === 'string') {
+            const trimmedValue = value.trim();
+            return trimmedValue.length > 0 ? trimmedValue : undefined;
+        }
+
+        if (Array.isArray(value)) {
+            const firstTextValue = value.find(entry =>
+                typeof entry === 'string' && entry.trim().length > 0
+            );
+            return typeof firstTextValue === 'string'
+                ? firstTextValue.trim()
+                : undefined;
+        }
+
+        return undefined;
     }
 
 

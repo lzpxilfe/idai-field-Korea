@@ -1829,6 +1829,9 @@ function validateProjectInvestigationModeWording() {
   const desktopRecordContextPanelText = readTextFile(
     'desktop/src/app/components/docedit/core/korean-fieldwork-record-context-panel.component.ts'
   );
+  const desktopRecordContextPanelSpecText = readTextFile(
+    'desktop/test/unit/components/docedit/core/korean-fieldwork-record-context-panel.component.spec.ts'
+  );
   const desktopNarrativeAssistText = readTextFile(
     'desktop/src/app/util/korean-fieldwork-narrative-assist.ts'
   );
@@ -2019,6 +2022,14 @@ function validateProjectInvestigationModeWording() {
         findings.push(`${label} still uses confusing desktop field-flow wording: ${forbiddenTerm}`);
       }
     }
+  }
+  if (!desktopRecordContextPanelText.includes('pushProjectSetupChips')
+      || !desktopRecordContextPanelText.includes('projectBoundarySummary')
+      || !desktopRecordContextPanelText.includes('PROJECT_INVESTIGATION_MODE_LABELS')) {
+    findings.push('desktop record context panel must keep tablet project setup visible on opened Operation records');
+  }
+  if (!desktopRecordContextPanelSpecText.includes('keeps tablet project setup visible on desktop operation records')) {
+    findings.push('desktop record context panel test must cover tablet project setup chips on Operation records');
   }
   for (const { label, text } of mobileFieldFlowWordingSources) {
     for (const forbiddenTerm of ['조사 기준', '기록 기준', '작업 단위', '조사 단위', '현장단위']) {

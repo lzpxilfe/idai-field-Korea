@@ -151,6 +151,31 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
     });
 
 
+    it('keeps tablet project setup visible on desktop operation records', async () => {
+
+        const operation = createDocument('operation-1', 'Operation', 'OP1', {}, {
+            projectInvestigationMode: 'trialTrench',
+            projectBoundarySummary: '1구역 북쪽 능선'
+        });
+        const component = createComponent({
+            find: jest.fn().mockResolvedValue({ documents: [operation] })
+        });
+        component.document = operation as any;
+        component.fieldDefinitions = [
+            field('projectInvestigationMode'),
+            field('projectBoundarySummary')
+        ] as any;
+
+        await component.ngOnChanges();
+
+        expect(component.shouldShow()).toBe(true);
+        expect(component.getStatusChips()).toEqual([
+            { label: '조사 시굴·표본조사', tone: 'info' },
+            { label: '경계 1구역 북쪽 능선', tone: 'success' }
+        ]);
+    });
+
+
     it('renders parent scope with included-location wording', () => {
 
         const template = fs.readFileSync(
