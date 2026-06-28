@@ -57,6 +57,38 @@ describe('korean-fieldwork-notebook-digest', () => {
     });
 
 
+    it('builds notebook entries from tablet fieldNote saved on selected records', () => {
+
+        const feature = createDoc('feature-1', 'Feature', 'F-1', {
+            fieldNote: [
+                '[관찰 내용] 바닥면에서 원형 윤곽 확인.',
+                '[다음 작업] 사진 보강 후 단면 정리.'
+            ].join('\n')
+        });
+
+        const entries = getKoreanFieldworkNotebookEntries([feature] as any);
+        const digest = makeKoreanFieldworkDailyNotebookDigest([feature] as any, today);
+
+        expect(entries).toEqual([
+            expect.objectContaining({
+                id: 'feature-1:fieldNote',
+                sourceLabel: '기록 메모',
+                targetLabel: 'F-1',
+                targetCategoryLabel: '유구',
+                detail: '바닥면에서 원형 윤곽 확인.',
+                nextWork: '사진 보강 후 단면 정리.',
+                needsEvidenceNumbers: true
+            })
+        ]);
+        expect(getKoreanFieldworkNotebookEntriesForDocument(
+            feature as any,
+            [feature] as any
+        ).map(entry => entry.id)).toEqual(['feature-1:fieldNote']);
+        expect(digest.entries.map(entry => entry.id)).toEqual(['feature-1:fieldNote']);
+        expect(digest.nextWorkEntries.map(entry => entry.id)).toEqual(['feature-1:fieldNote']);
+    });
+
+
     it('accepts short evidence-number section labels', () => {
 
         expect(extractKoreanFieldworkFieldNoteInput([

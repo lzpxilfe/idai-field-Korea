@@ -167,6 +167,7 @@ const FIELD_NOTE_SECTION_ALIASES: Record<string, keyof KoreanFieldworkFieldNoteI
   '근거 번호': 'evidenceNumbers',
   '사진·도면·유물·시료 번호': 'evidenceNumbers',
 };
+const RECORD_FIELD_NOTE_SOURCE_LABEL = '기록 메모';
 
 export const createKoreanFieldworkRecordMemoDraft = (
   document: Document,
@@ -372,7 +373,7 @@ export const getKoreanFieldworkNotebookEntries = (
         return createNotebookEntriesFromDailyLog(document, documents);
       }
 
-      return [];
+      return createNotebookEntryFromRecordFieldNote(document);
     })
     .sort((entryA, entryB) =>
       getNotebookEntryTimestamp(entryB) - getNotebookEntryTimestamp(entryA)
@@ -1427,6 +1428,23 @@ const createNotebookEntryFromRecordMemo = (
       sourceDocument: memoDocument,
       sourceLabel: '메모',
       targetDocument,
+      text: noteText,
+    }),
+  ];
+};
+
+const createNotebookEntryFromRecordFieldNote = (
+  document: Document
+): KoreanFieldworkNotebookEntryWithSortKey[] => {
+  const noteText = getStringField(document, 'fieldNote');
+  if (!hasMeaningfulFieldNoteText(noteText)) return [];
+
+  return [
+    createNotebookEntry({
+      id: `${document.resource.id}:fieldNote`,
+      sourceDocument: document,
+      sourceLabel: RECORD_FIELD_NOTE_SOURCE_LABEL,
+      targetDocument: document,
       text: noteText,
     }),
   ];

@@ -2658,6 +2658,11 @@ function validateRecordPanelOrder() {
     { label: 'desktop notebook digest', text: desktopNotebookDigestText },
     { label: 'tablet field notes', text: tabletFieldNotesText }
   ]) {
+    if (!text.includes('createNotebookEntryFromRecordFieldNote')
+        || !text.includes("getStringField(document, 'fieldNote')")
+        || !text.includes('RECORD_FIELD_NOTE_SOURCE_LABEL')) {
+      findings.push(`${label} must surface tablet fieldNote values as notebook entries`);
+    }
     const evidenceNumberCategoryChecks = label === 'desktop notebook digest'
       ? [
         {
@@ -2698,6 +2703,9 @@ function validateRecordPanelOrder() {
     { label: 'desktop notebook digest test', text: desktopNotebookDigestSpecText },
     { label: 'tablet field notes test', text: tabletFieldNotesSpecText }
   ]) {
+    if (!text.includes('builds notebook entries from tablet fieldNote saved on selected records')) {
+      findings.push(`${label} must cover direct tablet fieldNote notebook entries`);
+    }
     if (!text.includes('keeps soil profile photos and sketch memos in evidence-number follow-up review')) {
       findings.push(`${label} must cover soil profile photo and sketch memo evidence-number follow-up review`);
     }

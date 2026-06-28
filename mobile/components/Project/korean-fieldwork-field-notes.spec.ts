@@ -559,6 +559,39 @@ describe('korean-fieldwork-field-notes', () => {
     });
   });
 
+  it('builds notebook entries from tablet fieldNote saved on selected records', () => {
+    const feature = createDoc('feature-1', C.FEATURE, '수혈 1', {
+      fieldNote: [
+        '[관찰 내용] 바닥면에서 원형 윤곽 확인.',
+        '[다음 작업] 사진 보강 후 단면 정리.',
+      ].join('\n'),
+    });
+
+    const entries = getKoreanFieldworkNotebookEntries([feature]);
+    const digest = getKoreanFieldworkDailyNotebookDigest(
+      [feature],
+      new Date('2026-06-23T12:00:00.000Z')
+    );
+
+    expect(entries).toEqual([
+      expect.objectContaining({
+        id: 'feature-1:fieldNote',
+        sourceLabel: '기록 메모',
+        targetLabel: '수혈 1',
+        targetCategoryLabel: '유구',
+        detail: '바닥면에서 원형 윤곽 확인.',
+        nextWork: '사진 보강 후 단면 정리.',
+        needsEvidenceNumbers: true,
+      }),
+    ]);
+    expect(digest.entries.map((entry) => entry.id)).toEqual([
+      'feature-1:fieldNote',
+    ]);
+    expect(digest.nextWorkEntries.map((entry) => entry.id)).toEqual([
+      'feature-1:fieldNote',
+    ]);
+  });
+
   it('keeps soil profile photos and sketch memos in evidence-number follow-up review', () => {
     const soilProfilePhoto = createDoc(
       'soil-photo-1',

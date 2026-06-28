@@ -46,6 +46,7 @@ interface KoreanFieldworkNotebookEntryWithSortKey extends KoreanFieldworkNoteboo
 
 const PEN_MEMO_CATEGORY = 'PenMemo';
 const DAILY_LOG_CATEGORY = 'DailyLog';
+const RECORD_FIELD_NOTE_SOURCE_LABEL = '기록 메모';
 
 const EVIDENCE_NUMBER_CATEGORIES = new Set([
     'Photo',
@@ -136,7 +137,7 @@ export function getKoreanFieldworkNotebookEntries(
                 return createNotebookEntriesFromDailyLog(document, documents);
             }
 
-            return [];
+            return createNotebookEntryFromRecordFieldNote(document);
         })
         .sort((entryA, entryB) => entryB.sortKey - entryA.sortKey)
         .slice(0, limit)
@@ -223,6 +224,25 @@ function createNotebookEntryFromRecordMemo(
             sourceDocument: memoDocument,
             sourceLabel: '메모',
             targetDocument,
+            text: noteText
+        })
+    ];
+}
+
+
+function createNotebookEntryFromRecordFieldNote(
+        document: Document
+): KoreanFieldworkNotebookEntryWithSortKey[] {
+
+    const noteText = getStringField(document, 'fieldNote');
+    if (!hasMeaningfulFieldNoteText(noteText)) return [];
+
+    return [
+        createNotebookEntry({
+            id: `${document.resource.id}:fieldNote`,
+            sourceDocument: document,
+            sourceLabel: RECORD_FIELD_NOTE_SOURCE_LABEL,
+            targetDocument: document,
             text: noteText
         })
     ];
