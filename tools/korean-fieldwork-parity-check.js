@@ -3195,7 +3195,10 @@ function validateProgressModeAwareness() {
   const tabletProgressSpecText = readTextFile('mobile/components/Project/korean-fieldwork-progress.spec.ts');
   const desktopChecklistText = readTextFile('desktop/src/app/util/korean-fieldwork-checklist.ts');
   const desktopChecklistSpecText = readTextFile('desktop/test/unit/util/korean-fieldwork-checklist.spec.ts');
+  const tabletOverviewText = readTextFile('mobile/components/Project/korean-fieldwork-overview-chart.ts');
+  const tabletOverviewSpecText = readTextFile('mobile/components/Project/korean-fieldwork-overview-chart.spec.ts');
   const desktopOverviewText = readTextFile('desktop/src/app/util/korean-fieldwork-overview-chart.ts');
+  const desktopOverviewSpecText = readTextFile('desktop/test/unit/util/korean-fieldwork-overview-chart.spec.ts');
   const desktopUnitMatrixText = readTextFile('desktop/src/app/util/korean-fieldwork-unit-matrix.ts');
   const desktopProgressSpecText = readTextFile('desktop/test/unit/util/korean-fieldwork-progress-board.spec.ts');
   const tabletUnitMatrixText = readTextFile('mobile/components/Project/korean-fieldwork-unit-matrix.ts');
@@ -3256,6 +3259,18 @@ function validateProgressModeAwareness() {
   }
   if (!desktopOverviewText.includes('getKoreanFieldworkChecklistMetrics(documents, investigationMode)')) {
     findings.push('desktop overview chart must use shared tablet checklist metrics');
+  }
+  for (const source of [
+    { label: 'tablet', text: tabletOverviewText, specText: tabletOverviewSpecText },
+    { label: 'desktop', text: desktopOverviewText, specText: desktopOverviewSpecText }
+  ]) {
+    if (!/DIRECT_FIELDWORK_PHOTO_CATEGORIES[\s\S]*C\.FIND[\s\S]*C\.FIND_COLLECTION[\s\S]*C\.SAMPLE/.test(source.text)) {
+      findings.push(`${source.label} overview chart must count direct Find/Sample tablet photos as photo evidence`);
+    }
+    if (!source.specText.includes('photoEvidenceCount).toBe(3)')
+        || !source.specText.includes('사진 3 · 도면/메모 2 · 유물/시료 1')) {
+      findings.push(`${source.label} overview chart tests must cover direct Find/Sample tablet photos as photo evidence`);
+    }
   }
   if (!desktopUnitMatrixText.includes('getKoreanFieldworkChecklistSteps(document.resource.category, investigationMode)')) {
     findings.push('desktop unit matrix must use shared tablet checklist steps');

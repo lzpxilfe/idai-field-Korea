@@ -98,15 +98,15 @@ describe('korean-fieldwork-overview-chart', () => {
 
         const data = getKoreanFieldworkOverviewChartData(createStats(), documents);
 
-        expect(data.evidenceCount).toBe(5);
-        expect(data.photoEvidenceCount).toBe(2);
+        expect(data.evidenceCount).toBe(6);
+        expect(data.photoEvidenceCount).toBe(3);
         expect(data.drawingCount).toBe(1);
         expect(data.penMemoCount).toBe(1);
         expect(data.findSampleCount).toBe(1);
         expect(data.metrics.find(metric => metric.id === 'evidence')).toMatchObject({
             label: '자료',
-            value: 5,
-            detail: '사진 2 · 도면/메모 2 · 유물/시료 1',
+            value: 6,
+            detail: '사진 3 · 도면/메모 2 · 유물/시료 1',
             tone: 'info'
         });
     });
