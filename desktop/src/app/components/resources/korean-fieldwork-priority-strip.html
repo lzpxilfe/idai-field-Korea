@@ -627,6 +627,8 @@
                         {{entry.targetCategoryLabel}} · {{entry.targetLabel}}
                     </span>
                     <span class="korean-fieldwork-notebook-strip-detail">{{entry.nextWork}}</span>
+                    <span *ngIf="entry.handwritingSummaryLabel"
+                          class="korean-fieldwork-notebook-strip-detail">{{entry.handwritingSummaryLabel}}</span>
                     <span class="korean-fieldwork-notebook-strip-action">
                         {{getNotebookEntryActionLabel(entry)}}
                         <span class="mdi mdi-open-in-new"></span>
@@ -654,6 +656,8 @@
                     <span class="korean-fieldwork-notebook-strip-detail">
                         사진·도면·스케치·유물·시료 번호 확인
                     </span>
+                    <span *ngIf="entry.handwritingSummaryLabel"
+                          class="korean-fieldwork-notebook-strip-detail">{{entry.handwritingSummaryLabel}}</span>
                     <span class="korean-fieldwork-notebook-strip-action">
                         {{getNotebookEntryActionLabel(entry)}}
                         <span class="mdi mdi-open-in-new"></span>

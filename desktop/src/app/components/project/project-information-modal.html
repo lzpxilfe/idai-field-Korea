@@ -111,6 +111,7 @@
                                 <span>{{entry.sourceLabel}}</span>
                                 <span *ngIf="entry.nextWork">다음</span>
                                 <span *ngIf="entry.evidenceNumbers">번호 있음</span>
+                                <span *ngIf="entry.handwritingSummaryLabel">{{entry.handwritingSummaryLabel}}</span>
                                 <span *ngIf="entry.needsEvidenceNumbers" class="warning">번호 보강</span>
                             </span>
                             <span class="project-information-korean-notebook-source">

@@ -592,6 +592,32 @@ describe('korean-fieldwork-field-notes', () => {
     ]);
   });
 
+  it('keeps tablet handwriting metadata out of structured field note sections', () => {
+    const feature = createDoc('feature-1', C.FEATURE, '수혈 1', {
+      fieldNote: [
+        '[관찰 내용] 바닥면에서 원형 윤곽 확인.',
+        '[다음 작업] 사진 보강 후 단면 정리.',
+        '[손그림 메모] 총 1획, 점 2개',
+        '[손그림 좌표] {"version":1,"strokes":[{"points":[{"x":10,"y":20},{"x":40,"y":50}]}]}',
+      ].join('\n'),
+    });
+
+    const [entry] = getKoreanFieldworkNotebookEntries([feature]);
+
+    expect(extractKoreanFieldworkFieldNoteInput(feature.resource.fieldNote as string))
+      .toMatchObject({
+        observation: '바닥면에서 원형 윤곽 확인.',
+        nextWork: '사진 보강 후 단면 정리.',
+      });
+    expect(entry).toMatchObject({
+      detail: '바닥면에서 원형 윤곽 확인. · 손그림 메모 1획/2점.',
+      nextWork: '사진 보강 후 단면 정리.',
+      handwritingStrokeCount: 1,
+      handwritingPointCount: 2,
+      handwritingSummaryLabel: '손그림 메모 1획/2점.',
+    });
+  });
+
   it('keeps soil profile photos and sketch memos in evidence-number follow-up review', () => {
     const soilProfilePhoto = createDoc(
       'soil-photo-1',

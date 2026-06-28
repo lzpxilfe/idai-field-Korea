@@ -89,6 +89,34 @@ describe('korean-fieldwork-notebook-digest', () => {
     });
 
 
+    it('keeps tablet fieldNote handwriting metadata out of structured sections', () => {
+
+        const feature = createDoc('feature-1', 'Feature', 'F-1', {
+            fieldNote: [
+                '[관찰 내용] 바닥면에서 원형 윤곽 확인.',
+                '[다음 작업] 사진 보강 후 단면 정리.',
+                '[손그림 메모] 총 1획, 점 2개',
+                '[손그림 좌표] {"version":1,"strokes":[{"points":[{"x":10,"y":20},{"x":40,"y":50}]}]}'
+            ].join('\n')
+        });
+
+        const [entry] = getKoreanFieldworkNotebookEntries([feature] as any);
+
+        expect(extractKoreanFieldworkFieldNoteInput(feature.resource.fieldNote as string))
+            .toMatchObject({
+                observation: '바닥면에서 원형 윤곽 확인.',
+                nextWork: '사진 보강 후 단면 정리.'
+            });
+        expect(entry).toMatchObject({
+            detail: '바닥면에서 원형 윤곽 확인. · 손그림 메모 1획/2점.',
+            nextWork: '사진 보강 후 단면 정리.',
+            handwritingStrokeCount: 1,
+            handwritingPointCount: 2,
+            handwritingSummaryLabel: '손그림 메모 1획/2점.'
+        });
+    });
+
+
     it('accepts short evidence-number section labels', () => {
 
         expect(extractKoreanFieldworkFieldNoteInput([

@@ -11,6 +11,7 @@ import {
   KOREAN_FIELDWORK_CATEGORIES,
 } from './korean-fieldwork-categories';
 import {
+  countKoreanFieldworkHandwritingPoints,
   extractKoreanFieldworkHandwritingFromText,
   serializeKoreanFieldworkHandwriting,
 } from './korean-fieldwork-handwriting';
@@ -128,6 +129,9 @@ export interface KoreanFieldworkNotebookEntry {
   evidenceNumbers: string;
   needsEvidenceNumbers: boolean;
   input: KoreanFieldworkFieldNoteInput;
+  handwritingStrokeCount: number;
+  handwritingPointCount: number;
+  handwritingSummaryLabel: string;
 }
 
 export interface KoreanFieldworkFieldNoteContinuationSeed {
@@ -446,6 +450,11 @@ export const extractKoreanFieldworkFieldNoteInput = (
     if (field) {
       currentField = field;
       appendFieldNoteInputLine(input, field, match?.[2] ?? '');
+      return;
+    }
+
+    if (match) {
+      currentField = undefined;
       return;
     }
 
@@ -1503,7 +1512,14 @@ const createNotebookEntry = ({
   const targetCategoryLabel = targetDocument
     ? getKoreanFieldworkCategoryLabel(targetDocument.resource.category)
     : getKoreanFieldworkCategoryLabel(sourceDocument.resource.category);
-  const detail = getNotebookEntryDetail(input, text);
+  const handwritingStrokes = extractKoreanFieldworkHandwritingFromText(text);
+  const handwritingStrokeCount = handwritingStrokes.length;
+  const handwritingPointCount = countKoreanFieldworkHandwritingPoints(handwritingStrokes);
+  const handwritingSummaryLabel = getNotebookHandwritingSummaryLabel(
+    handwritingStrokeCount,
+    handwritingPointCount
+  );
+  const detail = getNotebookEntryDetail(input, text, handwritingSummaryLabel);
   const nextWork = normalizeFieldNoteText(input.nextWork ?? '');
   const evidenceNumbers = normalizeFieldNoteText(input.evidenceNumbers ?? '');
   const needsEvidenceNumbers = !evidenceNumbers
@@ -1522,17 +1538,24 @@ const createNotebookEntry = ({
     evidenceNumbers,
     needsEvidenceNumbers,
     input,
+    handwritingStrokeCount,
+    handwritingPointCount,
+    handwritingSummaryLabel,
     sortKey: getNotebookEntrySortKey(sourceDocument, timeLabel, order),
   };
 };
 
 const getNotebookEntryDetail = (
   input: KoreanFieldworkFieldNoteInput,
-  text: string
+  text: string,
+  handwritingSummaryLabel: string
 ): string =>
-  normalizeFieldNoteText(input.observation ?? '')
-  || normalizeFieldNoteText(input.interpretation ?? '')
-  || stripFieldNoteSectionLabel(stripDailyLogEntryPrefix(getLastMeaningfulLine(text)));
+  [
+    normalizeFieldNoteText(input.observation ?? '')
+    || normalizeFieldNoteText(input.interpretation ?? '')
+    || getLastMeaningfulFieldNoteLine(text),
+    handwritingSummaryLabel,
+  ].filter((value) => value.length > 0).join(' · ');
 
 const getKoreanFieldworkNotebookContinuationInput = (
   entry: KoreanFieldworkNotebookEntry,
@@ -1721,10 +1744,8 @@ const collectDailyLogEntryBlock = (
 const isDailyLogEntryStart = (line: string): boolean =>
   /^\d{2}:\d{2}\s+/.test(line);
 
-const getFieldNoteHistoryDetail = (text: string): string => {
-  const line = getLastMeaningfulLine(text);
-  return stripFieldNoteSectionLabel(stripDailyLogEntryPrefix(line));
-};
+const getFieldNoteHistoryDetail = (text: string): string =>
+  getLastMeaningfulFieldNoteLine(text);
 
 const getFieldNoteHistoryDateLabel = (document: Document): string => {
   const date = getStringField(document, 'date');
@@ -1812,8 +1833,31 @@ const stripDailyLogEntryPrefix = (line: string): string =>
 const stripFieldNoteSectionLabel = (line: string): string =>
   line.replace(/^\[[^\]]+\]\s*/, '');
 
+const getLastMeaningfulFieldNoteLine = (text: string): string =>
+  stripFieldNoteSectionLabel(stripDailyLogEntryPrefix(getLastMeaningfulNonCoordinateLine(text)));
+
+const getLastMeaningfulNonCoordinateLine = (text: string): string =>
+  text
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && !isHandwritingCoordinateLine(line))
+    .pop() ?? '';
+
+const isHandwritingCoordinateLine = (line: string): boolean =>
+  /^\[손그림 좌표\]/.test(stripDailyLogEntryPrefix(line));
+
+const getNotebookHandwritingSummaryLabel = (
+  strokeCount: number,
+  pointCount: number
+): string => {
+  if (strokeCount === 0) return '';
+  if (pointCount === 0) return `손그림 메모 ${strokeCount}획.`;
+
+  return `손그림 메모 ${strokeCount}획/${pointCount}점.`;
+};
+
 const getFieldNoteDetail = (document: Document): string =>
-  getLastMeaningfulLine(
+  getLastMeaningfulNonCoordinateLine(
     [
       getStringField(document, 'penMemoReviewedTranscript'),
       getStringField(document, 'penMemoAutoTranscript'),
@@ -1837,13 +1881,6 @@ const getStringArrayField = (
     ? value.filter((item): item is string => typeof item === 'string')
     : [];
 };
-
-const getLastMeaningfulLine = (text: string): string =>
-  text
-    .split('\n')
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0)
-    .pop() ?? '';
 
 const mergeStringArrays = (
   currentValues: string[],

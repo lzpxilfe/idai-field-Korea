@@ -21,6 +21,9 @@ export interface KoreanFieldworkNotebookEntry {
     evidenceNumbers: string;
     needsEvidenceNumbers: boolean;
     input: KoreanFieldworkFieldNoteInput;
+    handwritingStrokeCount: number;
+    handwritingPointCount: number;
+    handwritingSummaryLabel: string;
 }
 
 export type KoreanFieldworkNotebookContinuationFocus = 'nextWork'|'evidenceNumbers';
@@ -42,6 +45,15 @@ export interface KoreanFieldworkDailyNotebookDigest {
 
 interface KoreanFieldworkNotebookEntryWithSortKey extends KoreanFieldworkNotebookEntry {
     sortKey: number;
+}
+
+interface KoreanFieldworkNotebookHandwritingPoint {
+    x: number;
+    y: number;
+}
+
+interface KoreanFieldworkNotebookHandwritingStroke {
+    points: KoreanFieldworkNotebookHandwritingPoint[];
 }
 
 const PEN_MEMO_CATEGORY = 'PenMemo';
@@ -197,6 +209,11 @@ export function extractKoreanFieldworkFieldNoteInput(text: string): KoreanFieldw
             return;
         }
 
+        if (match) {
+            currentField = undefined;
+            return;
+        }
+
         if (currentField && line.length > 0) {
             appendFieldNoteInputLine(input, currentField, line);
         }
@@ -303,7 +320,9 @@ function createNotebookEntry({
     const targetCategoryLabel = targetDocument
         ? getKoreanFieldworkCategoryLabel(targetDocument.resource.category)
         : getKoreanFieldworkCategoryLabel(sourceDocument.resource.category);
-    const detail = getNotebookEntryDetail(input, text);
+    const handwritingStats = getNotebookHandwritingStats(text);
+    const handwritingSummaryLabel = getNotebookHandwritingSummaryLabel(handwritingStats);
+    const detail = getNotebookEntryDetail(input, text, handwritingSummaryLabel);
     const nextWork = normalizeKoreanFieldworkFieldNoteText(input.nextWork ?? '');
     const evidenceNumbers = normalizeKoreanFieldworkFieldNoteText(input.evidenceNumbers ?? '');
 
@@ -321,16 +340,27 @@ function createNotebookEntry({
         needsEvidenceNumbers: !evidenceNumbers
             && shouldPromptEvidenceNumbers(input, targetDocument ?? sourceDocument),
         input,
+        handwritingStrokeCount: handwritingStats.strokeCount,
+        handwritingPointCount: handwritingStats.pointCount,
+        handwritingSummaryLabel,
         sortKey: getNotebookEntrySortKey(sourceDocument, timeLabel, order)
     };
 }
 
 
-function getNotebookEntryDetail(input: KoreanFieldworkFieldNoteInput, text: string): string {
+function getNotebookEntryDetail(
+        input: KoreanFieldworkFieldNoteInput,
+        text: string,
+        handwritingSummaryLabel: string
+): string {
 
-    return normalizeKoreanFieldworkFieldNoteText(input.observation ?? '')
+    const detail = normalizeKoreanFieldworkFieldNoteText(input.observation ?? '')
         || normalizeKoreanFieldworkFieldNoteText(input.interpretation ?? '')
-        || stripFieldNoteSectionLabel(stripDailyLogEntryPrefix(getLastMeaningfulLine(text)));
+        || getLastMeaningfulFieldNoteLine(text);
+
+    return [detail, handwritingSummaryLabel]
+        .filter(value => value.length > 0)
+        .join(' · ');
 }
 
 
@@ -574,6 +604,24 @@ function stripFieldNoteSectionLabel(line: string): string {
 }
 
 
+function getLastMeaningfulFieldNoteLine(text: string): string {
+
+    return stripFieldNoteSectionLabel(stripDailyLogEntryPrefix(
+        text
+            .split('\n')
+            .map(line => line.trim())
+            .filter(line => line.length > 0 && !isHandwritingCoordinateLine(line))
+            .pop() ?? ''
+    ));
+}
+
+
+function isHandwritingCoordinateLine(line: string): boolean {
+
+    return /^\[손그림 좌표\]/.test(stripDailyLogEntryPrefix(line));
+}
+
+
 function getStringField(document: Document, fieldName: string): string {
 
     const value = document.resource[fieldName];
@@ -589,13 +637,112 @@ function getRelationIds(document: Document, relationName: string): string[] {
 }
 
 
-function getLastMeaningfulLine(text: string): string {
+function getNotebookHandwritingStats(text: string): { strokeCount: number, pointCount: number } {
+
+    const strokes = getNotebookHandwritingStrokes(text);
+
+    return {
+        strokeCount: strokes.length,
+        pointCount: strokes.reduce((sum, stroke) => sum + stroke.points.length, 0)
+    };
+}
+
+
+function getNotebookHandwritingSummaryLabel(stats: { strokeCount: number, pointCount: number }): string {
+
+    if (stats.strokeCount === 0) return '';
+    if (stats.pointCount === 0) return `손그림 메모 ${stats.strokeCount}획.`;
+
+    return `손그림 메모 ${stats.strokeCount}획/${stats.pointCount}점.`;
+}
+
+
+function getNotebookHandwritingStrokes(text: string): KoreanFieldworkNotebookHandwritingStroke[] {
+
+    for (const candidate of getNotebookHandwritingPayloadCandidates(text)) {
+        try {
+            const strokes = getParsedNotebookHandwritingStrokes(JSON.parse(candidate));
+            if (strokes.length > 0) return strokes;
+        } catch (_err) {
+            continue;
+        }
+    }
+
+    return [];
+}
+
+
+function getNotebookHandwritingPayloadCandidates(text: string): string[] {
 
     return text
-        .split('\n')
-        .map(line => line.trim())
-        .filter(line => line.length > 0)
-        .pop() ?? '';
+        .split(/\r?\n/)
+        .map(line => stripDailyLogEntryPrefix(line.trim()))
+        .flatMap(getNotebookHandwritingPayloadCandidatesFromLine);
+}
+
+
+function getNotebookHandwritingPayloadCandidatesFromLine(line: string): string[] {
+
+    const candidates: string[] = [];
+    const objectStart = line.includes('"strokes"') ? line.indexOf('{') : -1;
+    if (objectStart >= 0) candidates.push(line.slice(objectStart));
+
+    const legacyArrayStart = line.indexOf('[[{');
+    if (legacyArrayStart >= 0) candidates.push(line.slice(legacyArrayStart));
+
+    return candidates;
+}
+
+
+function getParsedNotebookHandwritingStrokes(value: unknown): KoreanFieldworkNotebookHandwritingStroke[] {
+
+    const strokesValue = isRecord(value) && Array.isArray(value.strokes)
+        ? value.strokes
+        : value;
+    if (!Array.isArray(strokesValue)) return [];
+
+    return strokesValue
+        .map(getNotebookHandwritingStrokePoints)
+        .filter(points => points.length > 0)
+        .map(points => ({ points }));
+}
+
+
+function getNotebookHandwritingStrokePoints(stroke: unknown): KoreanFieldworkNotebookHandwritingPoint[] {
+
+    const points = isRecord(stroke) && Array.isArray(stroke.points)
+        ? stroke.points
+        : stroke;
+    if (!Array.isArray(points)) return [];
+
+    return points
+        .map(getNotebookHandwritingPoint)
+        .filter((point): point is KoreanFieldworkNotebookHandwritingPoint => point !== undefined);
+}
+
+
+function getNotebookHandwritingPoint(point: unknown): KoreanFieldworkNotebookHandwritingPoint|undefined {
+
+    if (!isRecord(point)) return undefined;
+
+    return getFiniteCoordinate(point.x) === undefined || getFiniteCoordinate(point.y) === undefined
+        ? undefined
+        : {
+            x: getFiniteCoordinate(point.x) as number,
+            y: getFiniteCoordinate(point.y) as number
+        };
+}
+
+
+function getFiniteCoordinate(value: unknown): number|undefined {
+
+    return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
+
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+
+    return !!value && typeof value === 'object';
 }
 
 

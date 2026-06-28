@@ -196,6 +196,9 @@
              [class.warning]="getNotebookEntryTone(entry) === 'warning'">
             <span class="korean-fieldwork-record-context-notebook-meta">
                 {{entry.sourceLabel}} · {{entry.dateLabel}}
+                <ng-container *ngIf="entry.handwritingSummaryLabel">
+                    · {{entry.handwritingSummaryLabel}}
+                </ng-container>
             </span>
             <span class="korean-fieldwork-record-context-notebook-detail">
                 {{getNotebookEntryDetail(entry)}}
