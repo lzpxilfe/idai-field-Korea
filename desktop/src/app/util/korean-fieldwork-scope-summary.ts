@@ -93,7 +93,7 @@ export function makeKoreanFieldworkScopeSummary(documents: Document[],
             title: legacyRootRecordCount > 0 ? '조사 구역 정리 필요' : '조사 경계 필요',
             detail: legacyRootRecordCount > 0
                 ? `${modeLabel} · 부모 없이 떠 있는 기존 기록 ${legacyRootRecordCount}건을 새 조사 구역 안으로 정리하세요.`
-                : `${modeLabel} · 지도에서 GPS 임시 경계, SHP/DXF/CSV, 위성지도 중 하나로 조사 경계를 먼저 만드세요.`,
+                : `${modeLabel} · 지도에서 GPS 임시 경계, SHP/DXF/GeoJSON, 위성지도 중 하나로 조사 경계를 먼저 만드세요.`,
             modeLabel,
             boundaryLabel,
             structureCount,
@@ -113,8 +113,8 @@ export function makeKoreanFieldworkScopeSummary(documents: Document[],
             tone: 'warning',
             title: hasBoundarySummary ? '조사 구역 확정 필요' : '조사 구역 필요',
             detail: hasBoundarySummary
-                ? `${modeLabel} · ${boundarySummary} 기준만 있음. GPS 임시 경계, SHP/DXF/CSV, 위성지도 중 하나로 확정하세요.`
-                : `${modeLabel} · GPS 임시 경계, SHP/DXF/CSV, 위성지도 기준으로 확정한 경계가 없습니다.`,
+                ? `${modeLabel} · ${boundarySummary} 기준만 있음. GPS 임시 경계, SHP/DXF/GeoJSON, 위성지도 중 하나로 확정하세요.`
+                : `${modeLabel} · GPS 임시 경계, SHP/DXF/GeoJSON, 위성지도 기준으로 확정한 경계가 없습니다.`,
             modeLabel,
             boundaryLabel,
             structureCount,

@@ -42,11 +42,11 @@ export function getKoreanFieldworkSatelliteMapProviderNotice(settings: any): str
     const normalized = normalizeKoreanFieldworkMapProviderSettings(settings);
 
     if (normalized.kakaoMapJavaScriptKey.trim()) {
-        return '카카오 지도 JavaScript 키가 저장되어 있습니다. 태블릿에서는 JavaScript 키 WebView 경로를 우선 사용해 일반지도, 위성지도, 하이브리드로 조사 경계를 만들 수 있고, 데스크톱에서는 SHP/DXF/CSV 경계를 가져와 같은 프로젝트로 동기화한 경계와 함께 읽습니다.';
+        return '카카오 지도 JavaScript 키가 저장되어 있습니다. 태블릿에서는 JavaScript 키 WebView 경로를 우선 사용해 일반지도, 위성지도, 하이브리드로 조사 경계를 만들 수 있습니다. SHP/DXF/GeoJSON은 태블릿에서 파일 선택으로 바로 가져오거나, 데스크톱에서 가져온 뒤 같은 프로젝트로 동기화한 경계와 함께 읽습니다.';
     }
 
     if (normalized.kakaoNativeAppKey.trim()) {
-        return '카카오 Native App 키가 저장되어 있습니다. 현재 태블릿 지도 선택은 JavaScript 키 WebView 경로를 우선 사용합니다. 데스크톱에서는 SHP/DXF/CSV 경계를 가져와 같은 프로젝트로 동기화하거나 태블릿에서 만든 경계를 동기화해 확인하세요.';
+        return '카카오 Native App 키가 저장되어 있습니다. 현재 태블릿 지도 선택은 JavaScript 키 WebView 경로를 우선 사용합니다. SHP/DXF/GeoJSON은 태블릿에서 파일 선택으로 바로 가져오거나, 데스크톱에서 가져온 뒤 같은 프로젝트로 동기화해 확인하세요.';
     }
 
     if (normalized.kakaoLocalRestApiKey.trim()) {

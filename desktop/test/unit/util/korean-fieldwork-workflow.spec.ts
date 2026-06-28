@@ -27,14 +27,14 @@ describe('korean-fieldwork-workflow', () => {
             ['recording', 'todo']
         ]);
         expect(steps[1].detail).toBe('시굴·발굴·지표·입회 중 이 프로젝트의 조사 방식을 정하세요.');
-        expect(steps[2].detail).toBe('지도에서 조사 경계를 만들거나 SHP/DXF/CSV·위성지도 기준으로 구역을 기록하세요.');
+        expect(steps[2].detail).toBe('지도에서 조사 경계를 만들거나 SHP/DXF/GeoJSON·위성지도 기준으로 구역을 기록하세요.');
         expect(steps[3].detail).toBe('지도에서 조사 경계를 만들면 그 구역 안에 트렌치·유구 기록을 이어서 넣을 수 있습니다.');
         expect(steps[0].action).toEqual({ type: 'openProjectInfo' });
         expect(steps[1].action).toEqual({ type: 'openProjectInfo' });
         expect(steps[2].action).toEqual({ type: 'openMap' });
         expect(steps[2].secondaryAction).toEqual({ type: 'openImport' });
         expect(steps[2].secondaryActionDetail).toBe(
-            'SHP/DXF/CSV는 데스크톱 가져오기에서 불러온 뒤 동기화하면 태블릿 지도에서도 조사 경계로 보입니다.'
+            'SHP/DXF/GeoJSON은 태블릿에서 파일 선택으로 바로 가져오거나, 데스크톱에서 가져온 뒤 같은 프로젝트로 동기화해 조사 경계로 확인할 수 있습니다.'
         );
         expect(steps[2].secondaryActionLabel).toBe('가져오기');
         expect(steps[3].action).toEqual({ type: 'openMap' });
@@ -144,11 +144,11 @@ describe('korean-fieldwork-workflow', () => {
         ]);
         expect(steps[2]).toEqual(expect.objectContaining({
             label: '조사 구역',
-            detail: 'A구역 북쪽 능선 기준만 있음. 지도에서 조사 경계를 만들거나 SHP/DXF/CSV·위성지도 기준으로 확정하세요.',
+            detail: 'A구역 북쪽 능선 기준만 있음. 지도에서 조사 경계를 만들거나 SHP/DXF/GeoJSON·위성지도 기준으로 확정하세요.',
             action: { type: 'openMap' },
             actionLabel: '지도',
             secondaryAction: { type: 'openImport' },
-            secondaryActionDetail: 'SHP/DXF/CSV는 데스크톱 가져오기에서 불러온 뒤 동기화하면 태블릿 지도에서도 조사 경계로 보입니다.',
+            secondaryActionDetail: 'SHP/DXF/GeoJSON은 태블릿에서 파일 선택으로 바로 가져오거나, 데스크톱에서 가져온 뒤 같은 프로젝트로 동기화해 조사 경계로 확인할 수 있습니다.',
             secondaryActionLabel: '가져오기'
         }));
         expect(steps[3]).toEqual(expect.objectContaining({
@@ -186,11 +186,11 @@ describe('korean-fieldwork-workflow', () => {
         ]);
         expect(steps[2]).toEqual(expect.objectContaining({
             label: '조사 구역',
-            detail: 'A구역 북쪽 능선 기준만 있음. 지도에서 GPS 임시 경계를 만들거나 SHP/DXF/CSV·위성지도 기준으로 확정하세요.',
+            detail: 'A구역 북쪽 능선 기준만 있음. 지도에서 GPS 임시 경계를 만들거나 SHP/DXF/GeoJSON·위성지도 기준으로 확정하세요.',
             action: { type: 'openMap' },
             actionLabel: '지도',
             secondaryAction: { type: 'openImport' },
-            secondaryActionDetail: 'SHP/DXF/CSV는 데스크톱 가져오기에서 불러온 뒤 동기화하면 태블릿 지도에서도 조사 경계로 보입니다.',
+            secondaryActionDetail: 'SHP/DXF/GeoJSON은 태블릿에서 파일 선택으로 바로 가져오거나, 데스크톱에서 가져온 뒤 같은 프로젝트로 동기화해 조사 경계로 확인할 수 있습니다.',
             secondaryActionLabel: '가져오기'
         }));
     });

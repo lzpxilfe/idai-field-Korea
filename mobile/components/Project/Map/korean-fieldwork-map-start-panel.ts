@@ -19,8 +19,8 @@ export const getKoreanFieldworkMapStartPanelCopy = (
   if (options.hasPrimaryOperation) {
     return {
       title: '조사 경계 생성',
-      detail: 'GPS 임시 경계, SHP/DXF/CSV, 위성지도 기준을 연결합니다',
-      fileImportActionTitle: 'SHP/DXF/CSV',
+      detail: 'GPS 임시 경계, SHP/DXF/GeoJSON, 위성지도 기준을 연결합니다',
+      fileImportActionTitle: 'SHP/DXF/GeoJSON',
       primaryActionTitle: 'GPS 임시 경계',
       satelliteActionTitle: '위성지도',
     };
@@ -29,8 +29,8 @@ export const getKoreanFieldworkMapStartPanelCopy = (
   if (options.hasLegacyRecordsToWrap) {
     return {
       title: '조사 경계 생성',
-      detail: `${options.legacyRootDocumentCount ?? 0}개 기존 기록은 유지하고 GPS 임시 경계, SHP/DXF/CSV, 위성지도 기준 아래에서 계속 기록합니다`,
-      fileImportActionTitle: 'SHP/DXF/CSV',
+      detail: `${options.legacyRootDocumentCount ?? 0}개 기존 기록은 유지하고 GPS 임시 경계, SHP/DXF/GeoJSON, 위성지도 기준 아래에서 계속 기록합니다`,
+      fileImportActionTitle: 'SHP/DXF/GeoJSON',
       primaryActionTitle: 'GPS 임시 경계',
       satelliteActionTitle: '위성지도',
     };
@@ -39,9 +39,9 @@ export const getKoreanFieldworkMapStartPanelCopy = (
   return {
     title: '조사 경계 생성',
     detail: options.hasBoundarySummary
-      ? '프로젝트에 적은 경계를 GPS 임시 경계, SHP/DXF/CSV, 위성지도 기준으로 확정합니다'
-      : '조사 구역을 GPS 임시 경계, SHP/DXF/CSV, 위성지도 기준으로 먼저 정합니다',
-    fileImportActionTitle: 'SHP/DXF/CSV',
+      ? '프로젝트에 적은 경계를 GPS 임시 경계, SHP/DXF/GeoJSON, 위성지도 기준으로 확정합니다'
+      : '조사 구역을 GPS 임시 경계, SHP/DXF/GeoJSON, 위성지도 기준으로 먼저 정합니다',
+    fileImportActionTitle: 'SHP/DXF/GeoJSON',
     primaryActionTitle: 'GPS 임시 경계',
     satelliteActionTitle: '위성지도',
   };

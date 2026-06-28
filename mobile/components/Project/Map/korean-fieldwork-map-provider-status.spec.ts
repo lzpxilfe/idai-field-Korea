@@ -29,13 +29,16 @@ describe('korean-fieldwork-map-provider-status', () => {
     })).toContain('JavaScript 키 WebView 경로를 우선 사용');
     expect(getKakaoSatelliteBasemapStatusMessage({
       kakaoMapJavaScriptKey: 'js-key',
-    })).toContain('SHP/DXF/CSV는 데스크톱에서 가져온 뒤 동기화');
+    })).toContain('SHP/DXF/GeoJSON은 태블릿에서 파일 선택');
+    expect(getKakaoSatelliteBasemapStatusMessage({
+      kakaoMapJavaScriptKey: 'js-key',
+    })).toContain('데스크톱에서 가져온 뒤 같은 프로젝트로 동기화');
     expect(getKakaoSatelliteBasemapStatusMessage({
       kakaoMapJavaScriptKey: 'js-key',
     })).toContain('3개 이상의 꼭짓점');
     expect(getKakaoSatelliteBasemapStatusMessage({
       kakaoMapJavaScriptKey: 'js-key',
-    })).toContain('화면에 표시되는 WebView 출처');
+    })).toContain('지도 화면에 표시되는 WebView 출처');
     expect(getKakaoSatelliteBasemapStatusMessage({
       kakaoMapJavaScriptKey: 'js-key',
     })).toContain('Kakao Developers');
@@ -47,6 +50,6 @@ describe('korean-fieldwork-map-provider-status', () => {
     })).toContain('JavaScript 키 WebView 경로를 우선 사용');
     expect(getKakaoSatelliteBasemapStatusMessage({
       kakaoNativeAppKey: 'native-key',
-    })).toContain('SHP/DXF/CSV는 데스크톱에서 가져온 뒤 동기화');
+    })).toContain('SHP/DXF/GeoJSON은 태블릿에서 파일 선택');
   });
 });

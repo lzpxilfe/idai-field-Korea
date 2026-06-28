@@ -1319,7 +1319,7 @@ function validatePriorityTaskIds() {
     'desktop/src/app/util/korean-fieldwork-boundary-import-guidance.ts'
   );
   const boundaryImportSyncDetail =
-    'SHP/DXF/CSV는 데스크톱 가져오기에서 불러온 뒤 동기화하면 태블릿 지도에서도 조사 경계로 보입니다.';
+    'SHP/DXF/GeoJSON은 태블릿에서 파일 선택으로 바로 가져오거나, 데스크톱에서 가져온 뒤 같은 프로젝트로 동기화해 조사 경계로 확인할 수 있습니다.';
   if (!desktopBoundaryImportGuidanceText.includes(boundaryImportSyncDetail)) {
     findings.push('desktop boundary import guidance must explain desktop import and tablet sync handoff');
   }
@@ -1337,8 +1337,9 @@ function validatePriorityTaskIds() {
     findings.push('desktop priority strip tests must cover import secondary action execution');
   }
   const tabletMapText = readTextFile('mobile/components/Project/Map/Map.tsx');
-  if (!tabletMapText.includes(`${boundaryImportSyncDetail} 태블릿에서는 현장에서 GPS 임시 경계나 위성지도 위치를 바로 보태세요.`)) {
-    findings.push('tablet boundary import info must match desktop import and sync handoff');
+  if (!tabletMapText.includes(boundaryImportSyncDetail)
+      || !tabletMapText.includes('현장에서는 GPS 임시 경계나 위성지도 위치도 바로 보탤 수 있습니다.')) {
+    findings.push('tablet boundary import info must match direct tablet file import and desktop sync handoff');
   }
 
   return findings;
@@ -1652,19 +1653,22 @@ function validateProjectSettingsCompleteness() {
   if (mobileMapProviderStatusText.includes('Android Kakao Maps SDK 브리지')) {
     findings.push('tablet map provider status must not promise an SDK bridge as the active field path');
   }
-  if (!mobileMapProviderStatusText.includes('JavaScript 키 WebView 경로를 우선 사용')
-      || !mobileMapProviderStatusSpecText.includes('JavaScript 키 WebView 경로를 우선 사용')
-      || !desktopMapProviderText.includes('JavaScript 키 WebView 경로를 우선 사용')
-      || !desktopMapProviderSpecText.includes('JavaScript 키 WebView 경로를 우선 사용')) {
-    findings.push('map provider notices must explain that JavaScript WebView is the active tablet satellite path');
-  }
-  if (!mobileMapProviderStatusText.includes('데스크톱에서 가져온 뒤 동기화')
-      || !mobileMapProviderStatusSpecText.includes('데스크톱에서 가져온 뒤 동기화')
-      || !desktopMapProviderText.includes('SHP/DXF/CSV 경계를 가져와 같은 프로젝트로 동기화')
-      || !desktopMapProviderSpecText.includes('SHP/DXF/CSV 경계를 가져와 같은 프로젝트로 동기화')) {
-    findings.push('map provider notices must point SHP/DXF/CSV boundary work to desktop import and sync');
-  }
-  if (!desktopMapProviderText.includes('return !!normalized.kakaoMapJavaScriptKey.trim();')
+  for (const [label, text] of [
+    ['tablet map provider status', mobileMapProviderStatusText],
+    ['tablet map provider status test', mobileMapProviderStatusSpecText],
+    ['desktop map provider notice', desktopMapProviderText],
+    ['desktop map provider notice test', desktopMapProviderSpecText]
+  ]) {
+    if (!text.includes('JavaScript 키 WebView 경로를 우선 사용')) {
+      findings.push(`${label} must explain that JavaScript WebView is the active tablet satellite path`);
+    }
+    if (!text.includes('SHP/DXF/GeoJSON은 태블릿에서 파일 선택')) {
+      findings.push(`${label} must explain direct tablet SHP/DXF/GeoJSON file selection`);
+    }
+    if (!text.includes('데스크톱에서 가져온 뒤 같은 프로젝트로 동기화')) {
+      findings.push(`${label} must explain desktop boundary import sync handoff`);
+    }
+  }  if (!desktopMapProviderText.includes('return !!normalized.kakaoMapJavaScriptKey.trim();')
       || desktopMapProviderText.includes('|| !!normalized.kakaoNativeAppKey.trim()')
       || !desktopMapProviderSpecText.includes('kakaoNativeAppKey: \'native-key\'')
       || !desktopMapProviderSpecText.includes('})).toBe(false);')) {
@@ -2072,10 +2076,10 @@ function validateProjectInvestigationModeWording() {
   if (desktopWorkflowText.includes('!!boundarySummary || getCategoryCount')) {
     findings.push('desktop workflow must not mark survey boundary done from the project boundary summary alone');
   }
-  if (!desktopWorkflowText.includes('기준만 있음. 지도에서 GPS 임시 경계를 만들거나 SHP/DXF/CSV·위성지도 기준으로 확정하세요.')) {
+  if (!desktopWorkflowText.includes('기준만 있음. 지도에서 GPS 임시 경계를 만들거나 SHP/DXF/GeoJSON·위성지도 기준으로 확정하세요.')) {
     findings.push('desktop workflow must keep boundary-summary-only projects on GPS/file/satellite confirmation');
   }
-  if (!desktopWorkflowText.includes('지도에서 조사 경계를 만들거나 SHP/DXF/CSV·위성지도 기준으로 확정하세요.')) {
+  if (!desktopWorkflowText.includes('지도에서 조사 경계를 만들거나 SHP/DXF/GeoJSON·위성지도 기준으로 확정하세요.')) {
     findings.push('desktop workflow must route boundary setup through GPS/file/satellite wording');
   }
   if (!desktopWorkflowSpecText.includes("['boundary', 'attention']")) {
@@ -2124,7 +2128,7 @@ function validateProjectInvestigationModeWording() {
   }
   if (!tabletMapStartPanelText.includes('조사 경계 생성')
       || !tabletMapStartPanelText.includes('GPS 임시 경계')
-      || !tabletMapStartPanelText.includes('SHP/DXF/CSV')
+      || !tabletMapStartPanelText.includes('SHP/DXF/GeoJSON')
       || !tabletMapStartPanelText.includes('위성지도')) {
     findings.push('tablet map start panel must expose GPS, file import, and satellite boundary setup choices');
   }
@@ -2791,10 +2795,10 @@ function validateScopeMetricWording() {
   if (!desktopScopeSummaryText.includes('조사 경계 필요')) {
     findings.push('desktop scope summary must ask for survey boundary setup with field wording');
   }
-  if (!desktopScopeSummaryText.includes('기준만 있음. GPS 임시 경계, SHP/DXF/CSV, 위성지도 중 하나로 확정하세요.')) {
+  if (!desktopScopeSummaryText.includes('기준만 있음. GPS 임시 경계, SHP/DXF/GeoJSON, 위성지도 중 하나로 확정하세요.')) {
     findings.push('desktop scope summary must route boundary-summary-only projects back to GPS/file/satellite confirmation');
   }
-  if (!desktopScopeSummaryText.includes('GPS 임시 경계, SHP/DXF/CSV, 위성지도 기준으로 확정한 경계가 없습니다.')) {
+  if (!desktopScopeSummaryText.includes('GPS 임시 경계, SHP/DXF/GeoJSON, 위성지도 기준으로 확정한 경계가 없습니다.')) {
     findings.push('desktop scope summary must name GPS, file, and satellite boundary sources when no boundary exists');
   }
   if (!desktopScopeSummaryText.includes('legacyRootRecordCount')

@@ -34,7 +34,7 @@ describe('makeKoreanFieldworkScopeSummary', () => {
         expect(summary).toMatchObject({
             tone: 'info',
             title: '조사 경계 필요',
-            detail: '표본·시굴조사 · 지도에서 GPS 임시 경계, SHP/DXF/CSV, 위성지도 중 하나로 조사 경계를 먼저 만드세요.',
+            detail: '표본·시굴조사 · 지도에서 GPS 임시 경계, SHP/DXF/GeoJSON, 위성지도 중 하나로 조사 경계를 먼저 만드세요.',
             modeLabel: '표본·시굴조사',
             boundaryLabel: '경계 없음',
             legacyRootRecordCount: 0,
@@ -81,12 +81,12 @@ describe('makeKoreanFieldworkScopeSummary', () => {
         expect(summary).toMatchObject({
             tone: 'warning',
             title: '조사 구역 필요',
-            detail: '표본·시굴조사 · GPS 임시 경계, SHP/DXF/CSV, 위성지도 기준으로 확정한 경계가 없습니다.',
+            detail: '표본·시굴조사 · GPS 임시 경계, SHP/DXF/GeoJSON, 위성지도 기준으로 확정한 경계가 없습니다.',
             modeLabel: '표본·시굴조사',
             boundaryLabel: '경계 없음',
             actionLabel: '지도',
             action: { type: 'openMap' },
-            secondaryActionDetail: 'SHP/DXF/CSV는 데스크톱 가져오기에서 불러온 뒤 동기화하면 태블릿 지도에서도 조사 경계로 보입니다.',
+            secondaryActionDetail: 'SHP/DXF/GeoJSON은 태블릿에서 파일 선택으로 바로 가져오거나, 데스크톱에서 가져온 뒤 같은 프로젝트로 동기화해 조사 경계로 확인할 수 있습니다.',
             secondaryActionLabel: '가져오기',
             secondaryAction: { type: 'openImport' }
         });
@@ -108,12 +108,12 @@ describe('makeKoreanFieldworkScopeSummary', () => {
         expect(summary).toMatchObject({
             tone: 'warning',
             title: '조사 구역 확정 필요',
-            detail: '표본·시굴조사 · A구역 북쪽 능선 기준만 있음. GPS 임시 경계, SHP/DXF/CSV, 위성지도 중 하나로 확정하세요.',
+            detail: '표본·시굴조사 · A구역 북쪽 능선 기준만 있음. GPS 임시 경계, SHP/DXF/GeoJSON, 위성지도 중 하나로 확정하세요.',
             modeLabel: '표본·시굴조사',
             boundaryLabel: 'A구역 북쪽 능선',
             actionLabel: '지도',
             action: { type: 'openMap' },
-            secondaryActionDetail: 'SHP/DXF/CSV는 데스크톱 가져오기에서 불러온 뒤 동기화하면 태블릿 지도에서도 조사 경계로 보입니다.',
+            secondaryActionDetail: 'SHP/DXF/GeoJSON은 태블릿에서 파일 선택으로 바로 가져오거나, 데스크톱에서 가져온 뒤 같은 프로젝트로 동기화해 조사 경계로 확인할 수 있습니다.',
             secondaryActionLabel: '가져오기',
             secondaryAction: { type: 'openImport' }
         });

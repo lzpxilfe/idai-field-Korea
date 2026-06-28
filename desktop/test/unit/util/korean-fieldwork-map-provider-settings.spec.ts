@@ -55,7 +55,10 @@ describe('korean-fieldwork-map-provider-settings', () => {
         })).toContain('JavaScript 키 WebView 경로를 우선 사용');
         expect(getKoreanFieldworkSatelliteMapProviderNotice({
             kakaoMapJavaScriptKey: 'js-key'
-        })).toContain('SHP/DXF/CSV 경계를 가져와 같은 프로젝트로 동기화');
+        })).toContain('SHP/DXF/GeoJSON은 태블릿에서 파일 선택');
+        expect(getKoreanFieldworkSatelliteMapProviderNotice({
+            kakaoMapJavaScriptKey: 'js-key'
+        })).toContain('데스크톱에서 가져온 뒤 같은 프로젝트로 동기화');
 
         expect(hasKoreanFieldworkSatelliteMapDisplayKey({
             kakaoNativeAppKey: 'native-key'
@@ -65,6 +68,6 @@ describe('korean-fieldwork-map-provider-settings', () => {
         })).toContain('Native App 키');
         expect(getKoreanFieldworkSatelliteMapProviderNotice({
             kakaoNativeAppKey: 'native-key'
-        })).toContain('SHP/DXF/CSV 경계를 가져와 같은 프로젝트로 동기화');
+        })).toContain('SHP/DXF/GeoJSON은 태블릿에서 파일 선택');
     });
 });
