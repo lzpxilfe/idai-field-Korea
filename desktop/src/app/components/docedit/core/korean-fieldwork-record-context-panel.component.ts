@@ -728,7 +728,7 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
 
         const reviewPhotos = getKoreanFieldworkReviewPhotoDocuments(this.document, bundle);
         const reviewSoilProfilePhotos = getKoreanFieldworkReviewSoilProfilePhotoDocuments(this.document, bundle);
-        const canAppendSoilColorInsight = !!this.getNarrativeAppendTargetField();
+        const canAppendEvidenceInsight = !!this.getNarrativeAppendTargetField();
         const soilColorInsights = getSoilColorCandidateSummaries(reviewSoilProfilePhotos)
             .map(summary => {
                 const insight: EvidenceInsight = {
@@ -741,7 +741,7 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
                 };
                 const appendText = this.getSoilColorInsightAppendText(summary);
 
-                return canAppendSoilColorInsight && appendText
+                return canAppendEvidenceInsight && appendText
                     ? { ...insight, appendText }
                     : insight;
             });
@@ -756,13 +756,20 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
                 tone: summary.pendingTranscription ? 'warning' as const : 'info' as const
             }));
         const photoAnnotationInsights = getPhotoAnnotationSummaries(reviewPhotos, reviewSoilProfilePhotos)
-            .map(summary => ({
-                detail: `${this.getDocumentLabel(summary.document)} · ${summary.label}`,
-                id: `photoAnnotation:${summary.document.resource.id}`,
-                label: summary.source === 'soilProfilePhoto' ? '토층사진 표시' : '사진 표시',
-                sketchPreview: summary.preview,
-                tone: 'info' as const
-            }));
+            .map(summary => {
+                const insight: EvidenceInsight = {
+                    detail: `${this.getDocumentLabel(summary.document)} · ${summary.label}`,
+                    id: `photoAnnotation:${summary.document.resource.id}`,
+                    label: summary.source === 'soilProfilePhoto' ? '토층사진 표시' : '사진 표시',
+                    sketchPreview: summary.preview,
+                    tone: 'info' as const
+                };
+                const appendText = this.getPhotoAnnotationInsightAppendText(summary);
+
+                return canAppendEvidenceInsight && appendText
+                    ? { ...insight, appendText }
+                    : insight;
+            });
 
         return [...soilColorInsights, ...photoAnnotationInsights, ...penMemoSketchInsights]
             .filter(insight => insight.detail.trim().length > 0)
@@ -856,6 +863,32 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
             this.getNotebookAppendLine('토색 번호', swatches),
             this.getNotebookAppendLine('토색 메모', colorNote),
             this.getNotebookAppendLine('촬영 조건', captureNote)
+        ].filter((line): line is string => !!line && line.length > 0);
+
+        return lines.length > 1 ? lines.join('\n') : '';
+    }
+
+
+    private getPhotoAnnotationInsightAppendText(
+            summary: {
+                document: Document;
+                label: string;
+                preview?: { label: string };
+                source: 'photo'|'soilProfilePhoto';
+                updatedAt?: string;
+            }
+    ): string {
+
+        const sourceLabel = summary.source === 'soilProfilePhoto' ? '토층사진' : '사진';
+        const documentLabel = this.getDocumentLabel(summary.document);
+        const annotationLabel = summary.preview?.label ?? summary.label;
+        const photoDescription = this.getNonEmptyDocumentStringField(summary.document, 'description')
+            ?? this.getNonEmptyDocumentStringField(summary.document, 'shortDescription');
+        const lines = [
+            `[${sourceLabel} ${documentLabel} 표시]`,
+            this.getNotebookAppendLine('표시 요약', annotationLabel),
+            this.getNotebookAppendLine('표시 설명', photoDescription ?? '사진 원본에서 표시 위치 확인 필요'),
+            this.getNotebookAppendLine('수정 시각', summary.updatedAt)
         ].filter((line): line is string => !!line && line.length > 0);
 
         return lines.length > 1 ? lines.join('\n') : '';

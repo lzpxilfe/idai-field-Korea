@@ -682,6 +682,61 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
     });
 
 
+    it('appends tablet photo annotation summaries to the current record narrative once', async () => {
+
+        const feature = createDocument('feature-1', 'Feature', 'F1', {}, {
+            description: '기존 사진 관찰.'
+        });
+        const photo = createDocument('photo-1', 'Photo', 'P1', {
+            depicts: ['feature-1']
+        }, {
+            description: '동쪽 벽면 균열 표시.',
+            fieldworkPhotoAnnotationStrokes: '{"version":1,"strokes":[{"points":[{"x":1000,"y":1000},{"x":5000,"y":5000}]}]}',
+            fieldworkPhotoAnnotationUpdatedAt: '2026-06-23T08:34:00.000Z'
+        });
+        const component = createComponent({
+            find: jest.fn().mockResolvedValue({
+                documents: [feature, photo]
+            })
+        });
+        const handleChanged = jest.fn();
+        component.onChanged.subscribe(handleChanged);
+        component.document = feature as any;
+        component.fieldDefinitions = [
+            field('featureRecordingStatus'),
+            textField('description', '설명')
+        ] as any;
+
+        await component.ngOnChanges();
+
+        const [insight] = component.getEvidenceInsights();
+        expect(insight).toMatchObject({
+            id: 'photoAnnotation:photo-1',
+            label: '사진 표시',
+            detail: 'P1 · 사진 표시 1획/2점 · 수정 2026-06-23T08:34:00.000Z',
+            appendText: [
+                '[사진 P1 표시]',
+                '표시 요약: 사진 표시 1획/2점',
+                '표시 설명: 동쪽 벽면 균열 표시.',
+                '수정 시각: 2026-06-23T08:34:00.000Z'
+            ].join('\n')
+        });
+        expect(component.canApplyEvidenceInsight(insight)).toBe(true);
+        expect(component.getEvidenceInsightApplyTargetLabel(insight)).toBe('설명');
+
+        component.applyEvidenceInsight(insight);
+        component.applyEvidenceInsight(insight);
+
+        expect(feature.resource.description).toContain('기존 사진 관찰.');
+        expect(feature.resource.description).toContain('[사진 P1 표시]');
+        expect(feature.resource.description).toContain('표시 요약: 사진 표시 1획/2점');
+        expect(feature.resource.description).toContain('표시 설명: 동쪽 벽면 균열 표시.');
+        expect(feature.resource.description).toContain('수정 시각: 2026-06-23T08:34:00.000Z');
+        expect(feature.resource.description.match(/\[사진 P1 표시\]/g)).toHaveLength(1);
+        expect(handleChanged).toHaveBeenCalledTimes(1);
+    });
+
+
     it('shows tablet photo annotation update times in record context insights', async () => {
 
         const photoStrokes = '{"version":1,"strokes":[{"points":[{"x":1000,"y":1000},{"x":5000,"y":5000}]}]}';
