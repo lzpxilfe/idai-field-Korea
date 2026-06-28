@@ -29,6 +29,8 @@ describe('buildKakaoSatellitePickerHtml', () => {
     expect(html).toContain("var currentMapType = 'ROADMAP'");
     expect(html).toContain('map.setMapTypeId(kakaoMapTypeIds[currentMapType])');
     expect(html).toContain('mapTypeId: currentMapType');
+    expect(html).toContain("data.type !== 'setMapType'");
+    expect(html).toContain('setMapType(data.payload && data.payload.mapTypeId)');
   });
 
   it('posts drawn WGS84 boundary coordinates back to React Native', () => {

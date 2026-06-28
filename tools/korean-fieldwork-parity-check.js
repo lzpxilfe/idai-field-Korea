@@ -1755,7 +1755,9 @@ function validateProjectSettingsCompleteness() {
   for (const token of [
     'WebView',
     'buildKakaoSatellitePickerHtml',
-    'onPickLocation'
+    'onPickLocation',
+    'KAKAO_MAP_TYPE_OPTIONS',
+    'kakao-map-type-'
   ]) {
     if (!mobileKakaoSatellitePickerText.includes(token)) {
       findings.push(`tablet Kakao satellite picker missing WebView flow: ${token}`);
@@ -1764,7 +1766,8 @@ function validateProjectSettingsCompleteness() {
   for (const token of [
     'dapi.kakao.com/v2/maps/sdk.js',
     'kakao.maps.MapTypeId.HYBRID',
-    'window.ReactNativeWebView.postMessage'
+    'window.ReactNativeWebView.postMessage',
+    'setMapType(data.payload && data.payload.mapTypeId)'
   ]) {
     if (!mobileKakaoSatellitePickerHtmlText.includes(token)) {
       findings.push(`tablet Kakao satellite picker HTML missing SDK behavior: ${token}`);

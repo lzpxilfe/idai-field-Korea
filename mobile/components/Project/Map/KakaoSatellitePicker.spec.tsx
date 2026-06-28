@@ -7,7 +7,13 @@ jest.mock('react-native-webview', () => {
   const { View } = require('react-native');
 
   return {
-    WebView: (props: Record<string, unknown>) => <View {...props} />,
+    WebView: React.forwardRef((props: Record<string, unknown>, ref: unknown) => {
+      React.useImperativeHandle(ref, () => ({
+        postMessage: jest.fn(),
+      }));
+
+      return <View {...props} />;
+    }),
   };
 });
 
@@ -45,6 +51,40 @@ describe('KakaoSatellitePicker', () => {
     expect(onPickBoundary).toHaveBeenCalledWith(expect.objectContaining({
       mapTypeId: 'ROADMAP',
     }));
+  });
+
+  it('keeps the native map type selector in sync with the WebView map type', () => {
+    const { getByTestId } = render(
+      <KakaoSatellitePicker
+        initialLocation={{ latitude: 36.45, longitude: 127.12 }}
+        javaScriptKey="js-key"
+        onClose={jest.fn()}
+        onPickBoundary={jest.fn()}
+        visible
+      />
+    );
+
+    expect(getByTestId('kakao-map-type-HYBRID').props.accessibilityState)
+      .toEqual({ selected: true });
+
+    fireEvent.press(getByTestId('kakao-map-type-ROADMAP'));
+
+    expect(getByTestId('kakao-map-type-ROADMAP').props.accessibilityState)
+      .toEqual({ selected: true });
+
+    act(() => {
+      fireEvent(getByTestId('kakao-satellite-picker-webview'), 'message', {
+        nativeEvent: {
+          data: JSON.stringify({
+            type: 'mapType',
+            payload: { mapTypeId: 'SKYVIEW' },
+          }),
+        },
+      });
+    });
+
+    expect(getByTestId('kakao-map-type-SKYVIEW').props.accessibilityState)
+      .toEqual({ selected: true });
   });
 
   it('opens a public Kakao map fallback when every SDK origin is rejected', () => {

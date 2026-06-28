@@ -245,6 +245,19 @@ export const buildKakaoSatellitePickerHtml = ({
           post('mapType', { mapTypeId: currentMapType });
         }
 
+        function handleNativeMessage(event) {
+          try {
+            var data = typeof event.data === 'string'
+              ? JSON.parse(event.data)
+              : event.data;
+            if (!data || data.type !== 'setMapType') return;
+            setMapType(data.payload && data.payload.mapTypeId);
+          } catch (error) {}
+        }
+
+        window.addEventListener('message', handleNativeMessage);
+        document.addEventListener('message', handleNativeMessage);
+
         function addPoint(latLng) {
           points.push(latLng);
           markers.push(new kakao.maps.Marker({

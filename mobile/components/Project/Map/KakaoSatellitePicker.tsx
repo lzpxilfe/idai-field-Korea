@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Modal,
   StyleSheet,
@@ -45,6 +45,11 @@ const KAKAO_MAP_WEBVIEW_BASE_URLS = [
   'http://localhost/',
   'http://127.0.0.1/',
 ];
+const KAKAO_MAP_TYPE_OPTIONS: Array<{ id: KakaoMapTypeId; label: string }> = [
+  { id: 'ROADMAP', label: '일반' },
+  { id: 'SKYVIEW', label: '위성' },
+  { id: 'HYBRID', label: '혼합' },
+];
 
 const KakaoSatellitePicker: React.FC<KakaoSatellitePickerProps> = ({
   initialLocation,
@@ -53,6 +58,7 @@ const KakaoSatellitePicker: React.FC<KakaoSatellitePickerProps> = ({
   onPickBoundary,
   visible,
 }) => {
+  const webViewRef = useRef<any>(null);
   const latitude = initialLocation?.latitude ?? DEFAULT_LOCATION.latitude;
   const longitude = initialLocation?.longitude ?? DEFAULT_LOCATION.longitude;
   const [message, setMessage] = useState(
@@ -60,6 +66,8 @@ const KakaoSatellitePicker: React.FC<KakaoSatellitePickerProps> = ({
   );
   const [baseUrlIndex, setBaseUrlIndex] = useState(0);
   const [isPublicMapFallbackOpen, setIsPublicMapFallbackOpen] = useState(false);
+  const [selectedMapTypeId, setSelectedMapTypeId] = useState<KakaoMapTypeId>('HYBRID');
+  const [initialMapTypeId, setInitialMapTypeId] = useState<KakaoMapTypeId>('HYBRID');
   const webViewBaseUrl =
     KAKAO_MAP_WEBVIEW_BASE_URLS[baseUrlIndex] ?? KAKAO_MAP_WEBVIEW_BASE_URLS[0];
   const publicMapUrl = getKakaoPublicMapUrl(latitude, longitude);
@@ -68,15 +76,18 @@ const KakaoSatellitePicker: React.FC<KakaoSatellitePickerProps> = ({
       javaScriptKey,
       latitude,
       longitude,
+      mapTypeId: initialMapTypeId,
       webViewBaseUrl,
     }),
-    [javaScriptKey, latitude, longitude, webViewBaseUrl]
+    [initialMapTypeId, javaScriptKey, latitude, longitude, webViewBaseUrl]
   );
 
   useEffect(() => {
     if (visible) {
       setBaseUrlIndex(0);
       setIsPublicMapFallbackOpen(false);
+      setInitialMapTypeId('HYBRID');
+      setSelectedMapTypeId('HYBRID');
     }
   }, [javaScriptKey, visible]);
 
@@ -98,11 +109,25 @@ const KakaoSatellitePicker: React.FC<KakaoSatellitePickerProps> = ({
     onPickBoundary(boundary);
   };
 
+  const selectMapType = (mapTypeId: KakaoMapTypeId) => {
+    setSelectedMapTypeId(mapTypeId);
+    webViewRef.current?.postMessage(JSON.stringify({
+      type: 'setMapType',
+      payload: { mapTypeId },
+    }));
+  };
+
   const onMessage = (event: WebViewMessageEvent) => {
     try {
       const data = JSON.parse(event.nativeEvent.data);
       if (data.type === 'ready') {
         setMessage('카카오 지도가 열렸습니다. 지도 종류를 고르고 경계 꼭짓점을 3개 이상 찍어 저장하세요.');
+        return;
+      }
+
+      if (data.type === 'mapType') {
+        const mapTypeId = getPickedMapTypeId(data.payload?.mapTypeId);
+        if (mapTypeId) setSelectedMapTypeId(mapTypeId);
         return;
       }
 
@@ -141,6 +166,32 @@ const KakaoSatellitePicker: React.FC<KakaoSatellitePickerProps> = ({
           <View style={styles.headerText}>
             <Text style={styles.title}>카카오 지도에서 경계 그리기</Text>
             <Text style={styles.message}>{message}</Text>
+            <View style={styles.mapTypeControls}>
+              {KAKAO_MAP_TYPE_OPTIONS.map((option) => {
+                const selected = option.id === selectedMapTypeId;
+
+                return (
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                    key={option.id}
+                    onPress={() => selectMapType(option.id)}
+                    style={[
+                      styles.mapTypeButton,
+                      selected && styles.mapTypeButtonSelected,
+                    ]}
+                    testID={`kakao-map-type-${option.id}`}
+                  >
+                    <Text style={[
+                      styles.mapTypeButtonText,
+                      selected && styles.mapTypeButtonTextSelected,
+                    ]}>
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
           <TouchableOpacity
             accessibilityRole="button"
@@ -152,6 +203,7 @@ const KakaoSatellitePicker: React.FC<KakaoSatellitePickerProps> = ({
           </TouchableOpacity>
         </View>
         <WebView
+          ref={webViewRef}
           originWhitelist={['*']}
           javaScriptEnabled
           domStorageEnabled
@@ -236,6 +288,34 @@ const styles = StyleSheet.create({
   },
   headerText: {
     flex: 1,
+  },
+  mapTypeButton: {
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    borderColor: '#cbd5df',
+    borderRadius: 4,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 30,
+    paddingHorizontal: 10,
+  },
+  mapTypeButtonSelected: {
+    backgroundColor: '#24495d',
+    borderColor: '#24495d',
+  },
+  mapTypeButtonText: {
+    color: '#20313a',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  mapTypeButtonTextSelected: {
+    color: '#fff',
+  },
+  mapTypeControls: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 8,
   },
   message: {
     color: '#526272',
