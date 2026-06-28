@@ -113,6 +113,333 @@ korean-fieldwork-priority-strip {
     color: #175cd3;
   }
 
+  .korean-fieldwork-overview-chart {
+    background: #ffffff;
+    border: 1px solid #d0d5dd;
+    border-radius: 6px;
+    display: grid;
+    gap: 8px;
+    grid-column: 1 / -1;
+    grid-template-columns: minmax(210px, .9fr) minmax(360px, 1.6fr) minmax(320px, 1.4fr) auto;
+    min-width: 0;
+    padding: 8px;
+  }
+
+  .korean-fieldwork-overview-chart-header {
+    align-content: center;
+    display: grid;
+    gap: 7px;
+    min-width: 0;
+  }
+
+  .korean-fieldwork-overview-title-wrap {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .korean-fieldwork-overview-kicker {
+    color: #175cd3;
+    font-size: 10px;
+    font-weight: 900;
+    line-height: 1;
+  }
+
+  .korean-fieldwork-overview-title {
+    color: #1d2939;
+    font-size: 14px;
+    font-weight: 900;
+    line-height: 1.1;
+  }
+
+  .korean-fieldwork-overview-scope {
+    color: #667085;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.15;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .korean-fieldwork-overview-return {
+    align-items: center;
+    background: #eff8ff;
+    border: 1px solid #b2ddff;
+    border-radius: 4px;
+    color: #175cd3;
+    display: inline-flex;
+    font-size: 12px;
+    font-weight: 900;
+    gap: 4px;
+    justify-content: center;
+    line-height: 1;
+    min-height: 30px;
+    padding: 5px 8px;
+    width: fit-content;
+
+    &:hover {
+      background: #d1e9ff;
+    }
+  }
+
+  .korean-fieldwork-overview-metrics {
+    display: grid;
+    gap: 6px;
+    grid-template-columns: repeat(4, minmax(82px, 1fr));
+    min-width: 0;
+  }
+
+  .korean-fieldwork-overview-metric {
+    align-items: center;
+    border: 1px solid #d0d5dd;
+    border-radius: 5px;
+    display: grid;
+    gap: 1px;
+    justify-items: center;
+    min-height: 74px;
+    min-width: 0;
+    padding: 6px 5px;
+
+    &.tone-neutral {
+      background: #f8fafc;
+      border-color: #d0d5dd;
+    }
+
+    &.tone-info {
+      background: #eff8ff;
+      border-color: #b2ddff;
+    }
+
+    &.tone-success {
+      background: #ecfdf3;
+      border-color: #abefc6;
+    }
+
+    &.tone-warning {
+      background: #fffaeb;
+      border-color: #fedf89;
+    }
+
+    &.tone-danger {
+      background: #fff1f3;
+      border-color: #fecdca;
+    }
+  }
+
+  .korean-fieldwork-overview-metric-icon {
+    color: #475467;
+    font-size: 16px;
+    line-height: 1;
+  }
+
+  .korean-fieldwork-overview-metric.tone-info .korean-fieldwork-overview-metric-icon,
+  .korean-fieldwork-overview-metric.tone-info .korean-fieldwork-overview-metric-value {
+    color: #175cd3;
+  }
+
+  .korean-fieldwork-overview-metric.tone-success .korean-fieldwork-overview-metric-icon,
+  .korean-fieldwork-overview-metric.tone-success .korean-fieldwork-overview-metric-value {
+    color: #027a48;
+  }
+
+  .korean-fieldwork-overview-metric.tone-warning .korean-fieldwork-overview-metric-icon,
+  .korean-fieldwork-overview-metric.tone-warning .korean-fieldwork-overview-metric-value {
+    color: #b54708;
+  }
+
+  .korean-fieldwork-overview-metric.tone-danger .korean-fieldwork-overview-metric-icon,
+  .korean-fieldwork-overview-metric.tone-danger .korean-fieldwork-overview-metric-value {
+    color: #b42318;
+  }
+
+  .korean-fieldwork-overview-metric-value {
+    color: #475467;
+    font-size: 17px;
+    font-weight: 900;
+    line-height: 1;
+  }
+
+  .korean-fieldwork-overview-metric-label,
+  .korean-fieldwork-overview-metric-detail {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .korean-fieldwork-overview-metric-label {
+    color: #344054;
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 1.1;
+  }
+
+  .korean-fieldwork-overview-metric-detail {
+    color: #667085;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1.15;
+  }
+
+  .korean-fieldwork-overview-block {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .korean-fieldwork-overview-block-header {
+    align-items: center;
+    color: #344054;
+    display: flex;
+    font-size: 12px;
+    font-weight: 900;
+    justify-content: space-between;
+    line-height: 1;
+    min-width: 0;
+
+    span:last-child {
+      color: #667085;
+      font-size: 11px;
+      font-weight: 800;
+    }
+  }
+
+  .korean-fieldwork-overview-track {
+    align-items: stretch;
+    background: #eef2f6;
+    border-radius: 4px;
+    display: flex;
+    height: 14px;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .korean-fieldwork-overview-track-segment {
+    display: block;
+    min-width: 2px;
+
+    &.tone-neutral {
+      background: #667085;
+    }
+
+    &.tone-info {
+      background: #175cd3;
+    }
+
+    &.tone-success {
+      background: #027a48;
+    }
+
+    &.tone-warning {
+      background: #dc6803;
+    }
+
+    &.tone-danger {
+      background: #b42318;
+    }
+  }
+
+  .korean-fieldwork-overview-empty-track {
+    align-items: center;
+    color: #98a2b3;
+    display: flex;
+    flex: 1;
+    font-size: 10px;
+    font-weight: 800;
+    justify-content: center;
+  }
+
+  .korean-fieldwork-overview-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    min-width: 0;
+  }
+
+  .korean-fieldwork-overview-legend-item {
+    align-items: center;
+    background: #f8fafc;
+    border: 1px solid #eaecf0;
+    border-radius: 4px;
+    color: #344054;
+    display: inline-flex;
+    font-size: 11px;
+    font-weight: 800;
+    gap: 4px;
+    line-height: 1;
+    min-height: 25px;
+    min-width: 0;
+    padding: 4px 6px;
+
+    &.action {
+      background: #eff8ff;
+      border-color: #b2ddff;
+      color: #175cd3;
+    }
+
+    &.action:hover {
+      background: #d1e9ff;
+    }
+  }
+
+  .korean-fieldwork-overview-legend-dot {
+    border-radius: 50%;
+    display: inline-block;
+    flex: 0 0 auto;
+    height: 8px;
+    width: 8px;
+
+    &.tone-neutral {
+      background: #667085;
+    }
+
+    &.tone-info {
+      background: #175cd3;
+    }
+
+    &.tone-success {
+      background: #027a48;
+    }
+
+    &.tone-warning {
+      background: #dc6803;
+    }
+
+    &.tone-danger {
+      background: #b42318;
+    }
+  }
+
+  .korean-fieldwork-overview-legend-label {
+    max-width: 68px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .korean-fieldwork-overview-legend-count {
+    color: #1d2939;
+    font-weight: 900;
+  }
+
+  .korean-fieldwork-overview-legend-percent {
+    color: #667085;
+    font-size: 10px;
+    font-weight: 800;
+  }
+
+  .korean-fieldwork-overview-footer {
+    align-self: end;
+    border-top: 1px solid #eef0f3;
+    color: #475467;
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 1.2;
+    padding-top: 7px;
+    white-space: nowrap;
+  }
+
   .korean-fieldwork-today-quick-actions {
     display: grid;
     gap: 7px;
@@ -2258,6 +2585,14 @@ korean-fieldwork-priority-strip {
 
     .korean-fieldwork-priority-strip-panels {
       grid-column: 1;
+    }
+
+    .korean-fieldwork-overview-chart {
+      grid-template-columns: 1fr;
+    }
+
+    .korean-fieldwork-overview-metrics {
+      grid-template-columns: repeat(2, minmax(120px, 1fr));
     }
 
     .korean-fieldwork-priority-strip-item {

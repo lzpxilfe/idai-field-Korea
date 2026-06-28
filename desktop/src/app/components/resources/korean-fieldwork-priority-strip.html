@@ -23,6 +23,99 @@
             <span class="korean-fieldwork-priority-strip-panel-count">{{panel.count}}</span>
         </button>
     </div>
+    <div *ngIf="isPanelActive('overview') && hasOverviewChartData()"
+         class="korean-fieldwork-overview-chart">
+        <div class="korean-fieldwork-overview-chart-header">
+            <span class="korean-fieldwork-overview-title-wrap">
+                <span class="korean-fieldwork-overview-kicker">전체 현황</span>
+                <span class="korean-fieldwork-overview-title">유적·유구 차트</span>
+                <span class="korean-fieldwork-overview-scope">{{getOverviewScopeLabel()}}</span>
+            </span>
+            <button type="button"
+                    class="korean-fieldwork-overview-return"
+                    ngbTooltip="조사 작업 순서로 돌아갑니다."
+                    container="body"
+                    placement="bottom"
+                    (click)="returnToInvestigationOverview()">
+                <span class="mdi mdi-family-tree"></span>
+                <span>조사</span>
+            </button>
+        </div>
+
+        <div class="korean-fieldwork-overview-metrics">
+            <div *ngFor="let metric of getOverviewMetrics()"
+                 class="korean-fieldwork-overview-metric"
+                 [ngClass]="getOverviewToneClass(metric.tone)">
+                <span class="mdi korean-fieldwork-overview-metric-icon"
+                      [class.mdi-family-tree]="metric.id === 'investigation'"
+                      [class.mdi-map-marker-plus-outline]="metric.id === 'feature'"
+                      [class.mdi-playlist-check]="metric.id === 'process'"
+                      [class.mdi-alert-circle-outline]="metric.id === 'review'"></span>
+                <span class="korean-fieldwork-overview-metric-value">{{metric.value}}</span>
+                <span class="korean-fieldwork-overview-metric-label">{{metric.label}}</span>
+                <span class="korean-fieldwork-overview-metric-detail">{{metric.detail}}</span>
+            </div>
+        </div>
+
+        <div class="korean-fieldwork-overview-block">
+            <div class="korean-fieldwork-overview-block-header">
+                <span>조사 단위</span>
+                <span>{{getOverviewInvestigationSubtitle()}}</span>
+            </div>
+            <div class="korean-fieldwork-overview-track">
+                <span *ngFor="let segment of getOverviewVisibleSegments(getOverviewInvestigationSegments())"
+                      class="korean-fieldwork-overview-track-segment"
+                      [ngClass]="getOverviewToneClass(segment.tone)"
+                      [style.flex]="getOverviewSegmentFlex(segment)"></span>
+                <span *ngIf="getOverviewVisibleSegments(getOverviewInvestigationSegments()).length === 0"
+                      class="korean-fieldwork-overview-empty-track">
+                    조사 단위 없음
+                </span>
+            </div>
+            <div class="korean-fieldwork-overview-legend">
+                <button *ngFor="let segment of getOverviewInvestigationSegments()"
+                        type="button"
+                        class="korean-fieldwork-overview-legend-item"
+                        [class.action]="segment.id === 'operation'"
+                        (click)="segment.id === 'operation' && returnToInvestigationOverview()">
+                    <span class="korean-fieldwork-overview-legend-dot"
+                          [ngClass]="getOverviewToneClass(segment.tone)"></span>
+                    <span class="korean-fieldwork-overview-legend-label">{{segment.label}}</span>
+                    <span class="korean-fieldwork-overview-legend-count">{{segment.count}}</span>
+                    <span class="korean-fieldwork-overview-legend-percent">{{segment.percent}}%</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="korean-fieldwork-overview-block">
+            <div class="korean-fieldwork-overview-block-header">
+                <span>유구·피트 진행</span>
+                <span>{{getOverviewFeatureStatusSubtitle()}}</span>
+            </div>
+            <div class="korean-fieldwork-overview-track">
+                <span *ngFor="let segment of getOverviewVisibleSegments(getOverviewFeatureStatusSegments())"
+                      class="korean-fieldwork-overview-track-segment"
+                      [ngClass]="getOverviewToneClass(segment.tone)"
+                      [style.flex]="getOverviewSegmentFlex(segment)"></span>
+                <span *ngIf="getOverviewVisibleSegments(getOverviewFeatureStatusSegments()).length === 0"
+                      class="korean-fieldwork-overview-empty-track">
+                    유구 기록 없음
+                </span>
+            </div>
+            <div class="korean-fieldwork-overview-legend">
+                <span *ngFor="let segment of getOverviewFeatureStatusSegments()"
+                      class="korean-fieldwork-overview-legend-item">
+                    <span class="korean-fieldwork-overview-legend-dot"
+                          [ngClass]="getOverviewToneClass(segment.tone)"></span>
+                    <span class="korean-fieldwork-overview-legend-label">{{segment.label}}</span>
+                    <span class="korean-fieldwork-overview-legend-count">{{segment.count}}</span>
+                    <span class="korean-fieldwork-overview-legend-percent">{{segment.percent}}%</span>
+                </span>
+            </div>
+        </div>
+
+        <div class="korean-fieldwork-overview-footer">{{getOverviewFooterLabel()}}</div>
+    </div>
     <div *ngIf="isPanelActive('today') && hasPriorityIssues()" class="korean-fieldwork-priority-strip-list">
         <button *ngFor="let issue of getPriorityIssues()"
                 type="button"

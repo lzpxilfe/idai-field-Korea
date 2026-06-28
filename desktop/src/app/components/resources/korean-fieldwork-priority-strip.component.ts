@@ -40,6 +40,13 @@ import {
     makeKoreanFieldworkUnitMatrixItems
 } from '../../util/korean-fieldwork-unit-matrix';
 import {
+    getKoreanFieldworkOverviewChartData,
+    KoreanFieldworkOverviewChartData,
+    KoreanFieldworkOverviewMetric,
+    KoreanFieldworkOverviewSegment,
+    KoreanFieldworkOverviewTone
+} from '../../util/korean-fieldwork-overview-chart';
+import {
     KoreanFieldworkDailyNotebookDigest,
     KoreanFieldworkNotebookEntry,
     KoreanFieldworkNotebookContinuationFocus,
@@ -107,7 +114,7 @@ import {
 } from '../../util/korean-fieldwork-feature-guidance';
 import { DoceditLauncher } from './service/docedit-launcher';
 
-type KoreanFieldworkPriorityPanelId = 'workflow'|'today'|'records'|'notebook'|'closeout';
+type KoreanFieldworkPriorityPanelId = 'overview'|'workflow'|'today'|'records'|'notebook'|'closeout';
 
 interface KoreanFieldworkPriorityPanelOption {
     id: KoreanFieldworkPriorityPanelId;
@@ -203,8 +210,9 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
     public closeoutBatchUpdates: KoreanFieldworkCloseoutBatchUpdate[] = [];
     public notebookDigest: KoreanFieldworkDailyNotebookDigest|undefined;
     public notebookDailyLogParentDocumentId: string|undefined;
+    public overviewChartData: KoreanFieldworkOverviewChartData|undefined;
     public isLoading: boolean = false;
-    public activePanel: KoreanFieldworkPriorityPanelId = 'workflow';
+    public activePanel: KoreanFieldworkPriorityPanelId = 'overview';
     public pendingFeatureDraft: PendingFeatureDraft|undefined;
 
     private changesSubscription: Subscription|undefined;
@@ -251,6 +259,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
     public getPanelOptions(): KoreanFieldworkPriorityPanelOption[] {
 
         const panels: KoreanFieldworkPriorityPanelOption[] = [
+            { id: 'overview', label: '전체 현황', count: this.getOverviewPanelCount() },
             { id: 'workflow', label: '작업 순서', count: this.getWorkflowStepAttentionCount() },
             { id: 'today', label: '오늘 할 일', count: this.getTodayPanelCount() },
             { id: 'records', label: '기록 작업', count: this.getRecordsPanelCount() },
@@ -284,6 +293,51 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
     public getStatusLabel = () => this.stats?.statusLabel ?? '';
 
     public getStatusTone = () => this.stats?.statusTone ?? 'success';
+
+    public hasOverviewChartData = () => this.overviewChartData !== undefined;
+
+    public getOverviewChartData = () => this.overviewChartData;
+
+    public getOverviewMetrics = (): KoreanFieldworkOverviewMetric[] =>
+        this.overviewChartData?.metrics ?? [];
+
+    public getOverviewInvestigationSegments = (): KoreanFieldworkOverviewSegment[] =>
+        this.overviewChartData?.investigationSegments ?? [];
+
+    public getOverviewFeatureStatusSegments = (): KoreanFieldworkOverviewSegment[] =>
+        this.overviewChartData?.featureStatusSegments ?? [];
+
+    public getOverviewVisibleSegments = (segments: KoreanFieldworkOverviewSegment[]) =>
+        segments.filter(segment => segment.count > 0);
+
+    public getOverviewScopeLabel = () =>
+        `전체 조사자료 · 기록 ${this.overviewChartData?.totalDocumentCount ?? 0}`;
+
+    public getOverviewInvestigationSubtitle = () =>
+        `${this.overviewChartData?.investigationUnitCount ?? 0}단위`;
+
+    public getOverviewFeatureStatusSubtitle = () =>
+        `${this.overviewChartData?.featureWorkflowCount ?? 0}건`;
+
+    public getOverviewFooterLabel = () => {
+        const data = this.overviewChartData;
+        if (!data) return '';
+
+        return `과정 ${data.checklistDone}/${data.checklistTotal}`
+            + ` · 확인 ${data.openIssueCount}`
+            + ` · 필수 ${data.criticalIssueCount}`;
+    };
+
+    public getOverviewSegmentFlex = (segment: KoreanFieldworkOverviewSegment) =>
+        Math.max(segment.count, 1);
+
+    public getOverviewToneClass = (tone: KoreanFieldworkOverviewTone) =>
+        `tone-${tone}`;
+
+    public returnToInvestigationOverview() {
+
+        this.setActivePanel('workflow');
+    }
 
     public hasScopeSummary = () => this.scopeSummary !== undefined;
 
@@ -1177,6 +1231,9 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
             const progressItems = stats
                 ? makeKoreanFieldworkProgressItems(documents, 6, investigationMode)
                 : [];
+            const overviewChartData = stats
+                ? getKoreanFieldworkOverviewChartData(stats, documents, investigationMode)
+                : undefined;
             const featureOverviewItems = stats
                 ? makeKoreanFieldworkFeatureOverviewItems(
                     documents,
@@ -1223,6 +1280,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
                 this.workflowSteps = workflowSteps;
                 this.scopeSummary = scopeSummary;
                 this.priorityTasks = priorityTasks;
+                this.overviewChartData = overviewChartData;
                 this.progressItems = progressItems;
                 this.featureOverviewItems = featureOverviewItems;
                 this.unitMatrixItems = unitMatrixItems;
@@ -1242,6 +1300,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
                 this.workflowSteps = [];
                 this.scopeSummary = undefined;
                 this.priorityTasks = [];
+                this.overviewChartData = undefined;
                 this.progressItems = [];
                 this.featureOverviewItems = [];
                 this.unitMatrixItems = [];
@@ -1387,6 +1446,8 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
     private isPanelAvailable(panelId: KoreanFieldworkPriorityPanelId): boolean {
 
         switch (panelId) {
+            case 'overview':
+                return this.hasOverviewChartData();
             case 'workflow':
                 return this.workflowSteps.length > 0;
             case 'today':
@@ -1541,6 +1602,10 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
 
         return openSteps > 0 ? openSteps : this.workflowSteps.length;
     }
+
+
+    private getOverviewPanelCount = () =>
+        this.overviewChartData?.totalDocumentCount ?? 0;
 
 
     private getTodayPanelCount = () =>

@@ -277,9 +277,10 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
 
         await component.refresh();
 
-        expect(component.activePanel).toBe('workflow');
+        expect(component.activePanel).toBe('overview');
         expect(component.shouldShowPanelNavigation()).toBe(true);
         expect(component.getPanelOptions().map(panel => panel.label)).toEqual([
+            '전체 현황',
             '작업 순서',
             '오늘 할 일',
             '기록 작업',
@@ -287,12 +288,26 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
             '마감'
         ]);
         expect(component.getPanelOptions().map(panel => panel.id)).toEqual([
+            'overview',
             'workflow',
             'today',
             'records',
             'notebook',
             'closeout'
         ]);
+        expect(component.hasOverviewChartData()).toBe(true);
+        expect(component.getOverviewChartData()).toMatchObject({
+            totalDocumentCount: 3,
+            featureCount: 1,
+            openIssueCount: 1
+        });
+        expect(component.getOverviewMetrics().map(metric => metric.label)).toEqual([
+            '조사',
+            '유구',
+            '진행',
+            '확인 필요'
+        ]);
+        expect(component.getOverviewFooterLabel()).toBe('과정 0/8 · 확인 1 · 필수 0');
 
         component.setActivePanel('records');
 
