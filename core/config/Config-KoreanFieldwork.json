@@ -4216,6 +4216,10 @@
           "inputType": "input",
           "constraintIndexed": true
         },
+        "fieldworkPhotoAnnotationStrokes": {
+          "inputType": "text",
+          "constraintIndexed": true
+        },
         "fieldworkImageUploadStatus": {
           "inputType": "input",
           "editable": false,
@@ -4392,6 +4396,7 @@
           "name": "koreanFieldwork",
           "fields": [
             "fieldworkPhotoCapturedAt",
+            "fieldworkPhotoAnnotationStrokes",
             "fieldworkImageUploadStatus",
             "fieldworkImageUploadedAt",
             "fieldworkImageUploadedUri",
@@ -4504,6 +4509,10 @@
           "mandatory": true,
           "constraintIndexed": true
         },
+        "soilProfilePhotoAnnotationStrokes": {
+          "inputType": "text",
+          "constraintIndexed": true
+        },
         "soilProfileLayerMarkers": {
           "inputType": "text",
           "constraintIndexed": true
@@ -4589,6 +4598,7 @@
             "fieldworkImageStoredMd5",
             "fieldworkImageStoredSha256",
             "soilProfileAnnotationStrokes",
+            "soilProfilePhotoAnnotationStrokes",
             "soilProfileLayerMarkers",
             "soilColorCaptureCondition",
             "soilColorAssistCandidates",

@@ -33,6 +33,22 @@
                 <span class="korean-fieldwork-evidence-insight-detail">{{label}}</span>
             </span>
         </div>
+        <div *ngIf="getPhotoAnnotationInsights().length > 0"
+             class="korean-fieldwork-evidence-insight-row">
+            <span *ngFor="let insight of getPhotoAnnotationInsights()"
+                  class="korean-fieldwork-evidence-insight">
+                <span class="korean-fieldwork-evidence-insight-label">{{insight.sourceLabel}}</span>
+                <span class="korean-fieldwork-evidence-insight-detail">
+                    {{insight.documentLabel}} · {{insight.label}}
+                </span>
+                <svg class="korean-fieldwork-evidence-sketch-preview"
+                     [attr.viewBox]="insight.sketchPreview.viewBox"
+                     role="img"
+                     [attr.aria-label]="insight.sketchPreview.label">
+                    <path [attr.d]="insight.sketchPreview.path"></path>
+                </svg>
+            </span>
+        </div>
         <div *ngIf="getPenMemoTranscriptionInsights().length > 0"
              class="korean-fieldwork-evidence-insight-row">
             <span *ngFor="let insight of getPenMemoTranscriptionInsights()"

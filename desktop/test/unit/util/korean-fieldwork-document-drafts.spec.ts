@@ -109,6 +109,7 @@ describe('Korean fieldwork document drafts', () => {
             identifier: 'photo-1700000000000',
             category: 'Photo',
             relations: { depicts: ['feature-1'] },
+            fieldworkPhotoAnnotationStrokes: '[]',
             fieldworkPhotoQuality: 0.35,
             fieldworkPhotoSizeHintKb: 512,
             mediaEvidenceRole: ['fieldResultRecord']
@@ -326,6 +327,7 @@ const createFields = (categoryName: string) => {
             ];
         case 'Photo':
             return [
+                field('fieldworkPhotoAnnotationStrokes'),
                 field('fieldworkPhotoQuality'),
                 field('fieldworkPhotoSizeHintKb'),
                 field('mediaEvidenceRole')

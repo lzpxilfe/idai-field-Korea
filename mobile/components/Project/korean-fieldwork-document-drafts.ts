@@ -107,6 +107,7 @@ export const createKoreanFieldworkDraftResource = (
     return {
       ...resource,
       soilProfileAnnotationStrokes: '[]',
+      soilProfilePhotoAnnotationStrokes: '[]',
       soilProfileLayerMarkers: '[]',
       soilProfileLayerIds: '[]',
       soilProfileColorSwatches: '[]',
@@ -121,6 +122,7 @@ export const createKoreanFieldworkDraftResource = (
   if (categoryName === C.PHOTO) {
     return {
       ...resource,
+      fieldworkPhotoAnnotationStrokes: '[]',
       fieldworkPhotoSizeHintKb: SOIL_PROFILE_PHOTO_SIZE_HINT_KB_DEFAULT,
       fieldworkPhotoQuality: SOIL_PROFILE_PHOTO_QUALITY_DEFAULT,
       mediaEvidenceRole: ['fieldResultRecord'],

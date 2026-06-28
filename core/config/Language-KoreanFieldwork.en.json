@@ -1754,6 +1754,9 @@
         "soilProfileAnnotationStrokes": {
           "label": "Annotation stroke JSON"
         },
+        "soilProfilePhotoAnnotationStrokes": {
+          "label": "Soil profile photo annotation stroke JSON"
+        },
         "soilProfileLayerMarkers": {
           "label": "Layer marker JSON"
         },
@@ -1870,6 +1873,9 @@
         },
         "fieldworkPhotoCapturedAt": {
           "label": "Capture time"
+        },
+        "fieldworkPhotoAnnotationStrokes": {
+          "label": "Photo annotation stroke JSON"
         },
         "fieldworkImageUploadStatus": {
           "label": "Server upload status"

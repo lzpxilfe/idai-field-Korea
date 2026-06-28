@@ -135,10 +135,13 @@ describe('KoreanFieldworkReadinessPanelComponent', () => {
             featureRecordingStatus: 'confirmed',
             featureInvestigationChecklist: ['completionPhotoTaken']
         });
-        const linkedPhoto = createRelatedDocument('photo-1', 'Photo');
+        const linkedPhoto = createRelatedDocument('photo-1', 'Photo', undefined, {
+            fieldworkPhotoAnnotationStrokes: '{"version":1,"strokes":[{"points":[{"x":1000,"y":1000},{"x":5000,"y":5000}]}]}'
+        });
         const linkedSoilProfilePhoto = createRelatedDocument('soil-photo-1', 'SoilProfilePhoto', undefined, {
             soilColorAssistCandidates: '1: 10YR 4/3 (높음, 차이 0.0)',
-            soilColorAssistStatus: 'candidatesAvailable'
+            soilColorAssistStatus: 'candidatesAvailable',
+            soilProfilePhotoAnnotationStrokes: '{"version":1,"strokes":[{"points":[{"x":2000,"y":3000}]}]}'
         });
         const linkedDrawing = createRelatedDocument('drawing-1', 'Drawing');
         const linkedPenMemo = createRelatedDocument('memo-1', 'PenMemo', undefined, {
@@ -179,6 +182,7 @@ describe('KoreanFieldworkReadinessPanelComponent', () => {
             { id: 'layers', label: '토색 메모', count: 1 },
             { id: 'photos', label: '사진', count: 1 },
             { id: 'soilProfilePhotos', label: '토층사진', count: 1 },
+            { id: 'photoAnnotations', label: '사진 표시', count: 2 },
             { id: 'soilColorCandidates', label: '토색 후보', count: 1 },
             { id: 'drawings', label: '도면', count: 1 },
             { id: 'penMemos', label: '야장 메모', count: 1 },
@@ -194,6 +198,28 @@ describe('KoreanFieldworkReadinessPanelComponent', () => {
         ]);
         expect(component.getSoilColorCandidateSummaryLabels()).toEqual([
             'soil-photo-1 · 먼셀 후보 10YR 4/3'
+        ]);
+        expect(component.getPhotoAnnotationInsights()).toEqual([
+            {
+                documentLabel: 'photo-1',
+                label: '사진 표시 1획/2점',
+                sketchPreview: {
+                    label: '사진 표시 1획/2점',
+                    path: 'M 32 8 L 88 64',
+                    viewBox: '0 0 120 72'
+                },
+                sourceLabel: '사진 표시'
+            },
+            {
+                documentLabel: 'soil-photo-1',
+                label: '사진 표시 1획/1점',
+                sketchPreview: {
+                    label: '사진 표시 1획/1점',
+                    path: 'M 30 8 L 34 8 M 32 6 L 32 10',
+                    viewBox: '0 0 120 72'
+                },
+                sourceLabel: '토층사진 표시'
+            }
         ]);
         expect(component.getMissingEvidenceLabels()).toEqual(['검토 기록', '야장 전사']);
         expect(component.getPenMemoTranscriptionSummaryLabels()).toEqual([
@@ -633,6 +659,7 @@ const createSoilProfilePhotoCategory = () => ({
             field('soilColorAssistCandidates'),
             field('soilColorAssistStatus'),
             field('soilProfileAnnotationStrokes'),
+            field('soilProfilePhotoAnnotationStrokes'),
             field('soilProfileColorSwatches'),
             field('soilProfileLayerIds'),
             field('soilProfileLayerMarkers'),

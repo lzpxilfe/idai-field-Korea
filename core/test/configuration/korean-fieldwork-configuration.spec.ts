@@ -643,8 +643,10 @@ describe('KoreanFieldwork project configuration', () => {
         expect(photoForm.fields.fieldworkPhotoSizeHintKb.inputType).toBe('unsignedInt');
         expect(photoForm.fields.fieldworkPhotoQuality.inputType).toBe('unsignedFloat');
         expect(photoForm.fields.fieldworkPhotoCapturedAt.inputType).toBe('input');
+        expect(photoForm.fields.fieldworkPhotoAnnotationStrokes.inputType).toBe('text');
         expectFieldworkImageUploadAuditFieldsToBeSystemManaged(photoForm);
         expect(photoKoreanGroup.fields).toContain('fieldworkPhotoCapturedAt');
+        expect(photoKoreanGroup.fields).toContain('fieldworkPhotoAnnotationStrokes');
         expect(photoKoreanGroup.fields).toContain('fieldworkImageUploadedAt');
         expect(layerForm.fields.layerSequenceNumber.inputType).toBe('unsignedInt');
         expect(layerForm.fields.layerSequenceMeaning.inputType).toBe('dropdown');
@@ -675,6 +677,7 @@ describe('KoreanFieldwork project configuration', () => {
         expectFieldworkImageUploadAuditFieldsToBeSystemManaged(soilProfilePhotoForm);
         expect(soilProfilePhotoForm.fields.soilProfileAnnotationStrokes.inputType).toBe('text');
         expect(soilProfilePhotoForm.fields.soilProfileAnnotationStrokes.mandatory).toBe(true);
+        expect(soilProfilePhotoForm.fields.soilProfilePhotoAnnotationStrokes.inputType).toBe('text');
         expect(soilProfilePhotoForm.fields.soilProfileLayerMarkers.inputType).toBe('text');
         expect(soilProfilePhotoForm.fields.soilProfileLayerIds.inputType).toBe('text');
         expect(soilProfilePhotoForm.fields.soilColorAssistCandidates.inputType).toBe('text');
@@ -701,6 +704,7 @@ describe('KoreanFieldwork project configuration', () => {
             'fieldworkImageStoredMd5',
             'fieldworkImageStoredSha256',
             'soilProfileAnnotationStrokes',
+            'soilProfilePhotoAnnotationStrokes',
             'soilProfileLayerMarkers',
             'soilColorCaptureCondition',
             'soilColorAssistCandidates',
@@ -712,6 +716,10 @@ describe('KoreanFieldwork project configuration', () => {
         expect(soilProfileKoreanGroup.fields).toContain('soilProfileLayerMarkers');
         expect(soilProfileKoreanGroup.fields).toContain('soilProfileColorSwatches');
         expect(soilProfileKoreanGroup.fields).toContain('soilProfileColorNote');
+        expect(languages.ko.categories.Photo.fields.fieldworkPhotoAnnotationStrokes.label)
+            .toBe('사진 펜 표시');
+        expect(languages.ko.categories.SoilProfilePhoto.fields.soilProfilePhotoAnnotationStrokes.label)
+            .toBe('토층사진 펜 표시');
 
         expect(config.order).toContain('Layer');
         expect(config.order).toContain('SoilProfilePhoto');

@@ -54,6 +54,7 @@ describe('Korean fieldwork draft defaults', () => {
         expect(getKoreanFieldworkDefaultFieldValues(createCategory('SoilProfilePhoto', [
             field('layerSequenceMeaning', 'KoreanFieldwork-layerSequenceMeaning'),
             field('soilProfileAnnotationStrokes'),
+            field('soilProfilePhotoAnnotationStrokes'),
             field('soilProfileColorSwatches'),
             field('soilColorAssistStatus'),
             field('soilProfilePhotoQuality')
@@ -61,6 +62,7 @@ describe('Korean fieldwork draft defaults', () => {
             layerSequenceMeaning: 'latestToEarliest',
             soilColorAssistStatus: 'notRun',
             soilProfileAnnotationStrokes: '[]',
+            soilProfilePhotoAnnotationStrokes: '[]',
             soilProfileColorSwatches: '[]',
             soilProfilePhotoQuality: 0.35
         });
@@ -70,10 +72,12 @@ describe('Korean fieldwork draft defaults', () => {
     it('adds tablet-parity defaults for photos, survey boundaries, and pen memos', () => {
 
         expect(getKoreanFieldworkDefaultFieldValues(createCategory('Photo', [
+            field('fieldworkPhotoAnnotationStrokes'),
             field('fieldworkPhotoQuality'),
             field('fieldworkPhotoSizeHintKb'),
             field('mediaEvidenceRole')
         ]))).toEqual({
+            fieldworkPhotoAnnotationStrokes: '[]',
             fieldworkPhotoQuality: 0.35,
             fieldworkPhotoSizeHintKb: 512,
             mediaEvidenceRole: ['fieldResultRecord']

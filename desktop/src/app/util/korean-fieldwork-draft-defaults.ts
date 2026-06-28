@@ -79,6 +79,7 @@ export function getKoreanFieldworkDefaultFieldValues(category: CategoryForm|unde
             soilColorAssistCandidates: '',
             soilColorAssistStatus: KOREAN_FIELDWORK_SOIL_COLOR_ASSIST_STATUS_DEFAULT,
             soilProfileAnnotationStrokes: '[]',
+            soilProfilePhotoAnnotationStrokes: '[]',
             soilProfileColorSwatches: '[]',
             soilProfileLayerIds: '[]',
             soilProfileLayerMarkers: '[]',
@@ -89,6 +90,7 @@ export function getKoreanFieldworkDefaultFieldValues(category: CategoryForm|unde
 
     if (isKoreanFieldworkPhotoCategory(category)) {
         return getConfiguredDefaults(category, {
+            fieldworkPhotoAnnotationStrokes: '[]',
             fieldworkPhotoQuality: KOREAN_FIELDWORK_SOIL_PROFILE_PHOTO_QUALITY_DEFAULT,
             fieldworkPhotoSizeHintKb: KOREAN_FIELDWORK_SOIL_PROFILE_PHOTO_SIZE_HINT_KB_DEFAULT,
             mediaEvidenceRole: ['fieldResultRecord']

@@ -482,6 +482,63 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
     });
 
 
+    it('shows tablet photo annotation previews in the record context evidence', async () => {
+
+        const feature = createDocument('feature-1', 'Feature', 'F1', {}, {
+            featureRecordingStatus: 'investigating'
+        });
+        const photo = createDocument('photo-1', 'Photo', 'P1', {
+            depicts: ['feature-1']
+        }, {
+            fieldworkPhotoAnnotationStrokes: '{"version":1,"strokes":[{"points":[{"x":1000,"y":1000},{"x":5000,"y":5000}]}]}'
+        });
+        const soilProfilePhoto = createDocument('soil-photo-1', 'SoilProfilePhoto', 'SP1', {
+            depicts: ['feature-1']
+        }, {
+            soilProfilePhotoAnnotationStrokes: '{"version":1,"strokes":[{"points":[{"x":2000,"y":3000}]}]}'
+        });
+        const component = createComponent({
+            find: jest.fn().mockResolvedValue({
+                documents: [feature, photo, soilProfilePhoto]
+            })
+        });
+        component.document = feature as any;
+        component.fieldDefinitions = [
+            field('featureRecordingStatus')
+        ] as any;
+
+        await component.ngOnChanges();
+
+        expect(component.getEvidenceMetrics()).toEqual(expect.arrayContaining([
+            { id: 'photoAnnotations', label: '사진 표시', count: 2, canCreate: false }
+        ]));
+        expect(component.getEvidenceInsights()).toEqual([
+            {
+                id: 'photoAnnotation:photo-1',
+                label: '사진 표시',
+                detail: 'P1 · 사진 표시 1획/2점',
+                sketchPreview: {
+                    label: '사진 표시 1획/2점',
+                    path: 'M 32 8 L 88 64',
+                    viewBox: '0 0 120 72'
+                },
+                tone: 'info'
+            },
+            {
+                id: 'photoAnnotation:soil-photo-1',
+                label: '토층사진 표시',
+                detail: 'SP1 · 사진 표시 1획/1점',
+                sketchPreview: {
+                    label: '사진 표시 1획/1점',
+                    path: 'M 30 8 L 34 8 M 32 6 L 32 10',
+                    viewBox: '0 0 120 72'
+                },
+                tone: 'info'
+            }
+        ]);
+    });
+
+
     it('shows a stable empty state when the current record has no immediate actions', async () => {
 
         const photo = createDocument('photo-1', 'Photo', 'P1');

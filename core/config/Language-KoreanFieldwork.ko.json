@@ -1760,6 +1760,9 @@
         "soilProfileAnnotationStrokes": {
           "label": "펜 표시"
         },
+        "soilProfilePhotoAnnotationStrokes": {
+          "label": "토층사진 펜 표시"
+        },
         "soilProfileLayerMarkers": {
           "label": "토층 번호 표시"
         },
@@ -1876,6 +1879,9 @@
         },
         "fieldworkPhotoCapturedAt": {
           "label": "촬영 시각"
+        },
+        "fieldworkPhotoAnnotationStrokes": {
+          "label": "사진 펜 표시"
         },
         "fieldworkImageUploadStatus": {
           "label": "서버 업로드 상태"

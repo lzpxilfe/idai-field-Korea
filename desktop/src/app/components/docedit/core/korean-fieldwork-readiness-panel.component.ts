@@ -49,6 +49,13 @@ interface ReadinessPenMemoTranscriptionInsight {
     sketchPreview?: KoreanFieldworkPenMemoSketchPreview;
 }
 
+interface ReadinessPhotoAnnotationInsight {
+    documentLabel: string;
+    label: string;
+    sketchPreview: KoreanFieldworkPenMemoSketchPreview;
+    sourceLabel: string;
+}
+
 
 @Component({
     selector: 'korean-fieldwork-readiness-panel',
@@ -129,6 +136,11 @@ export class KoreanFieldworkReadinessPanelComponent implements OnChanges {
             { id: 'photos', label: '사진', count: this.evidenceReview.photos.length },
             { id: 'soilProfilePhotos', label: '토층사진', count: this.evidenceReview.soilProfilePhotos.length },
             {
+                id: 'photoAnnotations',
+                label: '사진 표시',
+                count: this.evidenceReview.photoAnnotationSummaries.length
+            },
+            {
                 id: 'soilColorCandidates',
                 label: '토색 후보',
                 count: this.evidenceReview.soilColorCandidateSummaries.length
@@ -177,6 +189,15 @@ export class KoreanFieldworkReadinessPanelComponent implements OnChanges {
             documentLabel: this.getDocumentLabel(summary.document),
             label: summary.label,
             sketchPreview: getPenMemoSketchPreview(summary.document.resource.penMemoStrokes)
+        })) ?? [];
+
+
+    public getPhotoAnnotationInsights = (): ReadinessPhotoAnnotationInsight[] =>
+        this.evidenceReview?.photoAnnotationSummaries.map(summary => ({
+            documentLabel: this.getDocumentLabel(summary.document),
+            label: summary.label,
+            sketchPreview: summary.preview,
+            sourceLabel: summary.source === 'soilProfilePhoto' ? '토층사진 표시' : '사진 표시'
         })) ?? [];
 
 

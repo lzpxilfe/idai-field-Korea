@@ -196,6 +196,7 @@ describe('Korean fieldwork map drafts', () => {
       category: 'SoilProfilePhoto',
       relations: { depicts: ['feature-1'] },
       soilProfileAnnotationStrokes: '[]',
+      soilProfilePhotoAnnotationStrokes: '[]',
       soilProfileLayerMarkers: '[]',
       soilProfileLayerIds: '[]',
       soilProfileColorSwatches: '[]',

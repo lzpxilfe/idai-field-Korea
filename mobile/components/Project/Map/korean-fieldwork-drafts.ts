@@ -150,6 +150,7 @@ export const createSoilProfilePhotoDraft = (targetDoc: Document): NewDocument =>
     category: KOREAN_FIELDWORK_CATEGORIES.SOIL_PROFILE_PHOTO,
     relations: createDepictsRelation(targetDoc),
     soilProfileAnnotationStrokes: '[]',
+    soilProfilePhotoAnnotationStrokes: '[]',
     soilProfileLayerMarkers: '[]',
     soilProfileLayerIds: '[]',
     soilProfileColorSwatches: '[]',

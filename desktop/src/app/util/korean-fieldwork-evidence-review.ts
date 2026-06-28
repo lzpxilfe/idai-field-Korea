@@ -10,6 +10,7 @@ export interface KoreanFieldworkEvidenceReview extends EvidenceBundle {
     hasOpenIssues: boolean;
     reportReady: boolean;
     missingEvidenceKinds: string[];
+    photoAnnotationSummaries: KoreanFieldworkPhotoAnnotationSummary[];
     pendingPenMemoTranscriptions: Document[];
     penMemoTranscriptionSummaries: KoreanFieldworkPenMemoTranscriptionSummary[];
     penMemoSketchSummaries: KoreanFieldworkPenMemoSketchSummary[];
@@ -27,6 +28,13 @@ export interface KoreanFieldworkPenMemoSketchPreview {
     label: string;
     path: string;
     viewBox: string;
+}
+
+export interface KoreanFieldworkPhotoAnnotationSummary {
+    document: Document;
+    label: string;
+    preview: KoreanFieldworkPenMemoSketchPreview;
+    source: 'photo'|'soilProfilePhoto';
 }
 
 interface KoreanFieldworkPenMemoPoint {
@@ -49,6 +57,12 @@ export interface KoreanFieldworkSoilColorCandidateSummary {
     label: string;
 }
 
+const FIELDWORK_PHOTO_ANNOTATION_FIELD = 'fieldworkPhotoAnnotationStrokes';
+const SOIL_PROFILE_PHOTO_ANNOTATION_FIELDS = [
+    'soilProfilePhotoAnnotationStrokes',
+    'soilProfileAnnotationStrokes'
+];
+
 export function makeKoreanFieldworkEvidenceReview(
         rootDocument: Document,
         documents: Document[]
@@ -59,6 +73,7 @@ export function makeKoreanFieldworkEvidenceReview(
     const penMemoTranscriptionSummaries = getPenMemoTranscriptionSummaries(pendingPenMemoTranscriptions);
     const penMemoSketchSummaries = getPenMemoSketchSummaries(bundle.penMemos);
     const soilColorCandidateSummaries = getSoilColorCandidateSummaries(bundle.soilProfilePhotos);
+    const photoAnnotationSummaries = getPhotoAnnotationSummaries(bundle.photos, bundle.soilProfilePhotos);
     const missingEvidenceKinds = getMissingEvidenceKinds(bundle, pendingPenMemoTranscriptions);
     const issues = bundle.issues.concat(
         getPendingPenMemoTranscriptionIssues(pendingPenMemoTranscriptions)
@@ -70,6 +85,7 @@ export function makeKoreanFieldworkEvidenceReview(
         hasOpenIssues: issues.length > 0,
         reportReady: issues.length === 0 && missingEvidenceKinds.length === 0,
         missingEvidenceKinds,
+        photoAnnotationSummaries,
         pendingPenMemoTranscriptions,
         penMemoTranscriptionSummaries,
         penMemoSketchSummaries,
@@ -155,6 +171,45 @@ export function getSoilColorCandidateSummaries(
 }
 
 
+export function getPhotoAnnotationSummaries(
+        photos: Document[],
+        soilProfilePhotos: Document[]
+): KoreanFieldworkPhotoAnnotationSummary[] {
+
+    const photoSummaries = photos.flatMap(document =>
+        getPhotoAnnotationSummary(document, FIELDWORK_PHOTO_ANNOTATION_FIELD, 'photo')
+    );
+    const soilProfilePhotoSummaries = soilProfilePhotos.flatMap(document =>
+        getPhotoAnnotationSummary(
+            document,
+            getFirstFilledStrokeField(document, SOIL_PROFILE_PHOTO_ANNOTATION_FIELDS),
+            'soilProfilePhoto'
+        )
+    );
+
+    return photoSummaries.concat(soilProfilePhotoSummaries);
+}
+
+
+export function getPhotoAnnotationSummaryLabel(value: unknown): string {
+
+    const stats = getPenMemoStrokeStats(value);
+    if (stats.strokeCount === 0) return '';
+    if (stats.pointCount === 0) return `사진 표시 ${stats.strokeCount}획`;
+
+    return `사진 표시 ${stats.strokeCount}획/${stats.pointCount}점`;
+}
+
+
+export function getPhotoAnnotationSketchPreview(value: unknown): KoreanFieldworkPenMemoSketchPreview|undefined {
+
+    const preview = getPenMemoSketchPreview(value);
+    const label = getPhotoAnnotationSummaryLabel(value);
+
+    return preview && label ? { ...preview, label } : undefined;
+}
+
+
 export function getPendingPenMemoTranscriptionIssues(
         penMemos: Document[]
 ): KoreanFieldworkReadinessIssue[] {
@@ -228,6 +283,33 @@ function hasTextValue(value: unknown): boolean {
 function hasPenMemoHandwriting(value: unknown): boolean {
 
     return getPenMemoStrokeStats(value).strokeCount > 0;
+}
+
+
+function getPhotoAnnotationSummary(
+        document: Document,
+        fieldName: string|undefined,
+        source: KoreanFieldworkPhotoAnnotationSummary['source']
+): KoreanFieldworkPhotoAnnotationSummary[] {
+
+    if (!fieldName) return [];
+
+    const value = document.resource[fieldName];
+    const preview = getPhotoAnnotationSketchPreview(value);
+    if (!preview) return [];
+
+    return [{
+        document,
+        label: preview.label,
+        preview,
+        source
+    }];
+}
+
+
+function getFirstFilledStrokeField(document: Document, fieldNames: string[]): string|undefined {
+
+    return fieldNames.find(fieldName => getPenMemoStrokes(document.resource[fieldName]).length > 0);
 }
 
 

@@ -1,6 +1,8 @@
 import {
     getPenMemoSketchPreview,
     getPenMemoSketchSummaries,
+    getPhotoAnnotationSketchPreview,
+    getPhotoAnnotationSummaries,
     getPenMemoTranscriptionSummaryLabel,
     getPendingPenMemoTranscriptionDocuments,
     getSoilColorCandidateSummaries,
@@ -133,6 +135,83 @@ describe('korean-fieldwork-evidence-review', () => {
             viewBox: '0 0 120 72'
         });
         expect(getPenMemoSketchPreview('[]')).toBeUndefined();
+    });
+
+
+    it('summarizes tablet photo annotations for desktop review panels', () => {
+
+        const photoStrokes = '{"version":1,"strokes":[{"points":[{"x":1000,"y":1000},{"x":5000,"y":5000}]}]}';
+        const soilProfilePhotoStrokes = '{"version":1,"strokes":[{"points":[{"x":2000,"y":3000}]}]}';
+        const summaries = getPhotoAnnotationSummaries([
+            createDocument('photo-annotated', 'Photo', {
+                fieldworkPhotoAnnotationStrokes: photoStrokes
+            })
+        ] as any, [
+            createDocument('soil-photo-annotated', 'SoilProfilePhoto', {
+                soilProfilePhotoAnnotationStrokes: soilProfilePhotoStrokes
+            }),
+            createDocument('soil-photo-legacy', 'SoilProfilePhoto', {
+                soilProfileAnnotationStrokes: '[[{"x":1,"y":2}]]'
+            }),
+            createDocument('soil-photo-empty', 'SoilProfilePhoto', {
+                soilProfilePhotoAnnotationStrokes: '[]'
+            })
+        ] as any);
+
+        expect(summaries.map(summary => ({
+            id: summary.document.resource.id,
+            label: summary.label,
+            preview: summary.preview,
+            source: summary.source
+        }))).toEqual([
+            {
+                id: 'photo-annotated',
+                label: '사진 표시 1획/2점',
+                preview: expect.objectContaining({
+                    label: '사진 표시 1획/2점',
+                    viewBox: '0 0 120 72'
+                }),
+                source: 'photo'
+            },
+            {
+                id: 'soil-photo-annotated',
+                label: '사진 표시 1획/1점',
+                preview: expect.objectContaining({
+                    label: '사진 표시 1획/1점',
+                    viewBox: '0 0 120 72'
+                }),
+                source: 'soilProfilePhoto'
+            },
+            {
+                id: 'soil-photo-legacy',
+                label: '사진 표시 1획/1점',
+                preview: expect.objectContaining({
+                    label: '사진 표시 1획/1점',
+                    viewBox: '0 0 120 72'
+                }),
+                source: 'soilProfilePhoto'
+            }
+        ]);
+        expect(getPhotoAnnotationSketchPreview(photoStrokes)).toEqual(expect.objectContaining({
+            label: '사진 표시 1획/2점',
+            path: 'M 32 8 L 88 64'
+        }));
+
+        expect(makeKoreanFieldworkEvidenceReview(
+            createDocument('feature-1', 'Feature') as any,
+            [
+                createDocument('feature-1', 'Feature'),
+                createDocument('photo-annotated', 'Photo', {
+                    relations: { depicts: ['feature-1'] },
+                    fieldworkPhotoAnnotationStrokes: photoStrokes
+                }),
+                createDocument('soil-photo-annotated', 'SoilProfilePhoto', {
+                    relations: { depicts: ['feature-1'] },
+                    soilProfilePhotoAnnotationStrokes: soilProfilePhotoStrokes
+                })
+            ] as any
+        ).photoAnnotationSummaries.map(summary => summary.document.resource.id))
+            .toEqual(['photo-annotated', 'soil-photo-annotated']);
     });
 
 

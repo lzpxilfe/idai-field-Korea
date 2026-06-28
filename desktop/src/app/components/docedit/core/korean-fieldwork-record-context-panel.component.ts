@@ -39,6 +39,7 @@ import {
     getPenMemoSketchPreview,
     KoreanFieldworkPenMemoSketchPreview,
     getPenMemoSketchSummaryLabel,
+    getPhotoAnnotationSummaries,
     getPenMemoTranscriptionSummaryLabel,
     getSoilColorCandidateSummaries
 } from '../../../util/korean-fieldwork-evidence-review';
@@ -660,8 +661,17 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
                 canCreate: false
             }
         ].filter(metric => metric.count > 0);
+        const photoAnnotationCount = getPhotoAnnotationSummaries(bundle.photos, bundle.soilProfilePhotos).length;
+        const photoAnnotationMetrics: EvidenceMetric[] = photoAnnotationCount > 0
+            ? [{
+                id: 'photoAnnotations',
+                label: '사진 표시',
+                count: photoAnnotationCount,
+                canCreate: false
+            }]
+            : [];
 
-        return evidenceMetrics.concat(penMemoMetrics);
+        return evidenceMetrics.concat(photoAnnotationMetrics, penMemoMetrics);
     }
 
 
@@ -686,8 +696,16 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
                 sketchPreview: getPenMemoSketchPreview(summary.document.resource.penMemoStrokes),
                 tone: summary.pendingTranscription ? 'warning' as const : 'info' as const
             }));
+        const photoAnnotationInsights = getPhotoAnnotationSummaries(bundle.photos, bundle.soilProfilePhotos)
+            .map(summary => ({
+                detail: `${this.getDocumentLabel(summary.document)} · ${summary.label}`,
+                id: `photoAnnotation:${summary.document.resource.id}`,
+                label: summary.source === 'soilProfilePhoto' ? '토층사진 표시' : '사진 표시',
+                sketchPreview: summary.preview,
+                tone: 'info' as const
+            }));
 
-        return [...soilColorInsights, ...penMemoSketchInsights]
+        return [...soilColorInsights, ...photoAnnotationInsights, ...penMemoSketchInsights]
             .filter(insight => insight.detail.trim().length > 0)
             .slice(0, 4);
     }
