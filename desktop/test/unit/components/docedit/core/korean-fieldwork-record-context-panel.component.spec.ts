@@ -155,7 +155,7 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
 
         const operation = createDocument('operation-1', 'Operation', 'OP1', {}, {
             projectInvestigationMode: 'trialTrench',
-            projectBoundarySummary: '1구역 북쪽 능선'
+            projectBoundarySummary: '1구역 북쪽 능선부터 남쪽 농로까지'
         });
         const component = createComponent({
             find: jest.fn().mockResolvedValue({ documents: [operation] })
@@ -170,8 +170,8 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
 
         expect(component.shouldShow()).toBe(true);
         expect(component.getStatusChips()).toEqual([
-            { label: '조사 시굴·표본조사', tone: 'info' },
-            { label: '경계 1구역 북쪽 능선', tone: 'success' }
+            { label: '조사 표본·시굴조사', tone: 'info' },
+            { label: '경계 1구역 북쪽 능선부터 남쪽 농로…', tone: 'success' }
         ]);
     });
 

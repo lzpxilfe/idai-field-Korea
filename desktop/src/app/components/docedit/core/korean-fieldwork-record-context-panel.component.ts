@@ -48,6 +48,7 @@ import {
     makeKoreanFieldworkRecordActions
 } from '../../../util/korean-fieldwork-record-actions';
 import { getKoreanFieldworkEvidenceChips } from '../../../util/korean-fieldwork-record-evidence';
+import { getKoreanFieldworkInvestigationModeOption } from '../../../util/korean-fieldwork-project-setup';
 import { DoceditComponent } from '../docedit.component';
 
 
@@ -152,14 +153,6 @@ const GEOMETRY_EDIT_STATUS_LABELS: Readonly<Record<string, ContextChip>> = {
     alignedToAerialMap: { label: '항공 보정됨', tone: 'success' },
     measured: { label: '실측', tone: 'success' }
 };
-
-const PROJECT_INVESTIGATION_MODE_LABELS: Readonly<Record<string, string>> = {
-    trialTrench: '\uc2dc\uad74\u00b7\ud45c\ubcf8\uc870\uc0ac',
-    excavation: '\ubc1c\uad74\uc870\uc0ac',
-    surfaceSurvey: '\uc9c0\ud45c\uc870\uc0ac',
-    watchingBrief: '\ucc38\uad00\u00b7\uc785\ud68c\uc870\uc0ac'
-};
-
 
 @Component({
     selector: 'korean-fieldwork-record-context-panel',
@@ -852,9 +845,7 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
 
         if (resource.category !== 'Operation' && resource.category !== 'Project') return;
 
-        const modeLabel = typeof resource.projectInvestigationMode === 'string'
-            ? PROJECT_INVESTIGATION_MODE_LABELS[resource.projectInvestigationMode]
-            : undefined;
+        const modeLabel = getKoreanFieldworkInvestigationModeOption(resource.projectInvestigationMode)?.label;
         const boundarySummary = this.getTextResourceValue(resource.projectBoundarySummary);
 
         if (modeLabel) chips.push({ label: `\uc870\uc0ac ${modeLabel}`, tone: 'info' });
@@ -870,7 +861,7 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
     private shortenChipText(value: string, maxLength: number): string {
 
         return value.length > maxLength
-            ? `${value.slice(0, maxLength - 1)}...`
+            ? `${value.slice(0, maxLength - 1)}…`
             : value;
     }
 

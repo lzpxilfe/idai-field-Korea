@@ -2025,11 +2025,16 @@ function validateProjectInvestigationModeWording() {
   }
   if (!desktopRecordContextPanelText.includes('pushProjectSetupChips')
       || !desktopRecordContextPanelText.includes('projectBoundarySummary')
-      || !desktopRecordContextPanelText.includes('PROJECT_INVESTIGATION_MODE_LABELS')) {
+      || !desktopRecordContextPanelText.includes('getKoreanFieldworkInvestigationModeOption')) {
     findings.push('desktop record context panel must keep tablet project setup visible on opened Operation records');
   }
-  if (!desktopRecordContextPanelSpecText.includes('keeps tablet project setup visible on desktop operation records')) {
-    findings.push('desktop record context panel test must cover tablet project setup chips on Operation records');
+  if (desktopRecordContextPanelText.includes('PROJECT_INVESTIGATION_MODE_LABELS')) {
+    findings.push('desktop record context panel must use the shared project setup investigation-mode labels');
+  }
+  if (!desktopRecordContextPanelSpecText.includes('keeps tablet project setup visible on desktop operation records')
+      || !desktopRecordContextPanelSpecText.includes('조사 표본·시굴조사')
+      || !desktopRecordContextPanelSpecText.includes('경계 1구역 북쪽 능선부터 남쪽 농로…')) {
+    findings.push('desktop record context panel test must cover tablet project setup chips on Operation records with tablet wording');
   }
   for (const { label, text } of mobileFieldFlowWordingSources) {
     for (const forbiddenTerm of ['조사 기준', '기록 기준', '작업 단위', '조사 단위', '현장단위']) {
