@@ -19,6 +19,9 @@ describe('Korean fieldwork record evidence', () => {
     const sketch = createDoc('sketch-1', C.PEN_MEMO, '약도 1', {
       depicts: ['feature-1'],
     });
+    const findCollection = createDoc('find-collection-1', C.FIND_COLLECTION, '유물군 1', {
+      liesWithin: ['feature-1'],
+    });
     const sample = createDoc('sample-1', C.SAMPLE, '시료 1', {
       liesWithin: ['feature-1'],
     });
@@ -28,6 +31,7 @@ describe('Korean fieldwork record evidence', () => {
       layer,
       photo,
       sketch,
+      findCollection,
       sample,
     ]);
 
@@ -90,10 +94,10 @@ describe('Korean fieldwork record evidence', () => {
       {
         id: 'finds',
         label: '유물',
-        count: 0,
-        tone: 'empty',
+        count: 1,
+        tone: 'filled',
         createCategoryName: C.FIND,
-        documentIds: [],
+        documentIds: ['find-collection-1'],
       },
       {
         id: 'samples',

@@ -324,6 +324,8 @@ const releaseCriticalPatterns = [
   /^core\/test\/datastore\/pouchdb\/sync-service\.spec\.ts$/,
   /^core\/src\/model\/document\/image-document\.ts$/,
   /^core\/test\/model\/image-document\.spec\.ts$/,
+  /^core\/src\/tools\/korean-fieldwork-readiness\.ts$/,
+  /^core\/test\/tools\/korean-fieldwork-readiness\.spec\.ts$/,
   /^mobile\/app\/\(tabs\)\/ProjectScreen\/Document(Add|Edit)\.tsx$/,
   /^mobile\/app\/\(tabs\)\/ProjectScreen\/index\.tsx$/,
   /^mobile\/app\/\(tabs\)\/SettingsScreen\.tsx$/,
@@ -3357,6 +3359,8 @@ function validateRecordActionEvidencePriority() {
   const desktopRecordContextSpecText = readTextFile(desktopRecordContextSpec);
   const desktopRecordEvidenceText = readTextFile(desktopRecordEvidenceSource);
   const desktopRecordEvidenceSpecText = readTextFile(desktopRecordEvidenceSpec);
+  const coreReadinessText = readTextFile('core/src/tools/korean-fieldwork-readiness.ts');
+  const coreReadinessSpecText = readTextFile('core/test/tools/korean-fieldwork-readiness.spec.ts');
   const desktopRecordWorkFilterText = readTextFile(
     'desktop/src/app/util/korean-fieldwork-record-work-filters.ts'
   );
@@ -3517,6 +3521,14 @@ function validateRecordActionEvidencePriority() {
       || !desktopRecordEvidenceSpecText.includes('find collection')
       || !desktopRecordEvidenceSpecText.includes('fieldworkPhotoUri: \'file:///tablet/photos/find-collection-1.jpg\'')) {
     findings.push('tablet and desktop record evidence tests must cover direct tablet photos on FindCollection records');
+  }
+  if (!coreReadinessText.includes("filterByCategory(relatedDocuments, 'Find')")
+      || !coreReadinessText.includes("filterByCategory(relatedDocuments, 'FindCollection')")
+      || !coreReadinessSpecText.includes("find-collection-1', 'FindCollection'")
+      || !coreReadinessSpecText.includes("['find-1', 'find-collection-1']")
+      || !mobileRecordEvidenceSpecText.includes("documentIds: ['find-collection-1']")
+      || !desktopRecordEvidenceSpecText.includes("documentIds: ['find-collection-1']")) {
+    findings.push('core, tablet, and desktop evidence bundles must count linked FindCollection records as find evidence');
   }
   for (const [label, text] of [
     ['tablet record evidence source', mobileRecordEvidenceText],

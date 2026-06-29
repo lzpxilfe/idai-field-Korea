@@ -337,7 +337,8 @@ export function buildEvidenceBundle(rootDocument: Document, documents: Document[
         soilProfilePhotos: filterByCategory(relatedDocuments, 'SoilProfilePhoto'),
         drawings: filterByCategory(relatedDocuments, 'Drawing'),
         penMemos: filterByCategory(relatedDocuments, 'PenMemo'),
-        finds: filterByCategory(relatedDocuments, 'Find'),
+        finds: filterByCategory(relatedDocuments, 'Find')
+            .concat(filterByCategory(relatedDocuments, 'FindCollection')),
         samples: filterByCategory(relatedDocuments, 'Sample'),
         reportPreparationReviews: filterByCategory(relatedDocuments, 'ReportPreparationReview'),
         reportEditorialCrossChecks: filterByCategory(relatedDocuments, 'ReportEditorialCrossCheck'),

@@ -56,6 +56,7 @@ describe('Korean fieldwork readiness', () => {
             makeDocument('drawing-1', 'Drawing', { relations: { isDepictedIn: ['feature-1'] } }),
             makeDocument('pen-1', 'PenMemo', { relations: { depicts: ['feature-1'] } }),
             makeDocument('find-1', 'Find', { relations: { liesWithin: ['feature-1'] } }),
+            makeDocument('find-collection-1', 'FindCollection', { relations: { liesWithin: ['feature-1'] } }),
             makeDocument('sample-1', 'Sample', { relations: { liesWithin: ['feature-1'] } }),
             makeDocument('prep-1', 'ReportPreparationReview', { relations: { isSubjectOf: ['feature-1'] } }),
             makeDocument('cross-1', 'ReportEditorialCrossCheck', { relations: { isSubjectOf: ['feature-1'] } })
@@ -69,7 +70,7 @@ describe('Korean fieldwork readiness', () => {
         expect(bundle.soilProfilePhotos.length).toBe(1);
         expect(bundle.drawings.length).toBe(1);
         expect(bundle.penMemos.length).toBe(1);
-        expect(bundle.finds.length).toBe(1);
+        expect(bundle.finds.map((document) => document.resource.id)).toEqual(['find-1', 'find-collection-1']);
         expect(bundle.samples.length).toBe(1);
         expect(bundle.reportPreparationReviews.length).toBe(1);
         expect(bundle.reportEditorialCrossChecks.length).toBe(1);
