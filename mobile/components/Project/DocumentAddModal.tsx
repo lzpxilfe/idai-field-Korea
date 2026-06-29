@@ -28,7 +28,10 @@ import {
   KOREAN_FIELDWORK_CATEGORIES,
 } from './korean-fieldwork-categories';
 import { canCreateKoreanFieldworkChildRecord } from './korean-fieldwork-child-records';
-import { KOREAN_FIELDWORK_FEATURE_TYPE_OPTIONS } from './korean-fieldwork-feature-types';
+import {
+  getKoreanFieldworkFeatureInvestigationSteps,
+  KOREAN_FIELDWORK_FEATURE_TYPE_OPTIONS,
+} from './korean-fieldwork-feature-types';
 
 const ICON_SIZE = 34;
 
@@ -122,6 +125,17 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
     const featureCategory = categoriesByName.get(KOREAN_FIELDWORK_CATEGORIES.FEATURE);
     if (!featureCategory) return null;
 
+    const renderFeatureInvestigationGuide = (featureType: string) => (
+      <View style={styles.featureGuide}>
+        <Text style={styles.featureGuideTitle}>조사 순서</Text>
+        <Text style={styles.featureGuideSteps} numberOfLines={2}>
+          {getKoreanFieldworkFeatureInvestigationSteps(featureType)
+            .slice(0, 3)
+            .join(' → ')}
+        </Text>
+      </View>
+    );
+
     return (
       <View>
         <View style={styles.parentPanel}>
@@ -145,15 +159,18 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
           style={styles.startUnknownFeature}
           testID="featureType_startUnknown"
         >
-          <Ionicons name="add-circle-outline" size={22} color="#027a48" />
-          <View style={styles.featureTypeText}>
-            <Text style={styles.featureTypeLabel} numberOfLines={1}>
-              유구로 바로 만들기
-            </Text>
-            <Text style={styles.featureTypeDescription} numberOfLines={2}>
-              시기와 성격은 조사하면서 다시 고칠 수 있습니다.
-            </Text>
+          <View style={styles.featureTypeHeader}>
+            <Ionicons name="add-circle-outline" size={22} color="#027a48" />
+            <View style={styles.featureTypeText}>
+              <Text style={styles.featureTypeLabel} numberOfLines={1}>
+                유구로 바로 만들기
+              </Text>
+              <Text style={styles.featureTypeDescription} numberOfLines={2}>
+                시기와 성격은 조사하면서 다시 고칠 수 있습니다.
+              </Text>
+            </View>
           </View>
+          {renderFeatureInvestigationGuide('unknown')}
         </TouchableOpacity>
         <View style={styles.featureTypeGrid}>
           {KOREAN_FIELDWORK_FEATURE_TYPE_OPTIONS.map((option) => (
@@ -168,15 +185,18 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
               style={styles.featureTypeOption}
               testID={`featureType_${option.value}`}
             >
-              <CategoryIcon category={featureCategory} size={24} />
-              <View style={styles.featureTypeText}>
-                <Text style={styles.featureTypeLabel} numberOfLines={1}>
-                  {option.label}
-                </Text>
-                <Text style={styles.featureTypeDescription} numberOfLines={2}>
-                  {option.description}
-                </Text>
+              <View style={styles.featureTypeHeader}>
+                <CategoryIcon category={featureCategory} size={24} />
+                <View style={styles.featureTypeText}>
+                  <Text style={styles.featureTypeLabel} numberOfLines={1}>
+                    {option.label}
+                  </Text>
+                  <Text style={styles.featureTypeDescription} numberOfLines={2}>
+                    {option.description}
+                  </Text>
+                </View>
               </View>
+              {renderFeatureInvestigationGuide(option.value)}
             </TouchableOpacity>
           ))}
         </View>
@@ -380,29 +400,32 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   featureTypeOption: {
-    alignItems: 'center',
+    alignItems: 'stretch',
     backgroundColor: 'white',
     borderColor: '#d0d5dd',
     borderRadius: 6,
     borderWidth: 1,
-    flexDirection: 'row',
     marginBottom: 8,
-    minHeight: 72,
+    minHeight: 120,
     paddingHorizontal: 10,
     paddingVertical: 9,
     width: '49%',
   },
   startUnknownFeature: {
-    alignItems: 'center',
+    alignItems: 'stretch',
     backgroundColor: '#ecfdf3',
     borderColor: '#abefc6',
     borderRadius: 6,
     borderWidth: 1,
-    flexDirection: 'row',
     marginBottom: 8,
-    minHeight: 66,
+    minHeight: 98,
     paddingHorizontal: 12,
     paddingVertical: 10,
+  },
+  featureTypeHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    width: '100%',
   },
   featureTypeText: {
     flex: 1,
@@ -419,6 +442,24 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 15,
     marginTop: 2,
+  },
+  featureGuide: {
+    borderTopColor: '#eaecf0',
+    borderTopWidth: 1,
+    marginTop: 8,
+    paddingTop: 7,
+  },
+  featureGuideTitle: {
+    color: '#475467',
+    fontSize: 10,
+    fontWeight: '900',
+    marginBottom: 3,
+  },
+  featureGuideSteps: {
+    color: '#344054',
+    fontSize: 11,
+    fontWeight: '700',
+    lineHeight: 15,
   },
   emptyState: {
     alignItems: 'center',
