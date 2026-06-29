@@ -139,7 +139,8 @@ function getMobileTestStep() {
           '--runTestsByPath',
           ...getMobileFieldworkTestPaths(),
           '--watchAll=false',
-          '--runInBand'
+          '--runInBand',
+          '--silent'
         ]
       });
 }

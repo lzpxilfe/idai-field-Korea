@@ -3282,7 +3282,7 @@ function validateProgressModeAwareness() {
     findings.push('tablet workbench must use investigation-mode checklist steps');
   }
   if (!tabletWorkbenchPanelText.includes('getKoreanFieldworkWorkbenchItems(')
-      || !tabletWorkbenchPanelText.includes('maxItems,\n      investigationModeId')) {
+      || !/maxItems,\r?\n      investigationModeId/.test(tabletWorkbenchPanelText)) {
     findings.push('tablet workbench panel must pass the investigation mode into workbench items');
   }
   if (!desktopWorkbenchText.includes('getKoreanFieldworkChecklistSteps(document.resource.category, investigationMode)')

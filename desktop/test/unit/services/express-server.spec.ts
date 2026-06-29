@@ -342,13 +342,28 @@ function getHash(data: Buffer, algorithm: 'md5'|'sha256'): string {
 
 async function removeTestFiles(filePath: string) {
 
-    for (let attempt = 1; attempt <= 10; attempt++) {
+    let lastError: any;
+
+    for (let attempt = 1; attempt <= 30; attempt++) {
         try {
             fs.rmSync(filePath, { recursive: true, force: true });
             return;
         } catch (err) {
-            if (attempt === 10) throw err;
-            await new Promise(resolve => setTimeout(resolve, 200));
+            lastError = err;
+            await new Promise(resolve => setTimeout(resolve, 500));
         }
     }
+
+    if (process.platform === 'win32' && lastError?.code === 'EPERM') {
+        process.once('exit', () => {
+            try {
+                fs.rmSync(filePath, { recursive: true, force: true });
+            } catch (_) {
+                // Windows can release PouchDB file handles only while the Jest process is exiting.
+            }
+        });
+        return;
+    }
+
+    throw lastError;
 }
