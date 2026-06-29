@@ -713,15 +713,8 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
     ): boolean {
 
         const parentDocument = this.getNotebookContinuationParentDocument(entry);
-        const penMemoCategory = getCategory(NOTEBOOK_RECORD_MEMO_CATEGORY, this.projectConfiguration);
 
-        return !!parentDocument
-            && !!penMemoCategory
-            && canCreateKoreanFieldworkChildRecord(
-                penMemoCategory,
-                parentDocument,
-                this.projectConfiguration
-            )
+        return this.canCreateNotebookRecordMemo(parentDocument)
             && !!getKoreanFieldworkNotebookContinuationSeed(
                 entry,
                 this.getNotebookContinuationFocus(entry, preferredFocus)
@@ -1664,22 +1657,31 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
     private getNotebookRecordMemoParentDocument(): Document|undefined {
 
         const selectedDocument = this.getNotebookSelectedRecordDocument();
-        const penMemoCategory = getCategory(NOTEBOOK_RECORD_MEMO_CATEGORY, this.projectConfiguration);
-        if (!selectedDocument || !penMemoCategory) return undefined;
 
-        return canCreateKoreanFieldworkChildRecord(
-            penMemoCategory,
-            selectedDocument,
-            this.projectConfiguration
-        )
+        return this.canCreateNotebookRecordMemo(selectedDocument)
             ? selectedDocument
             : undefined;
     }
 
 
-    private getNotebookContinuationParentDocument(entry: KoreanFieldworkNotebookEntry): Document|undefined {
+    private canCreateNotebookRecordMemo(parentDocument: Document|undefined): boolean {
 
-        return entry.targetDocument ?? entry.sourceDocument;
+        const penMemoCategory = getCategory(NOTEBOOK_RECORD_MEMO_CATEGORY, this.projectConfiguration);
+        if (!parentDocument || !penMemoCategory) return false;
+
+        return canCreateKoreanFieldworkChildRecord(
+            penMemoCategory,
+            parentDocument,
+            this.projectConfiguration
+        ) || NOTEBOOK_RECORD_MEMO_TARGET_CATEGORIES.has(parentDocument.resource.category);
+    }
+
+
+    private getNotebookContinuationParentDocument(
+            entry: KoreanFieldworkNotebookEntry|undefined
+    ): Document|undefined {
+
+        return entry?.targetDocument ?? entry?.sourceDocument;
     }
 
 

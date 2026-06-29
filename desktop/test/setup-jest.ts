@@ -3,6 +3,10 @@ import { setupZoneTestEnv } from 'jest-preset-angular/setup-env/zone';
 
 setupZoneTestEnv();
 
+if (typeof fetch === 'undefined') {
+    (globalThis as any).fetch = require('node-fetch');
+}
+
 const customRequire = (moduleName) => {
 
     // Electron modules cannot be used in unit tests

@@ -4,7 +4,7 @@ import { FieldDocument, FieldGeometry, Query, ObjectUtils, Datastore, FieldGeome
 import { M } from '../../components/messages/m';
 import { getAsynchronousFs } from '../../services/get-asynchronous-fs';
 
-import geojsonRewind from '@mapbox/geojson-rewind';
+import * as geojsonRewindModule from '@mapbox/geojson-rewind';
 
 
 /**
@@ -64,7 +64,7 @@ export module GeoJsonExporter {
             features: documents.map(document => createFeature(document, explodeShortDescription))
         };
 
-        geojsonRewind(featureCollection);
+        rewindGeoJson(featureCollection);
 
         return featureCollection;
     }
@@ -158,3 +158,8 @@ export module GeoJsonExporter {
         }
     }
 }
+
+const rewindGeoJson: (featureCollection: FeatureCollection<GeometryObject>) => void =
+    typeof geojsonRewindModule === 'function'
+        ? geojsonRewindModule as any
+        : (geojsonRewindModule as any).default;

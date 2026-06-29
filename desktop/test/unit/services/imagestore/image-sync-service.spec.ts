@@ -2,6 +2,9 @@ import Ajv from 'ajv';
 import { nop } from 'tsfun';
 import { ImageSyncService, PouchdbDatastore, ImageStore, IdGenerator, ImageVariant,
     base64Encode } from 'idai-field-core';
+
+jest.mock('pouchdb-browser', () => require('pouchdb-node'));
+
 import { ExpressServer } from '../../../../src/app/services/express-server/express-server';
 import { FsAdapter } from '../../../../src/app/services/imagestore/fs-adapter';
 import { ThumbnailGenerator } from '../../../../src/app/services/imagestore/thumbnail-generator';

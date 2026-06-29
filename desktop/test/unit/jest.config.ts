@@ -94,6 +94,7 @@ const config: Config = {
 
   // A map from regular expressions to module names or to arrays of module names that allow to stub out resources with a single module
   moduleNameMapper: {
+    '^src/(.*)$': '<rootDir>/src/$1',
     '.*create-worker': '<rootDir>/test/unit/create-worker.mock.ts'
   },
 

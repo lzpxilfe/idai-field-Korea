@@ -52,6 +52,7 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
 }) => {
   const config = useContext(ConfigurationContext);
   const { labels } = useContext(LabelsContext);
+  const [expandedFeatureGuideType, setExpandedFeatureGuideType] = useState<string>();
   const [isChoosingFeatureType, setIsChoosingFeatureType] = useState(false);
 
   const isAllowedCategory = useCallback(
@@ -90,6 +91,7 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
 
   const openAddOption = (option: KoreanFieldworkAddOption) => {
     if (option.categoryName === KOREAN_FIELDWORK_CATEGORIES.FEATURE) {
+      setExpandedFeatureGuideType(undefined);
       setIsChoosingFeatureType(true);
       return;
     }
@@ -125,9 +127,17 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
     const featureCategory = categoriesByName.get(KOREAN_FIELDWORK_CATEGORIES.FEATURE);
     if (!featureCategory) return null;
 
+    const toggleFeatureGuide = (featureType: string) => {
+      setExpandedFeatureGuideType((currentType) =>
+        currentType === featureType ? undefined : featureType);
+    };
+
     const renderFeatureInvestigationGuide = (featureType: string) => (
       <View style={styles.featureGuide}>
-        <Text style={styles.featureGuideTitle}>조사 순서</Text>
+        <Text style={styles.featureGuideTitle}>조사 참고</Text>
+        <Text style={styles.featureGuideNote}>
+          현장 상황에 맞게 바꿔도 되는 참고용 순서입니다.
+        </Text>
         <Text style={styles.featureGuideSteps} numberOfLines={2}>
           {getKoreanFieldworkFeatureInvestigationSteps(featureType)
             .slice(0, 3)
@@ -149,55 +159,93 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
             {KOREAN_FIELDWORK_HIERARCHY_HELP}
           </Text>
         </View>
-        <TouchableOpacity
-          activeOpacity={0.86}
-          onPress={() => onAddCategory(
-            KOREAN_FIELDWORK_CATEGORIES.FEATURE,
-            parentDoc,
-            { featureType: 'unknown' }
-          )}
-          style={styles.startUnknownFeature}
-          testID="featureType_startUnknown"
-        >
+        <View style={styles.startUnknownFeature}>
           <View style={styles.featureTypeHeader}>
-            <Ionicons name="add-circle-outline" size={22} color="#027a48" />
-            <View style={styles.featureTypeText}>
-              <Text style={styles.featureTypeLabel} numberOfLines={1}>
-                유구로 바로 만들기
-              </Text>
-              <Text style={styles.featureTypeDescription} numberOfLines={2}>
-                시기와 성격은 조사하면서 다시 고칠 수 있습니다.
-              </Text>
-            </View>
-          </View>
-          {renderFeatureInvestigationGuide('unknown')}
-        </TouchableOpacity>
-        <View style={styles.featureTypeGrid}>
-          {KOREAN_FIELDWORK_FEATURE_TYPE_OPTIONS.map((option) => (
             <TouchableOpacity
               activeOpacity={0.86}
-              key={option.value}
               onPress={() => onAddCategory(
                 KOREAN_FIELDWORK_CATEGORIES.FEATURE,
                 parentDoc,
-                { featureType: option.value }
+                { featureType: 'unknown' }
               )}
+              style={styles.featureTypeCreateArea}
+              testID="featureType_startUnknown"
+            >
+              <Ionicons name="add-circle-outline" size={22} color="#027a48" />
+              <View style={styles.featureTypeText}>
+                <Text style={styles.featureTypeLabel} numberOfLines={1}>
+                  유구로 바로 만들기
+                </Text>
+                <Text style={styles.featureTypeDescription} numberOfLines={2}>
+                  시기와 성격은 조사하면서 다시 고칠 수 있습니다.
+                </Text>
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              accessibilityLabel="유구 조사 참고 보기"
+              onPress={() => toggleFeatureGuide('startUnknown')}
+              style={styles.featureHelpButton}
+              testID="featureTypeHelp_startUnknown"
+            >
+              <Ionicons
+                name={expandedFeatureGuideType === 'startUnknown'
+                  ? 'close-circle-outline'
+                  : 'help-circle-outline'}
+                size={22}
+                color="#2f6f4e"
+              />
+            </TouchableOpacity>
+          </View>
+          {expandedFeatureGuideType === 'startUnknown'
+            && renderFeatureInvestigationGuide('unknown')}
+        </View>
+        <View style={styles.featureTypeGrid}>
+          {KOREAN_FIELDWORK_FEATURE_TYPE_OPTIONS.map((option) => (
+            <View
+              key={option.value}
               style={styles.featureTypeOption}
-              testID={`featureType_${option.value}`}
             >
               <View style={styles.featureTypeHeader}>
-                <CategoryIcon category={featureCategory} size={24} />
-                <View style={styles.featureTypeText}>
-                  <Text style={styles.featureTypeLabel} numberOfLines={1}>
-                    {option.label}
-                  </Text>
-                  <Text style={styles.featureTypeDescription} numberOfLines={2}>
-                    {option.description}
-                  </Text>
-                </View>
+                <TouchableOpacity
+                  activeOpacity={0.86}
+                  onPress={() => onAddCategory(
+                    KOREAN_FIELDWORK_CATEGORIES.FEATURE,
+                    parentDoc,
+                    { featureType: option.value }
+                  )}
+                  style={styles.featureTypeCreateArea}
+                  testID={`featureType_${option.value}`}
+                >
+                  <CategoryIcon category={featureCategory} size={24} />
+                  <View style={styles.featureTypeText}>
+                    <Text style={styles.featureTypeLabel} numberOfLines={1}>
+                      {option.label}
+                    </Text>
+                    <Text style={styles.featureTypeDescription} numberOfLines={2}>
+                      {option.description}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  accessibilityLabel={`${option.label} 조사 참고 보기`}
+                  onPress={() => toggleFeatureGuide(option.value)}
+                  style={styles.featureHelpButton}
+                  testID={`featureTypeHelp_${option.value}`}
+                >
+                  <Ionicons
+                    name={expandedFeatureGuideType === option.value
+                      ? 'close-circle-outline'
+                      : 'help-circle-outline'}
+                    size={22}
+                    color="#475467"
+                  />
+                </TouchableOpacity>
               </View>
-              {renderFeatureInvestigationGuide(option.value)}
-            </TouchableOpacity>
+              {expandedFeatureGuideType === option.value
+                && renderFeatureInvestigationGuide(option.value)}
+            </View>
           ))}
         </View>
       </View>
@@ -239,7 +287,10 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
                   size={16}
                 />}
                 onPress={isChoosingFeatureType
-                  ? () => setIsChoosingFeatureType(false)
+                  ? () => {
+                    setExpandedFeatureGuideType(undefined);
+                    setIsChoosingFeatureType(false);
+                  }
                   : onClose}
               />
             }
@@ -406,7 +457,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 1,
     marginBottom: 8,
-    minHeight: 120,
+    minHeight: 76,
     paddingHorizontal: 10,
     paddingVertical: 9,
     width: '49%',
@@ -418,7 +469,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 1,
     marginBottom: 8,
-    minHeight: 98,
+    minHeight: 70,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
@@ -426,6 +477,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     width: '100%',
+  },
+  featureTypeCreateArea: {
+    alignItems: 'center',
+    flex: 1,
+    flexDirection: 'row',
+    minHeight: 52,
   },
   featureTypeText: {
     flex: 1,
@@ -443,6 +500,16 @@ const styles = StyleSheet.create({
     lineHeight: 15,
     marginTop: 2,
   },
+  featureHelpButton: {
+    alignItems: 'center',
+    borderColor: '#d0d5dd',
+    borderRadius: 17,
+    borderWidth: 1,
+    height: 34,
+    justifyContent: 'center',
+    marginLeft: 8,
+    width: 34,
+  },
   featureGuide: {
     borderTopColor: '#eaecf0',
     borderTopWidth: 1,
@@ -453,6 +520,12 @@ const styles = StyleSheet.create({
     color: '#475467',
     fontSize: 10,
     fontWeight: '900',
+    marginBottom: 3,
+  },
+  featureGuideNote: {
+    color: '#667085',
+    fontSize: 10,
+    lineHeight: 14,
     marginBottom: 3,
   },
   featureGuideSteps: {

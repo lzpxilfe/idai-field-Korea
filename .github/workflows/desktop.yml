@@ -31,9 +31,11 @@ jobs:
         run: npm run test
         working-directory: desktop
       - name: Run Field Hub integration tests
+        if: ${{ github.event_name == 'push' && (contains(github.event.head_commit.message, '[hub]') || contains(github.event.head_commit.message, '[full-ci]')) }}
         run: npm run test:hub-integration
         working-directory: desktop
   E2E:
+    if: ${{ github.event_name == 'push' && (contains(github.event.head_commit.message, '[e2e]') || contains(github.event.head_commit.message, '[full-ci]')) }}
     timeout-minutes: 90
     runs-on: macos-latest
     steps:
@@ -51,7 +53,7 @@ jobs:
         working-directory: desktop
   Build:
     name: Build (${{ matrix.os.name }})
-    if: ${{ (github.ref == 'refs/heads/master') || (contains(github.event.head_commit.message, '[build]')) }}
+    if: ${{ github.event_name == 'push' && (contains(github.event.head_commit.message, '[build]') || contains(github.event.head_commit.message, '[full-ci]')) }}
     strategy:
       matrix:
         os:

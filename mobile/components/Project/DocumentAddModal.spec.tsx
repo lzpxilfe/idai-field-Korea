@@ -29,7 +29,7 @@ describe('DocumentAddModal', () => {
       },
     } as any;
 
-    const { getAllByText, getByTestId, getByText } = render(
+    const { getByTestId, getByText, queryByText } = render(
       <LabelsContext.Provider value={{ labels: new Labels(() => ['ko']) }}>
         <ConfigurationContext.Provider value={createConfig([
           createCategory(C.TRENCH),
@@ -58,7 +58,12 @@ describe('DocumentAddModal', () => {
       '여기서는 층위 선후를 정하지 않습니다. 새 기록이 어느 조사 경계·트렌치·유구에 포함되는지만 정합니다.'
     )).toBeTruthy();
     expect(getByText('유구로 바로 만들기')).toBeTruthy();
-    expect(getAllByText('조사 순서').length).toBeGreaterThan(1);
+    expect(queryByText('조사 참고')).toBeNull();
+
+    fireEvent.press(getByTestId('featureTypeHelp_pit'));
+
+    expect(getByText('조사 참고')).toBeTruthy();
+    expect(getByText('현장 상황에 맞게 바꿔도 되는 참고용 순서입니다.')).toBeTruthy();
     expect(getByText('조사 전 사진 → 윤곽·어깨선 → 장축·단축·깊이')).toBeTruthy();
 
     fireEvent.press(getByTestId('featureType_pit'));

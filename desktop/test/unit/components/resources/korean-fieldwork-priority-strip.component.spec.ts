@@ -1787,11 +1787,11 @@ const createDocument = (id: string, category: string, fields: any = {}) => ({
 
 
 const getTodayLabel = () => {
-    const today = new Date();
+    const today = new Date(new Date().getTime() + 9 * 60 * 60 * 1000);
 
     return [
-        today.getFullYear(),
-        String(today.getMonth() + 1).padStart(2, '0'),
-        String(today.getDate()).padStart(2, '0')
+        today.getUTCFullYear(),
+        String(today.getUTCMonth() + 1).padStart(2, '0'),
+        String(today.getUTCDate()).padStart(2, '0')
     ].join('-');
 };
