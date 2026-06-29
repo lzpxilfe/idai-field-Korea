@@ -129,6 +129,22 @@ export const buildKakaoSatellitePickerHtml = ({
       background: #98a2b3;
       color: #eef2f4;
     }
+    .midpoint-handle {
+      align-items: center;
+      background: #ffffff;
+      border: 2px solid #175cd3;
+      border-radius: 999px;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.25);
+      color: #175cd3;
+      cursor: pointer;
+      display: flex;
+      font: 800 18px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      height: 26px;
+      justify-content: center;
+      min-height: 0;
+      padding: 0;
+      width: 26px;
+    }
   </style>
 </head>
 <body>
@@ -140,7 +156,7 @@ export const buildKakaoSatellitePickerHtml = ({
   </div>
   <div class="banner">지도에서 조사 경계 꼭짓점을 차례대로 누르세요. 3개 이상 찍으면 경계를 저장할 수 있습니다.</div>
   <div class="toolbar">
-    <div id="status" class="status"><strong>조사 경계 그리기</strong>지도를 눌러 첫 꼭짓점을 추가하세요.</div>
+    <div id="status" class="status"><strong>조사 경계 그리기</strong>지도를 눌러 첫 꼭짓점을 추가하세요. 찍은 점은 끌어서 옮길 수 있습니다.</div>
     <button id="undo" class="secondary" type="button" disabled>되돌리기</button>
     <button id="reset" class="secondary" type="button" disabled>초기화</button>
     <button id="save" class="primary" type="button" disabled>경계 저장</button>
@@ -209,6 +225,7 @@ export const buildKakaoSatellitePickerHtml = ({
 
         var points = [];
         var markers = [];
+        var midpointOverlays = [];
         var statusEl = document.getElementById('status');
         var undoEl = document.getElementById('undo');
         var resetEl = document.getElementById('reset');
@@ -274,39 +291,90 @@ export const buildKakaoSatellitePickerHtml = ({
 
         function addPoint(latLng) {
           points.push(latLng);
-          markers.push(new kakao.maps.Marker({
-            map: map,
-            position: latLng
-          }));
           redraw();
         }
 
         function undoPoint() {
           if (points.length === 0) return;
           points.pop();
-          var marker = markers.pop();
-          marker && marker.setMap(null);
           redraw();
         }
 
         function resetPoints() {
           points = [];
-          markers.forEach(function(marker) {
-            marker.setMap(null);
-          });
-          markers = [];
           redraw();
         }
 
         function redraw() {
+          markers.forEach(function(marker) {
+            marker.setMap(null);
+          });
+          markers = [];
+          midpointOverlays.forEach(function(overlay) {
+            overlay.setMap(null);
+          });
+          midpointOverlays = [];
+          points.forEach(function(point, index) {
+            var marker = new kakao.maps.Marker({
+              draggable: true,
+              map: map,
+              position: point,
+              title: '경계점 ' + (index + 1)
+            });
+            marker.setDraggable(true);
+            kakao.maps.event.addListener(marker, 'dragend', function() {
+              points[index] = marker.getPosition();
+              redraw();
+            });
+            markers.push(marker);
+          });
+          addSegmentInsertHandles();
           outline.setPath(points);
           polygon.setPath(points.length >= 3 ? points : []);
           undoEl.disabled = points.length === 0;
           resetEl.disabled = points.length === 0;
           saveEl.disabled = points.length < 3;
           statusEl.innerHTML = points.length < 3
-            ? '<strong>조사 경계 그리기</strong>경계점 ' + points.length + '개. 최소 3개가 필요합니다.'
-            : '<strong>조사 경계 그리기</strong>경계점 ' + points.length + '개. 더 찍거나 경계를 저장하세요.';
+            ? '<strong>조사 경계 그리기</strong>경계점 ' + points.length + '개. 점은 끌어서 옮길 수 있습니다. 최소 3개가 필요합니다.'
+            : '<strong>조사 경계 그리기</strong>경계점 ' + points.length + '개. 점을 끌어 옮기거나 선 중간 +로 추가한 뒤 저장하세요.';
+        }
+
+        function addSegmentInsertHandles() {
+          if (points.length < 2) return;
+          for (var index = 0; index < points.length - 1; index += 1) {
+            addMidpointHandle(getMidpoint(points[index], points[index + 1]), index + 1);
+          }
+          if (points.length >= 3) {
+            addMidpointHandle(getMidpoint(points[points.length - 1], points[0]), points.length);
+          }
+        }
+
+        function addMidpointHandle(position, insertIndex) {
+          var handle = document.createElement('button');
+          handle.className = 'midpoint-handle';
+          handle.type = 'button';
+          handle.setAttribute('aria-label', '새 경계점 추가');
+          handle.textContent = '+';
+          handle.addEventListener('click', function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            points.splice(insertIndex, 0, position);
+            redraw();
+          });
+          midpointOverlays.push(new kakao.maps.CustomOverlay({
+            content: handle,
+            map: map,
+            position: position,
+            xAnchor: 0.5,
+            yAnchor: 0.5
+          }));
+        }
+
+        function getMidpoint(first, second) {
+          return new kakao.maps.LatLng(
+            (first.getLat() + second.getLat()) / 2,
+            (first.getLng() + second.getLng()) / 2
+          );
         }
 
         function saveBoundary() {
@@ -436,12 +504,39 @@ export const buildOpenBoundaryPickerHtml = ({
       background: #98a2b3;
       color: #eef2f4;
     }
+    .boundary-point-marker span {
+      align-items: center;
+      background: #ffffff;
+      border: 2px solid #175cd3;
+      border-radius: 4px;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.25);
+      color: #1f2937;
+      cursor: grab;
+      display: flex;
+      font: 800 13px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      height: 26px;
+      justify-content: center;
+      width: 26px;
+    }
+    .boundary-midpoint-marker span {
+      align-items: center;
+      background: #ffffff;
+      border: 2px solid #175cd3;
+      border-radius: 999px;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.25);
+      color: #175cd3;
+      display: flex;
+      font: 800 18px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      height: 24px;
+      justify-content: center;
+      width: 24px;
+    }
   </style>
 </head>
 <body>
   <div id="map"></div>
   <div class="toolbar">
-    <div id="status" class="status"><strong>조사 경계 그리기</strong>공개 배경지도를 눌러 첫 꼭짓점을 추가하세요.</div>
+    <div id="status" class="status"><strong>조사 경계 그리기</strong>공개 배경지도를 눌러 첫 꼭짓점을 추가하세요. 찍은 점은 끌어서 옮길 수 있습니다.</div>
     <button id="undo" class="secondary" type="button" disabled>되돌리기</button>
     <button id="reset" class="secondary" type="button" disabled>초기화</button>
     <button id="save" class="primary" type="button" disabled>경계 저장</button>
@@ -548,8 +643,7 @@ export const buildOpenBoundaryPickerHtml = ({
       document.addEventListener('message', handleNativeMessage);
 
       map.on('click', function(event) {
-        points.push(event.latlng);
-        redraw();
+        addPoint(event.latlng);
       });
       undoEl.addEventListener('click', function() {
         if (points.length === 0) return;
@@ -562,29 +656,79 @@ export const buildOpenBoundaryPickerHtml = ({
       });
       saveEl.addEventListener('click', saveBoundary);
 
+      function addPoint(latLng) {
+        points.push(latLng);
+        redraw();
+      }
+
       function redraw() {
         markersLayer.clearLayers();
         points.forEach(function(point, index) {
-          L.circleMarker([point.lat, point.lng], {
-            color: '#175cd3',
-            fillColor: '#ffffff',
-            fillOpacity: 1,
-            radius: 7,
-            weight: 3
-          }).bindTooltip(String(index + 1), {
-            permanent: true,
-            direction: 'center',
-            className: 'point-label'
+          L.marker([point.lat, point.lng], {
+            draggable: true,
+            icon: createPointIcon(index + 1),
+            title: '경계점 ' + (index + 1)
+          }).on('dragend', function(event) {
+            points[index] = event.target.getLatLng();
+            redraw();
           }).addTo(markersLayer);
         });
+        addSegmentInsertHandles();
         outline.setLatLngs(points);
         polygon.setLatLngs(points.length >= 3 ? [points] : []);
         undoEl.disabled = points.length === 0;
         resetEl.disabled = points.length === 0;
         saveEl.disabled = points.length < 3;
         statusEl.innerHTML = points.length < 3
-          ? '<strong>조사 경계 그리기</strong>경계점 ' + points.length + '개. 최소 3개가 필요합니다.'
-          : '<strong>조사 경계 그리기</strong>경계점 ' + points.length + '개. 더 찍거나 경계를 저장하세요.';
+          ? '<strong>조사 경계 그리기</strong>경계점 ' + points.length + '개. 점은 끌어서 옮길 수 있습니다. 최소 3개가 필요합니다.'
+          : '<strong>조사 경계 그리기</strong>경계점 ' + points.length + '개. 점을 끌어 옮기거나 선 중간 +로 추가한 뒤 저장하세요.';
+      }
+
+      function addSegmentInsertHandles() {
+        if (points.length < 2) return;
+        for (var index = 0; index < points.length - 1; index += 1) {
+          addMidpointHandle(getMidpoint(points[index], points[index + 1]), index + 1);
+        }
+        if (points.length >= 3) {
+          addMidpointHandle(getMidpoint(points[points.length - 1], points[0]), points.length);
+        }
+      }
+
+      function addMidpointHandle(position, insertIndex) {
+        L.marker([position.lat, position.lng], {
+          icon: createMidpointIcon(),
+          keyboard: false,
+          title: '새 경계점 추가'
+        }).on('click', function(event) {
+          if (event.originalEvent) L.DomEvent.stop(event.originalEvent);
+          points.splice(insertIndex, 0, position);
+          redraw();
+        }).addTo(markersLayer);
+      }
+
+      function getMidpoint(first, second) {
+        return L.latLng(
+          (first.lat + second.lat) / 2,
+          (first.lng + second.lng) / 2
+        );
+      }
+
+      function createPointIcon(label) {
+        return L.divIcon({
+          className: 'boundary-point-marker',
+          html: '<span>' + label + '</span>',
+          iconAnchor: [14, 14],
+          iconSize: [28, 28]
+        });
+      }
+
+      function createMidpointIcon() {
+        return L.divIcon({
+          className: 'boundary-midpoint-marker',
+          html: '<span>+</span>',
+          iconAnchor: [12, 12],
+          iconSize: [24, 24]
+        });
       }
 
       function saveBoundary() {

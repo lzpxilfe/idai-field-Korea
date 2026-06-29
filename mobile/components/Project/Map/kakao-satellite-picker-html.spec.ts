@@ -52,6 +52,30 @@ describe('buildKakaoSatellitePickerHtml', () => {
     expect(html).toContain('new kakao.maps.LatLng(37.5665, 126.978)');
   });
 
+  it('supports editing boundaries by moving points and inserting midpoint handles', () => {
+    const kakaoHtml = buildKakaoSatellitePickerHtml({
+      javaScriptKey: 'js-key',
+      latitude: 36.12,
+      longitude: 127.45,
+    });
+    const openHtml = buildOpenBoundaryPickerHtml({
+      latitude: 36.12,
+      longitude: 127.45,
+    });
+
+    expect(kakaoHtml).toContain('marker.setDraggable(true)');
+    expect(kakaoHtml).toContain('points[index] = marker.getPosition()');
+    expect(kakaoHtml).toContain('new kakao.maps.CustomOverlay');
+    expect(kakaoHtml).toContain('points.splice(insertIndex, 0, position)');
+    expect(kakaoHtml).toContain('새 경계점 추가');
+
+    expect(openHtml).toContain('draggable: true');
+    expect(openHtml).toContain('points[index] = event.target.getLatLng()');
+    expect(openHtml).toContain("className: 'boundary-midpoint-marker'");
+    expect(openHtml).toContain('points.splice(insertIndex, 0, position)');
+    expect(openHtml).toContain('새 경계점 추가');
+  });
+
   it('explains Kakao SDK key and domain failures inside the WebView', () => {
     const html = buildKakaoSatellitePickerHtml({
       javaScriptKey: 'js-key',

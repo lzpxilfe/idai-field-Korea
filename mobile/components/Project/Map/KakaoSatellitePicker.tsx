@@ -66,7 +66,7 @@ const KakaoSatellitePicker: React.FC<KakaoSatellitePickerProps> = ({
   const latitude = initialLocation?.latitude ?? DEFAULT_LOCATION.latitude;
   const longitude = initialLocation?.longitude ?? DEFAULT_LOCATION.longitude;
   const [message, setMessage] = useState(
-    '지도는 배경입니다. 지도 위를 눌러 조사 지역의 꼭짓점을 차례대로 찍으세요.'
+    '지도는 배경입니다. 꼭짓점을 찍고, 점을 끌어 옮기거나 선 중간 +로 점을 추가하세요.'
   );
   const [baseUrlIndex, setBaseUrlIndex] = useState(0);
   const [isMapReady, setIsMapReady] = useState(false);
@@ -105,7 +105,7 @@ const KakaoSatellitePicker: React.FC<KakaoSatellitePickerProps> = ({
       setInitialMapTypeId('HYBRID');
       setSelectedMapTypeId('HYBRID');
       setReloadNonce((value) => value + 1);
-      setMessage('지도는 배경입니다. 지도 위를 눌러 조사 지역의 꼭짓점을 차례대로 찍으세요.');
+      setMessage('지도는 배경입니다. 꼭짓점을 찍고, 점을 끌어 옮기거나 선 중간 +로 점을 추가하세요.');
     }
   }, [javaScriptKey, visible]);
 
