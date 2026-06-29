@@ -544,7 +544,13 @@ const hasSoilProfileColorSwatches = (value: unknown): boolean => {
   const trimmedValue = value.trim();
 
   return trimmedValue.length > 0
-    && trimmedValue !== '[]';
+    && trimmedValue !== '[]'
+    && trimmedValue.split(/\r?\n/).some((line) => {
+      const match = line.match(/^\s*\d+\s*:?\s*(.*)$/);
+      const colorValue = match ? match[1] : line;
+
+      return colorValue.trim().length > 0;
+    });
 };
 
 const toSentencePrefix = (value: string): string =>

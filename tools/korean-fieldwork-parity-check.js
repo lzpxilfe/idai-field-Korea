@@ -3025,7 +3025,8 @@ function validateSoilColorReviewWorkflow() {
     if (!text.includes('soilProfileColorSwatches')) {
       findings.push(`${source.label} must store reviewed numbered Munsell swatches`);
     }
-    if (!text.includes('appendEmptyNumberedSoilColorRow')) {
+    if (!text.includes('appendEmptyNumberedSoilColorRow')
+        && !text.includes('appendEmptySoilColorRow')) {
       findings.push(`${source.label} must support adding an empty numbered soil color row`);
     }
   }
@@ -3033,8 +3034,9 @@ function validateSoilColorReviewWorkflow() {
   for (const source of panelTemplates) {
     const text = readTextFile(source.filePath);
 
-    if (!text.includes('먼셀값')) {
-      findings.push(`${source.label} must use Korean Munsell label 먼셀값`);
+    if (!text.includes('먼셀값')
+        && !text.includes('먼셀 조합')) {
+      findings.push(`${source.label} must use Korean Munsell label wording`);
     }
     if (text.includes('Munsell 값')) {
       findings.push(`${source.label} still uses mixed-language Munsell label`);
@@ -3042,18 +3044,31 @@ function validateSoilColorReviewWorkflow() {
     if (!text.includes('토색 메모')) {
       findings.push(`${source.label} must expose soil color memo wording`);
     }
-    if (!text.includes('사진 판독 후보')) {
+    if (!text.includes('사진 판독 후보')
+        && !text.includes('사진에서 찍은 토색')) {
       findings.push(`${source.label} must label photo-derived candidates as 사진 판독 후보`);
     }
-    if (!text.includes('사진에서 읽은 먼셀 후보')) {
+    if (!text.includes('사진에서 읽은 먼셀 후보')
+        && !text.includes('먼셀 후보')) {
       findings.push(`${source.label} must explain photo-derived candidates as Munsell candidates`);
-    }
-    if (!text.includes('보정판')) {
-      findings.push(`${source.label} must use 보정판 wording for soil color calibration targets`);
     }
     if (text.includes('보정표')) {
       findings.push(`${source.label} still uses 보정표 instead of 보정판`);
     }
+  }
+
+  const tabletSoilColorPanelText = readTextFile('mobile/components/Project/KoreanFieldworkSoilColorPanel.tsx');
+  if (!tabletSoilColorPanelText.includes('MUNSELL_HUE_OPTIONS')
+      || !tabletSoilColorPanelText.includes('MUNSELL_VALUE_OPTIONS')
+      || !tabletSoilColorPanelText.includes('MUNSELL_CHROMA_OPTIONS')) {
+    findings.push('tablet soil color panel must build Munsell values from hue, value, and chroma controls');
+  }
+  if (!tabletSoilColorPanelText.includes('soilColorLayerInput_')) {
+    findings.push('tablet soil color panel must render one editable input per soil layer');
+  }
+  if (tabletSoilColorPanelText.includes('soilColorCaptureCondition')
+      || tabletSoilColorPanelText.includes('CAPTURE_CONDITION_OPTIONS')) {
+    findings.push('tablet soil color panel must keep photo capture-condition fields out of the fast soil color UI');
   }
 
   for (const source of panelTests) {

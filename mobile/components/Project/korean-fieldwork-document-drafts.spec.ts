@@ -183,7 +183,7 @@ describe('Korean fieldwork document drafts', () => {
       soilProfilePhotoAnnotationStrokes: '[]',
       soilProfileLayerMarkers: '[]',
       soilProfileLayerIds: '[]',
-      soilProfileColorSwatches: '[]',
+      soilProfileColorSwatches: '',
       soilColorAssistCandidates: '',
       soilColorAssistStatus: SOIL_COLOR_ASSIST_STATUS_DEFAULT,
       soilProfilePhotoSizeHintKb: SOIL_PROFILE_PHOTO_SIZE_HINT_KB_DEFAULT,

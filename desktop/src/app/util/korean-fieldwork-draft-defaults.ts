@@ -80,7 +80,7 @@ export function getKoreanFieldworkDefaultFieldValues(category: CategoryForm|unde
             soilColorAssistStatus: KOREAN_FIELDWORK_SOIL_COLOR_ASSIST_STATUS_DEFAULT,
             soilProfileAnnotationStrokes: '[]',
             soilProfilePhotoAnnotationStrokes: '[]',
-            soilProfileColorSwatches: '[]',
+            soilProfileColorSwatches: '',
             soilProfileLayerIds: '[]',
             soilProfileLayerMarkers: '[]',
             soilProfilePhotoQuality: KOREAN_FIELDWORK_SOIL_PROFILE_PHOTO_QUALITY_DEFAULT,

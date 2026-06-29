@@ -10,10 +10,10 @@ import { KOREAN_FIELDWORK_CATEGORIES } from './korean-fieldwork-categories';
 const C = KOREAN_FIELDWORK_CATEGORIES;
 
 describe('KoreanFieldworkSoilColorPanel', () => {
-  it('records manual Munsell values for layer records', () => {
+  it('builds manual Munsell values from hue, value, and chroma controls', () => {
     const handleUpdateResourceField = jest.fn();
     const handleUpdateResourceFields = jest.fn();
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText, queryByText } = render(
       <KoreanFieldworkSoilColorPanel
         category={createCategoryForm([
           'soilColorMunsellManual',
@@ -34,17 +34,18 @@ describe('KoreanFieldworkSoilColorPanel', () => {
       />
     );
 
-    expect(getByText('토색 빠른 기록')).toBeTruthy();
-    expect(getByText('먼셀값')).toBeTruthy();
-    expect(getByText('수분 상태')).toBeTruthy();
+    expect(getByText('토색 기록')).toBeTruthy();
+    expect(getByText('먼셀 조합')).toBeTruthy();
+    expect(queryByText('촬영 조건')).toBeNull();
 
-    fireEvent.press(getByTestId('soilColorOption_10YR 4/3'));
+    fireEvent.press(getByTestId('soilColorOption_7.5YR'));
+    fireEvent.press(getByTestId('soilColorValueOption_5'));
+    fireEvent.press(getByTestId('soilColorChromaOption_4'));
     fireEvent.press(getByTestId('soilColorOption_moist'));
-    fireEvent.press(getByTestId('soilColorOption_calibrationTargetUsed'));
     fireEvent.changeText(getByTestId('soilColorInput_note'), '회갈색 사질토');
 
-    expect(handleUpdateResourceFields).toHaveBeenCalledWith({
-      soilColorMunsellManual: '10YR 4/3',
+    expect(handleUpdateResourceFields).toHaveBeenLastCalledWith({
+      soilColorMunsellManual: '7.5YR 5/4',
       soilColorAssistStatus: 'manualRecorded',
     });
     expect(handleUpdateResourceField).toHaveBeenNthCalledWith(
@@ -54,20 +55,14 @@ describe('KoreanFieldworkSoilColorPanel', () => {
     );
     expect(handleUpdateResourceField).toHaveBeenNthCalledWith(
       2,
-      'soilColorCaptureCondition',
-      'calibrationTargetUsed'
-    );
-    expect(handleUpdateResourceField).toHaveBeenNthCalledWith(
-      3,
       'soilColorNote',
       '회갈색 사질토'
     );
   });
 
-  it('records numbered soil colors for soil profile photo records', () => {
+  it('adds the next empty numbered swatch row as one editable input per soil layer', () => {
     const handleUpdateResourceField = jest.fn();
-    const handleUpdateResourceFields = jest.fn();
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText, queryByTestId, queryByText } = render(
       <KoreanFieldworkSoilColorPanel
         category={createCategoryForm([
           'soilProfileColorSwatches',
@@ -76,83 +71,64 @@ describe('KoreanFieldworkSoilColorPanel', () => {
           'soilProfileCaptureNote',
         ])}
         resource={createResource(C.SOIL_PROFILE_PHOTO, {
-          soilProfileColorSwatches: '1: 10YR 4/3',
+          soilProfileColorSwatches: '[]',
           soilColorCaptureCondition: '',
           soilProfileColorNote: '',
           soilProfileCaptureNote: '',
         })}
         onUpdateResourceField={handleUpdateResourceField}
-        onUpdateResourceFields={handleUpdateResourceFields}
+        onUpdateResourceFields={jest.fn()}
       />
     );
 
-    expect(getByText('토색 빠른 기록')).toBeTruthy();
-    expect(getByText('사진 메모')).toBeTruthy();
+    expect(getByText('층별 토색')).toBeTruthy();
+    expect(getByTestId('soilColorLayerInput_1').props.value).toBe('');
+    expect(queryByTestId('soilColorInput_profileColorSwatches')).toBeNull();
+    expect(queryByText('사진 메모')).toBeNull();
+    expect(queryByText('촬영 조건')).toBeNull();
 
+    fireEvent.changeText(getByTestId('soilColorLayerInput_1'), '10YR 4/3 갈색');
     fireEvent.press(getByTestId('soilColorAddNumberedSwatch'));
-    fireEvent.press(getByTestId('soilColorOption_10YR 3/2'));
-    fireEvent.changeText(
-      getByTestId('soilColorInput_profileColorSwatches'),
-      '1: 10YR 4/3 갈색\n2: 10YR 3/2 암회갈색'
-    );
-    fireEvent.press(getByTestId('soilColorOption_shade'));
-    fireEvent.changeText(getByTestId('soilColorInput_note'), '2번은 습윤 상태');
-    fireEvent.changeText(getByTestId('soilColorInput_captureNote'), '북벽, 그늘');
 
-    expect(handleUpdateResourceFields).toHaveBeenCalledWith({
-      soilProfileColorSwatches: '1: 10YR 4/3\n2: 10YR 3/2',
-    });
     expect(handleUpdateResourceField).toHaveBeenNthCalledWith(
       1,
       'soilProfileColorSwatches',
-      '1: 10YR 4/3\n2: '
+      '1: 10YR 4/3 갈색'
     );
     expect(handleUpdateResourceField).toHaveBeenNthCalledWith(
       2,
       'soilProfileColorSwatches',
-      '1: 10YR 4/3 갈색\n2: 10YR 3/2 암회갈색'
-    );
-    expect(handleUpdateResourceField).toHaveBeenNthCalledWith(
-      3,
-      'soilColorCaptureCondition',
-      'shade'
-    );
-    expect(handleUpdateResourceField).toHaveBeenNthCalledWith(
-      4,
-      'soilProfileColorNote',
-      '2번은 습윤 상태'
-    );
-    expect(handleUpdateResourceField).toHaveBeenNthCalledWith(
-      5,
-      'soilProfileCaptureNote',
-      '북벽, 그늘'
+      '1: \n2: '
     );
   });
 
-  it('uses the next largest numbered row when adding soil profile swatches', () => {
-    const handleUpdateResourceFields = jest.fn();
+  it('writes Munsell builder output to the selected soil layer row', () => {
+    const handleUpdateResourceField = jest.fn();
     const { getByTestId } = render(
       <KoreanFieldworkSoilColorPanel
         category={createCategoryForm([
           'soilProfileColorSwatches',
         ])}
         resource={createResource(C.SOIL_PROFILE_PHOTO, {
-          soilProfileColorSwatches: '1: 10YR 4/3\n3: 10YR 5/4',
+          soilProfileColorSwatches: '1: 10YR 4/3\n2: ',
         })}
-        onUpdateResourceField={jest.fn()}
-        onUpdateResourceFields={handleUpdateResourceFields}
+        onUpdateResourceField={handleUpdateResourceField}
+        onUpdateResourceFields={jest.fn()}
       />
     );
 
-    fireEvent.press(getByTestId('soilColorOption_7.5YR 4/4'));
+    fireEvent.press(getByTestId('soilColorLayerSelect_2'));
+    fireEvent.press(getByTestId('soilColorOption_5YR'));
+    fireEvent.press(getByTestId('soilColorValueOption_4'));
+    fireEvent.press(getByTestId('soilColorChromaOption_6'));
 
-    expect(handleUpdateResourceFields).toHaveBeenCalledWith({
-      soilProfileColorSwatches: '1: 10YR 4/3\n3: 10YR 5/4\n4: 7.5YR 4/4',
-    });
+    expect(handleUpdateResourceField).toHaveBeenLastCalledWith(
+      'soilProfileColorSwatches',
+      '1: 10YR 4/3\n2: 5YR 4/6'
+    );
   });
 
-  it('lets users accept photo-derived Munsell candidates', () => {
-    const handleUpdateResourceField = jest.fn();
+  it('lets users accept photo-derived Munsell candidates into the selected layer', () => {
     const handleUpdateResourceFields = jest.fn();
     const { getByTestId, getByText } = render(
       <KoreanFieldworkSoilColorPanel
@@ -162,17 +138,18 @@ describe('KoreanFieldworkSoilColorPanel', () => {
           'soilColorAssistStatus',
         ])}
         resource={createResource(C.SOIL_PROFILE_PHOTO, {
-          soilProfileColorSwatches: '',
+          soilProfileColorSwatches: '1: \n2: ',
           soilColorAssistCandidates:
-            '사진 중앙부 평균 RGB 111/87/61\n1: 10YR 4/3 (보통, 차이 0.0)',
+            '사진 선택 지점 20%/50% 평균 RGB 111/87/61\n1: 10YR 4/3 (보통, 차이 0.0)',
           soilColorAssistStatus: 'candidatesAvailable',
         })}
-        onUpdateResourceField={handleUpdateResourceField}
+        onUpdateResourceField={jest.fn()}
         onUpdateResourceFields={handleUpdateResourceFields}
       />
     );
 
-    expect(getByText('사진 판독 후보')).toBeTruthy();
+    expect(getByText('사진에서 찍은 토색')).toBeTruthy();
+    fireEvent.press(getByTestId('soilColorLayerSelect_2'));
     fireEvent.press(getByTestId('soilColorCandidateOption_10YR 4/3'));
     fireEvent.changeText(
       getByTestId('soilColorInput_assistCandidates'),
@@ -184,7 +161,7 @@ describe('KoreanFieldworkSoilColorPanel', () => {
     );
 
     expect(handleUpdateResourceFields).toHaveBeenCalledWith({
-      soilProfileColorSwatches: '1: 10YR 4/3',
+      soilProfileColorSwatches: '1: \n2: 10YR 4/3',
       soilColorAssistStatus: 'reviewed',
     });
     expect(handleUpdateResourceFields).toHaveBeenCalledWith({

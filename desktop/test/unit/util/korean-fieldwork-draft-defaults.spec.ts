@@ -63,7 +63,7 @@ describe('Korean fieldwork draft defaults', () => {
             soilColorAssistStatus: 'notRun',
             soilProfileAnnotationStrokes: '[]',
             soilProfilePhotoAnnotationStrokes: '[]',
-            soilProfileColorSwatches: '[]',
+            soilProfileColorSwatches: '',
             soilProfilePhotoQuality: 0.35
         });
     });
