@@ -6,6 +6,9 @@ import usePreferences from '@/hooks/use-preferences';
 import { ToastProvider } from '@/components/common/Toast/ToastProvider';
 import { Toast } from '@/components/common/Toast/Toast';
 import LabelsContextProvider from '@/contexts/labels/LabelsContextProvider';
+import {
+  getKoreanFieldworkFieldBoardOverviewRoute,
+} from '@/components/Project/korean-fieldwork-navigation';
 
 export default function TabLayout() {
   const preferences = usePreferences();
@@ -49,7 +52,9 @@ export default function TabLayout() {
                 listeners={{
                   tabPress: (event) => {
                     event.preventDefault();
-                    router.replace('/ProjectScreen');
+                    router.replace(getKoreanFieldworkFieldBoardOverviewRoute(
+                      Date.now().toString()
+                    ));
                   },
                 }}
               />

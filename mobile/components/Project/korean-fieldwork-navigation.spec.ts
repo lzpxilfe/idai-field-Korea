@@ -1,6 +1,8 @@
 import {
+  getKoreanFieldworkFieldBoardOverviewRoute,
   getKoreanFieldworkReturnParam,
   getKoreanFieldworkReturnTarget,
+  KOREAN_FIELDWORK_FIELD_BOARD_RESET_PARAM,
   KOREAN_FIELDWORK_RETURN_TARGETS,
   navigateToKoreanFieldworkReturnTarget,
 } from './korean-fieldwork-navigation';
@@ -34,6 +36,13 @@ describe('Korean fieldwork navigation helpers', () => {
     expect(getKoreanFieldworkReturnParam(
       KOREAN_FIELDWORK_RETURN_TARGETS.FIELD_BOARD
     )).toEqual({ returnTo: 'fieldBoard' });
+  });
+
+  it('builds a field-board route that requests the top-level overview', () => {
+    expect(getKoreanFieldworkFieldBoardOverviewRoute('reset-1')).toEqual({
+      pathname: '/ProjectScreen',
+      params: { [KOREAN_FIELDWORK_FIELD_BOARD_RESET_PARAM]: 'reset-1' },
+    });
   });
 
   it('returns to the field board without map highlight params', () => {

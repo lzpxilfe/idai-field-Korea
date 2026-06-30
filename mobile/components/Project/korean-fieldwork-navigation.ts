@@ -5,6 +5,8 @@ export const KOREAN_FIELDWORK_RETURN_TARGETS = {
   MAP: 'map',
 } as const;
 
+export const KOREAN_FIELDWORK_FIELD_BOARD_RESET_PARAM = 'fieldBoardReset';
+
 export type KoreanFieldworkReturnTarget =
   typeof KOREAN_FIELDWORK_RETURN_TARGETS[keyof typeof KOREAN_FIELDWORK_RETURN_TARGETS];
 
@@ -22,6 +24,13 @@ export const getKoreanFieldworkReturnParam = (
   returnTarget: KoreanFieldworkReturnTarget
 ): { returnTo: KoreanFieldworkReturnTarget } => ({
   returnTo: returnTarget,
+});
+
+export const getKoreanFieldworkFieldBoardOverviewRoute = (
+  resetKey: string
+) => ({
+  pathname: '/ProjectScreen',
+  params: { [KOREAN_FIELDWORK_FIELD_BOARD_RESET_PARAM]: resetKey },
 });
 
 export const navigateToKoreanFieldworkReturnTarget = (

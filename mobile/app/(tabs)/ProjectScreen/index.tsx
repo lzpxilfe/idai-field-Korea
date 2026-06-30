@@ -3,7 +3,7 @@ import {
   Document,
   getKoreanFieldworkTodaySummary,
 } from 'idai-field-core';
-import { router } from 'expo-router';
+import { router, useGlobalSearchParams } from 'expo-router';
 import React, {
   useCallback,
   useContext,
@@ -73,6 +73,7 @@ import {
 } from '@/components/Project/korean-fieldwork-record-list-empty-state';
 import {
   getKoreanFieldworkReturnParam,
+  KOREAN_FIELDWORK_FIELD_BOARD_RESET_PARAM,
   KOREAN_FIELDWORK_RETURN_TARGETS,
 } from '@/components/Project/korean-fieldwork-navigation';
 import {
@@ -249,12 +250,17 @@ const DocumentsList: React.FC = () => {
       documentId: string;
       seed: KoreanFieldworkFieldNoteContinuationSeed;
     }>();
+  const scrollViewRef = useRef<ScrollView>(null);
   const fieldNoteContinuationRequestId = useRef(0);
   const [isCreatingFieldNote, setIsCreatingFieldNote] = useState(false);
   const [projectBoundaryDraft, setProjectBoundaryDraft] =
     useState<KoreanFieldworkProjectBoundaryDraft>();
   const [isSavingDailyJournal, setIsSavingDailyJournal] = useState(false);
   const now = useMemo(() => new Date(), []);
+  const routeParams = useGlobalSearchParams();
+  const resetToOverviewKey = getStringRouteParam(
+    routeParams[KOREAN_FIELDWORK_FIELD_BOARD_RESET_PARAM]
+  );
   const projectId = preferencesContext.preferences.currentProject;
   const {
     investigationModeId: loadedInvestigationModeId,
@@ -821,14 +827,20 @@ const DocumentsList: React.FC = () => {
         return;
     }
   };
-  const returnToInvestigationOverview = () => {
+  const returnToInvestigationOverview = useCallback(() => {
     clearHierarchy();
     setSelectedWorkbenchDocumentId(undefined);
     setIsSelectedWorkbenchExpanded(false);
     setFieldNoteContinuation(undefined);
+    setActiveWorkspaceTab('records');
     setActiveFilter('all');
     setQuery('');
-  };
+    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+  }, [clearHierarchy]);
+
+  useEffect(() => {
+    if (resetToOverviewKey) returnToInvestigationOverview();
+  }, [resetToOverviewKey, returnToInvestigationOverview]);
 
   return (
     <View style={styles.screen}>
@@ -845,6 +857,7 @@ const DocumentsList: React.FC = () => {
         />
       )}
       <ScrollView
+        ref={scrollViewRef}
         style={styles.scroll}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
@@ -1131,6 +1144,10 @@ const DocumentsList: React.FC = () => {
     </View>
   );
 };
+
+const getStringRouteParam = (
+  param: string | string[] | undefined
+): string | undefined => Array.isArray(param) ? param[0] : param;
 
 const FieldworkFlowPanel: React.FC<{
   boundaryDetail: string;
