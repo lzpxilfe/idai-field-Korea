@@ -30,6 +30,10 @@ export const KOREAN_FIELDWORK_DAILY_JOURNAL_FIELDS = {
   boundaryMemoImportedAt: 'dailyLogBoundaryMemoImportedAt',
   boundaryMemoStrokes: 'dailyLogBoundaryMemoStrokes',
   boundaryMemoUpdatedAt: 'dailyLogBoundaryMemoUpdatedAt',
+  equipmentCount: 'dailyLogEquipmentCount',
+  equipmentSize: 'dailyLogEquipmentSize',
+  investigatorCount: 'dailyLogInvestigatorCount',
+  laborerCount: 'dailyLogLaborerCount',
   safetyEducationPhoto: 'dailyLogSafetyEducationPhoto',
   safetyEducationStretching: 'dailyLogSafetyEducationStretching',
   workerCount: 'dailyLogWorkerCount',
@@ -69,12 +73,12 @@ const KoreanFieldworkDailyJournalCalendar: React.FC<
   onOpenDailyLog,
   onUpdateDailyLog,
 }) => {
-  const [workerCountDraft, setWorkerCountDraft] =
-    useState(getWorkerCountText(dailyLog));
+  const [personnelDraft, setPersonnelDraft] =
+    useState(getPersonnelDraft(dailyLog));
   const [saveStatus, setSaveStatus] =
     useState<'saved'|'saving'|'error'|undefined>();
   const dayItems = useMemo(() => getCalendarWeek(now), [now]);
-  const workerCountText = getWorkerCountText(dailyLog);
+  const personnelSummary = getPersonnelSummary(dailyLog);
   const hasDailyLog = !!dailyLog;
   const safetyPhotoDone = getBooleanField(dailyLog, FIELD.safetyEducationPhoto);
   const safetyStretchingDone = getBooleanField(
@@ -88,8 +92,8 @@ const KoreanFieldworkDailyJournalCalendar: React.FC<
     countKoreanFieldworkHandwritingPoints(boundaryStrokes);
 
   useEffect(() => {
-    setWorkerCountDraft(workerCountText);
-  }, [workerCountText]);
+    setPersonnelDraft(getPersonnelDraft(dailyLog));
+  }, [dailyLog]);
 
   const saveUpdates = async (updates: Record<string, unknown>) => {
     if (!canEdit) return;
@@ -105,12 +109,26 @@ const KoreanFieldworkDailyJournalCalendar: React.FC<
       setSaveStatus('error');
     }
   };
-  const saveWorkerCount = () => {
-    const normalizedWorkerCount = normalizeWorkerCount(workerCountDraft);
-    setWorkerCountDraft(
-      normalizedWorkerCount === undefined ? '' : String(normalizedWorkerCount)
-    );
-    saveUpdates({ [FIELD.workerCount]: normalizedWorkerCount });
+  const savePersonnel = () => {
+    const investigatorCount = normalizeCount(personnelDraft.investigatorCount);
+    const laborerCount = normalizeCount(personnelDraft.laborerCount);
+    const equipmentCount = normalizeCount(personnelDraft.equipmentCount);
+    const equipmentSize = normalizeText(personnelDraft.equipmentSize);
+    const workerCount = sumCounts(investigatorCount, laborerCount);
+
+    setPersonnelDraft({
+      equipmentCount: countToText(equipmentCount),
+      equipmentSize,
+      investigatorCount: countToText(investigatorCount),
+      laborerCount: countToText(laborerCount),
+    });
+    saveUpdates({
+      [FIELD.equipmentCount]: equipmentCount,
+      [FIELD.equipmentSize]: equipmentSize || undefined,
+      [FIELD.investigatorCount]: investigatorCount,
+      [FIELD.laborerCount]: laborerCount,
+      [FIELD.workerCount]: workerCount,
+    });
   };
   const toggleSafety = (fieldName: string, currentValue: boolean) => {
     saveUpdates({ [fieldName]: !currentValue });
@@ -204,9 +222,9 @@ const KoreanFieldworkDailyJournalCalendar: React.FC<
       <View style={styles.summaryRow}>
         <JournalMetric
           icon="groups"
-          label="작업자"
-          value={workerCountText ? `${workerCountText}명` : '미입력'}
-          warning={!workerCountText}
+          label="투입"
+          value={personnelSummary.text}
+          warning={personnelSummary.isEmpty}
         />
         <JournalMetric
           icon="health-and-safety"
@@ -230,27 +248,17 @@ const KoreanFieldworkDailyJournalCalendar: React.FC<
 
       <View style={styles.inputRow}>
         <View style={styles.workerInputWrap}>
-          <Text style={styles.fieldLabel}>오늘 작업자</Text>
-          <View style={styles.workerInputRow}>
-            <TextInput
-              editable={canEdit && !isSaving}
-              keyboardType="number-pad"
-              onChangeText={setWorkerCountDraft}
-              onEndEditing={saveWorkerCount}
-              placeholder="명"
-              style={styles.workerInput}
-              testID="dailyJournalWorkerCountInput"
-              value={workerCountDraft}
-            />
+          <View style={styles.fieldHeaderRow}>
+            <Text style={styles.fieldLabel}>오늘 투입 인원/장비</Text>
             <TouchableOpacity
               activeOpacity={0.86}
               disabled={!canEdit || isSaving}
-              onPress={saveWorkerCount}
+              onPress={savePersonnel}
               style={[
                 styles.smallButton,
                 (!canEdit || isSaving) && styles.disabledButton,
               ]}
-              testID="dailyJournalWorkerCountSave"
+              testID="dailyJournalPersonnelSave"
             >
               <Text
                 style={[
@@ -261,6 +269,56 @@ const KoreanFieldworkDailyJournalCalendar: React.FC<
                 반영
               </Text>
             </TouchableOpacity>
+          </View>
+          <View style={styles.personnelInputGrid}>
+            <PersonnelInput
+              editable={canEdit && !isSaving}
+              keyboardType="number-pad"
+              label="조사원"
+              onChangeText={(value) => setPersonnelDraft((draft) => ({
+                ...draft,
+                investigatorCount: value,
+              }))}
+              onEndEditing={savePersonnel}
+              testID="dailyJournalInvestigatorCountInput"
+              value={personnelDraft.investigatorCount}
+            />
+            <PersonnelInput
+              editable={canEdit && !isSaving}
+              keyboardType="number-pad"
+              label="인부"
+              onChangeText={(value) => setPersonnelDraft((draft) => ({
+                ...draft,
+                laborerCount: value,
+              }))}
+              onEndEditing={savePersonnel}
+              testID="dailyJournalLaborerCountInput"
+              value={personnelDraft.laborerCount}
+            />
+            <PersonnelInput
+              editable={canEdit && !isSaving}
+              keyboardType="number-pad"
+              label="장비"
+              onChangeText={(value) => setPersonnelDraft((draft) => ({
+                ...draft,
+                equipmentCount: value,
+              }))}
+              onEndEditing={savePersonnel}
+              testID="dailyJournalEquipmentCountInput"
+              value={personnelDraft.equipmentCount}
+            />
+            <PersonnelInput
+              editable={canEdit && !isSaving}
+              label="장비 크기"
+              onChangeText={(value) => setPersonnelDraft((draft) => ({
+                ...draft,
+                equipmentSize: value,
+              }))}
+              onEndEditing={savePersonnel}
+              placeholder="예: 0.6㎥, 10톤"
+              testID="dailyJournalEquipmentSizeInput"
+              value={personnelDraft.equipmentSize}
+            />
           </View>
         </View>
 
@@ -481,6 +539,40 @@ const JournalMetric: React.FC<{
   </View>
 );
 
+const PersonnelInput: React.FC<{
+  editable: boolean;
+  keyboardType?: 'default' | 'number-pad';
+  label: string;
+  onChangeText: (value: string) => void;
+  onEndEditing: () => void;
+  placeholder?: string;
+  testID: string;
+  value: string;
+}> = ({
+  editable,
+  keyboardType = 'default',
+  label,
+  onChangeText,
+  onEndEditing,
+  placeholder,
+  testID,
+  value,
+}) => (
+  <View style={styles.personnelField}>
+    <Text style={styles.personnelLabel}>{label}</Text>
+    <TextInput
+      editable={editable}
+      keyboardType={keyboardType}
+      onChangeText={onChangeText}
+      onEndEditing={onEndEditing}
+      placeholder={placeholder ?? '0'}
+      style={styles.workerInput}
+      testID={testID}
+      value={value}
+    />
+  </View>
+);
+
 const SafetyToggle: React.FC<{
   icon: keyof typeof MaterialIcons.glyphMap;
   isActive: boolean;
@@ -585,17 +677,70 @@ const formatDateKey = (date: Date): string =>
     String(date.getDate()).padStart(2, '0'),
   ].join('-');
 
-const getWorkerCountText = (document: Document | undefined): string => {
-  const value = getResourceValue(document, FIELD.workerCount);
+interface PersonnelDraft {
+  equipmentCount: string;
+  equipmentSize: string;
+  investigatorCount: string;
+  laborerCount: string;
+}
+
+const getPersonnelDraft = (
+  document: Document | undefined
+): PersonnelDraft => ({
+  equipmentCount: getCountText(document, FIELD.equipmentCount),
+  equipmentSize: getStringField(document, FIELD.equipmentSize),
+  investigatorCount: getCountText(document, FIELD.investigatorCount),
+  laborerCount: getCountText(document, FIELD.laborerCount),
+});
+
+const getPersonnelSummary = (
+  document: Document | undefined
+): { isEmpty: boolean; text: string } => {
+  const investigatorCount = getCountText(document, FIELD.investigatorCount);
+  const laborerCount = getCountText(document, FIELD.laborerCount);
+  const equipmentCount = getCountText(document, FIELD.equipmentCount);
+  const equipmentSize = getStringField(document, FIELD.equipmentSize);
+  const parts = [
+    investigatorCount ? `조사원 ${investigatorCount}` : undefined,
+    laborerCount ? `인부 ${laborerCount}` : undefined,
+    equipmentCount ? `장비 ${equipmentCount}` : undefined,
+    equipmentSize ? `크기 ${equipmentSize}` : undefined,
+  ].filter((part): part is string => !!part);
+
+  if (parts.length > 0) return { isEmpty: false, text: parts.join(' · ') };
+
+  const legacyWorkerCount = getCountText(document, FIELD.workerCount);
+  return legacyWorkerCount
+    ? { isEmpty: false, text: `작업자 ${legacyWorkerCount}` }
+    : { isEmpty: true, text: '미입력' };
+};
+
+const getCountText = (
+  document: Document | undefined,
+  fieldName: string
+): string => {
+  const value = getResourceValue(document, fieldName);
   if (typeof value === 'number' && Number.isFinite(value)) return String(value);
   if (typeof value === 'string') return value.replace(/[^\d]/g, '');
 
   return '';
 };
 
-const normalizeWorkerCount = (value: string): number | undefined => {
+const normalizeCount = (value: string): number | undefined => {
   const parsed = Number.parseInt(value.replace(/[^\d]/g, ''), 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+};
+
+const normalizeText = (value: string): string => value.trim();
+
+const countToText = (value: number | undefined): string =>
+  value === undefined ? '' : String(value);
+
+const sumCounts = (
+  ...counts: Array<number | undefined>
+): number | undefined => {
+  const total = counts.reduce<number>((sum, count) => sum + (count ?? 0), 0);
+  return total > 0 ? total : undefined;
 };
 
 const getBooleanField = (
@@ -902,11 +1047,12 @@ const styles = StyleSheet.create({
     color: '#b54708',
   },
   inputRow: {
+    alignItems: 'flex-start',
     flexDirection: 'row',
     marginTop: 10,
   },
   workerInputWrap: {
-    flex: 1,
+    flex: 1.45,
     marginRight: 8,
   },
   fieldLabel: {
@@ -914,10 +1060,31 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '900',
   },
+  fieldHeaderRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
   workerInputRow: {
     alignItems: 'center',
     flexDirection: 'row',
     marginTop: 6,
+  },
+  personnelInputGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginTop: 6,
+  },
+  personnelField: {
+    marginBottom: 6,
+    width: '48.5%',
+  },
+  personnelLabel: {
+    color: '#667085',
+    fontSize: 10,
+    fontWeight: '900',
+    marginBottom: 3,
   },
   workerInput: {
     backgroundColor: '#f8fafc',

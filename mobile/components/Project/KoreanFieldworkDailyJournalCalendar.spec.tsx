@@ -18,13 +18,16 @@ const FIELD = KOREAN_FIELDWORK_DAILY_JOURNAL_FIELDS;
 const C = KOREAN_FIELDWORK_CATEGORIES;
 
 describe('KoreanFieldworkDailyJournalCalendar', () => {
-  it('updates worker count and safety education fields on the daily log', async () => {
+  it('updates personnel hierarchy, equipment size, and safety education fields', async () => {
     const handleUpdateDailyLog = jest.fn();
     const { getByTestId } = render(
       <KoreanFieldworkDailyJournalCalendar
         canEdit
         dailyLog={createDailyLog({
-          [FIELD.workerCount]: 2,
+          [FIELD.equipmentCount]: 1,
+          [FIELD.equipmentSize]: '0.3㎥',
+          [FIELD.investigatorCount]: 1,
+          [FIELD.laborerCount]: 2,
         }) as any}
         now={new Date('2026-06-30T09:00:00+09:00')}
         onCreateDailyLog={jest.fn()}
@@ -32,14 +35,21 @@ describe('KoreanFieldworkDailyJournalCalendar', () => {
       />
     );
 
-    fireEvent.changeText(getByTestId('dailyJournalWorkerCountInput'), '5');
-    fireEvent.press(getByTestId('dailyJournalWorkerCountSave'));
+    fireEvent.changeText(getByTestId('dailyJournalInvestigatorCountInput'), '2');
+    fireEvent.changeText(getByTestId('dailyJournalLaborerCountInput'), '6');
+    fireEvent.changeText(getByTestId('dailyJournalEquipmentCountInput'), '1');
+    fireEvent.changeText(getByTestId('dailyJournalEquipmentSizeInput'), '0.6㎥');
+    fireEvent.press(getByTestId('dailyJournalPersonnelSave'));
     fireEvent.press(getByTestId('dailyJournalSafetyPhoto'));
     fireEvent.press(getByTestId('dailyJournalSafetyStretching'));
 
     await waitFor(() => {
       expect(handleUpdateDailyLog).toHaveBeenCalledWith(expect.objectContaining({
-        [FIELD.workerCount]: 5,
+        [FIELD.equipmentCount]: 1,
+        [FIELD.equipmentSize]: '0.6㎥',
+        [FIELD.investigatorCount]: 2,
+        [FIELD.laborerCount]: 6,
+        [FIELD.workerCount]: 8,
       }));
       expect(handleUpdateDailyLog).toHaveBeenCalledWith(expect.objectContaining({
         [FIELD.safetyEducationPhoto]: true,
