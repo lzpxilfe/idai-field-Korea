@@ -29,7 +29,7 @@ const SURVEY_BOUNDARY_CATEGORY = 'SurveyBoundary';
 const TRENCH_CATEGORY = 'Trench';
 
 export const KOREAN_FIELDWORK_DESKTOP_FEATURE_TRACE_NOTE =
-    '조사 경계 위 평면지도에서 유구 위치와 형태를 그리며 시작';
+    '위성지도나 평면도처럼 조사 경계 위에 유구 위치와 형태를 바로 얹으며 시작';
 
 export interface KoreanFieldworkDefaultFieldOptions {
     boundaryAccuracy?: string;

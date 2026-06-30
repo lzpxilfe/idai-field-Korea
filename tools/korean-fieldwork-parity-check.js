@@ -1014,6 +1014,7 @@ function validateGuidedFeatureDraftDefaults() {
   const tabletFieldNoteText = readTextFile('mobile/components/Project/KoreanFieldworkFieldNotePanel.tsx');
   const tabletMapBottomSheetText = readTextFile('mobile/components/Project/Map/MapBottomSheet.tsx');
   const desktopDraftText = readTextFile('desktop/src/app/util/korean-fieldwork-document-drafts.ts');
+  const desktopDraftDefaultsText = readTextFile('desktop/src/app/util/korean-fieldwork-draft-defaults.ts');
   const desktopFeatureGuidanceTemplateText = readTextFile(
     'desktop/src/app/components/docedit/core/korean-fieldwork-feature-guidance-panel.html'
   );
@@ -1085,6 +1086,10 @@ function validateGuidedFeatureDraftDefaults() {
       || !desktopRecordContextStyleText.includes('.satellite-road')
       || !desktopRecordContextSpecText.includes('flat placement map')) {
     findings.push('desktop record context must preview tablet feature placement as a flat placement map surface');
+  }
+  if (!desktopDraftDefaultsText.includes('위성지도나 평면도처럼 조사 경계 위에 유구 위치와 형태를 바로 얹으며 시작')
+      || desktopDraftDefaultsText.includes('조사 경계 위 평면지도에서 유구 위치와 형태를 그리며 시작')) {
+    findings.push('desktop feature draft defaults must use the same map-first placement wording as the tablet add flow');
   }
   if (
     !tabletQuickRecordText.includes('getFeatureAttributeSectionTitle')

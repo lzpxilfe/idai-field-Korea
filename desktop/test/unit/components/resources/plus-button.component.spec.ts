@@ -33,13 +33,13 @@ describe('PlusButtonComponent', () => {
                     featureRecordingStatus: 'candidate',
                     featureType: 'unknown',
                     featureGeometryRevisionNote:
-                        '조사 경계 위 평면지도에서 유구 위치와 형태를 그리며 시작',
+                        '위성지도나 평면도처럼 조사 경계 위에 유구 위치와 형태를 바로 얹으며 시작',
                     geometryConfidence: 'rough',
                     geometrySource: 'aerialLayerTrace',
                     identifier: '2호 유구',
                     relations: { isRecordedIn: ['operation-1'] },
                     shortDescription:
-                        '조사 경계 위 평면지도에서 유구 위치와 형태를 그리며 시작'
+                        '위성지도나 평면도처럼 조사 경계 위에 유구 위치와 형태를 바로 얹으며 시작'
                 })
             }),
             'Polygon'
@@ -70,7 +70,7 @@ describe('PlusButtonComponent', () => {
                     geometrySource: 'aerialLayerTrace',
                     identifier: '북쪽 배수로',
                     shortDescription:
-                        '조사 경계 위 평면지도에서 유구 위치와 형태를 그리며 시작'
+                        '위성지도나 평면도처럼 조사 경계 위에 유구 위치와 형태를 바로 얹으며 시작'
                 })
             }),
             'Polygon'

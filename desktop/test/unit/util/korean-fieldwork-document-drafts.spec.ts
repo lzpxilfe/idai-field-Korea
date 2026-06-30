@@ -86,10 +86,10 @@ describe('Korean fieldwork document drafts', () => {
             featureType: 'unknown',
             featureRecordingStatus: 'candidate',
             featureInvestigationChecklist: [],
-            featureGeometryRevisionNote: '조사 경계 위 평면지도에서 유구 위치와 형태를 그리며 시작',
+            featureGeometryRevisionNote: '위성지도나 평면도처럼 조사 경계 위에 유구 위치와 형태를 바로 얹으며 시작',
             geometryConfidence: 'rough',
             geometrySource: 'aerialLayerTrace',
-            shortDescription: '조사 경계 위 평면지도에서 유구 위치와 형태를 그리며 시작'
+            shortDescription: '위성지도나 평면도처럼 조사 경계 위에 유구 위치와 형태를 바로 얹으며 시작'
         });
         expect(createKoreanFieldworkDraftResource(operationDoc, 'Feature', config, {
             featureType: 'kiln'
