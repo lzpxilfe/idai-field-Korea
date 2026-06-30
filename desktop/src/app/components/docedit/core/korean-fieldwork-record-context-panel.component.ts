@@ -135,7 +135,8 @@ interface FeatureLocationSketchPreview {
 }
 
 interface FeatureFreeDrawingPreview {
-    path: string;
+    emptyLabel?: string;
+    path?: string;
     summary: string;
     updatedAt?: string;
     viewBox: string;
@@ -394,7 +395,14 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
         const preview = getPenMemoSketchPreview(
             this.document.resource[FEATURE_FREE_DRAWING_STROKES_FIELD]
         );
-        if (!preview) return undefined;
+        if (!preview) {
+            return {
+                emptyLabel: '자유 스케치 필요',
+                summary: '자유 스케치 없음',
+                updatedAt: this.getFeatureFreeDrawingUpdatedAtLabel(),
+                viewBox: '0 0 120 72'
+            };
+        }
 
         return {
             path: preview.path,

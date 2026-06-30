@@ -147,7 +147,12 @@
              [attr.viewBox]="freeDrawingPreview.viewBox"
              role="img"
              aria-label="태블릿 자유 스케치">
-            <path [attr.d]="freeDrawingPreview.path"></path>
+            <path *ngIf="freeDrawingPreview.path"
+                  [attr.d]="freeDrawingPreview.path"></path>
+            <text *ngIf="freeDrawingPreview.emptyLabel"
+                  x="60"
+                  y="37"
+                  text-anchor="middle">{{freeDrawingPreview.emptyLabel}}</text>
         </svg>
     </div>
 

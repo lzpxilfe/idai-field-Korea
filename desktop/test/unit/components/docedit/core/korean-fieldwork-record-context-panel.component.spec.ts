@@ -286,6 +286,28 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
     });
 
 
+    it('keeps the desktop free sketch slot visible before tablet drawing starts', () => {
+
+        const feature = createDocument('feature-1', 'Feature', 'F1');
+        const component = createComponent({
+            find: jest.fn().mockResolvedValue({ documents: [feature] })
+        });
+        component.document = feature as any;
+        component.fieldDefinitions = [
+            field('featureRecordingStatus')
+        ] as any;
+
+        expect(component.hasFeatureFreeDrawingPreview()).toBe(true);
+
+        const preview = component.getFeatureFreeDrawingPreview()!;
+
+        expect(preview.summary).toBe('자유 스케치 없음');
+        expect(preview.emptyLabel).toBe('자유 스케치 필요');
+        expect(preview.path).toBeUndefined();
+        expect(preview.viewBox).toBe('0 0 120 72');
+    });
+
+
     it('keeps the tablet free drawing preview section in the desktop record context template', () => {
 
         const template = fs.readFileSync(
