@@ -19,30 +19,23 @@ import SoilProfileCameraButton, {
   PhotoCameraButton,
   SoilProfileCaptureData,
 } from '@/components/Project/SoilProfileCameraButton';
-import KoreanFieldworkDraftContinuationPanel from '@/components/Project/KoreanFieldworkDraftContinuationPanel';
 import KoreanFieldworkDraftContextPanel from '@/components/Project/KoreanFieldworkDraftContextPanel';
 import FieldworkPhotoAnnotationPanel, {
   FIELDWORK_PHOTO_ANNOTATION_FIELDS,
   FieldworkPhotoSamplePoint,
 } from '@/components/Project/FieldworkPhotoAnnotationPanel';
-import KoreanFieldworkNarrativeAssistPanel from '@/components/Project/KoreanFieldworkNarrativeAssistPanel';
 import KoreanFieldworkQuickRecordPanel from '@/components/Project/KoreanFieldworkQuickRecordPanel';
 import KoreanFieldworkSoilColorPanel from '@/components/Project/KoreanFieldworkSoilColorPanel';
 import {
-  getKoreanFieldworkReturnParam,
   getKoreanFieldworkReturnTarget,
   navigateToKoreanFieldworkReturnTarget,
 } from '@/components/Project/korean-fieldwork-navigation';
-import {
-  KoreanFieldworkDraftContinuationTarget,
-  MAP_CONTINUATION_TARGET,
-} from '@/components/Project/korean-fieldwork-draft-continuation';
 import {
   createKoreanFieldworkDraftRelations,
   createKoreanFieldworkDraftResource,
 } from '@/components/Project/korean-fieldwork-document-drafts';
 import { ToastType } from '@/components/common/Toast/ToastProvider';
-import { router, useGlobalSearchParams } from 'expo-router';
+import { useGlobalSearchParams } from 'expo-router';
 import { ProjectContext } from '@/contexts/project-context';
 import { PreferencesContext } from '@/contexts/preferences-context';
 import {
@@ -159,9 +152,7 @@ const DocumentAdd: React.FC = () => {
     setNewResource((oldResource) => oldResource && { ...oldResource, ...data });
   };
 
-  const saveButtonHandler = (
-    target: KoreanFieldworkDraftContinuationTarget = MAP_CONTINUATION_TARGET
-  ) => {
+  const saveButtonHandler = () => {
     if (newResource) {
       const newDocument: NewDocument = {
         resource: newResource,
@@ -170,7 +161,8 @@ const DocumentAdd: React.FC = () => {
         ?.create(newDocument)
         .then((doc) => {
           showToast(ToastType.Success, `${doc.resource.identifier} 기록을 만들었습니다.`);
-          continueAfterSave(target, doc);
+          setResourceToDefault();
+          navigateToKoreanFieldworkReturnTarget(returnTarget, doc.resource.id);
         })
         .catch((_err) => {
           Keyboard.dismiss();
@@ -178,43 +170,6 @@ const DocumentAdd: React.FC = () => {
           console.log(_err);
         });
     }
-  };
-
-  const continueAfterSave = (
-    target: KoreanFieldworkDraftContinuationTarget,
-    doc: Document
-  ) => {
-    if (target.mode === 'same') {
-      setResourceToDefault();
-      return;
-    }
-
-    if (target.mode === 'edit') {
-      router.navigate({
-        pathname: '/ProjectScreen/DocumentEdit',
-        params: {
-          docId: doc.resource.id,
-          categoryName: doc.resource.category,
-          ...getKoreanFieldworkReturnParam(returnTarget),
-        },
-      });
-      return;
-    }
-
-    if (target.mode === 'addChild' && target.categoryName) {
-      router.navigate({
-        pathname: '/ProjectScreen/DocumentAdd',
-        params: {
-          parentDocId: doc.resource.id,
-          categoryName: target.categoryName,
-          ...getKoreanFieldworkReturnParam(returnTarget),
-        },
-      });
-      return;
-    }
-
-    setResourceToDefault();
-    navigateToKoreanFieldworkReturnTarget(returnTarget, doc.resource.id);
   };
 
   const onReturn = () => {
@@ -272,21 +227,11 @@ const DocumentAdd: React.FC = () => {
             onUpdateResourceField={updateResource}
             onUpdateResourceFields={applyResourceUpdates}
           />
-          <KoreanFieldworkNarrativeAssistPanel
-            category={category}
-            resource={newResource}
-            onUpdateResourceField={updateResource}
-          />
           <KoreanFieldworkSoilColorPanel
             category={category}
             resource={newResource}
             onUpdateResourceField={updateResource}
             onUpdateResourceFields={applyResourceUpdates}
-          />
-          <KoreanFieldworkDraftContinuationPanel
-            categoryName={categoryName}
-            config={config}
-            onSaveWithTarget={saveButtonHandler}
           />
         </View>
       }

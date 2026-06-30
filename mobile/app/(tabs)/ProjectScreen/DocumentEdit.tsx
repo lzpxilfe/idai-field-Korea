@@ -25,7 +25,6 @@ import SoilProfileCameraButton, {
 } from '@/components/Project/SoilProfileCameraButton';
 import KoreanFieldworkRecordActionPanel from '@/components/Project/KoreanFieldworkRecordActionPanel';
 import KoreanFieldworkRecordContextPanel from '@/components/Project/KoreanFieldworkRecordContextPanel';
-import KoreanFieldworkNarrativeAssistPanel from '@/components/Project/KoreanFieldworkNarrativeAssistPanel';
 import KoreanFieldworkQuickRecordPanel from '@/components/Project/KoreanFieldworkQuickRecordPanel';
 import KoreanFieldworkSoilColorPanel from '@/components/Project/KoreanFieldworkSoilColorPanel';
 import {
@@ -217,11 +216,6 @@ const DocumentEdit: React.FC = () => {
             resource={resource}
             onUpdateResourceField={updateResource}
             onUpdateResourceFields={applyResourceUpdates}
-          />
-          <KoreanFieldworkNarrativeAssistPanel
-            category={category}
-            resource={resource}
-            onUpdateResourceField={updateResource}
           />
           <KoreanFieldworkSoilColorPanel
             category={category}

@@ -163,11 +163,15 @@ describe('DocumentAdd', () => {
       .toBeTruthy();
   });
 
-  it('does not show the record template panel above detailed form fields', async () => {
+  it('does not show assist panels above detailed form fields', async () => {
     await waitFor(() => renderAPI.getByTestId('documentForm'));
 
     expect(renderAPI.queryByTestId('koreanFieldworkDraftPresetPanel')).toBeNull();
+    expect(renderAPI.queryByTestId('koreanFieldworkNarrativeAssistPanel')).toBeNull();
+    expect(renderAPI.queryByTestId('koreanFieldworkDraftContinuationPanel')).toBeNull();
     expect(renderAPI.queryByText('기록 템플릿')).toBeNull();
+    expect(renderAPI.queryByText('서술 보조')).toBeNull();
+    expect(renderAPI.queryByText('저장 후 이어가기')).toBeNull();
   });
 
   it('keeps compatibility fields out of a fresh fieldwork draft', async () => {

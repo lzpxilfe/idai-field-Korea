@@ -42,6 +42,11 @@ const setMapSettings = jest.fn();
 const setMapProviderSettings = jest.fn();
 
 jest.mock('@/repositories/document-repository');
+jest.mock('@/hooks/use-pouchdb-datastore', () => ({
+  __esModule: true,
+  default: jest.fn(),
+  destroyPouchDbDatastore: jest.fn(),
+}));
 jest.mock('@/contexts/project-context', () => {
   const React = require('react');
   return { ProjectContext: React.createContext(null) };
@@ -153,6 +158,13 @@ describe('DocumentEdit', () => {
 
     expect(renderAPI.queryByTestId('koreanFieldworkRecordContextPanel'))
       .toBeTruthy();
+  });
+
+  it('does not show the narrative assist panel above detailed form fields', async () => {
+    await waitFor(() => renderAPI.getByTestId('documentForm'));
+
+    expect(renderAPI.queryByTestId('koreanFieldworkNarrativeAssistPanel')).toBeNull();
+    expect(renderAPI.queryByText('서술 보조')).toBeNull();
   });
 
   it('keeps the full form collapsed until detailed fields are needed', async () => {
