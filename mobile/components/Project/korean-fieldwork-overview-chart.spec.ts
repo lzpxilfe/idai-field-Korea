@@ -172,6 +172,32 @@ describe('Korean fieldwork overview chart data', () => {
         tone: 'neutral',
       });
   });
+
+  it('does not count map-created setup boundary records as user records', () => {
+    const documents = [
+      createDoc('setup-operation', C.OPERATION, 'setup operation', {}, {
+        projectBoundarySetupState: 'draftBoundary',
+        projectBoundarySummary: 'A area',
+      }),
+      createDoc('setup-boundary', C.SURVEY_BOUNDARY, 'setup boundary', {
+        isRecordedIn: ['setup-operation'],
+      }),
+      createDoc('feature-1', C.FEATURE, 'feature 1', {
+        liesWithin: ['setup-operation'],
+      }),
+    ];
+
+    const data = getKoreanFieldworkOverviewChartData(
+      createSummary([]),
+      documents
+    );
+
+    expect(data.totalDocumentCount).toBe(1);
+    expect(data.investigationUnitCount).toBe(1);
+    expect(data.operationCount).toBe(0);
+    expect(data.surveyBoundaryCount).toBe(0);
+    expect(data.featureCount).toBe(1);
+  });
 });
 
 const createDoc = (

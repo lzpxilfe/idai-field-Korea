@@ -157,6 +157,7 @@ describe('usePouchDbDatastore', () => {
 
     const db = mockDbsByName.get('fieldwork-fast');
     expect(db?.allDocs).not.toHaveBeenCalled();
+    expect(mockDatastoreInstances[0].createDb.mock.calls[0][3]).toBe(false);
     expect(mockDatastoreInstances[0].setupChangesEmitter).toHaveBeenCalledTimes(1);
   });
 
@@ -203,6 +204,7 @@ describe('usePouchDbDatastore', () => {
       ],
       ''
     );
+    expect(mockDatastoreInstances[0].createDb.mock.calls[0][3]).toBe(true);
     expect(mockRemoveProjectBoundaryDraft)
       .toHaveBeenCalledWith('fieldwork-boundary');
   });

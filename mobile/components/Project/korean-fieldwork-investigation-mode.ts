@@ -302,6 +302,22 @@ export const removeKoreanFieldworkProjectBoundaryDraft = async (
   );
 };
 
+export const removeKoreanFieldworkProjectSetupDefaults = async (
+  projectId: string
+) => {
+  await Promise.all([
+    AsyncStorage.removeItem(
+      createKoreanFieldworkInvestigationModeStorageKey(projectId)
+    ),
+    AsyncStorage.removeItem(
+      createKoreanFieldworkBoundarySummaryStorageKey(projectId)
+    ),
+    AsyncStorage.removeItem(
+      createKoreanFieldworkProjectBoundaryDraftStorageKey(projectId)
+    ),
+  ]);
+};
+
 export const loadKoreanFieldworkDefaultInstitutionName = async (
 ): Promise<string | undefined> => {
   const storedValue = await AsyncStorage.getItem(

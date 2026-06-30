@@ -10,6 +10,10 @@ export const KOREAN_FIELDWORK_INITIAL_SURVEY_BOUNDARY_ID =
 export const KOREAN_FIELDWORK_INITIAL_BOUNDARY_SYSTEM_RECORD =
   'initialProjectBoundary';
 
+const OPERATION_CATEGORY = 'Operation';
+const SURVEY_BOUNDARY_CATEGORY = 'SurveyBoundary';
+const PROJECT_BOUNDARY_SETUP_STATE = 'draftBoundary';
+
 export const isKoreanFieldworkInitialBoundaryDocument = (
   document: Document | undefined
 ): boolean => {
@@ -20,14 +24,30 @@ export const isKoreanFieldworkInitialBoundaryDocument = (
   return resource.id === KOREAN_FIELDWORK_INITIAL_OPERATION_ID
     || resource.id === KOREAN_FIELDWORK_INITIAL_SURVEY_BOUNDARY_ID
     || resource.koreanFieldworkSystemRecord
-      === KOREAN_FIELDWORK_INITIAL_BOUNDARY_SYSTEM_RECORD;
+      === KOREAN_FIELDWORK_INITIAL_BOUNDARY_SYSTEM_RECORD
+    || isProjectBoundarySetupOperation(document);
 };
 
 export const getKoreanFieldworkUserVisibleDocuments = (
   documents: Document[]
-): Document[] => documents.filter((document) =>
-  !isKoreanFieldworkInitialBoundaryDocument(document)
-);
+): Document[] => {
+  const hiddenDocumentIds = new Set<string>();
+
+  documents.forEach((document) => {
+    if (isKoreanFieldworkInitialBoundaryDocument(document)) {
+      hiddenDocumentIds.add(document.resource.id);
+    }
+  });
+  documents.forEach((document) => {
+    if (isProjectBoundarySetupSurveyBoundary(document, hiddenDocumentIds)) {
+      hiddenDocumentIds.add(document.resource.id);
+    }
+  });
+
+  return documents.filter((document) =>
+    !hiddenDocumentIds.has(document.resource.id)
+  );
+};
 
 export const getKoreanFieldworkUserVisibleTodaySummary = (
   summary: KoreanFieldworkTodaySummary,
@@ -64,3 +84,40 @@ const filterVisibleDocuments = (
 ): Document[] => documents.filter((document) =>
   userVisibleDocumentIds.has(document.resource.id)
 );
+
+const isProjectBoundarySetupOperation = (
+  document: Document
+): boolean => {
+  const resource = document.resource as unknown as Record<string, unknown>;
+
+  return resource.category === OPERATION_CATEGORY
+    && resource.projectBoundarySetupState === PROJECT_BOUNDARY_SETUP_STATE
+    && hasTextValue(resource.projectBoundarySummary);
+};
+
+const isProjectBoundarySetupSurveyBoundary = (
+  document: Document,
+  hiddenDocumentIds: Set<string>
+): boolean => {
+  const resource = document.resource as unknown as Record<string, unknown>;
+
+  return resource.category === SURVEY_BOUNDARY_CATEGORY
+    && getRelationTargets(resource, 'isRecordedIn')
+      .some((targetId) => hiddenDocumentIds.has(targetId));
+};
+
+const getRelationTargets = (
+  resource: Record<string, unknown>,
+  relationName: string
+): string[] => {
+  const relations = resource.relations as Record<string, unknown> | undefined;
+  const relationTargets = relations?.[relationName];
+
+  return Array.isArray(relationTargets)
+    ? relationTargets.filter((target): target is string =>
+      typeof target === 'string')
+    : [];
+};
+
+const hasTextValue = (value: unknown): boolean =>
+  typeof value === 'string' && value.trim().length > 0;

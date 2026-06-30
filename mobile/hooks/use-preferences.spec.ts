@@ -12,6 +12,23 @@ import usePreferences, {
     PROJECT_PASSWORDS_SECURE_STORAGE_KEY,
 } from './use-preferences';
 
+const mockDestroyPouchDbDatastore = jest.fn<Promise<void>, [string]>(
+    () => Promise.resolve()
+);
+const mockRemoveProjectSetupDefaults = jest.fn<Promise<void>, [string]>(
+    () => Promise.resolve()
+);
+
+jest.mock('./use-pouchdb-datastore', () => ({
+    destroyPouchDbDatastore: (...args: [string]) =>
+        mockDestroyPouchDbDatastore(...args),
+}));
+
+jest.mock('@/components/Project/korean-fieldwork-investigation-mode', () => ({
+    removeKoreanFieldworkProjectSetupDefaults: (...args: [string]) =>
+        mockRemoveProjectSetupDefaults(...args),
+}));
+
 describe('usePreferences', () => {
     const koreanFieldworkProject = 'fieldwork-test';
 
@@ -452,6 +469,8 @@ describe('usePreferences', () => {
 
         expect(result.current.preferences.projects['test3']).toBeUndefined();
         expect(result.current.preferences.recentProjects).toHaveLength(2);
+        expect(mockDestroyPouchDbDatastore).toHaveBeenCalledWith('test3');
+        expect(mockRemoveProjectSetupDefaults).toHaveBeenCalledWith('test3');
     });
 
 });

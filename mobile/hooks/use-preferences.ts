@@ -12,8 +12,12 @@ import {
   MapSettings,
   normalizeMapSettings as normalizeStoredMapSettings,
 } from '@/components/Project/Map/map-settings';
+import {
+  removeKoreanFieldworkProjectSetupDefaults,
+} from '@/components/Project/korean-fieldwork-investigation-mode';
 import { getDefaultProjectLanguages } from '@/constants/korean-fieldwork-project';
 import { isSampleProject } from '@/constants/sample-project';
+import { destroyPouchDbDatastore } from './use-pouchdb-datastore';
 
 type SetCurrentProjectOptions = {
   includeInRecentProjects?: boolean;
@@ -131,7 +135,14 @@ const usePreferences = (): UsePreferences => {
       mapProviderSettings: normalizeMapProviderSettings(mapProviderSettings),
     }));
 
-  const removeProject = (project: string) =>
+  const removeProject = (project: string) => {
+    void destroyPouchDbDatastore(project).catch((error) => {
+      console.warn(`Failed to destroy project database '${project}'.`, error);
+    });
+    void removeKoreanFieldworkProjectSetupDefaults(project).catch((error) => {
+      console.warn(`Failed to remove project setup defaults '${project}'.`, error);
+    });
+
     setPreferences(
       compose(
         update('projects', detach(project)),
@@ -139,6 +150,7 @@ const usePreferences = (): UsePreferences => {
         update('currentProject', (p: string) => (p === project ? '' : p))
       )
     );
+  };
 
   const getMapSettings = (project: string): MapSettings =>
     project

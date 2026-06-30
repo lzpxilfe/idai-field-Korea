@@ -21,6 +21,7 @@ import {
 } from '@/components/Project/korean-fieldwork-investigation-mode';
 import type {
   KoreanFieldworkBoundaryMapTypeId,
+  KoreanFieldworkProjectBoundaryDraft,
   KoreanFieldworkProjectSetupDefaults,
 } from '@/components/Project/korean-fieldwork-investigation-mode';
 import {
@@ -88,6 +89,18 @@ const usePouchDbDatastore = (project: string): PouchdbDatastore | undefined => {
 
 export default usePouchDbDatastore;
 
+export const destroyPouchDbDatastore = async (project: string): Promise<void> => {
+  const normalizedProject = project.trim();
+  if (!normalizedProject || isSampleProject(normalizedProject)) return;
+
+  const datastore = new PouchdbDatastore(
+    (name: string) => new PouchDB(name),
+    new IdGenerator()
+  );
+
+  await datastore.destroyDb(normalizedProject);
+};
+
 const buildpouchdbDatastore = async (
   project: string
 ): Promise<PouchdbDatastore> => {
@@ -99,19 +112,26 @@ const buildpouchdbDatastore = async (
     ? {}
     : await loadKoreanFieldworkProjectSetupDefaults(project)
         .catch(() => ({}));
+  const boundaryDraft = isSampleProject(project)
+    ? undefined
+    : await loadKoreanFieldworkProjectBoundaryDraft(project)
+        .catch(() => undefined);
+  const shouldResetExistingProjectDb =
+    !isSampleProject(project) && !!boundaryDraft;
 
   await datastore.createDb(
     project,
     await createProjectDocument(project, projectSetupDefaults),
     await createConfigurationDocument(project),
-    isSampleProject(project)
+    isSampleProject(project) || shouldResetExistingProjectDb
   );
 
   if (!isSampleProject(project)) {
     await createInitialBoundaryDocuments(
       datastore,
       project,
-      projectSetupDefaults
+      projectSetupDefaults,
+      boundaryDraft
     ).catch((error) => {
       console.warn('Unable to create initial project boundary documents', error);
     });
@@ -168,9 +188,9 @@ const createConfigurationDocument = async (
 const createInitialBoundaryDocuments = async (
   datastore: PouchdbDatastore,
   project: string,
-  projectSetupDefaults: KoreanFieldworkProjectSetupDefaults
+  projectSetupDefaults: KoreanFieldworkProjectSetupDefaults,
+  boundaryDraft: KoreanFieldworkProjectBoundaryDraft | undefined
 ) => {
-  const boundaryDraft = await loadKoreanFieldworkProjectBoundaryDraft(project);
   if (!boundaryDraft) return;
 
   const db = datastore.getDb();
