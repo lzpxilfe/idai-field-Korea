@@ -2395,6 +2395,9 @@ function validateRawFormFieldRules() {
   const tabletText = readTextFile(tabletSource);
   const desktopText = readTextFile(desktopSource);
   const desktopTemplateText = readTextFile('desktop/src/app/components/docedit/core/edit-form.html');
+  const desktopEditFormSpecText = readTextFile('desktop/test/unit/components/docedit/core/edit-form.component.spec.ts');
+  const desktopDoceditModuleText = readTextFile('desktop/src/app/components/docedit/docedit.module.ts');
+  const desktopDoceditStyleText = readTextFile('desktop/src/app/components/docedit/docedit.scss');
   const koreanFieldworkConfigText = readTextFile('core/config/Config-KoreanFieldwork.json');
   const koreanFieldworkKoText = readTextFile('core/config/Language-KoreanFieldwork.ko.json');
   const koreanFieldworkEnText = readTextFile('core/config/Language-KoreanFieldwork.en.json');
@@ -2432,6 +2435,16 @@ function validateRawFormFieldRules() {
       text: readTextFile('mobile/components/Project/DocumentEdit.spec.tsx')
     },
     { label: 'desktop raw form', text: desktopTemplateText }
+  ];
+  const hiddenKoreanFieldworkHelperPanelTokens = [
+    'korean-fieldwork-draft-preset-panel',
+    'korean-fieldwork-narrative-assist-panel',
+    'korean-fieldwork-draft-continuation-panel',
+    'KoreanFieldworkDraftPresetPanelComponent',
+    'KoreanFieldworkNarrativeAssistPanelComponent',
+    '기록 템플릿',
+    '서술 보조',
+    '저장 후 이어가기'
   ];
   const guidedFieldNames = Object.keys(collectGuidedFeatureAttributeFieldValues());
   const tabletUsesDerivedFeatureAttributeFields = (
@@ -2502,6 +2515,20 @@ function validateRawFormFieldRules() {
         findings.push(`${label} still uses legacy auxiliary raw-storage wording: ${forbiddenTerm}`);
       }
     }
+  }
+  for (const hiddenPanelToken of hiddenKoreanFieldworkHelperPanelTokens) {
+    for (const { label, text } of [
+      { label: 'desktop edit form template', text: desktopTemplateText },
+      { label: 'desktop docedit module', text: desktopDoceditModuleText },
+      { label: 'desktop docedit stylesheet', text: desktopDoceditStyleText }
+    ]) {
+      if (text.includes(hiddenPanelToken)) {
+        findings.push(`${label} must keep tablet-hidden Korean fieldwork helper panel out of the edit flow: ${hiddenPanelToken}`);
+      }
+    }
+  }
+  if (!desktopEditFormSpecText.includes('tablet-hidden Korean fieldwork helper panels')) {
+    findings.push('desktop edit form test must prove tablet-hidden helper panels stay out of the main edit flow');
   }
   if (!tabletText.includes('getVisibleRawGroups(category, resource)')) {
     findings.push('tablet raw form must decide auxiliary visibility from current resource values');

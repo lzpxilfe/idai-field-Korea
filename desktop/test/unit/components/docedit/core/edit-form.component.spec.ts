@@ -8,6 +8,8 @@ jest.mock('../../../../../src/app/services/languages', () => ({
     }
 }));
 
+import * as fs from 'fs';
+import * as path from 'path';
 import { EditFormComponent } from '../../../../../src/app/components/docedit/core/edit-form.component';
 
 
@@ -99,6 +101,48 @@ describe('EditFormComponent Korean fieldwork detail visibility', () => {
 
         expect(component.shouldShowKoreanFieldworkRawStorageToggle()).toBe(true);
         expect(component.shouldShowKoreanFieldworkRawStorageSummary()).toBe(true);
+    });
+
+
+    it('keeps tablet-hidden Korean fieldwork helper panels out of the desktop edit flow', () => {
+
+        const template = fs.readFileSync(
+            path.resolve(
+                __dirname,
+                '../../../../../src/app/components/docedit/core/edit-form.html'
+            ),
+            'utf8'
+        );
+        const moduleSource = fs.readFileSync(
+            path.resolve(
+                __dirname,
+                '../../../../../src/app/components/docedit/docedit.module.ts'
+            ),
+            'utf8'
+        );
+        const doceditStyles = fs.readFileSync(
+            path.resolve(
+                __dirname,
+                '../../../../../src/app/components/docedit/docedit.scss'
+            ),
+            'utf8'
+        );
+        const hiddenPanelTokens = [
+            'korean-fieldwork-draft-preset-panel',
+            'korean-fieldwork-narrative-assist-panel',
+            'korean-fieldwork-draft-continuation-panel',
+            'KoreanFieldworkDraftPresetPanelComponent',
+            'KoreanFieldworkNarrativeAssistPanelComponent',
+            '기록 템플릿',
+            '서술 보조',
+            '저장 후 이어가기'
+        ];
+
+        for (const hiddenPanelToken of hiddenPanelTokens) {
+            expect(template).not.toContain(hiddenPanelToken);
+            expect(moduleSource).not.toContain(hiddenPanelToken);
+            expect(doceditStyles).not.toContain(hiddenPanelToken);
+        }
     });
 
 
