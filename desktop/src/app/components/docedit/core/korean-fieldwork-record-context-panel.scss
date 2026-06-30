@@ -164,43 +164,51 @@ korean-fieldwork-record-context-panel {
   }
 
   .korean-fieldwork-record-context-feature-sketch-svg {
-    background: #eef5ed;
-    border: 1px solid #9ab28c;
+    background: #536653;
+    border: 1px solid #475467;
     border-radius: 4px;
     display: block;
     height: 92px;
     width: 100%;
 
     .flat-map-surface {
-      .land-patch {
-        fill: rgba(185, 216, 172, 0.34);
-        stroke: rgba(47, 111, 78, 0.14);
-        stroke-width: 0.8;
+      .satellite-field {
+        stroke: rgba(255, 255, 255, 0.16);
+        stroke-width: 0.7;
       }
 
-      .land-patch.south {
-        fill: rgba(220, 205, 165, 0.28);
+      .satellite-field.field-a {
+        fill: #65775a;
       }
 
-      .map-track {
-        fill: none;
-        stroke: rgba(255, 255, 255, 0.72);
-        stroke-linecap: round;
-        stroke-width: 5.4;
+      .satellite-field.field-b {
+        fill: #766f55;
       }
 
-      .map-track.secondary {
-        stroke-width: 4.4;
+      .satellite-field.field-c {
+        fill: #405a5f;
       }
 
-      .water-patch {
-        fill: rgba(178, 221, 255, 0.36);
+      .satellite-tree-line {
+        fill: rgba(39, 78, 57, 0.62);
+      }
+
+      .satellite-road {
+        fill: rgba(222, 226, 216, 0.76);
+        stroke: rgba(52, 64, 84, 0.28);
+        stroke-width: 0.45;
+      }
+
+      .satellite-water {
+        fill: rgba(112, 169, 190, 0.72);
+        stroke: rgba(255, 255, 255, 0.18);
+        stroke-width: 0.45;
       }
     }
 
     .flat-map-grid path {
       fill: none;
-      stroke: rgba(52, 64, 84, 0.13);
+      stroke: rgba(255, 255, 255, 0.18);
       stroke-width: 0.7;
     }
 
@@ -212,7 +220,7 @@ korean-fieldwork-record-context-panel {
 
     .flat-map-badge text {
       fill: #175cd3;
-      font-size: 3.6px;
+      font-size: 3.2px;
       font-weight: 900;
     }
 

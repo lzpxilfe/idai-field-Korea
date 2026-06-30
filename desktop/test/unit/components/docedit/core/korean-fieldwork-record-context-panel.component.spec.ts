@@ -191,7 +191,7 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
     });
 
 
-    it('keeps the desktop feature location preview framed as a top-down 2D map', () => {
+    it('keeps the desktop feature location preview framed as a satellite-style map plane', () => {
 
         const template = fs.readFileSync(
             path.resolve(
@@ -211,8 +211,12 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
 
         expect(template).toContain('class="flat-map-surface"');
         expect(template).toContain('class="flat-map-grid"');
-        expect(template).toContain('2D 지도');
+        expect(template).toContain('위성지도식 평면');
+        expect(template).toContain('satellite-field');
+        expect(template).toContain('satellite-road');
         expect(styles).toContain('.flat-map-surface');
+        expect(styles).toContain('.satellite-field');
+        expect(styles).toContain('.satellite-road');
         expect(styles).toContain('.flat-map-grid path');
         expect(styles).toContain('.flat-map-badge text');
     });

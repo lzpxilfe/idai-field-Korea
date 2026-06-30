@@ -1077,10 +1077,12 @@ function validateGuidedFeatureDraftDefaults() {
     findings.push('tablet add flow must place new features on a top-down satellite-style map surface');
   }
   if (!desktopRecordContextTemplateText.includes('flat-map-surface')
-      || !desktopRecordContextTemplateText.includes('2D 지도')
+      || !desktopRecordContextTemplateText.includes('위성지도식 평면')
+      || !desktopRecordContextTemplateText.includes('satellite-field')
       || !desktopRecordContextStyleText.includes('.flat-map-surface')
-      || !desktopRecordContextSpecText.includes('top-down 2D map')) {
-    findings.push('desktop record context must preview tablet feature placement as a top-down 2D map surface');
+      || !desktopRecordContextStyleText.includes('.satellite-road')
+      || !desktopRecordContextSpecText.includes('satellite-style map plane')) {
+    findings.push('desktop record context must preview tablet feature placement as a top-down satellite-style map surface');
   }
   if (
     !tabletQuickRecordText.includes('getFeatureAttributeSectionTitle')
