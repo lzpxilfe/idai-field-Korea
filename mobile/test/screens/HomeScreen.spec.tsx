@@ -45,7 +45,7 @@ describe('HomeScreen', () => {
     const { getByLabelText, getByText } = renderHomeScreen(preferences);
 
     expect(getByText('설정 확인 필요')).toBeTruthy();
-    fireEvent.press(getByLabelText('작업자 이름과 프로젝트 기본 설정 열기'));
+    fireEvent.press(getByLabelText('개인 기본값과 프로젝트 기본 설정 열기'));
 
     expect(router.navigate).toHaveBeenCalledWith('/SettingsScreen');
   });

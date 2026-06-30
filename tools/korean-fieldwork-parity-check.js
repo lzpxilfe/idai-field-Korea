@@ -1494,7 +1494,7 @@ function validateProjectSettingsCompleteness() {
     '조사 방식은 오늘 할 일을 묻는 값이 아니라, 이 프로젝트가 어떤 조사인지 정하는 기본값입니다.',
     '프로젝트 초기에 정한 경계 기준입니다. 지도 도형은 조사 경계 기록으로 따로 남깁니다.'
   ];
-  const mobilePersonalTexts = ['개인 기본값', '작업자 이름'];
+  const mobilePersonalTexts = ['개인 기본값', '작업자 이름', '기관명'];
 
   for (const text of projectSetupTexts) {
     if (!mobileSettingsText.includes(text)) {
@@ -1537,8 +1537,8 @@ function validateProjectSettingsCompleteness() {
   if (!desktopSettingsTemplateText.includes('조사 방식·경계와 야장 기록은 같은 프로젝트 문서로 동기화됩니다.')) {
     findings.push('desktop settings must explain tablet and desktop project setup sync');
   }
-  if (!mobileSettingsText.includes('작업자 이름은 따로 저장할 수 있습니다. 조사 방식과 조사 경계를 채우면 프로젝트 기본값도 함께 저장됩니다.')) {
-    findings.push('tablet settings must explain worker name and project setup can be saved separately');
+  if (!mobileSettingsText.includes('개인 기본값은 따로 저장할 수 있습니다. 조사 방식과 조사 경계를 채우면 프로젝트 기본값도 함께 저장됩니다.')) {
+    findings.push('tablet settings must explain personal defaults and project setup can be saved separately');
   }
 
   for (const token of [

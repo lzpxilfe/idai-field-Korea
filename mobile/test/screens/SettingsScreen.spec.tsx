@@ -19,6 +19,7 @@ import { UsePreferences } from '@/hooks/use-preferences';
 import { defaultMapSettings } from '@/components/Project/Map/map-settings';
 import {
   createKoreanFieldworkBoundarySummaryStorageKey,
+  createKoreanFieldworkDefaultInstitutionNameStorageKey,
   createKoreanFieldworkInvestigationModeStorageKey,
 } from '@/components/Project/korean-fieldwork-investigation-mode';
 import useConfiguration from '@/hooks/use-configuration';
@@ -85,13 +86,15 @@ describe('SettingsScreen', () => {
     expect(getByText('조사 방식')).toBeTruthy();
     expect(getByText('조사 경계')).toBeTruthy();
     expect(getByText('작업자 이름')).toBeTruthy();
+    expect(getByText('기관명')).toBeTruthy();
     expect(getByTestId('settings-investigation-mode_excavation').props.disabled)
       .not.toBe(true);
     expect(getByText(
-      '작업자 이름은 따로 저장할 수 있습니다. 조사 방식과 조사 경계를 채우면 프로젝트 기본값도 함께 저장됩니다.'
+      '개인 기본값은 따로 저장할 수 있습니다. 조사 방식과 조사 경계를 채우면 프로젝트 기본값도 함께 저장됩니다.'
     )).toBeTruthy();
 
     fireEvent.changeText(getByTestId('settings-username-input'), '  조사원  ');
+    fireEvent.changeText(getByTestId('settings-institution-name-input'), '  한빛문화재연구원  ');
     fireEvent.press(getByTestId('settings-investigation-mode_excavation'));
     fireEvent.changeText(
       getByTestId('settings-boundary-summary-input'),
@@ -102,7 +105,7 @@ describe('SettingsScreen', () => {
       expect(getByDisplayValue('  1구역 북쪽 능선부터 남쪽 농로까지  '))
         .toBeTruthy();
       expect(getByTestId('settings-save').props.disabled).not.toBe(true);
-      expect(getByText('저장하면 작업자 이름과 프로젝트 기본값을 함께 저장합니다.'))
+      expect(getByText('저장하면 개인 기본값과 프로젝트 기본값을 함께 저장합니다.'))
         .toBeTruthy();
     }, { timeout: 1000 });
 
@@ -118,6 +121,14 @@ describe('SettingsScreen', () => {
     await expect(AsyncStorage.getItem(
       createKoreanFieldworkBoundarySummaryStorageKey('fieldwork-1')
     )).resolves.toBe('1구역 북쪽 능선부터 남쪽 농로까지');
+    await expect(AsyncStorage.getItem(
+      createKoreanFieldworkDefaultInstitutionNameStorageKey()
+    )).resolves.toBe('한빛문화재연구원');
+    expect(repository.update).toHaveBeenCalledWith(expect.objectContaining({
+      resource: expect.objectContaining({
+        institution: '한빛문화재연구원',
+      }),
+    }));
   }, 15000);
 
   it('syncs current project setup changes to the project document', async () => {
@@ -200,7 +211,7 @@ describe('SettingsScreen', () => {
     expect(queryByText('조사 방식을 선택해야 합니다.')).toBeNull();
     expect(queryByText('조사 경계 기준을 입력해야 합니다.')).toBeNull();
     expect(getByText(
-      '작업자 이름은 따로 저장할 수 있습니다. 조사 방식과 조사 경계를 채우면 프로젝트 기본값도 함께 저장됩니다.'
+      '개인 기본값은 따로 저장할 수 있습니다. 조사 방식과 조사 경계를 채우면 프로젝트 기본값도 함께 저장됩니다.'
     )).toBeTruthy();
 
     fireEvent.changeText(getByTestId('settings-username-input'), '  새 기록자  ');
@@ -240,7 +251,7 @@ describe('SettingsScreen', () => {
 
     await waitFor(() => {
       expect(getByText(
-        '조사 방식과 조사 경계를 모두 채우면 프로젝트 기본값도 같이 저장됩니다. 지금 저장하면 작업자 이름만 저장합니다.'
+        '조사 방식과 조사 경계를 모두 채우면 프로젝트 기본값도 같이 저장됩니다. 지금 저장하면 개인 기본값만 저장합니다.'
       )).toBeTruthy();
     });
 
@@ -315,6 +326,62 @@ describe('SettingsScreen', () => {
       resource: expect.objectContaining({
         projectInvestigationMode: 'surfaceSurvey',
         projectBoundarySummary: '하천 동쪽 조사 범위',
+      }),
+    }));
+  });
+
+  it('saves institution name separately from worker name', async () => {
+    const setUsername = jest.fn();
+    const projectDocument = {
+      _id: 'project',
+      resource: {
+        id: 'project',
+        identifier: 'fieldwork-1',
+        category: 'Project',
+        relations: {},
+      },
+      created: { user: '', date: new Date() },
+      modified: [],
+    };
+    const repository = {
+      get: jest.fn().mockResolvedValue(projectDocument),
+      update: jest.fn(async (document) => document),
+    };
+    mockedUsePouchDbDatastore.mockReturnValue({} as any);
+    mockedUseConfiguration.mockReturnValue({} as any);
+    mockedUseRepository.mockReturnValue(repository);
+
+    const preferences = createPreferencesContextValue(setUsername, {
+      username: '',
+    });
+    const { getByTestId } = render(
+      <SafeAreaInsetsContext.Provider value={safeAreaInsets}>
+        <PreferencesContext.Provider value={preferences}>
+          <SettingsScreen />
+        </PreferencesContext.Provider>
+      </SafeAreaInsetsContext.Provider>
+    );
+
+    await waitFor(() => {
+      expect(getByTestId('settings-current-project')).toBeTruthy();
+    });
+
+    fireEvent.changeText(
+      getByTestId('settings-institution-name-input'),
+      '  한빛문화재연구원  '
+    );
+    fireEvent.press(getByTestId('settings-save'));
+
+    await waitFor(() => {
+      expect(router.back).toHaveBeenCalled();
+    });
+    expect(setUsername).not.toHaveBeenCalled();
+    await expect(AsyncStorage.getItem(
+      createKoreanFieldworkDefaultInstitutionNameStorageKey()
+    )).resolves.toBe('한빛문화재연구원');
+    expect(repository.update).toHaveBeenCalledWith(expect.objectContaining({
+      resource: expect.objectContaining({
+        institution: '한빛문화재연구원',
       }),
     }));
   });

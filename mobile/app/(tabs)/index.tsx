@@ -27,7 +27,7 @@ const Header: React.FC<{
     {usernameNotSet && (
       <TouchableOpacity
         activeOpacity={0.86}
-        accessibilityLabel="작업자 이름과 프로젝트 기본 설정 열기"
+        accessibilityLabel="개인 기본값과 프로젝트 기본 설정 열기"
         accessibilityRole="button"
         onPress={onSettingsPress}
         style={styles.usernameWarning}

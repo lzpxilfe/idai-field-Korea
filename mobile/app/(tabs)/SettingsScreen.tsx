@@ -25,7 +25,9 @@ import { colors } from '@/utils/colors';
 import {
   KOREAN_FIELDWORK_INVESTIGATION_MODES,
   KoreanFieldworkInvestigationModeId,
+  loadKoreanFieldworkDefaultInstitutionName,
   loadKoreanFieldworkProjectSetupDefaults,
+  saveKoreanFieldworkDefaultInstitutionName,
   saveKoreanFieldworkBoundarySummary,
   saveKoreanFieldworkInvestigationModeId,
 } from '@/components/Project/korean-fieldwork-investigation-mode';
@@ -45,6 +47,7 @@ const SettingsScreen: React.FC = () => {
   const [usernameVal, setUsernameVal] = useState(
     preferences.preferences.username
   );
+  const [institutionName, setInstitutionName] = useState('');
   const [kakaoLocalRestApiKey, setKakaoLocalRestApiKey] = useState('');
   const [kakaoMapJavaScriptKey, setKakaoMapJavaScriptKey] = useState('');
   const [kakaoNativeAppKey, setKakaoNativeAppKey] = useState('');
@@ -56,6 +59,7 @@ const SettingsScreen: React.FC = () => {
   const [hasMapProviderInteraction, setHasMapProviderInteraction] =
     useState(false);
   const hasProjectSetupInteractionRef = useRef(false);
+  const hasInstitutionNameInteractionRef = useRef(false);
   const [, setIsLoadingProjectSettings] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const repositoryUsername = preferences.preferences.username.trim();
@@ -90,6 +94,21 @@ const SettingsScreen: React.FC = () => {
   useEffect(() => {
     let isActive = true;
 
+    loadKoreanFieldworkDefaultInstitutionName()
+      .then((defaultInstitutionName) => {
+        if (!isActive || hasInstitutionNameInteractionRef.current) return;
+        setInstitutionName(defaultInstitutionName ?? '');
+      })
+      .catch(() => undefined);
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isActive = true;
+
     if (!hasCurrentProject) {
       setInvestigationModeId(undefined);
       setBoundarySummary('');
@@ -119,6 +138,9 @@ const SettingsScreen: React.FC = () => {
       if (!isActive || hasProjectSetupInteractionRef.current) return;
       setInvestigationModeId(setupDefaults.investigationModeId);
       setBoundarySummary(setupDefaults.boundarySummary ?? '');
+      if (!hasInstitutionNameInteractionRef.current) {
+        setInstitutionName(setupDefaults.institutionName ?? '');
+      }
     };
 
     loadProjectSettings()
@@ -141,13 +163,19 @@ const SettingsScreen: React.FC = () => {
   const canSaveMapProviderSettings =
     hasMapProviderInteraction;
   const canSaveUsername = usernameVal.trim().length > 0;
+  const canSaveInstitutionName = institutionName.trim().length > 0;
   const isProjectSetupIncomplete =
     hasCurrentProject
     && (!investigationModeId || !isBoundarySummaryValid);
   const hasIncompleteProjectSetupDraft =
     hasProjectSetupInteraction && isProjectSetupIncomplete;
   const canSave =
-    (canSaveUsername || canSaveProjectSetup || canSaveMapProviderSettings)
+    (
+      canSaveUsername
+      || canSaveInstitutionName
+      || canSaveProjectSetup
+      || canSaveMapProviderSettings
+    )
     && !isSaving;
   const projectSetupNotice = getProjectSetupNotice(
     investigationModeId,
@@ -161,6 +189,11 @@ const SettingsScreen: React.FC = () => {
     setIsSaving(true);
     try {
       if (canSaveUsername) preferences.setUsername(usernameVal.trim());
+      if (canSaveInstitutionName) {
+        await saveKoreanFieldworkDefaultInstitutionName(
+          institutionName
+        );
+      }
       if (canSaveMapProviderSettings) {
         preferences.setMapProviderSettings({
           kakaoLocalRestApiKey: kakaoLocalRestApiKey.trim(),
@@ -177,11 +210,17 @@ const SettingsScreen: React.FC = () => {
           currentProject,
           boundarySummary
         );
+      }
+      if (hasCurrentProject && (canSaveProjectSetup || canSaveInstitutionName)) {
         await syncKoreanFieldworkProjectSetupDefaultsToProjectDocument(
           projectRepository,
           {
-            boundarySummary,
-            investigationModeId,
+            ...(canSaveProjectSetup && investigationModeId
+              ? { boundarySummary, investigationModeId }
+              : {}),
+            ...(canSaveInstitutionName
+              ? { institutionName }
+              : {}),
           }
         ).catch(() => undefined);
       }
@@ -197,6 +236,10 @@ const SettingsScreen: React.FC = () => {
   };
   const markMapProviderInteraction = () => {
     setHasMapProviderInteraction(true);
+  };
+  const setInstitutionNameValue = (value: string) => {
+    hasInstitutionNameInteractionRef.current = true;
+    setInstitutionName(value);
   };
 
   return (
@@ -413,7 +456,7 @@ const SettingsScreen: React.FC = () => {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>개인 기본값</Text>
             <Text style={styles.sectionText}>
-              기록을 만든 사람을 남기기 위한 앱 전체 설정입니다.
+              기록자와 기관을 나누어 저장합니다. 작업자 이름은 편집 이력에, 기관명은 프로젝트 기관 필드에 사용됩니다.
             </Text>
             <Input
               label="작업자 이름"
@@ -424,6 +467,16 @@ const SettingsScreen: React.FC = () => {
               isValid={usernameVal.trim().length > 0}
               invalidText="작업자 이름을 입력해야 합니다."
               testID="settings-username-input"
+              style={styles.input}
+            />
+            <Input
+              label="기관명"
+              value={institutionName}
+              onChangeText={setInstitutionNameValue}
+              autoCorrect={false}
+              placeholder="예: ○○문화재연구원"
+              helpText="기관명은 새 프로젝트 기본값으로 보관하고, 현재 프로젝트가 열려 있으면 프로젝트의 기관 필드에도 저장합니다."
+              testID="settings-institution-name-input"
               style={styles.input}
             />
           </View>
@@ -581,18 +634,18 @@ const getProjectSetupNotice = (
   hasIncompleteProjectSetupDraft: boolean
 ): string => {
   if (hasIncompleteProjectSetupDraft) {
-    return '조사 방식과 조사 경계를 모두 채우면 프로젝트 기본값도 같이 저장됩니다. 지금 저장하면 작업자 이름만 저장합니다.';
+    return '조사 방식과 조사 경계를 모두 채우면 프로젝트 기본값도 같이 저장됩니다. 지금 저장하면 개인 기본값만 저장합니다.';
   }
 
   if (!investigationModeId && !isBoundarySummaryValid) {
-    return '작업자 이름은 따로 저장할 수 있습니다. 조사 방식과 조사 경계를 채우면 프로젝트 기본값도 함께 저장됩니다.';
+    return '개인 기본값은 따로 저장할 수 있습니다. 조사 방식과 조사 경계를 채우면 프로젝트 기본값도 함께 저장됩니다.';
   }
   if (!investigationModeId) {
-    return '작업자 이름은 따로 저장할 수 있습니다. 조사 방식을 선택하면 프로젝트 기본값도 함께 저장됩니다.';
+    return '개인 기본값은 따로 저장할 수 있습니다. 조사 방식을 선택하면 프로젝트 기본값도 함께 저장됩니다.';
   }
   if (!isBoundarySummaryValid) {
-    return '작업자 이름은 따로 저장할 수 있습니다. 조사 경계를 적으면 프로젝트 기본값도 함께 저장됩니다.';
+    return '개인 기본값은 따로 저장할 수 있습니다. 조사 경계를 적으면 프로젝트 기본값도 함께 저장됩니다.';
   }
 
-  return '저장하면 작업자 이름과 프로젝트 기본값을 함께 저장합니다.';
+  return '저장하면 개인 기본값과 프로젝트 기본값을 함께 저장합니다.';
 };

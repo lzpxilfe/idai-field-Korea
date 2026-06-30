@@ -2,12 +2,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   createKoreanFieldworkProjectSetupResourceUpdates,
   createKoreanFieldworkBoundarySummaryStorageKey,
+  createKoreanFieldworkDefaultInstitutionNameStorageKey,
   createKoreanFieldworkInvestigationModeStorageKey,
   getKoreanFieldworkInvestigationMode,
   getKoreanFieldworkProjectSetupDefaultsFromDocument,
+  loadKoreanFieldworkDefaultInstitutionName,
   loadKoreanFieldworkBoundarySummary,
   loadKoreanFieldworkProjectSetupDefaults,
   loadKoreanFieldworkInvestigationModeId,
+  saveKoreanFieldworkDefaultInstitutionName,
   saveKoreanFieldworkBoundarySummary,
   saveKoreanFieldworkInvestigationModeId,
 } from './korean-fieldwork-investigation-mode';
@@ -69,11 +72,31 @@ describe('Korean fieldwork investigation mode', () => {
     );
   });
 
+  it('persists the default institution name separately from worker name', async () => {
+    await saveKoreanFieldworkDefaultInstitutionName(
+      '  한빛문화재연구원  '
+    );
+
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+      createKoreanFieldworkDefaultInstitutionNameStorageKey(),
+      '한빛문화재연구원'
+    );
+    await expect(loadKoreanFieldworkDefaultInstitutionName())
+      .resolves.toBe('한빛문화재연구원');
+
+    await saveKoreanFieldworkDefaultInstitutionName('   ');
+
+    expect(AsyncStorage.removeItem).toHaveBeenCalledWith(
+      createKoreanFieldworkDefaultInstitutionNameStorageKey()
+    );
+  });
+
   it('loads project setup defaults from the project document when local storage is empty', async () => {
     const projectDocument = {
       resource: {
         projectBoundarySummary: '1구역 북쪽 능선부터 남쪽 농로까지',
         projectInvestigationMode: 'trialTrench',
+        institution: '한빛문화재연구원',
       },
     } as any;
 
@@ -82,6 +105,7 @@ describe('Korean fieldwork investigation mode', () => {
       projectDocument
     )).resolves.toEqual({
       boundarySummary: '1구역 북쪽 능선부터 남쪽 농로까지',
+      institutionName: '한빛문화재연구원',
       investigationModeId: 'trialTrench',
     });
   });
@@ -89,8 +113,10 @@ describe('Korean fieldwork investigation mode', () => {
   it('builds synced project document updates with valid Korean fieldwork values', () => {
     expect(createKoreanFieldworkProjectSetupResourceUpdates({
       boundarySummary: '  1구역 북쪽 능선부터 남쪽 농로까지  ',
+      institutionName: '  한빛문화재연구원  ',
       investigationModeId: 'excavation',
     })).toEqual({
+      institution: '한빛문화재연구원',
       projectBoundarySetupState: 'draftBoundary',
       projectBoundarySummary: '1구역 북쪽 능선부터 남쪽 농로까지',
       projectInvestigationMode: 'excavation',

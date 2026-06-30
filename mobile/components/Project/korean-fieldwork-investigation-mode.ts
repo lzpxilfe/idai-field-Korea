@@ -17,6 +17,7 @@ export interface KoreanFieldworkInvestigationMode {
 
 export interface KoreanFieldworkProjectSetupDefaults {
   boundarySummary?: string;
+  institutionName?: string;
   investigationModeId?: KoreanFieldworkInvestigationModeId;
 }
 
@@ -80,6 +81,8 @@ export const KOREAN_FIELDWORK_INVESTIGATION_MODES: readonly KoreanFieldworkInves
 const STORAGE_KEY_PREFIX = 'koreanFieldwork.investigationMode.v1';
 const BOUNDARY_SUMMARY_STORAGE_KEY_PREFIX =
   'koreanFieldwork.boundarySummary.v1';
+const DEFAULT_INSTITUTION_NAME_STORAGE_KEY =
+  'koreanFieldwork.defaultInstitutionName.v1';
 
 export const createKoreanFieldworkInvestigationModeStorageKey = (
   projectId: string
@@ -88,6 +91,9 @@ export const createKoreanFieldworkInvestigationModeStorageKey = (
 export const createKoreanFieldworkBoundarySummaryStorageKey = (
   projectId: string
 ): string => `${BOUNDARY_SUMMARY_STORAGE_KEY_PREFIX}.${projectId}`;
+
+export const createKoreanFieldworkDefaultInstitutionNameStorageKey =
+  (): string => DEFAULT_INSTITUTION_NAME_STORAGE_KEY;
 
 export const getKoreanFieldworkInvestigationMode = (
   id: unknown
@@ -113,18 +119,22 @@ export const loadKoreanFieldworkProjectSetupDefaults = async (
   const [
     storedInvestigationModeId,
     storedBoundarySummary,
+    storedInstitutionName,
   ] = await Promise.all([
     loadKoreanFieldworkInvestigationModeId(projectId),
     loadKoreanFieldworkBoundarySummary(projectId),
+    loadKoreanFieldworkDefaultInstitutionName(),
   ]);
   const documentDefaults =
     getKoreanFieldworkProjectSetupDefaultsFromDocument(projectDocument);
-  const setupDefaults = {
+  const setupDefaults: KoreanFieldworkProjectSetupDefaults = {
     investigationModeId:
       storedInvestigationModeId ?? documentDefaults.investigationModeId,
     boundarySummary:
       storedBoundarySummary ?? documentDefaults.boundarySummary,
   };
+  const institutionName = storedInstitutionName ?? documentDefaults.institutionName;
+  if (institutionName) setupDefaults.institutionName = institutionName;
 
   if (!storedInvestigationModeId && setupDefaults.investigationModeId) {
     await saveKoreanFieldworkInvestigationModeId(
@@ -136,6 +146,11 @@ export const loadKoreanFieldworkProjectSetupDefaults = async (
     await saveKoreanFieldworkBoundarySummary(
       projectId,
       setupDefaults.boundarySummary
+    ).catch(() => undefined);
+  }
+  if (!storedInstitutionName && setupDefaults.institutionName) {
+    await saveKoreanFieldworkDefaultInstitutionName(
+      setupDefaults.institutionName
     ).catch(() => undefined);
   }
 
@@ -159,12 +174,16 @@ export const getKoreanFieldworkProjectSetupDefaultsFromDocument = (
   const boundarySummary = typeof resource?.projectBoundarySummary === 'string'
     ? resource.projectBoundarySummary.trim()
     : undefined;
+  const institutionName = typeof resource?.institution === 'string'
+    ? resource.institution.trim()
+    : undefined;
 
   return {
     investigationModeId: getKoreanFieldworkInvestigationMode(
       resource?.projectInvestigationMode
     )?.id,
     boundarySummary: boundarySummary || undefined,
+    ...(institutionName ? { institutionName } : {}),
   };
 };
 
@@ -173,9 +192,14 @@ export const createKoreanFieldworkProjectSetupResourceUpdates = (
 ): Record<string, unknown> => {
   const updates: Record<string, unknown> = {};
   const boundarySummary = defaults.boundarySummary?.trim();
+  const institutionName = defaults.institutionName?.trim();
 
   if (defaults.investigationModeId) {
     updates.projectInvestigationMode = defaults.investigationModeId;
+  }
+
+  if (institutionName) {
+    updates.institution = institutionName;
   }
 
   if (boundarySummary) {
@@ -211,4 +235,28 @@ export const saveKoreanFieldworkBoundarySummary = async (
   }
 
   await AsyncStorage.setItem(storageKey, normalizedSummary);
+};
+
+export const loadKoreanFieldworkDefaultInstitutionName = async (
+): Promise<string | undefined> => {
+  const storedValue = await AsyncStorage.getItem(
+    createKoreanFieldworkDefaultInstitutionNameStorageKey()
+  );
+  const institutionName = storedValue?.trim();
+
+  return institutionName ? institutionName : undefined;
+};
+
+export const saveKoreanFieldworkDefaultInstitutionName = async (
+  institutionName: string
+) => {
+  const normalizedInstitutionName = institutionName.trim();
+  const storageKey = createKoreanFieldworkDefaultInstitutionNameStorageKey();
+
+  if (normalizedInstitutionName.length === 0) {
+    await AsyncStorage.removeItem(storageKey);
+    return;
+  }
+
+  await AsyncStorage.setItem(storageKey, normalizedInstitutionName);
 };
