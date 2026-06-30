@@ -2838,6 +2838,14 @@ function validateRecordPanelOrder() {
       || !desktopRecordContextPanelSpecText.includes('캡션 대조 필요')) {
     findings.push('desktop record context panel must summarize source evidence caption verification inside the opened record');
   }
+  if (!desktopRecordContextPanelText.includes('pushMediaReviewChip')
+      || !desktopRecordContextPanelText.includes('MEDIA_REVIEW_FIELDS')
+      || !desktopRecordContextPanelText.includes('mediaQualityCheck')
+      || !desktopRecordContextPanelText.includes('reportCrossCheck')
+      || !desktopRecordContextPanelSpecText.includes('tablet media review values')
+      || !desktopRecordContextPanelSpecText.includes('초점 흔들림')) {
+    findings.push('desktop record context panel must summarize tablet media review values inside opened media records');
+  }
   for (const { label, text } of [
     { label: 'desktop notebook digest', text: desktopNotebookDigestText },
     { label: 'tablet field notes', text: tabletFieldNotesText }

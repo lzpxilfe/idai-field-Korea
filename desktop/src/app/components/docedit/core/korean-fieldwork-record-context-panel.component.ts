@@ -184,6 +184,8 @@ const KOREAN_FIELDWORK_CONTEXT_FIELDS = [
     'featureRecordingStatus',
     'fieldRecordQuality',
     'longAxisOrientation',
+    'mediaEvidenceRole',
+    'mediaQualityCheck',
     'operationRoleResponsibility',
     'period',
     'shortAxisOrientation',
@@ -191,6 +193,7 @@ const KOREAN_FIELDWORK_CONTEXT_FIELDS = [
     'projectInvestigationMode',
     'referenceBasemapProvider',
     'recordCreationTiming',
+    'reportCrossCheck',
     'sourceEvidenceVerification',
     'soilColorAssistStatus',
     'soilColorAssistCandidates',
@@ -308,6 +311,7 @@ const FEATURE_PERIOD_LABELS: Readonly<Record<string, string>> = {
 };
 
 const FEATURE_PERIOD_CATEGORIES = new Set<string>(['FeatureGroup', 'Feature', 'FeatureSegment']);
+const MEDIA_REVIEW_CATEGORIES = new Set<string>(['Photo', 'SoilProfilePhoto', 'Drawing']);
 
 const OPERATION_ROLE_RESPONSIBILITY_LABELS: Readonly<Record<string, string>> = {
     principalInvestigator: '조사단장',
@@ -464,15 +468,122 @@ const SOURCE_EVIDENCE_VERIFICATION_LABELS: Readonly<Record<string, string>> = {
     pendingDecision: '추가 확인'
 };
 
+const MEDIA_EVIDENCE_ROLE_LABELS: Readonly<Record<string, string>> = {
+    fieldOverview: '현장 전경',
+    workStageRecord: '작업단계 기록',
+    fieldResultRecord: '현장결과 기록',
+    stratigraphicEvidence: '층위 근거',
+    featureOutlineEvidence: '유구 윤곽 근거',
+    findContextEvidence: '유물 출토맥락 근거',
+    sampleLocationEvidence: '시료 위치 근거',
+    drawingCorrectionBasis: '도면 교정 근거',
+    preservationActionEvidence: '보존조치 근거',
+    reportPlateCandidate: '보고서 도판 후보',
+    publicOutputCandidate: '공개자료 후보',
+    pendingDecision: '추가 확인'
+};
+
+const MEDIA_QUALITY_CHECK_LABELS: Readonly<Record<string, string>> = {
+    targetPurposeClear: '대상·목적 명확',
+    resultProcessRoleSeparated: '결과·과정 구분',
+    directionRecorded: '방향 기록',
+    scaleIncluded: '축척 포함',
+    inFrameRecordBoardIncluded: '주기판·방위·스케일 동시촬영',
+    orientationChecked: '방위 기준 확인',
+    controlPointLinked: '기준점 연결',
+    resolutionOrLineworkReadable: '해상도·선명도 적정',
+    lightingConditionSuitable: '조명 조건 적정',
+    captureFormatRecorded: '촬영 포맷 기록',
+    originalUncroppedPreserved: '원본 무손상 보존',
+    registerNumberMatched: '대장번호 일치',
+    photoNotebookMatched: '사진야장 대조',
+    photoContentLogRecorded: '촬영내용 기록',
+    digitalMetadataCrossChecked: '디지털 메타데이터 대조',
+    printAnnotationAdded: '인화 사진 주기 기록',
+    preRecoveryPhotoTaken: '수습 전 사진',
+    multiDirectionPhotoTaken: '다방향 사진',
+    overheadOnlyAvoided: '직상방만 촬영 회피',
+    obliqueSidePhotoTaken: '사선·측면 사진',
+    overviewCloseupPaired: '원경·근경 병행',
+    associatedAreaIncluded: '관련 구역 함께 기록',
+    interiorOppositeDirectionViews: '내부 양방향 촬영',
+    colorMoistureStateCaptured: '색·수분 상태 기록',
+    stratigraphyWholePartDetailSet: '토층 전체·분할·세부 사진',
+    backlightAvoided: '역광 촬영 회피',
+    levelingLinkedForRecovery: '레벨링 연계 위치복원',
+    findNumberLocationMatched: '유물번호·위치 일치',
+    smallFeatureActualShapeShown: '소형 시설 실제 형상 표시',
+    planSectionElevationMatched: '평·단·입면 정합',
+    criticalSectionLinesRecorded: '핵심 단면선 기록',
+    multiplePlanDrawingsLinked: '복수 평면도 연결',
+    planProfileSequenceLinked: '평면·입단면 순서 연결',
+    conjecturalLineReasonRecorded: '추정선 사유 기록',
+    unexcavatedLineSeparated: '미조사 점선 구분',
+    longShortAxisSectionLinked: '장·단축 단면 연결',
+    oxidationReductionColorAnnotated: '산화·환원 색표기',
+    stageDrawingSeparated: '단계도면 분리',
+    separateGridSheetLinked: '별도 방안지 연결',
+    tracingOverlayRegistered: '트레이싱지 중첩 등록',
+    baseGridLineMaintained: '기준 방안선 유지',
+    sheetConnectionMarksRecorded: '도면 연결표시 기록',
+    copyDrawingPositionAnnotated: '복사도면 위치주기',
+    topBottomSurfaceSeparated: '상면·바닥 분리',
+    overlapSequenceAnnotated: '중복 선후관계 표기',
+    levelingDatumMatched: 'BM·해발고도 일치',
+    levelingColorSeparated: '차수별 레벨 색상 구분',
+    fieldCompletionCorrectionRecorded: '현장 완료·보완 이력',
+    stageDrawingScaleMismatch: '단계도면 축척 불일치',
+    orientationMismatch: '방향 불일치',
+    planSectionMismatch: '평·단면 불일치',
+    leftRightReversal: '좌우반전',
+    invertedScan: '뒤집힌 스캔',
+    photoUpsideDown: '사진 상하반전',
+    lowResolution: '저해상도',
+    focusBlurred: '초점 흔들림',
+    originalCropDamage: '원본 크롭 손상',
+    fieldResearcherReviewed: '현장조사자 검수',
+    rereviewNeeded: '재검수 필요',
+    retakeOrRedrawNeeded: '재촬영·재작성 필요',
+    pendingDecision: '추가 확인'
+};
+
+const REPORT_CROSS_CHECK_LABELS: Readonly<Record<string, string>> = {
+    manuscript: '원고',
+    drawingRegister: '도면대장',
+    photoRegister: '사진대장',
+    artifactRegister: '유물대장',
+    sampleRegister: '시료목록',
+    dailyLog: '조사일지',
+    stratigraphicStandard: '기준토층',
+    overallStratigraphyFlowDiagram: '전체 층위 흐름도',
+    stratigraphicPhotoPlate: '층위 사진 도판',
+    layerFindContextConsistency: '층위-유물 맥락 정합성',
+    absoluteDateStratigraphyLinked: '연대측정-층위도 연결',
+    numberConversionTable: '번호 변환표',
+    sourceMediaBackup: '원자료 백업',
+    evaluationFeedback: '평가 환류'
+};
+
 const RECORD_CONTEXT_CHECKLIST_WARNING_VALUES = new Set([
     'attributionCaution',
     'captionNeedsCheck',
     'expertReviewRequested',
+    'focusBlurred',
+    'invertedScan',
+    'leftRightReversal',
+    'lowResolution',
     'ocrCorrectionNeeded',
+    'orientationMismatch',
+    'originalCropDamage',
     'pendingDecision',
+    'photoUpsideDown',
+    'planSectionMismatch',
     'quantitativeAnalysisNeeded',
     'reportFeedbackRequired',
+    'retakeOrRedrawNeeded',
+    'rereviewNeeded',
     'siteAbsenceNotConfirmed',
+    'stageDrawingScaleMismatch',
     'trenchResultRevisesPrediction'
 ]);
 
@@ -525,6 +636,24 @@ const SOURCE_EVIDENCE_VERIFICATION_FIELDS: readonly ChecklistSummaryField[] = [
         fieldName: 'sourceEvidenceVerification',
         labels: SOURCE_EVIDENCE_VERIFICATION_LABELS,
         prefix: '근거'
+    }
+];
+
+const MEDIA_REVIEW_FIELDS: readonly ChecklistSummaryField[] = [
+    {
+        fieldName: 'mediaEvidenceRole',
+        labels: MEDIA_EVIDENCE_ROLE_LABELS,
+        prefix: '역할'
+    },
+    {
+        fieldName: 'mediaQualityCheck',
+        labels: MEDIA_QUALITY_CHECK_LABELS,
+        prefix: '품질'
+    },
+    {
+        fieldName: 'reportCrossCheck',
+        labels: REPORT_CROSS_CHECK_LABELS,
+        prefix: '보고'
     }
 ];
 
@@ -602,6 +731,7 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
         this.pushFeatureStratigraphyReviewChips(chips, resource);
         this.pushSurveyPredictionReviewChip(chips, resource);
         this.pushSourceEvidenceVerificationChip(chips, resource);
+        this.pushMediaReviewChip(chips, resource);
         this.pushFeaturePeriodChip(chips, resource);
         this.pushMappedChip(chips, resource.featureRecordingStatus, FEATURE_RECORDING_STATUS_LABELS);
         this.pushFeatureAttributeChip(chips);
@@ -1971,6 +2101,20 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
         chips.push({
             label: this.shortenChipText(`검증 ${verificationSummary.label}`, 58),
             tone: verificationSummary.hasWarning ? 'warning' : 'info'
+        });
+    }
+
+
+    private pushMediaReviewChip(chips: ContextChip[], resource: any) {
+
+        if (!MEDIA_REVIEW_CATEGORIES.has(resource.category)) return;
+
+        const mediaSummary = this.getChecklistSummaryLabel(resource, MEDIA_REVIEW_FIELDS);
+        if (!mediaSummary) return;
+
+        chips.push({
+            label: this.shortenChipText(`미디어 ${mediaSummary.label}`, 58),
+            tone: mediaSummary.hasWarning ? 'warning' : 'info'
         });
     }
 

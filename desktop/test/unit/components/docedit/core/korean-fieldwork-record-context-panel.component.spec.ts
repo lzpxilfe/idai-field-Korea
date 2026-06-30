@@ -495,6 +495,38 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
     });
 
 
+    it('summarizes tablet media review values on opened desktop photo records', async () => {
+
+        const photo = createDocument('photo-1', 'Photo', 'P1', {}, {
+            mediaEvidenceRole: ['fieldResultRecord'],
+            mediaQualityCheck: [
+                'resolutionOrLineworkReadable',
+                'focusBlurred'
+            ],
+            reportCrossCheck: ['photoRegister']
+        });
+        const component = createComponent({
+            find: jest.fn().mockResolvedValue({ documents: [photo] })
+        });
+        component.document = photo as any;
+        component.fieldDefinitions = [
+            checkboxesField('mediaEvidenceRole'),
+            checkboxesField('mediaQualityCheck'),
+            checkboxesField('reportCrossCheck')
+        ] as any;
+
+        await component.ngOnChanges();
+
+        expect(component.shouldShow()).toBe(true);
+        expect(component.getStatusChips()).toEqual([
+            {
+                label: '미디어 역할 현장결과 기록 / 품질 해상도·선명도 적정·초점 흔들림 / 보고 사진대장',
+                tone: 'warning'
+            }
+        ]);
+    });
+
+
     it('warns when a selected feature type has no core attributes recorded', async () => {
 
         const feature = createDocument('feature-1', 'Feature', 'F1', {}, {
