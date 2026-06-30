@@ -226,6 +226,9 @@ export const buildKakaoSatellitePickerHtml = ({
         var points = [];
         var markers = [];
         var midpointOverlays = [];
+        var activeDragFrame = null;
+        var activeDragMarker = null;
+        var activeDragPointIndex = -1;
         var statusEl = document.getElementById('status');
         var undoEl = document.getElementById('undo');
         var resetEl = document.getElementById('reset');
@@ -305,15 +308,64 @@ export const buildKakaoSatellitePickerHtml = ({
           redraw();
         }
 
-        function redraw() {
-          markers.forEach(function(marker) {
-            marker.setMap(null);
-          });
-          markers = [];
+        function clearMidpointHandles() {
           midpointOverlays.forEach(function(overlay) {
             overlay.setMap(null);
           });
           midpointOverlays = [];
+        }
+
+        function updateBoundaryPreview() {
+          outline.setPath(points);
+          polygon.setPath(points.length >= 3 ? points : []);
+          undoEl.disabled = points.length === 0;
+          resetEl.disabled = points.length === 0;
+          saveEl.disabled = points.length < 3;
+          statusEl.innerHTML = points.length < 3
+            ? '<strong>조사 경계 그리기</strong>경계점 ' + points.length + '개. 점은 끌어서 옮길 수 있습니다. 최소 3개가 필요합니다.'
+            : '<strong>조사 경계 그리기</strong>경계점 ' + points.length + '개. 점을 끌어 옮기면 경계 범위도 같이 움직입니다.';
+        }
+
+        function startDragPreview(index, marker) {
+          activeDragPointIndex = index;
+          activeDragMarker = marker;
+          clearMidpointHandles();
+          if (activeDragFrame !== null) {
+            cancelAnimationFrame(activeDragFrame);
+          }
+          syncDraggingPoint();
+        }
+
+        function syncDraggingPoint() {
+          if (!activeDragMarker || activeDragPointIndex < 0) return;
+          points[activeDragPointIndex] = activeDragMarker.getPosition();
+          updateBoundaryPreview();
+          activeDragFrame = requestAnimationFrame(syncDraggingPoint);
+        }
+
+        function stopDragPreview(index, marker) {
+          if (activeDragFrame !== null) {
+            cancelAnimationFrame(activeDragFrame);
+            activeDragFrame = null;
+          }
+          activeDragMarker = null;
+          activeDragPointIndex = -1;
+          points[index] = marker.getPosition();
+          redraw();
+        }
+
+        function redraw() {
+          if (activeDragFrame !== null) {
+            cancelAnimationFrame(activeDragFrame);
+            activeDragFrame = null;
+          }
+          activeDragMarker = null;
+          activeDragPointIndex = -1;
+          markers.forEach(function(marker) {
+            marker.setMap(null);
+          });
+          markers = [];
+          clearMidpointHandles();
           points.forEach(function(point, index) {
             var marker = new kakao.maps.Marker({
               draggable: true,
@@ -322,21 +374,16 @@ export const buildKakaoSatellitePickerHtml = ({
               title: '경계점 ' + (index + 1)
             });
             marker.setDraggable(true);
+            kakao.maps.event.addListener(marker, 'dragstart', function() {
+              startDragPreview(index, marker);
+            });
             kakao.maps.event.addListener(marker, 'dragend', function() {
-              points[index] = marker.getPosition();
-              redraw();
+              stopDragPreview(index, marker);
             });
             markers.push(marker);
           });
           addSegmentInsertHandles();
-          outline.setPath(points);
-          polygon.setPath(points.length >= 3 ? points : []);
-          undoEl.disabled = points.length === 0;
-          resetEl.disabled = points.length === 0;
-          saveEl.disabled = points.length < 3;
-          statusEl.innerHTML = points.length < 3
-            ? '<strong>조사 경계 그리기</strong>경계점 ' + points.length + '개. 점은 끌어서 옮길 수 있습니다. 최소 3개가 필요합니다.'
-            : '<strong>조사 경계 그리기</strong>경계점 ' + points.length + '개. 점을 끌어 옮기거나 선 중간 +로 추가한 뒤 저장하세요.';
+          updateBoundaryPreview();
         }
 
         function addSegmentInsertHandles() {
@@ -595,6 +642,7 @@ export const buildOpenBoundaryPickerHtml = ({
       });
       var points = [];
       var markersLayer = L.layerGroup().addTo(map);
+      var midpointMarkersLayer = L.layerGroup().addTo(map);
       var outline = L.polyline([], {
         color: '#175cd3',
         opacity: 0.95,
@@ -663,17 +711,26 @@ export const buildOpenBoundaryPickerHtml = ({
 
       function redraw() {
         markersLayer.clearLayers();
+        midpointMarkersLayer.clearLayers();
         points.forEach(function(point, index) {
           L.marker([point.lat, point.lng], {
             draggable: true,
             icon: createPointIcon(index + 1),
             title: '경계점 ' + (index + 1)
+          }).on('drag', function(event) {
+            points[index] = event.target.getLatLng();
+            midpointMarkersLayer.clearLayers();
+            updateBoundaryPreview();
           }).on('dragend', function(event) {
             points[index] = event.target.getLatLng();
             redraw();
           }).addTo(markersLayer);
         });
         addSegmentInsertHandles();
+        updateBoundaryPreview();
+      }
+
+      function updateBoundaryPreview() {
         outline.setLatLngs(points);
         polygon.setLatLngs(points.length >= 3 ? [points] : []);
         undoEl.disabled = points.length === 0;
@@ -681,7 +738,7 @@ export const buildOpenBoundaryPickerHtml = ({
         saveEl.disabled = points.length < 3;
         statusEl.innerHTML = points.length < 3
           ? '<strong>조사 경계 그리기</strong>경계점 ' + points.length + '개. 점은 끌어서 옮길 수 있습니다. 최소 3개가 필요합니다.'
-          : '<strong>조사 경계 그리기</strong>경계점 ' + points.length + '개. 점을 끌어 옮기거나 선 중간 +로 추가한 뒤 저장하세요.';
+          : '<strong>조사 경계 그리기</strong>경계점 ' + points.length + '개. 점을 끌어 옮기면 경계 범위도 같이 움직입니다.';
       }
 
       function addSegmentInsertHandles() {
@@ -703,7 +760,7 @@ export const buildOpenBoundaryPickerHtml = ({
           if (event.originalEvent) L.DomEvent.stop(event.originalEvent);
           points.splice(insertIndex, 0, position);
           redraw();
-        }).addTo(markersLayer);
+        }).addTo(midpointMarkersLayer);
       }
 
       function getMidpoint(first, second) {

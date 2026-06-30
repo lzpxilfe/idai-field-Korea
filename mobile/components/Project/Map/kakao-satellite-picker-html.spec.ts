@@ -65,12 +65,22 @@ describe('buildKakaoSatellitePickerHtml', () => {
 
     expect(kakaoHtml).toContain('marker.setDraggable(true)');
     expect(kakaoHtml).toContain('points[index] = marker.getPosition()');
+    expect(kakaoHtml).toContain("kakao.maps.event.addListener(marker, 'dragstart'");
+    expect(kakaoHtml).toContain('startDragPreview(index, marker)');
+    expect(kakaoHtml).toContain('syncDraggingPoint()');
+    expect(kakaoHtml).toContain('clearMidpointHandles()');
+    expect(kakaoHtml).toContain('updateBoundaryPreview()');
+    expect(kakaoHtml).toContain('점을 끌어 옮기면 경계 범위도 같이 움직입니다.');
     expect(kakaoHtml).toContain('new kakao.maps.CustomOverlay');
     expect(kakaoHtml).toContain('points.splice(insertIndex, 0, position)');
     expect(kakaoHtml).toContain('새 경계점 추가');
 
     expect(openHtml).toContain('draggable: true');
     expect(openHtml).toContain('points[index] = event.target.getLatLng()');
+    expect(openHtml).toContain("}).on('drag', function(event)");
+    expect(openHtml).toContain('midpointMarkersLayer.clearLayers()');
+    expect(openHtml).toContain('updateBoundaryPreview()');
+    expect(openHtml).toContain('점을 끌어 옮기면 경계 범위도 같이 움직입니다.');
     expect(openHtml).toContain("className: 'boundary-midpoint-marker'");
     expect(openHtml).toContain('points.splice(insertIndex, 0, position)');
     expect(openHtml).toContain('새 경계점 추가');
