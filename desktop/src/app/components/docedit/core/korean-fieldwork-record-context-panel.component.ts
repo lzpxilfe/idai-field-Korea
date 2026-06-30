@@ -31,6 +31,8 @@ import {
     getKoreanFieldworkReportIdentifier
 } from '../../../util/korean-fieldwork-identifier-revision';
 import {
+    createDailyJournalSummary,
+    KoreanFieldworkDailyJournalSummary,
     getKoreanFieldworkNotebookEntriesForDocument,
     KoreanFieldworkNotebookEntry
 } from '../../../util/korean-fieldwork-notebook-digest';
@@ -152,6 +154,13 @@ interface DailyJournalBoundaryMemoPreview {
 const KOREAN_FIELDWORK_CONTEXT_FIELDS = [
     'dailyLogBoundaryMemoStrokes',
     'dailyLogBoundaryMemoUpdatedAt',
+    'dailyLogEquipmentCount',
+    'dailyLogEquipmentSize',
+    'dailyLogInvestigatorCount',
+    'dailyLogLaborerCount',
+    'dailyLogSafetyEducationPhoto',
+    'dailyLogSafetyEducationStretching',
+    'dailyLogWorkerCount',
     'featureFreeDrawingStrokes',
     'featureFreeDrawingUpdatedAt',
     'featureInvestigationChecklist',
@@ -422,6 +431,18 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
             updatedAt: this.getFeatureFreeDrawingUpdatedAtLabel(),
             viewBox: preview.viewBox
         };
+    }
+
+
+    public hasDailyJournalSummary = () =>
+        this.getDailyJournalSummary() !== undefined;
+
+
+    public getDailyJournalSummary(): KoreanFieldworkDailyJournalSummary|undefined {
+
+        if (this.document?.resource?.category !== DAILY_LOG_CATEGORY_NAME) return undefined;
+
+        return createDailyJournalSummary(this.document);
     }
 
 

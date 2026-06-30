@@ -178,6 +178,30 @@
         </svg>
     </div>
 
+    <div *ngIf="getDailyJournalSummary() as dailyJournalSummary"
+         class="korean-fieldwork-record-context-daily-summary">
+        <div class="korean-fieldwork-record-context-daily-summary-title">
+            <span class="mdi mdi-calendar-check-outline"></span>
+            <span>작업일지 요약</span>
+        </div>
+        <div class="korean-fieldwork-record-context-daily-summary-grid">
+            <span class="korean-fieldwork-record-context-daily-summary-chip">
+                {{dailyJournalSummary.personnelLabel}}
+            </span>
+            <span class="korean-fieldwork-record-context-daily-summary-chip">
+                {{dailyJournalSummary.equipmentLabel}}
+            </span>
+            <span class="korean-fieldwork-record-context-daily-summary-chip"
+                  [class.warning]="!dailyJournalSummary.hasSafetyComplete">
+                {{dailyJournalSummary.safetyLabel}}
+            </span>
+            <span class="korean-fieldwork-record-context-daily-summary-chip"
+                  [class.empty]="!dailyJournalSummary.hasBoundaryMemo">
+                {{dailyJournalSummary.boundaryMemoLabel}}
+            </span>
+        </div>
+    </div>
+
     <div *ngIf="getDailyJournalBoundaryMemoPreview() as boundaryMemoPreview"
          class="korean-fieldwork-record-context-daily-boundary">
         <div class="korean-fieldwork-record-context-daily-boundary-title">

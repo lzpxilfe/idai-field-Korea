@@ -351,6 +351,55 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
     });
 
 
+    it('shows tablet daily journal personnel, equipment, and safety on opened DailyLog records', () => {
+
+        const dailyLog = createDocument('daily-log-1', 'DailyLog', '2026-06-30 일지', {}, {
+            dailyLogInvestigatorCount: 2,
+            dailyLogLaborerCount: 4,
+            dailyLogEquipmentCount: 1,
+            dailyLogEquipmentSize: '0.6㎥',
+            dailyLogSafetyEducationPhoto: true,
+            dailyLogSafetyEducationStretching: false
+        });
+        const component = createComponent({
+            find: jest.fn().mockResolvedValue({ documents: [dailyLog] })
+        });
+        component.document = dailyLog as any;
+        component.fieldDefinitions = [
+            field('dailyLogInvestigatorCount')
+        ] as any;
+
+        expect(component.shouldShow()).toBe(true);
+        expect(component.hasDailyJournalSummary()).toBe(true);
+
+        const summary = component.getDailyJournalSummary()!;
+
+        expect(summary.personnelLabel).toBe('투입 6명 (조사원 2명 / 인부 4명)');
+        expect(summary.equipmentLabel).toBe('장비 1대/0.6㎥');
+        expect(summary.safetyLabel).toBe('안전교육 · 사진 · 체조 미확인');
+        expect(summary.boundaryMemoLabel).toBe('경계 메모 없음');
+        expect(summary.hasSafetyComplete).toBe(false);
+        expect(summary.hasBoundaryMemo).toBe(false);
+    });
+
+
+    it('keeps the tablet daily journal summary section in the desktop record context template', () => {
+
+        const template = fs.readFileSync(
+            path.resolve(
+                __dirname,
+                '../../../../../src/app/components/docedit/core/korean-fieldwork-record-context-panel.html'
+            ),
+            'utf8'
+        );
+
+        expect(template).toContain('getDailyJournalSummary() as dailyJournalSummary');
+        expect(template).toContain('작업일지 요약');
+        expect(template).toContain('dailyJournalSummary.personnelLabel');
+        expect(template).toContain('dailyJournalSummary.safetyLabel');
+    });
+
+
     it('shows tablet daily journal boundary handwriting on opened DailyLog records', () => {
 
         const dailyLog = createDocument('daily-log-1', 'DailyLog', '2026-06-30 일지', {}, {

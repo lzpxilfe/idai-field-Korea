@@ -510,7 +510,7 @@ function findDailyLogContextDocument(contextLabel: string, documents: Document[]
 }
 
 
-function createDailyJournalSummary(dailyLogDocument: Document): KoreanFieldworkDailyJournalSummary|undefined {
+export function createDailyJournalSummary(dailyLogDocument: Document): KoreanFieldworkDailyJournalSummary|undefined {
 
     const investigatorCount = getNumberField(dailyLogDocument, DAILY_JOURNAL_FIELD.investigatorCount);
     const laborerCount = getNumberField(dailyLogDocument, DAILY_JOURNAL_FIELD.laborerCount);
