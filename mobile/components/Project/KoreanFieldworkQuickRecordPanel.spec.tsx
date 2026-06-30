@@ -91,6 +91,9 @@ describe('KoreanFieldworkQuickRecordPanel', () => {
 
     expect(getByText('유구 성격')).toBeTruthy();
     expect(getByText('유구 성격별 기록')).toBeTruthy();
+    expect(getByText(
+      '확신이 없으면 미정이나 추정으로 두고, 조사하면서 다시 고쳐도 됩니다.'
+    )).toBeTruthy();
 
     fireEvent.press(getByTestId('quickRecordOption_posthole'));
 
@@ -155,6 +158,9 @@ describe('KoreanFieldworkQuickRecordPanel', () => {
 
     expect(getByText('가마 핵심 속성')).toBeTruthy();
     expect(getByText('유구 성격별 기록')).toBeTruthy();
+    expect(getByText(
+      '처음부터 모두 채울 필요 없습니다. 조사 진행 중 확인한 항목부터 계속 보완하세요.'
+    )).toBeTruthy();
     expect(getByText('가마 부위')).toBeTruthy();
     expect(getByText('구조·피열')).toBeTruthy();
     expect(getByText('연소부')).toBeTruthy();

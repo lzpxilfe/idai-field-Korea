@@ -425,7 +425,10 @@ const KoreanFieldworkQuickRecordPanel: React.FC<KoreanFieldworkQuickRecordPanelP
       )}
 
       {availability.featureType && (
-        <QuickSection title="유구 성격">
+        <QuickSection
+          title="유구 성격"
+          description="확신이 없으면 미정이나 추정으로 두고, 조사하면서 다시 고쳐도 됩니다."
+        >
           <OptionRow
             options={FEATURE_TYPE_QUICK_OPTIONS}
             activeValues={getSingleValue(resource, FIELDWORK_QUICK_FIELDS.featureType)}
@@ -436,7 +439,10 @@ const KoreanFieldworkQuickRecordPanel: React.FC<KoreanFieldworkQuickRecordPanelP
       )}
 
       {featureAttributeGroups.length > 0 && (
-        <QuickSection title={featureAttributeSectionTitle}>
+        <QuickSection
+          title={featureAttributeSectionTitle}
+          description="처음부터 모두 채울 필요 없습니다. 조사 진행 중 확인한 항목부터 계속 보완하세요."
+        >
           {featureAttributeGroups.map((group) => (
             <FeatureAttributeGroup
               key={group.fieldName}
@@ -668,11 +674,15 @@ const PresetButton: React.FC<{
 );
 
 const QuickSection: React.FC<{
+  description?: string;
   title: string;
   children: React.ReactNode;
-}> = ({ title, children }) => (
+}> = ({ description, title, children }) => (
   <View style={styles.section}>
     <Text style={styles.sectionTitle}>{title}</Text>
+    {description && (
+      <Text style={styles.sectionDescription}>{description}</Text>
+    )}
     {children}
   </View>
 );
@@ -966,6 +976,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '900',
     marginBottom: 5,
+  },
+  sectionDescription: {
+    color: '#667085',
+    fontSize: 11,
+    lineHeight: 15,
+    marginBottom: 6,
   },
   attributeGroup: {
     marginBottom: 7,

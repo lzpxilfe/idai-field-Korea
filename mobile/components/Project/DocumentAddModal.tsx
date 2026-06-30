@@ -201,7 +201,7 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
             value={featureIdentifier}
           />
           <Text style={styles.featureNameHint}>
-            현장에서 부르는 이름을 먼저 적고, 아래에서 유구 성격을 고르세요.
+            유구명만 먼저 적어도 됩니다. 성격과 세부 정보는 조사하면서 계속 채우고 고칠 수 있습니다.
           </Text>
         </View>
         <View style={styles.startUnknownFeature}>

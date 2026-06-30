@@ -58,6 +58,9 @@ describe('DocumentAddModal', () => {
       '여기서는 층위 선후를 정하지 않습니다. 새 기록이 어느 조사 경계·트렌치·유구에 포함되는지만 정합니다.'
     )).toBeTruthy();
     expect(getByText('유구로 바로 만들기')).toBeTruthy();
+    expect(getByText(
+      '유구명만 먼저 적어도 됩니다. 성격과 세부 정보는 조사하면서 계속 채우고 고칠 수 있습니다.'
+    )).toBeTruthy();
     expect(queryByText('조사 참고')).toBeNull();
     fireEvent.changeText(getByTestId('featureIdentifierInput'), '  1호 수혈  ');
 
