@@ -72,7 +72,6 @@ const INVESTIGATION_UNIT_CATEGORIES = new Set<string>([
   C.SURVEY_BOUNDARY,
   C.OPERATION,
   C.TRENCH,
-  C.FEATURE_GROUP,
   C.FEATURE,
   C.FEATURE_SEGMENT,
 ]);
@@ -92,7 +91,6 @@ const EVIDENCE_DOCUMENT_CATEGORIES = [
 const DIRECT_FIELDWORK_PHOTO_CATEGORIES = new Set<string>([
   C.DAILY_LOG,
   C.FEATURE,
-  C.FEATURE_GROUP,
   C.FEATURE_SEGMENT,
   C.FIELD_RECORD_QUALITY_REVIEW,
   C.FIND,
@@ -188,7 +186,7 @@ export const getKoreanFieldworkOverviewChartData = (
         id: 'feature',
         label: '유구',
         value: featureCount,
-        detail: `유구군 ${featureGroupCount} · 피트 ${featureSegmentCount}`,
+        detail: `피트 ${featureSegmentCount}`,
         tone: featureCount > 0 ? 'success' : 'neutral',
       },
       {
@@ -229,13 +227,6 @@ export const getKoreanFieldworkOverviewChartData = (
       ),
       createSegment('operation', '조사', operationCount, investigationUnitCount, 'success'),
       createSegment('trench', '트렌치', trenchCount, investigationUnitCount, 'info'),
-      createSegment(
-        'featureGroup',
-        '유구군',
-        featureGroupCount,
-        investigationUnitCount,
-        'neutral'
-      ),
       createSegment('feature', '유구', featureCount, investigationUnitCount, 'warning'),
       createSegment(
         'featureSegment',

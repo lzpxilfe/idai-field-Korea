@@ -106,6 +106,18 @@ describe('korean fieldwork add options', () => {
     expect(options.other.map((option) => option.categoryName)).not.toContain(C.SURVEY_BOUNDARY);
   });
 
+  it('does not continue records below legacy feature groups', () => {
+    const options = getKoreanFieldworkAddOptions(C.FEATURE_GROUP, [
+      C.FEATURE,
+      C.PHOTO,
+      C.PEN_MEMO,
+    ]);
+
+    expect(options.primary).toEqual([]);
+    expect(options.special).toEqual([]);
+    expect(options.other).toEqual([]);
+  });
+
   it('hides generic model categories from the Korean fieldwork add picker', () => {
     expect(isVisibleAddCategory(C.PLACE)).toBe(false);
     expect(isVisibleAddCategory('Image')).toBe(false);

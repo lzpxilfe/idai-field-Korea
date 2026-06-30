@@ -34,7 +34,6 @@ const C = KOREAN_FIELDWORK_CATEGORIES;
 const FIELDWORK_NARRATIVE_CATEGORIES = new Set<string>([
   C.OPERATION,
   C.TRENCH,
-  C.FEATURE_GROUP,
   C.FEATURE,
   C.FEATURE_SEGMENT,
   C.LAYER,
@@ -114,16 +113,6 @@ readonly KoreanFieldworkNarrativeSnippet[] = [
     text: '트렌치의 위치, 방향, 조사 범위와 주변 유구 노출 양상을 함께 확인함.',
     mode: 'append',
     categoryNames: [C.TRENCH],
-  },
-  {
-    id: 'feature-group-relation',
-    label: '군집 관계',
-    detail: '배치와 중복',
-    icon: 'hub',
-    target: 'description',
-    text: '유구의 배치, 중복, 방향성을 기준으로 군집 내부 관계를 구분하여 기록함.',
-    mode: 'append',
-    categoryNames: [C.FEATURE_GROUP],
   },
   {
     id: 'feature-candidate-summary',

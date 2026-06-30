@@ -57,8 +57,8 @@ describe('Korean fieldwork overview chart data', () => {
       documents
     );
 
-    expect(data.totalDocumentCount).toBe(8);
-    expect(data.investigationUnitCount).toBe(7);
+    expect(data.totalDocumentCount).toBe(7);
+    expect(data.investigationUnitCount).toBe(6);
     expect(data.operationCount).toBe(1);
     expect(data.trenchCount).toBe(1);
     expect(data.featureCount).toBe(2);
@@ -72,7 +72,13 @@ describe('Korean fieldwork overview chart data', () => {
     )).toMatchObject({
       label: '조사',
       count: 1,
-      percent: 14,
+      percent: 17,
+    });
+    expect(data.investigationSegments.map((segment) => segment.id))
+      .not.toContain('featureGroup');
+    expect(data.metrics.find((metric) => metric.id === 'feature')).toMatchObject({
+      value: 2,
+      detail: '피트 1',
     });
     expect(data.featureStatusSegments.map((segment) => [
       segment.id,

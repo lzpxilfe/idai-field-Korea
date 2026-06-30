@@ -71,7 +71,7 @@ describe('Korean fieldwork identifier revision', () => {
   it('limits renumbering to feature-level records', () => {
     expect(canReviseKoreanFieldworkIdentifier(
       createDoc('feature-group-1', C.FEATURE_GROUP, '수혈군 1')
-    )).toBe(true);
+    )).toBe(false);
     expect(canReviseKoreanFieldworkIdentifier(
       createDoc('feature-1', C.FEATURE, '수혈 1')
     )).toBe(true);

@@ -77,7 +77,6 @@ const GEOMETRY_EDIT_STATUS_LABELS: Readonly<Record<string, KoreanFieldworkStatus
 const QUALITY_TRACKED_CATEGORIES = new Set<string>([
   C.OPERATION,
   C.TRENCH,
-  C.FEATURE_GROUP,
   C.FEATURE,
   C.FEATURE_SEGMENT,
   C.DAILY_LOG,
@@ -85,6 +84,16 @@ const QUALITY_TRACKED_CATEGORIES = new Set<string>([
 ]);
 
 export const getKoreanFieldworkPrimaryParent = (
+  document: Document,
+  documentsById: Map<string, Document>
+): Document | undefined => {
+  const directParent = getKoreanFieldworkDirectParent(document, documentsById);
+  if (!directParent) return undefined;
+
+  return resolveLegacyFeatureGroupParent(directParent, documentsById);
+};
+
+const getKoreanFieldworkDirectParent = (
   document: Document,
   documentsById: Map<string, Document>
 ): Document | undefined => {
@@ -100,6 +109,30 @@ export const getKoreanFieldworkPrimaryParent = (
   }
 
   return undefined;
+};
+
+const resolveLegacyFeatureGroupParent = (
+  parent: Document,
+  documentsById: Map<string, Document>
+): Document | undefined => {
+  let currentParent: Document | undefined = parent;
+  const visitedIds = new Set<string>();
+
+  while (
+    currentParent
+    && currentParent.resource.category === C.FEATURE_GROUP
+    && !visitedIds.has(currentParent.resource.id)
+  ) {
+    visitedIds.add(currentParent.resource.id);
+    currentParent = getKoreanFieldworkDirectParent(
+      currentParent,
+      documentsById
+    );
+  }
+
+  return currentParent?.resource.category === C.FEATURE_GROUP
+    ? undefined
+    : currentParent;
 };
 
 export const getKoreanFieldworkParentPath = (

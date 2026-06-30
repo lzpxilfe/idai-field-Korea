@@ -38,7 +38,6 @@ const SOIL_PROFILE_PHOTO_CATEGORY = 'SoilProfilePhoto';
 const DIRECT_FIELDWORK_PHOTO_CATEGORIES = new Set([
   'DailyLog',
   'Feature',
-  'FeatureGroup',
   'FeatureSegment',
   'FieldRecordQualityReview',
   'Find',

@@ -57,7 +57,7 @@ describe('Korean fieldwork record summary', () => {
       .toBe(`${displayPrefix}20260625`);
   });
 
-  it('keeps the Korean excavation hierarchy visible down to pit/detail records', () => {
+  it('skips legacy feature groups in the visible excavation hierarchy', () => {
     const operation = createDoc('operation-1', C.OPERATION, '조사구역 1');
     const trench = createDoc('trench-1', C.TRENCH, 'T1', {
       isRecordedIn: ['operation-1'],
@@ -84,7 +84,7 @@ describe('Korean fieldwork record summary', () => {
     ]);
 
     expect(formatKoreanFieldworkParentPath(pit, documentsById))
-      .toBe('조사구역 1 > T1 > 수혈군 A > 수혈 1');
+      .toBe('조사구역 1 > T1 > 수혈 1');
   });
 
   it('summarizes fieldwork state chips from Korean workflow fields', () => {

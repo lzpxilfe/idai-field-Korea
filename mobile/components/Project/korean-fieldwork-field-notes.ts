@@ -21,7 +21,6 @@ const C = KOREAN_FIELDWORK_CATEGORIES;
 const KOREAN_FIELDWORK_TIME_ZONE_OFFSET_MINUTES = 9 * 60;
 const FEATURE_PROGRESS_CATEGORIES = new Set<string>([
   C.FEATURE,
-  C.FEATURE_GROUP,
   C.FEATURE_SEGMENT,
   C.TRENCH,
 ]);
@@ -592,27 +591,6 @@ export const getKoreanFieldworkFieldNoteObservationPrompts = (
   document: Document
 ): KoreanFieldworkFieldNoteObservationPrompt[] => {
   switch (document.resource.category) {
-    case C.FEATURE_GROUP:
-      return [
-        {
-          id: 'group-scope',
-          label: '군집 범위',
-          detail: '분포·간격·경계',
-          observation: '같은 성격의 유구 분포 범위, 개별 유구 간격, 경계를 기록.',
-        },
-        {
-          id: 'group-pattern',
-          label: '배열·반복',
-          detail: '방향·규칙성',
-          observation: '반복되는 배열, 방향, 규모 차이와 규칙성을 기록.',
-        },
-        {
-          id: 'group-relation',
-          label: '선후 관계',
-          detail: '중복·절단',
-          observation: '군집 안팎의 중복, 절단, 선후관계를 기록.',
-        },
-      ];
     case C.FEATURE_SEGMENT:
       return [
         {
@@ -756,7 +734,6 @@ export const getKoreanFieldworkFieldNoteObservationPrompts = (
         },
       ];
     case C.FEATURE:
-    default:
       return [
         {
           id: 'plan-boundary',
@@ -783,6 +760,8 @@ export const getKoreanFieldworkFieldNoteObservationPrompts = (
           observation: '주변 유구와의 중복, 절단, 선후관계를 기록.',
         },
       ];
+    default:
+      return [];
   }
 };
 

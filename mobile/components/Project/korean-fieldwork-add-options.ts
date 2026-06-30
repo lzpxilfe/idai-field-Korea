@@ -45,16 +45,6 @@ const PRIMARY_OPTIONS_BY_PARENT: Readonly<Record<string, readonly string[]>> = {
     C.PHOTO,
     C.DRAWING,
   ],
-  [C.FEATURE_GROUP]: [
-    C.FEATURE,
-    C.LAYER,
-    C.FIND,
-    C.SAMPLE,
-    C.SOIL_PROFILE_PHOTO,
-    C.PEN_MEMO,
-    C.PHOTO,
-    C.DRAWING,
-  ],
   [C.FEATURE]: [
     C.FEATURE_SEGMENT,
     C.LAYER,
@@ -194,11 +184,15 @@ const isAllowedForInvestigationMode = (
   parentCategoryName: string,
   categoryName: string,
   investigationModeId?: KoreanFieldworkInvestigationModeId
-): boolean => !(
-  parentCategoryName === C.OPERATION
-  && categoryName === C.TRENCH
-  && !shouldUseKoreanFieldworkTrenchWorkflow(investigationModeId)
-);
+): boolean => {
+  if (parentCategoryName === C.FEATURE_GROUP) return false;
+
+  return !(
+    parentCategoryName === C.OPERATION
+    && categoryName === C.TRENCH
+    && !shouldUseKoreanFieldworkTrenchWorkflow(investigationModeId)
+  );
+};
 
 const compareKoreanFieldworkCategoryNames = (
   categoryNameA: string,

@@ -27,13 +27,11 @@ const C = KOREAN_FIELDWORK_CATEGORIES;
 
 const FEATURE_PARENT_CATEGORIES: readonly string[] = [
   C.TRENCH,
-  C.FEATURE_GROUP,
 ];
 
 const PROGRESS_CATEGORY_ORDER: readonly string[] = [
   C.OPERATION,
   C.TRENCH,
-  C.FEATURE_GROUP,
   C.FEATURE,
   C.FEATURE_SEGMENT,
 ];
@@ -90,7 +88,6 @@ export const KOREAN_FIELDWORK_PROGRESS_STAGES: KoreanFieldworkProgressStage[] = 
 const PROGRESS_CATEGORIES = new Set<string>([
   C.OPERATION,
   C.TRENCH,
-  C.FEATURE_GROUP,
   C.FEATURE,
   C.FEATURE_SEGMENT,
 ]);
@@ -98,7 +95,6 @@ const PROGRESS_CATEGORIES = new Set<string>([
 const HIERARCHY_CATEGORIES = new Set<string>([
   C.OPERATION,
   C.TRENCH,
-  C.FEATURE_GROUP,
   C.FEATURE,
   C.FEATURE_SEGMENT,
   C.LAYER,
@@ -258,7 +254,6 @@ const getProgressStage = (
     FEATURE_PARENT_CATEGORIES.includes(document.resource.category)
     && !descendants.some((descendant) => (
       descendant.resource.category === C.FEATURE
-      || descendant.resource.category === C.FEATURE_GROUP
     ))
   ) {
     return toStage(

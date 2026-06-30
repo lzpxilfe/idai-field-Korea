@@ -106,11 +106,7 @@ describe('korean-fieldwork-field-notes', () => {
     ).observation).toBe(boundaryPrompt!.observation);
     expect(getKoreanFieldworkFieldNoteObservationPrompts(
       createDoc('feature-group-1', C.FEATURE_GROUP, '수혈군 1')
-    ).map((prompt) => prompt.id)).toEqual([
-      'group-scope',
-      'group-pattern',
-      'group-relation',
-    ]);
+    )).toEqual([]);
     expect(getKoreanFieldworkFieldNoteObservationPrompts(
       createDoc('segment-1', C.FEATURE_SEGMENT, '피트 1')
     ).map((prompt) => prompt.id)).toEqual([

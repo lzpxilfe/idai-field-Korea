@@ -27,7 +27,6 @@ interface EvidenceDefinition {
 const EVIDENCE_TARGET_CATEGORIES: readonly string[] = [
   C.OPERATION,
   C.TRENCH,
-  C.FEATURE_GROUP,
   C.FEATURE,
   C.FEATURE_SEGMENT,
   C.LAYER,
@@ -45,14 +44,14 @@ const EVIDENCE_DEFINITIONS: EvidenceDefinition[] = [
     id: 'featureSegments',
     label: '피트',
     getDocuments: (bundle: EvidenceBundle) => bundle.featureSegments,
-    categories: [C.OPERATION, C.TRENCH, C.FEATURE_GROUP, C.FEATURE],
+    categories: [C.OPERATION, C.TRENCH, C.FEATURE],
     createCategoryName: C.FEATURE_SEGMENT,
   },
   {
     id: 'layers',
     label: '토색 메모',
     getDocuments: (bundle: EvidenceBundle) => bundle.layers,
-    categories: [C.TRENCH, C.FEATURE_GROUP, C.FEATURE, C.FEATURE_SEGMENT],
+    categories: [C.TRENCH, C.FEATURE, C.FEATURE_SEGMENT],
   },
   {
     id: 'photos',

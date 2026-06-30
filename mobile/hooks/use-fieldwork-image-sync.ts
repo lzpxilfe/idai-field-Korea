@@ -44,7 +44,6 @@ const DIRECT_FIELDWORK_PHOTO_URI_FIELDS = ['fieldworkPhotoUri', 'imageUri', 'fil
 const DIRECT_FIELDWORK_PHOTO_CATEGORIES = [
   'DailyLog',
   'Feature',
-  'FeatureGroup',
   'FeatureSegment',
   'FieldRecordQualityReview',
   'Find',

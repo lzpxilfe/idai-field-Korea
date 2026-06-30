@@ -249,7 +249,6 @@ export const createDraftIdentifier = (
 
 const isFeatureWorkflowCategory = (categoryName: string): boolean =>
   categoryName === C.FEATURE
-  || categoryName === C.FEATURE_GROUP
   || categoryName === C.FEATURE_SEGMENT;
 
 const parseFeatureGeometryOption = (

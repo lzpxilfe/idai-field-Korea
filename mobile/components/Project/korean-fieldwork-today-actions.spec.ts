@@ -35,7 +35,7 @@ describe('Korean fieldwork today actions', () => {
     });
   });
 
-  it('uses trench before feature group or operation for new feature candidates', () => {
+  it('uses trench before operation for new feature candidates', () => {
     const operation = createDoc('operation-1', C.OPERATION);
     const featureGroup = createDoc('feature-group-1', C.FEATURE_GROUP);
     const trench = createDoc('trench-1', C.TRENCH);
@@ -50,14 +50,14 @@ describe('Korean fieldwork today actions', () => {
     expect(targets.featureDraftParent).toBe(trench);
   });
 
-  it('falls back to feature group and then operation when creating feature candidates', () => {
+  it('skips legacy feature groups when creating feature candidates', () => {
     const operation = createDoc('operation-1', C.OPERATION);
     const featureGroup = createDoc('feature-group-1', C.FEATURE_GROUP);
 
     expect(getKoreanFieldworkTodayActionTargets(
       createSummary() as any,
       [operation, featureGroup] as any
-    ).featureDraftParent).toBe(featureGroup);
+    ).featureDraftParent).toBe(operation);
 
     expect(getKoreanFieldworkTodayActionTargets(
       createSummary() as any,

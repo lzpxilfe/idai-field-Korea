@@ -33,7 +33,6 @@ const getDisplayIdentifier = (document: Document): string =>
 const STRUCTURE_CATEGORIES = [
   C.OPERATION,
   C.TRENCH,
-  C.FEATURE_GROUP,
   C.FEATURE,
   C.FEATURE_SEGMENT,
   C.LAYER,

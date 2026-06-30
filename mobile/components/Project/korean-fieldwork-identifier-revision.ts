@@ -18,7 +18,6 @@ export interface KoreanFieldworkIdentifierRevisionInput {
 }
 
 const IDENTIFIER_REVISION_CATEGORIES = new Set<string>([
-  C.FEATURE_GROUP,
   C.FEATURE,
   C.FEATURE_SEGMENT,
 ]);

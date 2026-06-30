@@ -460,17 +460,13 @@ export const getFeatureDraftParent = (
     return trench ?? (
       investigationModeId === 'trialTrench'
         ? undefined
-        : documents.find((document) =>
-          document.resource.category === C.FEATURE_GROUP
-        ) ?? primaryOperation
+        : primaryOperation
     );
   }
 
   if (investigationModeId === 'excavation' && scopedTrench) return scopedTrench;
 
-  return documents.find((document) =>
-    document.resource.category === C.FEATURE_GROUP
-  ) ?? primaryOperation;
+  return primaryOperation;
 };
 
 const getFirstIssueDocument = (
