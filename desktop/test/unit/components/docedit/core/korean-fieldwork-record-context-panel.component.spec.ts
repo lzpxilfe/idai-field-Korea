@@ -648,6 +648,31 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
     });
 
 
+    it('summarizes source evidence caption checks on opened desktop records', async () => {
+
+        const sourceEvidence = createDocument('source-1', 'SourceEvidenceIndex', 'SRC1', {}, {
+            sourceEvidenceVerification: [
+                'pageChecked',
+                'captionNeedsCheck'
+            ]
+        });
+        const component = createComponent({
+            find: jest.fn().mockResolvedValue({ documents: [sourceEvidence] })
+        });
+        component.document = sourceEvidence as any;
+        component.fieldDefinitions = [
+            checkboxesField('sourceEvidenceVerification')
+        ] as any;
+
+        await component.ngOnChanges();
+
+        expect(component.shouldShow()).toBe(true);
+        expect(component.getStatusChips()).toEqual([
+            { label: '검증 근거 쪽수 대조·캡션 대조 필요', tone: 'warning' }
+        ]);
+    });
+
+
     it('keeps tablet imported boundary file details visible on desktop boundary records', async () => {
 
         const boundary = createDocument('boundary-1', 'SurveyBoundary', 'B1', {}, {

@@ -191,6 +191,7 @@ const KOREAN_FIELDWORK_CONTEXT_FIELDS = [
     'projectInvestigationMode',
     'referenceBasemapProvider',
     'recordCreationTiming',
+    'sourceEvidenceVerification',
     'soilColorAssistStatus',
     'soilColorAssistCandidates',
     'soilMapPredictionVerification',
@@ -214,6 +215,7 @@ const KOREAN_FIELDWORK_CONTEXT_CATEGORIES = new Set<string>([
     'Layer',
     'Survey',
     'SurveyBoundary',
+    'SourceEvidenceIndex',
     'Find',
     'FindCollection',
     'Sample',
@@ -443,9 +445,30 @@ const SOIL_MAP_PREDICTION_VERIFICATION_LABELS: Readonly<Record<string, string>> 
     pendingDecision: '추가 확인'
 };
 
+const SOURCE_EVIDENCE_VERIFICATION_LABELS: Readonly<Record<string, string>> = {
+    pageChecked: '쪽수 대조',
+    figureNumberChecked: '그림번호 대조',
+    tableNumberChecked: '표번호 대조',
+    captionChecked: '캡션 대조',
+    caseNameChecked: '사례명 대조',
+    originalScriptChecked: '한자·원문 대조',
+    numericValueChecked: '수치 대조',
+    provenanceChecked: '출전·소장처 대조',
+    crossSourceCompared: '교차 출처 대조',
+    directPdfChecked: '원PDF 직접 대조',
+    formChecked: '양식 대조',
+    ocrCorrectionNeeded: 'OCR 교정 필요',
+    captionNeedsCheck: '캡션 대조 필요',
+    valueListPromotionReady: '값목록 승격 가능',
+    uiExposureDeferred: 'UI 노출 보류',
+    pendingDecision: '추가 확인'
+};
+
 const RECORD_CONTEXT_CHECKLIST_WARNING_VALUES = new Set([
     'attributionCaution',
+    'captionNeedsCheck',
     'expertReviewRequested',
+    'ocrCorrectionNeeded',
     'pendingDecision',
     'quantitativeAnalysisNeeded',
     'reportFeedbackRequired',
@@ -494,6 +517,14 @@ const SURVEY_PREDICTION_REVIEW_FIELDS: readonly ChecklistSummaryField[] = [
         fieldName: 'soilMapPredictionVerification',
         labels: SOIL_MAP_PREDICTION_VERIFICATION_LABELS,
         prefix: '토양도'
+    }
+];
+
+const SOURCE_EVIDENCE_VERIFICATION_FIELDS: readonly ChecklistSummaryField[] = [
+    {
+        fieldName: 'sourceEvidenceVerification',
+        labels: SOURCE_EVIDENCE_VERIFICATION_LABELS,
+        prefix: '근거'
     }
 ];
 
@@ -570,6 +601,7 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
         this.pushOperationRoleResponsibilityChip(chips, resource);
         this.pushFeatureStratigraphyReviewChips(chips, resource);
         this.pushSurveyPredictionReviewChip(chips, resource);
+        this.pushSourceEvidenceVerificationChip(chips, resource);
         this.pushFeaturePeriodChip(chips, resource);
         this.pushMappedChip(chips, resource.featureRecordingStatus, FEATURE_RECORDING_STATUS_LABELS);
         this.pushFeatureAttributeChip(chips);
@@ -1922,6 +1954,23 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
         chips.push({
             label: this.shortenChipText(`예측 ${predictionSummary.label}`, 58),
             tone: predictionSummary.hasWarning ? 'warning' : 'info'
+        });
+    }
+
+
+    private pushSourceEvidenceVerificationChip(chips: ContextChip[], resource: any) {
+
+        if (resource.category !== 'SourceEvidenceIndex') return;
+
+        const verificationSummary = this.getChecklistSummaryLabel(
+            resource,
+            SOURCE_EVIDENCE_VERIFICATION_FIELDS
+        );
+        if (!verificationSummary) return;
+
+        chips.push({
+            label: this.shortenChipText(`검증 ${verificationSummary.label}`, 58),
+            tone: verificationSummary.hasWarning ? 'warning' : 'info'
         });
     }
 

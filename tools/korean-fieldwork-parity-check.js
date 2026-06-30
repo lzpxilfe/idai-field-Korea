@@ -2831,6 +2831,13 @@ function validateRecordPanelOrder() {
       || !desktopRecordContextPanelSpecText.includes('예측 토양도 토양도 반영깊이 한계 확인')) {
     findings.push('desktop record context panel must summarize tablet soil-map prediction verification on opened Survey records');
   }
+  if (!desktopRecordContextPanelText.includes('pushSourceEvidenceVerificationChip')
+      || !desktopRecordContextPanelText.includes('SOURCE_EVIDENCE_VERIFICATION_LABELS')
+      || !desktopRecordContextPanelText.includes('sourceEvidenceVerification')
+      || !desktopRecordContextPanelSpecText.includes('source evidence caption checks')
+      || !desktopRecordContextPanelSpecText.includes('캡션 대조 필요')) {
+    findings.push('desktop record context panel must summarize source evidence caption verification inside the opened record');
+  }
   for (const { label, text } of [
     { label: 'desktop notebook digest', text: desktopNotebookDigestText },
     { label: 'tablet field notes', text: tabletFieldNotesText }
