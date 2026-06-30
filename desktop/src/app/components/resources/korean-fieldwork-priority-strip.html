@@ -581,6 +581,18 @@
                     (click)="openNotebookDailyJournalSummary(summary)">
                 <span class="korean-fieldwork-notebook-strip-kind">일지</span>
                 <span class="korean-fieldwork-notebook-journal-title">{{summary.documentLabel}}</span>
+                <span *ngIf="summary.contentLabel"
+                      class="korean-fieldwork-notebook-journal-detail">
+                    {{summary.contentLabel}}
+                </span>
+                <span *ngIf="summary.evidenceRoleLabel"
+                      class="korean-fieldwork-notebook-journal-detail">
+                    {{summary.evidenceRoleLabel}}
+                </span>
+                <span *ngIf="summary.reviewLabel"
+                      class="korean-fieldwork-notebook-journal-detail">
+                    {{summary.reviewLabel}}
+                </span>
                 <span class="korean-fieldwork-notebook-journal-detail">{{summary.personnelLabel}}</span>
                 <span class="korean-fieldwork-notebook-journal-detail">{{summary.equipmentLabel}}</span>
                 <span class="korean-fieldwork-notebook-journal-detail">{{summary.safetyLabel}}</span>

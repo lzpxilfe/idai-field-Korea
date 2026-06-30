@@ -217,6 +217,18 @@
                   [class.warning]="!dailyJournalSummary.hasSafetyComplete">
                 {{dailyJournalSummary.safetyLabel}}
             </span>
+            <span *ngIf="dailyJournalSummary.contentLabel"
+                  class="korean-fieldwork-record-context-daily-summary-chip">
+                {{dailyJournalSummary.contentLabel}}
+            </span>
+            <span *ngIf="dailyJournalSummary.evidenceRoleLabel"
+                  class="korean-fieldwork-record-context-daily-summary-chip">
+                {{dailyJournalSummary.evidenceRoleLabel}}
+            </span>
+            <span *ngIf="dailyJournalSummary.reviewLabel"
+                  class="korean-fieldwork-record-context-daily-summary-chip">
+                {{dailyJournalSummary.reviewLabel}}
+            </span>
             <span class="korean-fieldwork-record-context-daily-summary-chip"
                   [class.empty]="!dailyJournalSummary.hasBoundaryMemo">
                 {{dailyJournalSummary.boundaryMemoLabel}}

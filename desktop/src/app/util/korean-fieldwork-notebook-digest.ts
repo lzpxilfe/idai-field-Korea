@@ -36,6 +36,9 @@ export interface KoreanFieldworkDailyJournalSummary {
     personnelLabel: string;
     equipmentLabel: string;
     safetyLabel: string;
+    contentLabel: string;
+    evidenceRoleLabel: string;
+    reviewLabel: string;
     boundaryMemoLabel: string;
     boundaryMemoImportedAtLabel: string;
     workMemoUpdatedAtLabel: string;
@@ -44,6 +47,7 @@ export interface KoreanFieldworkDailyJournalSummary {
     hasPersonnel: boolean;
     hasSafetyComplete: boolean;
     hasBoundaryMemo: boolean;
+    hasLogClassification: boolean;
 }
 
 export type KoreanFieldworkNotebookContinuationFocus = 'nextWork'|'evidenceNumbers';
@@ -85,15 +89,66 @@ const DAILY_JOURNAL_FIELD = {
     boundaryMemoImportedAt: 'dailyLogBoundaryMemoImportedAt',
     boundaryMemoStrokes: 'dailyLogBoundaryMemoStrokes',
     boundaryMemoUpdatedAt: 'dailyLogBoundaryMemoUpdatedAt',
+    content: 'dailyLogContent',
     equipmentCount: 'dailyLogEquipmentCount',
     equipmentSize: 'dailyLogEquipmentSize',
+    evidenceRole: 'dailyLogEvidenceRole',
     investigatorCount: 'dailyLogInvestigatorCount',
     laborerCount: 'dailyLogLaborerCount',
+    review: 'dailyLogReview',
     safetyEducationPhoto: 'dailyLogSafetyEducationPhoto',
     safetyEducationStretching: 'dailyLogSafetyEducationStretching',
     workMemoUpdatedAt: 'dailyLogWorkMemoUpdatedAt',
     workerCount: 'dailyLogWorkerCount'
 } as const;
+
+const DAILY_LOG_CONTENT_LABELS: Readonly<Record<string, string>> = {
+    workDateWeather: '작업일자·날씨',
+    staffRoles: '조사자·역할',
+    workArea: '작업구역',
+    strippingProgress: '제토 진행',
+    featureProgress: '유구 조사 진행',
+    layerDecision: '층위 판단',
+    findSampleCollection: '유물·시료 수습',
+    photoDrawingNumbers: '사진·도면 번호',
+    visitorInstruction: '방문자·지시사항',
+    equipmentIssue: '장비 문제',
+    safetyIssue: '안전 문제',
+    changeReason: '변경 사유',
+    nextWorkPlan: '다음 작업계획',
+    pendingDecision: '추가 확인'
+};
+
+const DAILY_LOG_EVIDENCE_ROLE_LABELS: Readonly<Record<string, string>> = {
+    sameDayFactRecord: '당일 사실기록',
+    cumulativeStaffCount: '누적 조사원 수',
+    cumulativeWorkerCount: '누적 인부 수',
+    cumulativeEquipmentCount: '누적 장비 수',
+    weatherAndRainWork: '날씨·우천작업',
+    importantFindNoted: '중요 유물·유구 기록',
+    visitorInstructionNoted: '방문자·지시사항 기록',
+    committeeMeetingNoted: '학술위원회 기록',
+    expertReviewMeetingNoted: '전문가 검토회의 기록',
+    clientAgencyCommunication: '발주처·기관 소통',
+    disputeEvidencePotential: '분쟁 증거 가능성',
+    nextPlanBasis: '다음 작업계획 근거',
+    pendingDecision: '추가 확인'
+};
+
+const DAILY_LOG_REVIEW_LABELS: Readonly<Record<string, string>> = {
+    sameDayWritten: '당일 작성',
+    factsInterpretationSeparated: '사실·해석 분리',
+    authorIdentified: '작성자 확인',
+    reviewerChecked: '검토자 확인',
+    photoDrawingCrossChecked: '사진·도면 대조',
+    findListCrossChecked: '유물목록 대조',
+    sampleListCrossChecked: '시료목록 대조',
+    numberConversionChecked: '번호 변환표 대조',
+    correctionReasonLinked: '수정근거 연결',
+    sourceRecordArchived: '원기록 보존',
+    reportCarryForwardChecked: '보고서 반영 확인',
+    pendingDecision: '추가 확인'
+};
 
 const EVIDENCE_NUMBER_CATEGORIES = new Set([
     'Photo',
@@ -528,6 +583,24 @@ export function createDailyJournalSummary(dailyLogDocument: Document): KoreanFie
     const boundaryMemoStrokes = dailyLogDocument.resource[DAILY_JOURNAL_FIELD.boundaryMemoStrokes];
     const boundaryMemoStats = getStoredHandwritingStats(boundaryMemoStrokes);
     const boundaryMemoPreview = getPenMemoSketchPreview(boundaryMemoStrokes);
+    const contentLabel = getDailyJournalArrayFieldLabel(
+        dailyLogDocument,
+        DAILY_JOURNAL_FIELD.content,
+        '내용',
+        DAILY_LOG_CONTENT_LABELS
+    );
+    const evidenceRoleLabel = getDailyJournalArrayFieldLabel(
+        dailyLogDocument,
+        DAILY_JOURNAL_FIELD.evidenceRole,
+        '근거',
+        DAILY_LOG_EVIDENCE_ROLE_LABELS
+    );
+    const reviewLabel = getDailyJournalArrayFieldLabel(
+        dailyLogDocument,
+        DAILY_JOURNAL_FIELD.review,
+        '검토',
+        DAILY_LOG_REVIEW_LABELS
+    );
     const hasPersonnel = [
         investigatorCount,
         laborerCount,
@@ -537,7 +610,9 @@ export function createDailyJournalSummary(dailyLogDocument: Document): KoreanFie
     ].some(value => value !== undefined && value !== '');
     const hasSafety = safetyPhotoDone || safetyStretchingDone;
     const hasBoundaryMemo = boundaryMemoStats.pointCount > 0;
-    if (!hasPersonnel && !hasSafety && !hasBoundaryMemo) return undefined;
+    const hasLogClassification = [contentLabel, evidenceRoleLabel, reviewLabel]
+        .some(label => label.length > 0);
+    if (!hasPersonnel && !hasSafety && !hasBoundaryMemo && !hasLogClassification) return undefined;
 
     const personnelLabel = getDailyJournalPersonnelLabel(investigatorCount, laborerCount, workerCount);
     const equipmentLabel = getDailyJournalEquipmentLabel(equipmentCount, equipmentSize);
@@ -562,6 +637,9 @@ export function createDailyJournalSummary(dailyLogDocument: Document): KoreanFie
         personnelLabel,
         equipmentLabel,
         safetyLabel,
+        contentLabel,
+        evidenceRoleLabel,
+        reviewLabel,
         boundaryMemoLabel,
         boundaryMemoImportedAtLabel,
         workMemoUpdatedAtLabel,
@@ -570,13 +648,17 @@ export function createDailyJournalSummary(dailyLogDocument: Document): KoreanFie
             personnelLabel,
             equipmentLabel,
             safetyLabel,
+            contentLabel,
+            evidenceRoleLabel,
+            reviewLabel,
             boundaryMemoLabel,
             boundaryMemoImportedAtLabel,
             workMemoUpdatedAtLabel
         ].filter(value => value.length > 0).join(' · '),
         hasPersonnel,
         hasSafetyComplete: safetyPhotoDone && safetyStretchingDone,
-        hasBoundaryMemo
+        hasBoundaryMemo,
+        hasLogClassification
     };
 }
 
@@ -825,6 +907,19 @@ function getDailyJournalDateFieldLabel(document: Document, fieldName: string, pr
 }
 
 
+function getDailyJournalArrayFieldLabel(document: Document,
+                                        fieldName: string,
+                                        prefix: string,
+                                        labels: Readonly<Record<string, string>>): string {
+
+    const values = getStringArrayField(document, fieldName)
+        .map(value => labels[value] ?? value)
+        .filter(value => value.length > 0);
+
+    return values.length > 0 ? `${prefix} ${values.join(' · ')}` : '';
+}
+
+
 function formatCount(value: number): string {
 
     return Number.isInteger(value) ? value.toString() : value.toFixed(1).replace(/\.0$/, '');
@@ -836,6 +931,43 @@ function getRelationIds(document: Document, relationName: string): string[] {
     const value = document.resource.relations?.[relationName];
     if (Array.isArray(value)) return value.filter(item => typeof item === 'string');
     return typeof value === 'string' ? [value] : [];
+}
+
+
+function getStringArrayField(document: Document, fieldName: string): string[] {
+
+    const value = document.resource[fieldName];
+    const values = Array.isArray(value)
+        ? value
+        : parseStringArrayValue(value);
+    const seen = new Set<string>();
+
+    return values
+        .filter(item => typeof item === 'string')
+        .map(item => item.trim())
+        .filter(item => {
+            if (item.length === 0 || seen.has(item)) return false;
+            seen.add(item);
+            return true;
+        });
+}
+
+
+function parseStringArrayValue(value: unknown): string[] {
+
+    if (typeof value !== 'string') return [];
+
+    const trimmedValue = value.trim();
+    if (trimmedValue.length === 0) return [];
+
+    try {
+        const parsedValue = JSON.parse(trimmedValue);
+        if (Array.isArray(parsedValue)) return parsedValue;
+    } catch {
+        // The desktop summary should still surface plain string values from older imports.
+    }
+
+    return [trimmedValue];
 }
 
 

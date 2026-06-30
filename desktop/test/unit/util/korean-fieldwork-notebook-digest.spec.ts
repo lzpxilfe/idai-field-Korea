@@ -100,6 +100,9 @@ describe('korean-fieldwork-notebook-digest', () => {
             dailyLogEquipmentSize: '0.6㎥',
             dailyLogSafetyEducationPhoto: true,
             dailyLogSafetyEducationStretching: false,
+            dailyLogContent: ['workArea', 'featureProgress', 'photoDrawingNumbers'],
+            dailyLogEvidenceRole: ['sameDayFactRecord'],
+            dailyLogReview: ['sameDayWritten'],
             dailyLogBoundaryMemoImportedAt: '2026-06-24T08:30:00.000Z',
             dailyLogWorkMemoUpdatedAt: '2026-06-24T10:15:00.000Z',
             dailyLogBoundaryMemoStrokes: JSON.stringify({
@@ -119,6 +122,9 @@ describe('korean-fieldwork-notebook-digest', () => {
                 personnelLabel: '투입 7명 (조사원 2명 / 인부 5명)',
                 equipmentLabel: '장비 1대/0.6㎥',
                 safetyLabel: '안전교육 · 사진 · 체조 미확인',
+                contentLabel: '내용 작업구역 · 유구 조사 진행 · 사진·도면 번호',
+                evidenceRoleLabel: '근거 당일 사실기록',
+                reviewLabel: '검토 당일 작성',
                 boundaryMemoLabel: '경계 메모 1획/2점',
                 boundaryMemoImportedAtLabel: '경계 가져옴 2026-06-24',
                 workMemoUpdatedAtLabel: '작업일지 수정 2026-06-24',
@@ -128,7 +134,34 @@ describe('korean-fieldwork-notebook-digest', () => {
                 }),
                 hasPersonnel: true,
                 hasSafetyComplete: false,
-                hasBoundaryMemo: true
+                hasBoundaryMemo: true,
+                hasLogClassification: true
+            })
+        ]);
+    });
+
+
+    it('keeps tablet daily journal classification-only logs in desktop summaries', () => {
+
+        const dailyLog = createDoc('daily-log-1', 'DailyLog', '2026-06-24 일지', {
+            date: '2026-06-24',
+            dailyLogContent: JSON.stringify(['strippingProgress', 'workArea', 'unknownContent']),
+            dailyLogEvidenceRole: ['sameDayFactRecord'],
+            dailyLogReview: ['sameDayWritten', 'reviewerChecked']
+        });
+
+        const digest = makeKoreanFieldworkDailyNotebookDigest([dailyLog] as any, today);
+
+        expect(digest.dailyJournalSummaries).toEqual([
+            expect.objectContaining({
+                document: dailyLog,
+                contentLabel: '내용 제토 진행 · 작업구역 · unknownContent',
+                evidenceRoleLabel: '근거 당일 사실기록',
+                reviewLabel: '검토 당일 작성 · 검토자 확인',
+                hasPersonnel: false,
+                hasSafetyComplete: false,
+                hasBoundaryMemo: false,
+                hasLogClassification: true
             })
         ]);
     });

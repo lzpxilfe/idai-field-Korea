@@ -364,6 +364,9 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
             dailyLogEquipmentSize: '0.6㎥',
             dailyLogSafetyEducationPhoto: true,
             dailyLogSafetyEducationStretching: false,
+            dailyLogContent: ['strippingProgress', 'workArea', 'safetyIssue'],
+            dailyLogEvidenceRole: ['sameDayFactRecord'],
+            dailyLogReview: ['sameDayWritten', 'reviewerChecked'],
             dailyLogBoundaryMemoImportedAt: '2026-06-30T08:30:00.000Z',
             dailyLogWorkMemoUpdatedAt: '2026-06-30T10:15:00.000Z'
         });
@@ -372,7 +375,7 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
         });
         component.document = dailyLog as any;
         component.fieldDefinitions = [
-            field('dailyLogInvestigatorCount')
+            field('dailyLogContent')
         ] as any;
 
         expect(component.shouldShow()).toBe(true);
@@ -383,11 +386,15 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
         expect(summary.personnelLabel).toBe('투입 6명 (조사원 2명 / 인부 4명)');
         expect(summary.equipmentLabel).toBe('장비 1대/0.6㎥');
         expect(summary.safetyLabel).toBe('안전교육 · 사진 · 체조 미확인');
+        expect(summary.contentLabel).toBe('내용 제토 진행 · 작업구역 · 안전 문제');
+        expect(summary.evidenceRoleLabel).toBe('근거 당일 사실기록');
+        expect(summary.reviewLabel).toBe('검토 당일 작성 · 검토자 확인');
         expect(summary.boundaryMemoLabel).toBe('경계 메모 없음');
         expect(summary.boundaryMemoImportedAtLabel).toBe('경계 가져옴 2026-06-30');
         expect(summary.workMemoUpdatedAtLabel).toBe('작업일지 수정 2026-06-30');
         expect(summary.hasSafetyComplete).toBe(false);
         expect(summary.hasBoundaryMemo).toBe(false);
+        expect(summary.hasLogClassification).toBe(true);
     });
 
 
@@ -405,6 +412,9 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
         expect(template).toContain('작업일지 요약');
         expect(template).toContain('dailyJournalSummary.personnelLabel');
         expect(template).toContain('dailyJournalSummary.safetyLabel');
+        expect(template).toContain('dailyJournalSummary.contentLabel');
+        expect(template).toContain('dailyJournalSummary.evidenceRoleLabel');
+        expect(template).toContain('dailyJournalSummary.reviewLabel');
         expect(template).toContain('dailyJournalSummary.boundaryMemoImportedAtLabel');
         expect(template).toContain('dailyJournalSummary.workMemoUpdatedAtLabel');
     });

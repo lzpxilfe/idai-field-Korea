@@ -2675,27 +2675,43 @@ function validateRecordPanelOrder() {
   if (!desktopNotebookDigestText.includes('boundaryMemoPreview')
       || !desktopNotebookDigestText.includes('boundaryMemoImportedAtLabel')
       || !desktopNotebookDigestText.includes('workMemoUpdatedAtLabel')
+      || !desktopNotebookDigestText.includes('dailyLogContent')
+      || !desktopNotebookDigestText.includes('contentLabel')
+      || !desktopNotebookDigestText.includes('evidenceRoleLabel')
+      || !desktopNotebookDigestText.includes('reviewLabel')
       || !desktopPriorityStripTemplateText.includes('korean-fieldwork-notebook-journal-boundary-preview')
       || !desktopPriorityStripTemplateText.includes('summary.boundaryMemoImportedAtLabel')
       || !desktopPriorityStripTemplateText.includes('summary.workMemoUpdatedAtLabel')
+      || !desktopPriorityStripTemplateText.includes('summary.contentLabel')
+      || !desktopPriorityStripTemplateText.includes('summary.evidenceRoleLabel')
+      || !desktopPriorityStripTemplateText.includes('summary.reviewLabel')
       || !desktopPriorityStripStyleText.includes('korean-fieldwork-notebook-journal-boundary-preview')
       || !desktopNotebookDigestSpecText.includes('boundaryMemoPreview')
       || !desktopNotebookDigestSpecText.includes('경계 가져옴')
       || !desktopNotebookDigestSpecText.includes('작업일지 수정')
+      || !desktopNotebookDigestSpecText.includes('classification-only logs')
       || !desktopPriorityStripSpecText.includes('작업일지 수정')
+      || !desktopPriorityStripSpecText.includes('당일 사실기록')
       || !desktopPriorityStripSpecText.includes('boundaryMemoPreview')) {
-    findings.push('desktop notebook panel must preview tablet daily-journal boundary handwriting, imported boundary date, and last work-memo update, not only count it');
+    findings.push('desktop notebook panel must preview tablet daily-journal boundary handwriting, imported boundary date, last work-memo update, and daily log classification fields, not only count it');
   }
   if (!desktopNotebookDigestText.includes('export function createDailyJournalSummary')
       || !desktopRecordContextPanelText.includes('getDailyJournalSummary')
       || !desktopRecordContextPanelText.includes('dailyLogInvestigatorCount')
       || !desktopRecordContextPanelText.includes('dailyLogWorkMemoUpdatedAt')
+      || !desktopRecordContextPanelText.includes('dailyLogContent')
+      || !desktopRecordContextPanelText.includes('dailyLogEvidenceRole')
+      || !desktopRecordContextPanelText.includes('dailyLogReview')
       || !desktopRecordContextPanelTemplateText.includes('korean-fieldwork-record-context-daily-summary')
       || !desktopRecordContextPanelStyleText.includes('korean-fieldwork-record-context-daily-summary-chip')
       || !desktopRecordContextPanelTemplateText.includes('dailyJournalSummary.workMemoUpdatedAtLabel')
+      || !desktopRecordContextPanelTemplateText.includes('dailyJournalSummary.contentLabel')
+      || !desktopRecordContextPanelTemplateText.includes('dailyJournalSummary.evidenceRoleLabel')
+      || !desktopRecordContextPanelTemplateText.includes('dailyJournalSummary.reviewLabel')
       || !desktopRecordContextPanelSpecText.includes('작업일지 수정')
+      || !desktopRecordContextPanelSpecText.includes('당일 사실기록')
       || !desktopRecordContextPanelSpecText.includes('personnel, equipment, and safety on opened DailyLog records')) {
-    findings.push('desktop record context must summarize tablet daily-journal personnel, equipment, safety, and last work-memo update on opened DailyLog records');
+    findings.push('desktop record context must summarize tablet daily-journal personnel, equipment, safety, last work-memo update, and daily log classification fields on opened DailyLog records');
   }
   if (!desktopRecordContextPanelText.includes('getDailyJournalBoundaryMemoPreview')
       || !desktopRecordContextPanelText.includes('dailyLogBoundaryMemoImportedAt')

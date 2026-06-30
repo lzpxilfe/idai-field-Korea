@@ -1038,6 +1038,9 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
             dailyLogEquipmentSize: '10톤',
             dailyLogSafetyEducationPhoto: true,
             dailyLogSafetyEducationStretching: true,
+            dailyLogContent: ['workArea', 'featureProgress', 'findSampleCollection'],
+            dailyLogEvidenceRole: ['sameDayFactRecord'],
+            dailyLogReview: ['sameDayWritten'],
             dailyLogBoundaryMemoImportedAt: `${getTodayLabel()}T08:30:00.000Z`,
             dailyLogWorkMemoUpdatedAt: `${getTodayLabel()}T10:15:00.000Z`,
             dailyLogBoundaryMemoStrokes: {
@@ -1075,6 +1078,9 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
             personnelLabel: '투입 4명 (조사원 1명 / 인부 3명)',
             equipmentLabel: '장비 1대/10톤',
             safetyLabel: '안전교육 완료',
+            contentLabel: '내용 작업구역 · 유구 조사 진행 · 유물·시료 수습',
+            evidenceRoleLabel: '근거 당일 사실기록',
+            reviewLabel: '검토 당일 작성',
             boundaryMemoLabel: '경계 메모 1획/2점',
             boundaryMemoImportedAtLabel: `경계 가져옴 ${getTodayLabel()}`,
             workMemoUpdatedAtLabel: `작업일지 수정 ${getTodayLabel()}`,
@@ -1083,7 +1089,8 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
                 viewBox: '0 0 120 72'
             }),
             hasSafetyComplete: true,
-            hasBoundaryMemo: true
+            hasBoundaryMemo: true,
+            hasLogClassification: true
         });
         expect(component.getNotebookDailyJournalSummaryTone(
             component.getNotebookDailyJournalSummaries()[0]
