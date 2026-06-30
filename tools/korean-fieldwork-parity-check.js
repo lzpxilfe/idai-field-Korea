@@ -3660,7 +3660,10 @@ function validateRecordActionEvidencePriority() {
   }
   if (!desktopRecordActionText.includes('FEATURE_LOCATION_SKETCH_FIELD')
       || !desktopRecordActionText.includes('current-feature-location-sketch')
-      || !desktopRecordActionSpecText.includes('flat-map feature sketch after tablet placement exists')) {
+      || !desktopRecordActionText.includes('위성지도나 평면도처럼 조사 경계 위에 얹은 유구 위치와 형태')
+      || desktopRecordActionText.includes('태블릿 평면지도 위치 스케치')
+      || !desktopRecordActionSpecText.includes('flat-map feature sketch after tablet placement exists')
+      || !desktopRecordActionSpecText.includes('map-first boundary placement')) {
     findings.push('desktop record actions must surface missing tablet flat-map feature placement');
   }
   if (!desktopRecordActionSpecText.includes('tablet handwriting PenMemo transcription')

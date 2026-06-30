@@ -194,7 +194,7 @@ function getMissingFeatureSketchAction(document: Document): KoreanFieldworkRecor
         id: 'current-feature-location-sketch',
         type: 'openDocument',
         label: '위치 스케치 확인',
-        detail: '태블릿 평면지도 위치 스케치가 비어 있습니다. 전체 경계 안 위치와 유구 형태를 먼저 남기세요.',
+        detail: '위성지도나 평면도처럼 조사 경계 위에 얹은 유구 위치와 형태가 비어 있습니다.',
         icon: 'mdi-map-marker-path',
         tone: 'warning',
         documentId: document.resource.id

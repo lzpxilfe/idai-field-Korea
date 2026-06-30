@@ -133,6 +133,25 @@ describe('korean-fieldwork-record-actions', () => {
     });
 
 
+    it('describes missing feature placement as map-first boundary placement', () => {
+
+        const feature = createDoc('feature-1', 'Feature');
+        const actions = makeKoreanFieldworkRecordActions(
+            feature,
+            [feature],
+            createConfig({})
+        );
+
+        expect(actions).toContainEqual(expect.objectContaining({
+            id: 'current-feature-location-sketch',
+            label: '위치 스케치 확인',
+            detail: '위성지도나 평면도처럼 조사 경계 위에 얹은 유구 위치와 형태가 비어 있습니다.'
+        }));
+        expect(actions.map(action => action.detail).join('\n'))
+            .not.toContain('태블릿 평면지도 위치 스케치');
+    });
+
+
     it('opens existing tablet evidence records before neutral follow-up drafts', () => {
 
         const feature = createDoc('feature-1', 'Feature');
