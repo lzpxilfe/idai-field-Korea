@@ -191,6 +191,31 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
     });
 
 
+    it('keeps the desktop feature location preview framed as a flat map', () => {
+
+        const template = fs.readFileSync(
+            path.resolve(
+                __dirname,
+                '../../../../../src/app/components/docedit/core/korean-fieldwork-record-context-panel.html'
+            ),
+            'utf8'
+        );
+
+        const styles = fs.readFileSync(
+            path.resolve(
+                __dirname,
+                '../../../../../src/app/components/docedit/core/korean-fieldwork-record-context-panel.scss'
+            ),
+            'utf8'
+        );
+
+        expect(template).toContain('class="flat-map-grid"');
+        expect(template).toContain('평면 지도');
+        expect(styles).toContain('.flat-map-grid path');
+        expect(styles).toContain('.flat-map-badge text');
+    });
+
+
     it('keeps the desktop feature sketch reference visible before a sketch is drawn', () => {
 
         const feature = createDocument('feature-1', 'Feature', 'F1', {}, {

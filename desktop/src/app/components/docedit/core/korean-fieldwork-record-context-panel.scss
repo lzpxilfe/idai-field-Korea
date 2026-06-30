@@ -164,12 +164,30 @@ korean-fieldwork-record-context-panel {
   }
 
   .korean-fieldwork-record-context-feature-sketch-svg {
-    background: #ffffff;
-    border: 1px solid #edf1f5;
+    background: #f8fbff;
+    border: 1px solid #d5e7f8;
     border-radius: 4px;
     display: block;
     height: 92px;
     width: 100%;
+
+    .flat-map-grid path {
+      fill: none;
+      stroke: rgba(102, 148, 202, 0.22);
+      stroke-width: 0.7;
+    }
+
+    .flat-map-badge rect {
+      fill: rgba(255, 255, 255, 0.95);
+      stroke: #b2ddff;
+      stroke-width: 0.8;
+    }
+
+    .flat-map-badge text {
+      fill: #175cd3;
+      font-size: 3.6px;
+      font-weight: 900;
+    }
 
     .boundary {
       fill: none;
