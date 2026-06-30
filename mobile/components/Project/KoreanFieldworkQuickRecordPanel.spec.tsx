@@ -321,7 +321,7 @@ describe('KoreanFieldworkQuickRecordPanel', () => {
     )).toBeTruthy();
   });
 
-  it('updates a single orientation memo field from the quick record flow', () => {
+  it('updates orientation from three quick bearing fields', () => {
     const handleUpdateResourceField = jest.fn();
     const { getByTestId, getByText } = render(
       <KoreanFieldworkQuickRecordPanel
@@ -343,23 +343,31 @@ describe('KoreanFieldworkQuickRecordPanel', () => {
       />
     );
 
-    expect(getByText('방위 메모')).toBeTruthy();
+    expect(getByText('방위')).toBeTruthy();
     expect(getByText(
-      '장축·단축을 따로 나눠 쓰지 않아도 됩니다. 필요한 방향감, 기준, 재측정 여부만 한 칸에 적으세요.'
+      '왼쪽 방위, 가운데 각도, 오른쪽 방위를 따로 적으세요. 예: N 30 W'
     )).toBeTruthy();
     expect(getByText('기존 방위 참고: 장축 N-23°-E')).toBeTruthy();
     fireEvent.changeText(
-      getByTestId('quickRecordInput_orientationNote'),
-      '장축은 대략 북동-남서, GPS 나침반 기준. 재측정 필요'
+      getByTestId('quickRecordInput_orientationStart'),
+      'S'
+    );
+    fireEvent.changeText(
+      getByTestId('quickRecordInput_orientationDegrees'),
+      '45'
+    );
+    fireEvent.changeText(
+      getByTestId('quickRecordInput_orientationEnd'),
+      'W'
     );
 
     expect(handleUpdateResourceField).toHaveBeenCalledWith(
-      FIELDWORK_QUICK_FIELDS.orientationNote,
-      '장축은 대략 북동-남서, GPS 나침반 기준. 재측정 필요'
+      FIELDWORK_QUICK_FIELDS.longAxisOrientation,
+      'S-45°-W'
     );
   });
 
-  it('falls back to the available axis field when no orientation memo field exists', () => {
+  it('falls back to the available axis field for three-cell orientation input', () => {
     const handleUpdateResourceField = jest.fn();
     const { getByTestId } = render(
       <KoreanFieldworkQuickRecordPanel
@@ -378,13 +386,21 @@ describe('KoreanFieldworkQuickRecordPanel', () => {
     );
 
     fireEvent.changeText(
-      getByTestId('quickRecordInput_orientationNote'),
-      '대략 북동-남서'
+      getByTestId('quickRecordInput_orientationStart'),
+      'N'
+    );
+    fireEvent.changeText(
+      getByTestId('quickRecordInput_orientationDegrees'),
+      '30'
+    );
+    fireEvent.changeText(
+      getByTestId('quickRecordInput_orientationEnd'),
+      'E'
     );
 
     expect(handleUpdateResourceField).toHaveBeenCalledWith(
       FIELDWORK_QUICK_FIELDS.longAxisOrientation,
-      '대략 북동-남서'
+      'N-30°-E'
     );
   });
 

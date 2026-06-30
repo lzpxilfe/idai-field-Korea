@@ -3,7 +3,7 @@ import {
   CategoryForm,
   NewResource,
 } from 'idai-field-core';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -24,8 +24,10 @@ import {
   FEATURE_PERIOD_QUICK_OPTIONS,
   FEATURE_TYPE_QUICK_OPTIONS,
   FIELDWORK_QUICK_FIELDS,
+  buildKoreanFieldworkLongAxisOrientation,
   getKoreanFieldworkFeatureTypeUpdates,
   getKoreanFieldworkChecklistQuickOptions,
+  getKoreanFieldworkLongAxisOrientationParts,
   getKoreanFieldworkQuickRecordAvailability,
   getKoreanFieldworkQuickPresetUpdates,
   getKoreanFieldworkQuickPresets,
@@ -94,8 +96,6 @@ const KoreanFieldworkQuickRecordPanel: React.FC<KoreanFieldworkQuickRecordPanelP
     resource,
     FIELDWORK_QUICK_FIELDS.shortAxisOrientation
   );
-  if (!hasKoreanFieldworkQuickRecordActions(availability) && !observationFieldName) return null;
-
   const applyUpdates = (updates: Record<string, unknown>) => {
     if (onUpdateResourceFields) {
       onUpdateResourceFields(updates);
@@ -153,15 +153,20 @@ const KoreanFieldworkQuickRecordPanel: React.FC<KoreanFieldworkQuickRecordPanelP
     categoryFieldNames.has(FIELDWORK_QUICK_FIELDS.longAxisOrientation);
   const hasShortAxisOrientation =
     categoryFieldNames.has(FIELDWORK_QUICK_FIELDS.shortAxisOrientation);
-  const orientationMemoFieldName = getOrientationMemoFieldName(
-    hasOrientationNote,
+  const orientationBearingFieldName = getOrientationBearingFieldName(
     hasLongAxisOrientation,
     hasShortAxisOrientation,
+    hasOrientationNote,
     hasOrientationReference
   );
-  const orientationMemoValue = orientationMemoFieldName === FIELDWORK_QUICK_FIELDS.orientationNote
-    ? orientationNoteValue
-    : getTextValue(resource, orientationMemoFieldName);
+  const orientationBearingValue = getTextValue(resource, orientationBearingFieldName);
+  const [orientationDraft, setOrientationDraft] = useState<OrientationDraft>(() =>
+    getOrientationDraftFromValue(orientationBearingValue)
+  );
+  useEffect(
+    () => setOrientationDraft(getOrientationDraftFromValue(orientationBearingValue)),
+    [orientationBearingValue]
+  );
   const existingOrientationSummary = getExistingOrientationSummary({
     longAxisOrientationValue,
     orientationNoteValue,
@@ -189,6 +194,36 @@ const KoreanFieldworkQuickRecordPanel: React.FC<KoreanFieldworkQuickRecordPanelP
     availability.timing,
   ].filter(Boolean).length;
   const shouldShowSecondaryFields = !hasPrimarySections || showSecondaryFields;
+
+  if (!hasKoreanFieldworkQuickRecordActions(availability) && !observationFieldName) return null;
+
+  const updateOrientationDraft = (
+    part: keyof OrientationDraft,
+    value: string
+  ) => {
+    const normalizedValue = part === 'degrees'
+      ? normalizeOrientationDegreeInput(value)
+      : normalizeOrientationDirectionInput(value);
+    const nextDraft = { ...orientationDraft, [part]: normalizedValue };
+    const nextOrientationValue = buildKoreanFieldworkLongAxisOrientation(
+      nextDraft.start,
+      nextDraft.degrees,
+      nextDraft.end
+    );
+
+    setOrientationDraft(nextDraft);
+
+    if (nextOrientationValue) {
+      onUpdateResourceField(orientationBearingFieldName, nextOrientationValue);
+    } else if (
+      !nextDraft.start
+      && !nextDraft.degrees
+      && !nextDraft.end
+      && orientationBearingValue
+    ) {
+      onUpdateResourceField(orientationBearingFieldName, '');
+    }
+  };
 
   return (
     <View style={styles.container} testID="koreanFieldworkQuickRecordPanel">
@@ -288,27 +323,49 @@ const KoreanFieldworkQuickRecordPanel: React.FC<KoreanFieldworkQuickRecordPanelP
 
       {availability.axisOrientation && (
         <QuickSection
-          title="방위 메모"
-          description="장축·단축을 따로 나눠 쓰지 않아도 됩니다. 필요한 방향감, 기준, 재측정 여부만 한 칸에 적으세요."
+          title="방위"
+          description="왼쪽 방위, 가운데 각도, 오른쪽 방위를 따로 적으세요. 예: N 30 W"
         >
           {existingOrientationSummary && (
             <Text style={styles.orientationSummary}>
               기존 방위 참고: {existingOrientationSummary}
             </Text>
           )}
-          <TextInput
-            testID="quickRecordInput_orientationNote"
-            autoCorrect={false}
-            multiline
-            placeholder="예: 장축은 대략 북동-남서, 자북 기준. 나침반 흔들림 있어 재측정 필요."
-            placeholderTextColor="#98a2b3"
-            value={orientationMemoValue}
-            onChangeText={(value) => onUpdateResourceField(
-              orientationMemoFieldName,
-              value
-            )}
-            style={[styles.textInput, styles.noteInput]}
-          />
+          <View style={styles.orientationInputRow}>
+            <TextInput
+              autoCapitalize="characters"
+              autoCorrect={false}
+              maxLength={1}
+              onChangeText={(value) => updateOrientationDraft('start', value)}
+              placeholder="N"
+              placeholderTextColor="#98a2b3"
+              style={[styles.textInput, styles.orientationDirectionInput]}
+              testID="quickRecordInput_orientationStart"
+              value={orientationDraft.start}
+            />
+            <TextInput
+              autoCorrect={false}
+              keyboardType="number-pad"
+              maxLength={2}
+              onChangeText={(value) => updateOrientationDraft('degrees', value)}
+              placeholder="30"
+              placeholderTextColor="#98a2b3"
+              style={[styles.textInput, styles.orientationDegreeInput]}
+              testID="quickRecordInput_orientationDegrees"
+              value={orientationDraft.degrees}
+            />
+            <TextInput
+              autoCapitalize="characters"
+              autoCorrect={false}
+              maxLength={1}
+              onChangeText={(value) => updateOrientationDraft('end', value)}
+              placeholder="W"
+              placeholderTextColor="#98a2b3"
+              style={[styles.textInput, styles.orientationDirectionInput]}
+              testID="quickRecordInput_orientationEnd"
+              value={orientationDraft.end}
+            />
+          </View>
         </QuickSection>
       )}
 
@@ -470,19 +527,41 @@ const QuickSection: React.FC<{
   </View>
 );
 
-const getOrientationMemoFieldName = (
-  hasOrientationNote: boolean,
+interface OrientationDraft {
+  degrees: string;
+  end: string;
+  start: string;
+}
+
+const getOrientationBearingFieldName = (
   hasLongAxisOrientation: boolean,
   hasShortAxisOrientation: boolean,
+  hasOrientationNote: boolean,
   hasOrientationReference: boolean
 ): string => {
-  if (hasOrientationNote) return FIELDWORK_QUICK_FIELDS.orientationNote;
   if (hasLongAxisOrientation) return FIELDWORK_QUICK_FIELDS.longAxisOrientation;
   if (hasShortAxisOrientation) return FIELDWORK_QUICK_FIELDS.shortAxisOrientation;
+  if (hasOrientationNote) return FIELDWORK_QUICK_FIELDS.orientationNote;
   if (hasOrientationReference) return FIELDWORK_QUICK_FIELDS.orientationReference;
 
   return FIELDWORK_QUICK_FIELDS.orientationNote;
 };
+
+const getOrientationDraftFromValue = (value: string): OrientationDraft => {
+  const parts = getKoreanFieldworkLongAxisOrientationParts(value);
+
+  return {
+    degrees: parts?.degrees?.toString() ?? '',
+    end: parts?.end ?? '',
+    start: parts?.start ?? '',
+  };
+};
+
+const normalizeOrientationDirectionInput = (value: string): string =>
+  value.toUpperCase().replace(/[^NSEW]/g, '').slice(0, 1);
+
+const normalizeOrientationDegreeInput = (value: string): string =>
+  value.replace(/[^\d]/g, '').slice(0, 2);
 
 const getExistingOrientationSummary = ({
   longAxisOrientationValue,
@@ -801,6 +880,21 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     lineHeight: 15,
     marginBottom: 6,
+  },
+  orientationInputRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+  },
+  orientationDirectionInput: {
+    flexGrow: 0,
+    textAlign: 'center',
+    width: 58,
+  },
+  orientationDegreeInput: {
+    flexGrow: 0,
+    marginHorizontal: 7,
+    textAlign: 'center',
+    width: 74,
   },
   textInput: {
     backgroundColor: 'white',
