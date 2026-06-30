@@ -251,6 +251,7 @@ const DocumentsMap: React.FC<DocumentsMapProps> = ({
       {isAddModalOpen && (
         <DocumentAddModal
           boundaryDraft={boundaryDraft}
+          existingDocuments={userVisibleDocuments}
           initialCategoryName={addModalInitialCategoryName}
           initialDraftParams={addModalInitialDraftParams}
           investigationModeId={investigationModeId}

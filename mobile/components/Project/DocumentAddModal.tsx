@@ -34,6 +34,7 @@ import {
 import { canCreateKoreanFieldworkChildRecord } from './korean-fieldwork-child-records';
 import {
   getKoreanFieldworkFeatureInvestigationSteps,
+  getKoreanFieldworkFeatureTypeOption,
   KOREAN_FIELDWORK_FEATURE_TYPE_OPTIONS,
 } from './korean-fieldwork-feature-types';
 import type {
@@ -67,6 +68,7 @@ type FeatureSketchPixelPoint = {
 
 interface AddModalProps {
   boundaryDraft?: KoreanFieldworkProjectBoundaryDraft;
+  existingDocuments?: readonly Document[];
   initialCategoryName?: string;
   initialDraftParams?: Record<string, string>;
   investigationModeId?: KoreanFieldworkInvestigationModeId;
@@ -81,6 +83,7 @@ interface AddModalProps {
 
 const DocumentAddModal: React.FC<AddModalProps> = ({
   boundaryDraft,
+  existingDocuments = [],
   initialCategoryName,
   initialDraftParams = {},
   investigationModeId,
@@ -92,8 +95,6 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
   const { labels } = useContext(LabelsContext);
   const [expandedFeatureGuideType, setExpandedFeatureGuideType] = useState<string>();
   const [featureIdentifier, setFeatureIdentifier] = useState('');
-  const [featureIdentifierWasRequested, setFeatureIdentifierWasRequested] =
-    useState(false);
   const isFeatureOnlyFlow =
     initialCategoryName === KOREAN_FIELDWORK_CATEGORIES.FEATURE;
   const [isChoosingFeatureType, setIsChoosingFeatureType] =
@@ -197,7 +198,6 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
   const openFeatureCreation = () => {
     setExpandedFeatureGuideType(undefined);
     setFeatureIdentifier('');
-    setFeatureIdentifierWasRequested(false);
     resetFeatureLocationSketch();
     setIsChoosingFeatureType(true);
   };
@@ -209,7 +209,6 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
     }
 
     setExpandedFeatureGuideType(undefined);
-    setFeatureIdentifierWasRequested(false);
     resetFeatureLocationSketch();
     setIsChoosingFeatureType(false);
   };
@@ -520,18 +519,14 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
         currentType === featureType ? undefined : featureType);
     };
     const normalizedFeatureIdentifier = featureIdentifier.trim();
-    const canCreateFeature = normalizedFeatureIdentifier.length > 0;
 
     const updateFeatureIdentifier = (value: string) => {
       setFeatureIdentifier(value);
-      if (value.trim().length > 0) setFeatureIdentifierWasRequested(false);
     };
 
     const createFeature = (featureType: string) => {
-      if (!canCreateFeature) {
-        setFeatureIdentifierWasRequested(true);
-        return;
-      }
+      const resolvedFeatureIdentifier = normalizedFeatureIdentifier
+        || createNextFeatureIdentifier(featureType, existingDocuments);
 
       onAddCategory(
         KOREAN_FIELDWORK_CATEGORIES.FEATURE,
@@ -539,7 +534,7 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
         {
           ...initialDraftParams,
           featureType,
-          identifier: normalizedFeatureIdentifier,
+          identifier: resolvedFeatureIdentifier,
           ...getFeatureLocationSketchDraftParams({
             center: featureSketchCenter,
             isEdited: featureSketchWasEdited,
@@ -582,7 +577,7 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
         <View style={styles.featureNamePanel}>
           <Input
             autoFocus
-            isValid={!featureIdentifierWasRequested || canCreateFeature}
+            isValid={true}
             invalidText="유구명을 먼저 입력하세요."
             label="유구명"
             onChangeText={updateFeatureIdentifier}
@@ -601,10 +596,7 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
             <TouchableOpacity
               activeOpacity={0.86}
               onPress={() => createFeature('unknown')}
-              style={[
-                styles.featureTypeCreateArea,
-                !canCreateFeature && styles.featureTypeCreateAreaWaiting,
-              ]}
+              style={styles.featureTypeCreateArea}
               testID="featureType_startUnknown"
             >
               <Ionicons name="add-circle-outline" size={22} color="#027a48" />
@@ -646,10 +638,7 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
                 <TouchableOpacity
                   activeOpacity={0.86}
                   onPress={() => createFeature(option.value)}
-                  style={[
-                    styles.featureTypeCreateArea,
-                    !canCreateFeature && styles.featureTypeCreateAreaWaiting,
-                  ]}
+                  style={styles.featureTypeCreateArea}
                   testID={`featureType_${option.value}`}
                 >
                   <CategoryIcon category={featureCategory} size={24} />
@@ -875,6 +864,97 @@ const getFeatureLocationSketchShapeLabel = (
       return '점';
   }
 };
+
+const createNextFeatureIdentifier = (
+  featureType: string,
+  existingDocuments: readonly Document[]
+): string => {
+  const prefix = getFeatureIdentifierPrefix(featureType);
+  const nextNumber = getNextFeatureIdentifierNumber(
+    featureType,
+    prefix,
+    existingDocuments
+  );
+
+  return `${nextNumber}호 ${prefix}`;
+};
+
+const getFeatureIdentifierPrefix = (featureType: string): string => {
+  const prefix = getKoreanFieldworkFeatureTypeOption(featureType)
+    ?.identifierPrefix
+    ?.trim();
+
+  return prefix || '유구';
+};
+
+const getNextFeatureIdentifierNumber = (
+  featureType: string,
+  prefix: string,
+  existingDocuments: readonly Document[]
+): number => {
+  const maxNumber = existingDocuments
+    .filter((document) =>
+      document.resource.category === KOREAN_FIELDWORK_CATEGORIES.FEATURE)
+    .reduce((maxIdentifierNumber, document) => {
+      const identifier = document.resource.identifier ?? '';
+      const identifierNumber = getFeatureIdentifierNumber(identifier, prefix);
+      if (identifierNumber !== undefined) {
+        return Math.max(maxIdentifierNumber, identifierNumber);
+      }
+
+      if (getDocumentFeatureType(document) !== featureType) {
+        return maxIdentifierNumber;
+      }
+
+      return Math.max(
+        maxIdentifierNumber,
+        getFirstPositiveNumber(identifier) ?? 0
+      );
+    }, 0);
+
+  return maxNumber + 1;
+};
+
+const getDocumentFeatureType = (document: Document): string => {
+  const featureType = (document.resource as Record<string, unknown>).featureType;
+
+  return typeof featureType === 'string' ? featureType : '';
+};
+
+const getFeatureIdentifierNumber = (
+  identifier: string,
+  prefix: string
+): number | undefined => {
+  const normalizedIdentifier = identifier.replace(/\s+/g, ' ').trim();
+  if (!normalizedIdentifier) return undefined;
+
+  const escapedPrefix = escapeRegExp(prefix);
+  const patterns = [
+    new RegExp(`(?:^|\\s)(\\d+)\\s*호\\s*${escapedPrefix}(?:\\s|$)`),
+    new RegExp(`(?:^|\\s)${escapedPrefix}\\s*(\\d+)\\s*호?(?:\\s|$)`),
+    new RegExp(`(?:^|\\s)${escapedPrefix}[-_\\s]*(\\d+)(?:\\s|$)`),
+  ];
+
+  for (const pattern of patterns) {
+    const match = normalizedIdentifier.match(pattern);
+    const number = match ? Number.parseInt(match[1], 10) : 0;
+    if (number > 0) return number;
+  }
+
+  return normalizedIdentifier.includes(prefix)
+    ? getFirstPositiveNumber(normalizedIdentifier)
+    : undefined;
+};
+
+const getFirstPositiveNumber = (value: string): number | undefined => {
+  const match = value.match(/\d+/);
+  const number = match ? Number.parseInt(match[0], 10) : 0;
+
+  return number > 0 ? number : undefined;
+};
+
+const escapeRegExp = (value: string): string =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const getSketchPointFromPress = (
   event: GestureResponderEvent,
@@ -1385,9 +1465,6 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     minHeight: 52,
-  },
-  featureTypeCreateAreaWaiting: {
-    opacity: 0.58,
   },
   featureTypeText: {
     flex: 1,

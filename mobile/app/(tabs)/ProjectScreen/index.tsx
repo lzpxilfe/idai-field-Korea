@@ -835,6 +835,7 @@ const DocumentsList: React.FC = () => {
       {addModalParent && (
         <DocumentAddModal
           boundaryDraft={projectBoundaryDraft}
+          existingDocuments={userVisibleDocuments}
           initialCategoryName={addModalInitialCategoryName}
           initialDraftParams={addModalInitialDraftParams}
           investigationModeId={investigationModeId}

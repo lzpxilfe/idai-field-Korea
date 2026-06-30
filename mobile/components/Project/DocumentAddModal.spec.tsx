@@ -120,7 +120,7 @@ describe('DocumentAddModal', () => {
     });
   });
 
-  it('does not create a feature before the feature name is entered', () => {
+  it('auto-names a feature when a type is chosen without a typed name', () => {
     const onAddCategory = jest.fn();
     const parentDoc = {
       resource: {
@@ -131,7 +131,7 @@ describe('DocumentAddModal', () => {
       },
     } as any;
 
-    const { getByTestId, getByText } = render(
+    const { getByTestId } = render(
       <LabelsContext.Provider value={{ labels: new Labels(() => ['ko']) }}>
         <ConfigurationContext.Provider value={createConfig([
           createCategory(C.TRENCH),
@@ -148,10 +148,53 @@ describe('DocumentAddModal', () => {
     );
 
     fireEvent.press(getByTestId(`addCategory_${C.FEATURE}`));
-    fireEvent.press(getByTestId('featureType_startUnknown'));
+    fireEvent.press(getByTestId('featureType_pit'));
 
-    expect(getByText('유구명을 먼저 입력하세요.')).toBeTruthy();
-    expect(onAddCategory).not.toHaveBeenCalled();
+    expect(onAddCategory).toHaveBeenCalledWith(C.FEATURE, parentDoc, {
+      featureType: 'pit',
+      identifier: '1호 수혈',
+    });
+  });
+
+  it('continues feature numbers from existing records of the same type', () => {
+    const onAddCategory = jest.fn();
+    const parentDoc = {
+      resource: {
+        id: 'trench-1',
+        identifier: 'T1',
+        category: C.TRENCH,
+        relations: {},
+      },
+    } as any;
+
+    const { getByTestId } = render(
+      <LabelsContext.Provider value={{ labels: new Labels(() => ['ko']) }}>
+        <ConfigurationContext.Provider value={createConfig([
+          createCategory(C.TRENCH),
+          createCategory(C.FEATURE),
+        ])}
+        >
+          <DocumentAddModal
+            existingDocuments={[
+              createDocument('feature-1', C.FEATURE, '1호 수혈', { featureType: 'pit' }),
+              createDocument('feature-2', C.FEATURE, '조선시대 2호 수혈', { featureType: 'pit' }),
+              createDocument('feature-3', C.FEATURE, '1호 구상유구', { featureType: 'ditch' }),
+            ]}
+            onAddCategory={onAddCategory}
+            onClose={jest.fn()}
+            parentDoc={parentDoc}
+          />
+        </ConfigurationContext.Provider>
+      </LabelsContext.Provider>
+    );
+
+    fireEvent.press(getByTestId(`addCategory_${C.FEATURE}`));
+    fireEvent.press(getByTestId('featureType_pit'));
+
+    expect(onAddCategory).toHaveBeenCalledWith(C.FEATURE, parentDoc, {
+      featureType: 'pit',
+      identifier: '3호 수혈',
+    });
   });
 
   it('can create a feature without choosing a detailed type first', () => {
@@ -360,6 +403,21 @@ const createConfig = (categories: Forest<CategoryForm>) => ({
     categoryName === C.FEATURE
     && parentCategoryName === C.TRENCH
     && relationName === 'liesWithin',
+} as any);
+
+const createDocument = (
+  id: string,
+  category: string,
+  identifier: string,
+  fields: Record<string, unknown> = {}
+) => ({
+  resource: {
+    id,
+    identifier,
+    category,
+    relations: {},
+    ...fields,
+  },
 } as any);
 
 const createBoundaryDraft = () => ({
