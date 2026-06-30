@@ -13,6 +13,7 @@ import {
     getKoreanFieldworkDefaultFieldValues,
     isKoreanFieldworkFeatureCategory
 } from '../../util/korean-fieldwork-draft-defaults';
+import { createNextFeatureIdentifier } from '../../util/korean-fieldwork-document-drafts';
 
 
 export type PlusButtonStatus = 'enabled'|'disabled-hierarchy';
@@ -20,6 +21,8 @@ export type PlusButtonStatus = 'enabled'|'disabled-hierarchy';
 
 const KOREAN_FIELDWORK_FEATURE_CATEGORY = 'Feature';
 const KOREAN_FIELDWORK_FEATURE_GEOMETRY_TYPE: FieldGeometryType = 'Polygon';
+const KOREAN_FIELDWORK_DEFAULT_FEATURE_TYPE = 'unknown';
+const KOREAN_FIELDWORK_DESKTOP_GEOMETRY_SOURCE_AERIAL_LAYER_TRACE = 'aerialLayerTrace';
 
 
 @Component({
@@ -113,7 +116,7 @@ export class PlusButtonComponent implements OnInit, OnChanges, OnDestroy {
             }
         };
 
-        Object.assign(newDocument.resource, this.getDefaultFieldValues(geometryType));
+        Object.assign(newDocument.resource, await this.getDefaultFieldValues(geometryType));
 
         if (this.skipFormAndReturnNewDocument) {
             this.documentRequested.emit(newDocument);
@@ -311,14 +314,51 @@ export class PlusButtonComponent implements OnInit, OnChanges, OnDestroy {
     }
 
 
-    private getDefaultFieldValues(geometryType: string): Map<any> {
+    private async getDefaultFieldValues(geometryType: string): Promise<Map<any>> {
 
         const defaultFieldValues = { ...this.defaultFieldValues };
 
         return {
-            ...getKoreanFieldworkDefaultFieldValues(this.selectedCategory, { geometryType }),
+            ...getKoreanFieldworkDefaultFieldValues(this.selectedCategory, {
+                geometrySource: this.getGeometrySourceDefault(geometryType),
+                geometryType
+            }),
+            ...(await this.getKoreanFieldworkFeatureDraftDefaults(geometryType)),
             ...defaultFieldValues
         };
+    }
+
+
+    private getGeometrySourceDefault(geometryType: string): string|undefined {
+
+        return this.isKoreanFieldworkFeaturePolygonDraft(geometryType)
+            ? KOREAN_FIELDWORK_DESKTOP_GEOMETRY_SOURCE_AERIAL_LAYER_TRACE
+            : undefined;
+    }
+
+
+    private async getKoreanFieldworkFeatureDraftDefaults(geometryType: string): Promise<Map<any>> {
+
+        if (!this.isKoreanFieldworkFeaturePolygonDraft(geometryType)) return {};
+
+        const featureDocuments: FieldDocument[] = (await this.datastore.find({
+            categories: [KOREAN_FIELDWORK_FEATURE_CATEGORY]
+        })).documents as FieldDocument[];
+
+        return {
+            ...(CategoryForm.getField(this.selectedCategory, 'featureType')
+                ? { featureType: KOREAN_FIELDWORK_DEFAULT_FEATURE_TYPE }
+                : {}),
+            identifier: createNextFeatureIdentifier(KOREAN_FIELDWORK_DEFAULT_FEATURE_TYPE, featureDocuments ?? [])
+        };
+    }
+
+
+    private isKoreanFieldworkFeaturePolygonDraft(geometryType: string): boolean {
+
+        return this.selectedCategory?.name === KOREAN_FIELDWORK_FEATURE_CATEGORY
+            && geometryType === KOREAN_FIELDWORK_FEATURE_GEOMETRY_TYPE
+            && isKoreanFieldworkFeatureCategory(this.selectedCategory);
     }
 
 

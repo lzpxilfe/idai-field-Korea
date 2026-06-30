@@ -31,6 +31,7 @@ export interface KoreanFieldworkDefaultFieldOptions {
     boundaryAccuracy?: string;
     boundarySummary?: string;
     boundarySource?: string;
+    geometrySource?: string;
     geometryType?: FieldGeometryType|string;
     referenceBasemapProvider?: string;
 }
@@ -50,7 +51,7 @@ export function getKoreanFieldworkDefaultFieldValues(category: CategoryForm|unde
             featureSoilProfilePhotoCount: 0,
             ...(options.geometryType && options.geometryType !== 'none'
                 ? {
-                    geometrySource: KOREAN_FIELDWORK_GEOMETRY_SOURCE_TABLET_SKETCH,
+                    geometrySource: options.geometrySource ?? KOREAN_FIELDWORK_GEOMETRY_SOURCE_TABLET_SKETCH,
                     geometryConfidence: KOREAN_FIELDWORK_GEOMETRY_CONFIDENCE_ROUGH
                 }
                 : {})
