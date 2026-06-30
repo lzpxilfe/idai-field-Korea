@@ -23,6 +23,7 @@ import {
 } from 'react-native';
 import CategoryIcon from '@/components/common/CategoryIcon';
 import DocumentAddModal from '@/components/Project/DocumentAddModal';
+import KoreanFieldworkDailyJournalCalendar from '@/components/Project/KoreanFieldworkDailyJournalCalendar';
 import KoreanFieldworkDailyNotebookDigest from '@/components/Project/KoreanFieldworkDailyNotebookDigest';
 import KoreanFieldworkFieldNotePanel from '@/components/Project/KoreanFieldworkFieldNotePanel';
 import KoreanFieldworkHierarchyBoard from '@/components/Project/KoreanFieldworkHierarchyBoard';
@@ -99,8 +100,10 @@ import {
   KOREAN_FIELDWORK_RETURN_TARGETS,
 } from '@/components/Project/korean-fieldwork-navigation';
 import {
+  loadKoreanFieldworkProjectBoundaryDraft,
   saveKoreanFieldworkInvestigationModeId,
   KoreanFieldworkInvestigationModeId,
+  KoreanFieldworkProjectBoundaryDraft,
 } from '@/components/Project/korean-fieldwork-investigation-mode';
 import {
   syncKoreanFieldworkProjectSetupDefaultsToProjectDocument,
@@ -273,6 +276,9 @@ const DocumentsList: React.FC = () => {
     }>();
   const fieldNoteContinuationRequestId = useRef(0);
   const [isCreatingFieldNote, setIsCreatingFieldNote] = useState(false);
+  const [projectBoundaryDraft, setProjectBoundaryDraft] =
+    useState<KoreanFieldworkProjectBoundaryDraft>();
+  const [isSavingDailyJournal, setIsSavingDailyJournal] = useState(false);
   const now = useMemo(() => new Date(), []);
   const projectId = preferencesContext.preferences.currentProject;
   const {
@@ -477,6 +483,20 @@ const DocumentsList: React.FC = () => {
   useEffect(() => {
     setSelectedInvestigationModeId(undefined);
   }, [projectId]);
+  useEffect(() => {
+    let isActive = true;
+    setProjectBoundaryDraft(undefined);
+
+    loadKoreanFieldworkProjectBoundaryDraft(projectId)
+      .then((boundaryDraft) => {
+        if (isActive) setProjectBoundaryDraft(boundaryDraft);
+      })
+      .catch(() => undefined);
+
+    return () => {
+      isActive = false;
+    };
+  }, [projectId]);
   const openMap = () => router.navigate('/ProjectScreen/DocumentsMap');
   const editDocumentById = (docId: string, categoryName: string) => {
     router.navigate({
@@ -569,6 +589,42 @@ const DocumentsList: React.FC = () => {
         KOREAN_FIELDWORK_CATEGORIES.DAILY_LOG
       )
       && !!config.getCategory(KOREAN_FIELDWORK_CATEGORIES.DAILY_LOG)
+    );
+  const fallbackOperationDocument = useMemo(
+    () => documents.find((document) =>
+      document.resource.category === KOREAN_FIELDWORK_CATEGORIES.OPERATION
+    ),
+    [documents]
+  );
+  const journalOperationDocument =
+    selectedFieldNoteOperation
+    ?? actionTargets.primaryOperation
+    ?? fallbackOperationDocument;
+  const journalDailyLog = useMemo(
+    () => getKoreanFieldworkDailyLogForOperation(
+      journalOperationDocument,
+      documents,
+      now
+    ) ?? actionTargets.dailyLog,
+    [actionTargets.dailyLog, documents, journalOperationDocument, now]
+  );
+  const journalOperationAllowedCategoryNames = useMemo(
+    () => journalOperationDocument
+      ? getAllowedAddCategoryNames(journalOperationDocument)
+      : [],
+    [getAllowedAddCategoryNames, journalOperationDocument]
+  );
+  const canEditDailyJournal =
+    !!repository
+    && (
+      !!journalDailyLog
+      || (
+        !!journalOperationDocument
+        && journalOperationAllowedCategoryNames.includes(
+          KOREAN_FIELDWORK_CATEGORIES.DAILY_LOG
+        )
+        && !!config.getCategory(KOREAN_FIELDWORK_CATEGORIES.DAILY_LOG)
+      )
     );
   const overviewScopeLabel = selectedWorkbenchDocumentId && selectedWorkbenchDocument
     ? `선택: ${
@@ -739,6 +795,58 @@ const DocumentsList: React.FC = () => {
     } finally {
       setIsCreatingFieldNote(false);
     }
+  };
+  const saveDailyJournalFields = async (
+    updates: Record<string, unknown>
+  ) => {
+    if (!repository) throw new Error('repository unavailable');
+    if (!journalDailyLog && !journalOperationDocument) {
+      throw new Error('daily journal operation unavailable');
+    }
+
+    try {
+      setIsSavingDailyJournal(true);
+
+      if (journalDailyLog) {
+        await repository.update({
+          ...journalDailyLog,
+          resource: {
+            ...journalDailyLog.resource,
+            ...updates,
+          },
+        });
+        return;
+      }
+
+      if (!journalOperationDocument) return;
+
+      const draft = createKoreanFieldworkDailyLogDraft(
+        journalOperationDocument,
+        journalOperationDocument,
+        '오늘 작업일지 시작',
+        config,
+        now
+      );
+      await repository.create({
+        ...draft,
+        resource: {
+          ...draft.resource,
+          ...updates,
+        },
+      });
+    } catch (error) {
+      showToast(
+        ToastType.Error,
+        `작업일지를 저장하지 못했습니다. ${error}`
+      );
+      throw error;
+    } finally {
+      setIsSavingDailyJournal(false);
+    }
+  };
+  const createDailyJournalLog = () => saveDailyJournalFields({});
+  const openDailyJournalLog = (dailyLog: Document) => {
+    selectWorkbenchDocument(dailyLog, { expand: true });
   };
   const applyCloseoutBatchUpdates = (
     batchUpdates: KoreanFieldworkCloseoutBatchUpdate[]
@@ -969,13 +1077,26 @@ const DocumentsList: React.FC = () => {
         )}
 
         {activeWorkspaceTab === 'journal' && (
-        <KoreanFieldworkDailyNotebookDigest
-          canOpenDailyLog={!quickActions.dailyLog.disabled}
-          documents={userVisibleDocuments}
-          now={now}
-          onContinueEntry={continueNotebookEntry}
-          onOpenDailyLog={openDailyLog}
-        />
+        <>
+          <KoreanFieldworkDailyJournalCalendar
+            boundaryDraft={projectBoundaryDraft}
+            boundarySummary={boundarySummary}
+            canEdit={canEditDailyJournal}
+            dailyLog={journalDailyLog}
+            isSaving={isSavingDailyJournal}
+            now={now}
+            onCreateDailyLog={createDailyJournalLog}
+            onOpenDailyLog={openDailyJournalLog}
+            onUpdateDailyLog={saveDailyJournalFields}
+          />
+          <KoreanFieldworkDailyNotebookDigest
+            canOpenDailyLog={!quickActions.dailyLog.disabled}
+            documents={userVisibleDocuments}
+            now={now}
+            onContinueEntry={continueNotebookEntry}
+            onOpenDailyLog={openDailyLog}
+          />
+        </>
         )}
 
         {selectedWorkbenchDocument && (
