@@ -17,10 +17,13 @@ const MAX_COORDINATE = 10000;
 export const normalizeKoreanFieldworkHandwritingStrokes = (
   value: unknown
 ): KoreanFieldworkHandwritingStroke[] => {
-  const strokesValue = isRecord(value)
-    && Array.isArray(value.strokes)
-    ? value.strokes
+  const normalizedValue = typeof value === 'string'
+    ? parseKoreanFieldworkHandwritingPayload(value)
     : value;
+  const strokesValue = isRecord(normalizedValue)
+    && Array.isArray(normalizedValue.strokes)
+    ? normalizedValue.strokes
+    : normalizedValue;
 
   if (!Array.isArray(strokesValue)) return [];
 
@@ -136,6 +139,14 @@ const normalizeCoordinate = (value: unknown): number | undefined => {
   if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
 
   return Math.max(0, Math.min(MAX_COORDINATE, Math.round(value)));
+};
+
+const parseKoreanFieldworkHandwritingPayload = (value: string): unknown => {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>

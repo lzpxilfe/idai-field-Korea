@@ -1,0 +1,658 @@
+import { Ionicons } from '@expo/vector-icons';
+import { Document } from 'idai-field-core';
+import React, { useMemo, useState } from 'react';
+import type { DimensionValue } from 'react-native';
+import {
+  LayoutChangeEvent,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { KOREAN_FIELDWORK_CATEGORIES } from './korean-fieldwork-categories';
+
+type FeatureLocationSketchShape = 'point' | 'polygon' | 'rectangle' | 'oval';
+
+interface SketchPoint {
+  x: number;
+  y: number;
+}
+
+interface PixelPoint {
+  x: number;
+  y: number;
+}
+
+interface CanvasSize {
+  height: number;
+  width: number;
+}
+
+interface FeatureLocationSketch {
+  center: SketchPoint;
+  points: SketchPoint[];
+  rotation: number;
+  scale: number;
+  shape: FeatureLocationSketchShape;
+}
+
+interface Props {
+  document: Document;
+  documents: readonly Document[];
+}
+
+const PREVIEW_DEFAULT_SIZE = {
+  height: 150,
+  width: 260,
+};
+const BOUNDARY_PADDING = 12;
+const VALID_SHAPES = new Set<FeatureLocationSketchShape>([
+  'point',
+  'polygon',
+  'rectangle',
+  'oval',
+]);
+const TEXT = {
+  panelTitle: '\uc720\uad6c \uc704\uce58\uc640 \ud615\ud0dc',
+  boundaryTitle: '\uc804\uccb4 \uacbd\uacc4 \uc548 \uc704\uce58',
+  shapeTitle: '\uc720\uad6c \ud615\ud0dc \uc2a4\ucf00\uce58',
+  noBoundary: '\uc870\uc0ac \uacbd\uacc4 \uc5c6\uc74c',
+  noSketch: '\uc720\uad6c \uc2a4\ucf00\uce58 \uc5c6\uc74c',
+  feature: '\uc720\uad6c',
+};
+
+const KoreanFieldworkFeatureSketchReferencePanel: React.FC<Props> = ({
+  document,
+  documents,
+}) => {
+  const [boundaryCanvasSize, setBoundaryCanvasSize] =
+    useState(PREVIEW_DEFAULT_SIZE);
+  const [shapeCanvasSize, setShapeCanvasSize] =
+    useState(PREVIEW_DEFAULT_SIZE);
+  const boundaryPoints = useMemo(
+    () => getSurveyBoundaryPoints(documents),
+    [documents]
+  );
+  const sketch = useMemo(
+    () => normalizeFeatureLocationSketch(
+      (document.resource as Record<string, unknown>).featureLocationSketch
+    ),
+    [document.resource]
+  );
+
+  if (document.resource.category !== KOREAN_FIELDWORK_CATEGORIES.FEATURE) {
+    return null;
+  }
+
+  return (
+    <View style={styles.container} testID="featureSketchReferencePanel">
+      <View style={styles.headerRow}>
+        <Ionicons name="map-outline" size={16} color="#344054" />
+        <Text style={styles.title}>{TEXT.panelTitle}</Text>
+      </View>
+      <View style={styles.previewRow}>
+        <SketchCard
+          onLayout={(size) => setBoundaryCanvasSize(size)}
+          testID="featureBoundaryLocationPreview"
+          title={TEXT.boundaryTitle}
+        >
+          {boundaryPoints.length >= 3
+            ? (
+              <>
+                {toLineSegments({
+                  canvasSize: boundaryCanvasSize,
+                  closePath: true,
+                  color: '#175cd3',
+                  keyPrefix: 'boundary',
+                  points: boundaryPoints,
+                  testID: 'featureBoundaryLine',
+                  width: 2,
+                })}
+                {boundaryPoints.map((point, index) => (
+                  <View
+                    key={`boundary-point-${index}`}
+                    pointerEvents="none"
+                    style={[styles.boundaryPoint, getPointPercentStyle(point)]}
+                    testID={`featureBoundaryPoint_${index}`}
+                  />
+                ))}
+              </>
+            )
+            : (
+              <EmptyPreviewText text={TEXT.noBoundary} />
+            )}
+          {sketch && renderFeatureSketch(
+            sketch,
+            boundaryCanvasSize,
+            'featureBoundaryFeatureShape',
+            true
+          )}
+        </SketchCard>
+        <SketchCard
+          onLayout={(size) => setShapeCanvasSize(size)}
+          testID="featureShapeSketchPreview"
+          title={TEXT.shapeTitle}
+        >
+          {sketch
+            ? renderFeatureSketch(
+              sketch,
+              shapeCanvasSize,
+              'featureShapeSketchShape',
+              false
+            )
+            : <EmptyPreviewText text={TEXT.noSketch} />}
+        </SketchCard>
+      </View>
+    </View>
+  );
+};
+
+const SketchCard: React.FC<{
+  children: React.ReactNode;
+  onLayout: (size: CanvasSize) => void;
+  testID: string;
+  title: string;
+}> = ({
+  children,
+  onLayout,
+  testID,
+  title,
+}) => {
+  const handleLayout = (event: LayoutChangeEvent) => {
+    const { height, width } = event.nativeEvent.layout;
+    if (height > 0 && width > 0) onLayout({ height, width });
+  };
+
+  return (
+    <View style={styles.card} testID={testID}>
+      <Text style={styles.cardTitle}>{title}</Text>
+      <View
+        onLayout={handleLayout}
+        pointerEvents="none"
+        style={styles.previewCanvas}
+      >
+        <View style={styles.northBand}>
+          <Text style={styles.northText}>N</Text>
+        </View>
+        <View style={styles.verticalAxis} />
+        <View style={styles.horizontalAxis} />
+        {children}
+      </View>
+    </View>
+  );
+};
+
+const EmptyPreviewText: React.FC<{ text: string }> = ({ text }) => (
+  <View style={styles.emptyPreview}>
+    <Text style={styles.emptyPreviewText}>{text}</Text>
+  </View>
+);
+
+const renderFeatureSketch = (
+  sketch: FeatureLocationSketch,
+  canvasSize: CanvasSize,
+  testID: string,
+  compact: boolean
+) => {
+  if (sketch.shape === 'rectangle' || sketch.shape === 'oval') {
+    return (
+      <View
+        pointerEvents="none"
+        style={[
+          styles.featureShape,
+          compact && styles.featureShapeCompact,
+          sketch.shape === 'oval' && styles.featureShapeOval,
+          getFeatureShapeFrame(sketch, canvasSize, compact ? 0.84 : 1.12),
+        ]}
+        testID={testID}
+      >
+        <View style={styles.featureShapeCenter} />
+        {!compact && (
+          <Text style={styles.featureShapeLabel}>{TEXT.feature}</Text>
+        )}
+      </View>
+    );
+  }
+
+  const points = getVisibleFeatureSketchPoints(sketch);
+
+  return (
+    <>
+      {sketch.shape === 'polygon' && toLineSegments({
+        canvasSize,
+        closePath: points.length > 2,
+        color: '#f97316',
+        keyPrefix: `${testID}-line`,
+        points,
+        testID,
+        width: compact ? 2 : 3,
+      })}
+      {points.map((point, index) => (
+        <View
+          key={`${testID}-${index}-${point.x}-${point.y}`}
+          pointerEvents="none"
+          style={[
+            styles.featurePoint,
+            compact && styles.featurePointCompact,
+            getPointPercentStyle(point),
+          ]}
+          testID={`${testID}_${index}`}
+        >
+          {!compact && (
+            <Text style={styles.featurePointText}>{index + 1}</Text>
+          )}
+        </View>
+      ))}
+    </>
+  );
+};
+
+const getVisibleFeatureSketchPoints = (
+  sketch: FeatureLocationSketch
+): SketchPoint[] => {
+  if (sketch.shape === 'polygon') return sketch.points;
+  return sketch.points.length > 0 ? sketch.points : [sketch.center];
+};
+
+const normalizeFeatureLocationSketch = (
+  value: unknown
+): FeatureLocationSketch | undefined => {
+  const rawValue = typeof value === 'string' ? parseJsonObject(value) : value;
+  if (!isRecord(rawValue)) return undefined;
+
+  const shapeValue = rawValue.shape;
+  const shape = typeof shapeValue === 'string' && VALID_SHAPES.has(
+    shapeValue as FeatureLocationSketchShape
+  )
+    ? shapeValue as FeatureLocationSketchShape
+    : 'point';
+  const center = normalizeSketchPoint(rawValue.center) ?? { x: 50, y: 50 };
+  const points = Array.isArray(rawValue.points)
+    ? rawValue.points
+      .map(normalizeSketchPoint)
+      .filter((point): point is SketchPoint => !!point)
+    : [];
+
+  return {
+    center,
+    points,
+    rotation: normalizeNumber(rawValue.rotation, 0),
+    scale: clamp(normalizeNumber(rawValue.scale, 100), 40, 220),
+    shape,
+  };
+};
+
+const getSurveyBoundaryPoints = (
+  documents: readonly Document[]
+): SketchPoint[] => {
+  const boundaryDocument = documents.find((candidate) =>
+    candidate.resource.category === KOREAN_FIELDWORK_CATEGORIES.SURVEY_BOUNDARY
+      && getBoundaryCoordinatePairs(candidate.resource.geometry).length >= 3);
+  if (!boundaryDocument) return [];
+
+  return normalizeBoundaryCoordinatePairs(
+    getBoundaryCoordinatePairs(boundaryDocument.resource.geometry)
+  );
+};
+
+const getBoundaryCoordinatePairs = (geometry: unknown): number[][] => {
+  if (!isRecord(geometry)) return [];
+
+  if (geometry.type === 'LineString') {
+    return getNumericCoordinatePairs(geometry.coordinates);
+  }
+
+  if (geometry.type === 'Polygon' && Array.isArray(geometry.coordinates)) {
+    return getNumericCoordinatePairs(geometry.coordinates[0]);
+  }
+
+  return [];
+};
+
+const getNumericCoordinatePairs = (value: unknown): number[][] => {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .filter((coordinate): coordinate is unknown[] =>
+      Array.isArray(coordinate) && coordinate.length >= 2)
+    .map((coordinate) => [coordinate[0], coordinate[1]])
+    .filter((coordinate): coordinate is number[] =>
+      typeof coordinate[0] === 'number'
+        && Number.isFinite(coordinate[0])
+        && typeof coordinate[1] === 'number'
+        && Number.isFinite(coordinate[1]));
+};
+
+const normalizeBoundaryCoordinatePairs = (
+  coordinatePairs: number[][]
+): SketchPoint[] => {
+  const openPairs = getOpenCoordinatePairs(coordinatePairs);
+  if (openPairs.length < 3) return [];
+
+  const xs = openPairs.map((coordinate) => coordinate[0]);
+  const ys = openPairs.map((coordinate) => coordinate[1]);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+  const xRange = Math.max(maxX - minX, 0.000001);
+  const yRange = Math.max(maxY - minY, 0.000001);
+  const drawableSize = 100 - (BOUNDARY_PADDING * 2);
+
+  return openPairs.map((coordinate) => ({
+    x: BOUNDARY_PADDING + (((coordinate[0] - minX) / xRange) * drawableSize),
+    y: BOUNDARY_PADDING + (((maxY - coordinate[1]) / yRange) * drawableSize),
+  }));
+};
+
+const getOpenCoordinatePairs = (coordinatePairs: number[][]): number[][] => {
+  if (coordinatePairs.length < 2) return coordinatePairs;
+
+  const first = coordinatePairs[0];
+  const last = coordinatePairs[coordinatePairs.length - 1];
+  return first[0] === last[0] && first[1] === last[1]
+    ? coordinatePairs.slice(0, -1)
+    : coordinatePairs;
+};
+
+const toLineSegments = ({
+  canvasSize,
+  closePath,
+  color,
+  keyPrefix,
+  points,
+  testID,
+  width,
+}: {
+  canvasSize: CanvasSize;
+  closePath: boolean;
+  color: string;
+  keyPrefix: string;
+  points: SketchPoint[];
+  testID: string;
+  width: number;
+}) => {
+  if (points.length < 2) return [];
+
+  const segmentStartPoints = closePath ? points : points.slice(0, -1);
+
+  return segmentStartPoints.map((point, index) => (
+    <SketchLineSegment
+      color={color}
+      end={denormalizePoint(points[(index + 1) % points.length], canvasSize)}
+      key={`${keyPrefix}-${index}`}
+      start={denormalizePoint(point, canvasSize)}
+      testID={testID}
+      width={width}
+    />
+  ));
+};
+
+const SketchLineSegment: React.FC<{
+  color: string;
+  end: PixelPoint;
+  start: PixelPoint;
+  testID: string;
+  width: number;
+}> = ({
+  color,
+  end,
+  start,
+  testID,
+  width,
+}) => {
+  const distance = Math.sqrt(((end.x - start.x) ** 2) + ((end.y - start.y) ** 2));
+  const angle = Math.atan2(end.y - start.y, end.x - start.x);
+
+  return (
+    <View
+      pointerEvents="none"
+      style={{
+        backgroundColor: color,
+        borderRadius: width,
+        height: width,
+        left: ((start.x + end.x) / 2) - (distance / 2),
+        opacity: 0.92,
+        position: 'absolute',
+        top: ((start.y + end.y) / 2) - (width / 2),
+        transform: [{ rotateZ: `${angle}rad` }],
+        width: distance,
+      }}
+      testID={testID}
+    />
+  );
+};
+
+const getFeatureShapeFrame = (
+  sketch: FeatureLocationSketch,
+  canvasSize: CanvasSize,
+  scaleMultiplier: number
+) => {
+  const center = denormalizePoint(sketch.center, canvasSize);
+  const shapeScale = (sketch.scale / 100) * scaleMultiplier;
+  const width = clamp(canvasSize.width * 0.22 * shapeScale, 24, 120);
+  const height = clamp(canvasSize.height * 0.26 * shapeScale, 22, 96);
+
+  return {
+    height,
+    left: center.x - (width / 2),
+    top: center.y - (height / 2),
+    transform: [{ rotateZ: `${sketch.rotation}deg` }],
+    width,
+  };
+};
+
+const denormalizePoint = (
+  point: SketchPoint,
+  canvasSize: CanvasSize
+): PixelPoint => ({
+  x: (point.x / 100) * canvasSize.width,
+  y: (point.y / 100) * canvasSize.height,
+});
+
+const getPointPercentStyle = (point: SketchPoint) => ({
+  left: toPercent(point.x),
+  top: toPercent(point.y),
+});
+
+const normalizeSketchPoint = (value: unknown): SketchPoint | undefined => {
+  if (!isRecord(value)) return undefined;
+
+  const x = normalizePercent(value.x);
+  const y = normalizePercent(value.y);
+
+  return x === undefined || y === undefined ? undefined : { x, y };
+};
+
+const normalizePercent = (value: unknown): number | undefined =>
+  typeof value === 'number' && Number.isFinite(value)
+    ? clamp(value, 0, 100)
+    : undefined;
+
+const normalizeNumber = (value: unknown, fallback: number): number =>
+  typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+
+const parseJsonObject = (value: string): unknown => {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return undefined;
+  }
+};
+
+const toPercent = (value: number): DimensionValue =>
+  `${value}%` as DimensionValue;
+
+const clamp = (value: number, min: number, max: number): number =>
+  Math.min(max, Math.max(min, value));
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  !!value && typeof value === 'object';
+
+const styles = StyleSheet.create({
+  container: {
+    backgroundColor: 'white',
+    borderColor: '#d0d5dd',
+    borderRadius: 6,
+    borderWidth: 1,
+    marginHorizontal: 14,
+    marginTop: 8,
+    overflow: 'hidden',
+  },
+  headerRow: {
+    alignItems: 'center',
+    borderBottomColor: '#eaecf0',
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  title: {
+    color: '#344054',
+    fontSize: 13,
+    fontWeight: '900',
+    marginLeft: 5,
+  },
+  previewRow: {
+    flexDirection: 'row',
+    gap: 8,
+    padding: 8,
+  },
+  card: {
+    backgroundColor: '#f8fafc',
+    borderColor: '#d0d5dd',
+    borderRadius: 6,
+    borderWidth: 1,
+    flex: 1,
+    minWidth: 0,
+    overflow: 'hidden',
+  },
+  cardTitle: {
+    color: '#475467',
+    fontSize: 11,
+    fontWeight: '900',
+    paddingHorizontal: 8,
+    paddingTop: 7,
+  },
+  previewCanvas: {
+    backgroundColor: '#ffffff',
+    borderTopColor: '#eaecf0',
+    borderTopWidth: 1,
+    height: PREVIEW_DEFAULT_SIZE.height,
+    marginTop: 6,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  northBand: {
+    alignItems: 'center',
+    backgroundColor: '#eef4ff',
+    borderBottomColor: '#d6e4ff',
+    borderBottomWidth: 1,
+    height: 18,
+    justifyContent: 'center',
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
+  northText: {
+    color: '#175cd3',
+    fontSize: 10,
+    fontWeight: '900',
+  },
+  verticalAxis: {
+    backgroundColor: '#eef2f6',
+    bottom: 0,
+    left: '50%',
+    position: 'absolute',
+    top: 18,
+    width: 1,
+  },
+  horizontalAxis: {
+    backgroundColor: '#eef2f6',
+    height: 1,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: '50%',
+  },
+  boundaryPoint: {
+    backgroundColor: '#175cd3',
+    borderColor: '#ffffff',
+    borderRadius: 4,
+    borderWidth: 1,
+    height: 8,
+    marginLeft: -4,
+    marginTop: -4,
+    position: 'absolute',
+    width: 8,
+  },
+  emptyPreview: {
+    alignItems: 'center',
+    bottom: 0,
+    justifyContent: 'center',
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 18,
+  },
+  emptyPreviewText: {
+    color: '#98a2b3',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  featureShape: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(249, 115, 22, 0.16)',
+    borderColor: '#f97316',
+    borderRadius: 5,
+    borderWidth: 2,
+    justifyContent: 'center',
+    position: 'absolute',
+  },
+  featureShapeCompact: {
+    backgroundColor: 'rgba(249, 115, 22, 0.24)',
+    borderWidth: 2,
+  },
+  featureShapeOval: {
+    borderRadius: 999,
+  },
+  featureShapeCenter: {
+    backgroundColor: '#f97316',
+    borderRadius: 4,
+    height: 8,
+    width: 8,
+  },
+  featureShapeLabel: {
+    color: '#9a3412',
+    fontSize: 10,
+    fontWeight: '900',
+    marginTop: 3,
+  },
+  featurePoint: {
+    alignItems: 'center',
+    backgroundColor: '#f97316',
+    borderColor: '#ffffff',
+    borderRadius: 10,
+    borderWidth: 2,
+    height: 20,
+    justifyContent: 'center',
+    marginLeft: -10,
+    marginTop: -10,
+    position: 'absolute',
+    width: 20,
+  },
+  featurePointCompact: {
+    borderRadius: 7,
+    height: 14,
+    marginLeft: -7,
+    marginTop: -7,
+    width: 14,
+  },
+  featurePointText: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: '900',
+  },
+});
+
+export default KoreanFieldworkFeatureSketchReferencePanel;

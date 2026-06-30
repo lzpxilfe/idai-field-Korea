@@ -18,6 +18,11 @@ import FieldworkPhotoAnnotationPanel, {
   FIELDWORK_PHOTO_ANNOTATION_FIELDS,
   FieldworkPhotoSamplePoint,
 } from '@/components/Project/FieldworkPhotoAnnotationPanel';
+import KoreanFieldworkFeatureSketchReferencePanel
+  from '@/components/Project/KoreanFieldworkFeatureSketchReferencePanel';
+import KoreanFieldworkFreeDrawingPanel, {
+  KOREAN_FIELDWORK_FREE_DRAWING_FIELDS,
+} from '@/components/Project/KoreanFieldworkFreeDrawingPanel';
 import SoilProfileCameraButton, {
   FieldworkPhotoCaptureData,
   PhotoCameraButton,
@@ -36,6 +41,7 @@ import { ToastType } from '@/components/common/Toast/ToastProvider';
 import { router, useGlobalSearchParams } from 'expo-router';
 import { ProjectContext } from '@/contexts/project-context';
 import { getKoreanFieldworkAllowedChildCategoryNames } from '@/components/Project/korean-fieldwork-child-records';
+import { KOREAN_FIELDWORK_CATEGORIES } from '@/components/Project/korean-fieldwork-categories';
 import { PreferencesContext } from '@/contexts/preferences-context';
 import {
   KoreanFieldworkInvestigationModeId,
@@ -173,6 +179,7 @@ const DocumentEdit: React.FC = () => {
   }
 
   const effectiveDocument = { ...document, resource };
+  const isFeatureRecord = resource.category === KOREAN_FIELDWORK_CATEGORIES.FEATURE;
 
   return (
     <DocumentForm
@@ -194,6 +201,12 @@ const DocumentEdit: React.FC = () => {
       returnBtnHandler={onReturn}
       formHeader={
         <View>
+          {isFeatureRecord && (
+            <KoreanFieldworkFeatureSketchReferencePanel
+              document={effectiveDocument}
+              documents={documents ?? []}
+            />
+          )}
           <KoreanFieldworkRecordContextPanel
             document={effectiveDocument}
             documents={documents ?? []}
@@ -225,6 +238,16 @@ const DocumentEdit: React.FC = () => {
           />
         </View>
       }
+      formFooter={isFeatureRecord ? (
+        <KoreanFieldworkFreeDrawingPanel
+          strokesValue={resource[KOREAN_FIELDWORK_FREE_DRAWING_FIELDS.featureStrokes]}
+          onUpdateStrokes={(serializedStrokes) => applyResourceUpdates({
+            [KOREAN_FIELDWORK_FREE_DRAWING_FIELDS.featureStrokes]: serializedStrokes,
+            [KOREAN_FIELDWORK_FREE_DRAWING_FIELDS.featureUpdatedAt]:
+              new Date().toISOString(),
+          })}
+        />
+      ) : undefined}
       resource={resource}
       updateFunction={updateResource}
       resourceActions={renderPhotoResourceActions(

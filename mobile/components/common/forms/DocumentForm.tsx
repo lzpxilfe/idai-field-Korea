@@ -46,6 +46,7 @@ interface DocumentFormProps {
   returnBtnHandler: () => void;
   titleBarRight: ReactNode;
   formHeader?: ReactNode;
+  formFooter?: ReactNode;
   resourceActions?: ReactNode;
   collapseFormFieldsByDefault?: boolean;
   resource: Resource | NewResource | undefined;
@@ -152,6 +153,7 @@ const DocumentForm: React.FC<DocumentFormProps> = ({
   returnBtnHandler,
   titleBarRight,
   formHeader,
+  formFooter,
   resourceActions,
   collapseFormFieldsByDefault = false,
   resource,
@@ -292,6 +294,11 @@ const DocumentForm: React.FC<DocumentFormProps> = ({
             )}
           </>
         )}
+        ListFooterComponent={formFooter ? (
+          <View style={styles.formFooter}>
+            {formFooter}
+          </View>
+        ) : undefined}
         renderItem={({ item }) => (
           <EditFormField
             setFunction={updateFunction}
@@ -428,6 +435,10 @@ const styles = StyleSheet.create({
   formHeader: {
     marginHorizontal: 5,
     marginTop: 8,
+  },
+  formFooter: {
+    marginTop: 10,
+    paddingBottom: 16,
   },
   formFieldsPanel: {
     borderColor: '#cbd7e3',
