@@ -85,7 +85,8 @@ interface OperationDraftOptions {
   legacyRootDocumentCount?: number;
   investigationModeId?: KoreanFieldworkInvestigationModeId;
   boundarySummary?: string;
-  now?: Date;
+  existingOperationIdentifiers?: readonly string[];
+  projectId?: string;
 }
 
 export const createOperationDraft = (
@@ -97,11 +98,13 @@ export const createOperationDraft = (
     legacyRootDocumentCount,
     normalizedBoundarySummary
   );
-  const now = options.now ?? new Date(Date.now());
 
   return {
     resource: {
-      identifier: `조사구역-${formatOperationDraftTimestamp(now)}`,
+      identifier: createOperationDraftIdentifier(
+        options.projectId,
+        options.existingOperationIdentifiers
+      ),
       category: KOREAN_FIELDWORK_CATEGORIES.OPERATION,
       relations: {},
       ...(options.investigationModeId ? {
@@ -133,11 +136,42 @@ const getOperationDraftShortDescription = (
   return undefined;
 };
 
-const formatOperationDraftTimestamp = (date: Date): string =>
-  `${date.getFullYear()}${pad2(date.getMonth() + 1)}${pad2(date.getDate())}`
-  + `-${pad2(date.getHours())}${pad2(date.getMinutes())}${pad2(date.getSeconds())}`;
+const createOperationDraftIdentifier = (
+  projectId?: string,
+  existingOperationIdentifiers: readonly string[] = []
+): string => {
+  const baseIdentifier = createProjectScopedIdentifier(projectId, '조사구역');
+  const existingIdentifierSet = new Set(existingOperationIdentifiers);
+  if (!existingIdentifierSet.has(baseIdentifier)) return baseIdentifier;
 
-const pad2 = (value: number): string => value.toString().padStart(2, '0');
+  let sequenceNumber = 2;
+  while (existingIdentifierSet.has(`${baseIdentifier}-${sequenceNumber}`)) {
+    sequenceNumber += 1;
+  }
+
+  return `${baseIdentifier}-${sequenceNumber}`;
+};
+
+const createProjectScopedIdentifier = (
+  projectId: string | undefined,
+  suffix: string
+): string => {
+  const projectIdentifier = createProjectIdentifierPrefix(projectId);
+
+  return projectIdentifier ? `${projectIdentifier}-${suffix}` : suffix;
+};
+
+const createProjectIdentifierPrefix = (projectId?: string): string | undefined => {
+  const normalizedProjectId = projectId
+    ?.trim()
+    .replace(/[\s.]+/g, '-')
+    .replace(/[^0-9A-Za-z가-힣_-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^[-_]+|[-_]+$/g, '')
+    .slice(0, 40);
+
+  return normalizedProjectId || undefined;
+};
 
 export const createDepictsRelation = (targetDoc: Document): { depicts: string[] } => ({
   depicts: [targetDoc.resource.id],

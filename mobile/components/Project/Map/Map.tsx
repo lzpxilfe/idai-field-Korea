@@ -261,6 +261,9 @@ const Map: React.FC<MapProps> = (props) => {
       legacyRootDocumentCount: legacyRootDocuments.length,
       investigationModeId: props.investigationModeId,
       boundarySummary: props.boundarySummary,
+      existingOperationIdentifiers: operationDocuments.map((document) =>
+        document.resource.identifier),
+      projectId: preferences.preferences.currentProject,
     }));
     if (legacyRootDocuments.length > 0) {
       await Promise.all(legacyRootDocuments.map((document) =>

@@ -41,24 +41,36 @@ describe('Korean fieldwork map drafts', () => {
 
   it('creates Operation drafts as root field unit records', () => {
     const draft = createOperationDraft({
-      now: new Date(2023, 10, 15, 7, 13, 20),
+      projectId: 'fieldwork-2026',
     });
 
     expect(draft.resource).toMatchObject({
-      identifier: '조사구역-20231115-071320',
+      identifier: 'fieldwork-2026-조사구역',
       category: 'Operation',
       relations: {},
     });
   });
 
+  it('increments project-scoped Operation draft identifiers when needed', () => {
+    const draft = createOperationDraft({
+      existingOperationIdentifiers: [
+        'fieldwork-2026-조사구역',
+        'fieldwork-2026-조사구역-2',
+      ],
+      projectId: 'fieldwork-2026',
+    });
+
+    expect(draft.resource.identifier).toBe('fieldwork-2026-조사구역-3');
+  });
+
   it('describes wrapped legacy roots in Operation drafts', () => {
     const draft = createOperationDraft({
       legacyRootDocumentCount: 4,
-      now: new Date(2023, 10, 15, 7, 13, 20),
+      projectId: 'fieldwork-2026',
     });
 
     expect(draft.resource).toMatchObject({
-      identifier: '조사구역-20231115-071320',
+      identifier: 'fieldwork-2026-조사구역',
       shortDescription: '기존 기록 4건을 유지하고 새 조사 경계 기준을 만들었습니다.',
     });
   });
@@ -67,11 +79,11 @@ describe('Korean fieldwork map drafts', () => {
     const draft = createOperationDraft({
       investigationModeId: 'trialTrench',
       boundarySummary: '  1구역 북쪽 능선부터 남쪽 농로까지  ',
-      now: new Date(2023, 10, 15, 7, 13, 20),
+      projectId: 'fieldwork-2026',
     });
 
     expect(draft.resource).toMatchObject({
-      identifier: '조사구역-20231115-071320',
+      identifier: 'fieldwork-2026-조사구역',
       projectInvestigationMode: 'trialTrench',
       projectBoundarySetupState: 'draftBoundary',
       projectBoundarySummary: '1구역 북쪽 능선부터 남쪽 농로까지',
@@ -83,7 +95,6 @@ describe('Korean fieldwork map drafts', () => {
     const draft = createOperationDraft({
       legacyRootDocumentCount: 4,
       boundarySummary: '1구역 북쪽 능선',
-      now: new Date(2023, 10, 15, 7, 13, 20),
     });
 
     expect(draft.resource.shortDescription)
