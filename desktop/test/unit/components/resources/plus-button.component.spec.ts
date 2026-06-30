@@ -1,5 +1,7 @@
 import { Subject } from 'rxjs';
 import { PlusButtonComponent } from '../../../../src/app/components/resources/plus-button.component';
+import * as fs from 'fs';
+import * as path from 'path';
 
 
 describe('PlusButtonComponent', () => {
@@ -75,6 +77,18 @@ describe('PlusButtonComponent', () => {
             }),
             'Polygon'
         );
+    });
+
+
+    it('describes Korean feature drawing as map-first placement in the desktop popover', () => {
+
+        const template = fs.readFileSync(
+            path.resolve(__dirname, '../../../../src/app/components/resources/plus-button.html'),
+            'utf8'
+        );
+
+        expect(template).toContain('위성지도나 평면도처럼 조사 경계 위에 유구 위치와 형태를 바로 얹습니다.');
+        expect(template).not.toContain('조사 경계 위 평면지도에 유구선을 그립니다.');
     });
 });
 

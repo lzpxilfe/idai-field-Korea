@@ -1015,6 +1015,19 @@ function validateGuidedFeatureDraftDefaults() {
   const tabletMapBottomSheetText = readTextFile('mobile/components/Project/Map/MapBottomSheet.tsx');
   const desktopDraftText = readTextFile('desktop/src/app/util/korean-fieldwork-document-drafts.ts');
   const desktopDraftDefaultsText = readTextFile('desktop/src/app/util/korean-fieldwork-draft-defaults.ts');
+  const desktopPlusButtonTemplateText = readTextFile('desktop/src/app/components/resources/plus-button.html');
+  const desktopPlusButtonI18nText = [
+    'de',
+    'el',
+    'en',
+    'es',
+    'fr',
+    'it',
+    'ko',
+    'pt',
+    'tr',
+    'uk'
+  ].map(locale => readTextFile(`desktop/src/app/i18n/angular/messages.${locale}.xlf`)).join('\n');
   const desktopFeatureGuidanceTemplateText = readTextFile(
     'desktop/src/app/components/docedit/core/korean-fieldwork-feature-guidance-panel.html'
   );
@@ -1090,6 +1103,12 @@ function validateGuidedFeatureDraftDefaults() {
   if (!desktopDraftDefaultsText.includes('위성지도나 평면도처럼 조사 경계 위에 유구 위치와 형태를 바로 얹으며 시작')
       || desktopDraftDefaultsText.includes('조사 경계 위 평면지도에서 유구 위치와 형태를 그리며 시작')) {
     findings.push('desktop feature draft defaults must use the same map-first placement wording as the tablet add flow');
+  }
+  if (!desktopPlusButtonTemplateText.includes('위성지도나 평면도처럼 조사 경계 위에 유구 위치와 형태를 바로 얹습니다.')
+      || desktopPlusButtonTemplateText.includes('조사 경계 위 평면지도에 유구선을 그립니다.')
+      || !desktopPlusButtonI18nText.includes('위성지도나 평면도처럼 조사 경계 위에 유구 위치와 형태를 바로 얹습니다.')
+      || desktopPlusButtonI18nText.includes('조사 경계 위 평면지도에 유구선을 그립니다.')) {
+    findings.push('desktop feature quick-create popover and i18n must describe feature placement as map-first, not an abstract feature-line drawing');
   }
   if (
     !tabletQuickRecordText.includes('getFeatureAttributeSectionTitle')
