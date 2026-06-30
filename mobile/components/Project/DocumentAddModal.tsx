@@ -45,8 +45,8 @@ import type {
 
 const ICON_SIZE = 34;
 const FEATURE_SKETCH_CANVAS_DEFAULT_SIZE = {
-  height: 640,
-  width: 860,
+  height: 720,
+  width: 1100,
 };
 const FEATURE_SKETCH_TABLET_WIDTH = 720;
 const FEATURE_SKETCH_SCALE_STEP = 10;
@@ -107,9 +107,9 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
     windowDimensions.width >= FEATURE_SKETCH_TABLET_WIDTH;
   const featureSketchCanvasHeight = useMemo(
     () => clamp(
-      Math.round(windowDimensions.height * (isFeatureWideLayout ? 0.78 : 0.70)),
-      isFeatureWideLayout ? 620 : 500,
-      isFeatureWideLayout ? 860 : 680
+      Math.round(windowDimensions.height * (isFeatureWideLayout ? 0.84 : 0.74)),
+      isFeatureWideLayout ? 680 : 540,
+      isFeatureWideLayout ? 960 : 720
     ),
     [isFeatureWideLayout, windowDimensions.height]
   );
@@ -430,6 +430,20 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
     </>
   );
 
+  const renderFeatureSketchMapSurface = () => (
+    <View
+      pointerEvents="none"
+      style={styles.featureSketchMapSurface}
+      testID="featureSketchFlatMapSurface"
+    >
+      <View style={[styles.featureSketchMapPatch, styles.featureSketchMapPatchNorth]} />
+      <View style={[styles.featureSketchMapPatch, styles.featureSketchMapPatchSouth]} />
+      <View style={[styles.featureSketchMapTrack, styles.featureSketchMapTrackA]} />
+      <View style={[styles.featureSketchMapTrack, styles.featureSketchMapTrackB]} />
+      <View style={[styles.featureSketchMapWater, styles.featureSketchMapWaterA]} />
+    </View>
+  );
+
   const renderFeatureSketchToolbar = () => (
     <View pointerEvents="box-none" style={styles.featureSketchToolbar}>
       <TouchableOpacity
@@ -485,12 +499,12 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
   );
 
   const renderFeatureLocationSketchPanel = () => (
-    <View style={styles.featureLocationPanel}>
+    <View style={styles.featureLocationPanel} testID="featureLocationSketchPanel">
       <View style={styles.featureLocationHeader}>
         <View>
-          <Text style={styles.featureLocationTitle}>유구 위치 그리기</Text>
+          <Text style={styles.featureLocationTitle}>조사 경계 지도</Text>
           <Text style={styles.featureLocationDetail}>
-            위성지도·일반지도 같은 평면 기준으로 조사 경계 안에 유구 위치와 형태를 표시합니다.
+            지도 평면 기준으로 조사 경계 안에 유구 위치와 형태를 표시합니다.
           </Text>
         </View>
         {featureSketchWasEdited && (
@@ -503,38 +517,6 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
             <Ionicons name="refresh-outline" size={17} color="#475467" />
           </TouchableOpacity>
         )}
-      </View>
-      <View style={styles.featureSketchModeRow}>
-        {FEATURE_LOCATION_SKETCH_SHAPES.map((shape) => {
-          const isSelected = shape.id === featureLocationShape;
-
-          return (
-            <TouchableOpacity
-              activeOpacity={0.84}
-              accessibilityRole="button"
-              accessibilityState={{ selected: isSelected }}
-              key={shape.id}
-              onPress={() => selectFeatureLocationShape(shape.id)}
-              style={[
-                styles.featureSketchModeButton,
-                isSelected && styles.featureSketchModeButtonSelected,
-              ]}
-              testID={`featureSketchMode_${shape.id}`}
-            >
-              <Ionicons
-                name={shape.icon as keyof typeof Ionicons.glyphMap}
-                size={15}
-                color={isSelected ? '#175cd3' : '#526272'}
-              />
-              <Text style={[
-                styles.featureSketchModeText,
-                isSelected && styles.featureSketchModeTextSelected,
-              ]}>
-                {shape.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
       </View>
       <View
         onLayout={handleFeatureSketchLayout}
@@ -550,10 +532,43 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
         ]}
         testID="featureLocationSketchCanvas"
       >
+        {renderFeatureSketchMapSurface()}
         {renderFeatureSketchGrid()}
         <View pointerEvents="none" style={styles.featureSketchPlaneBadge}>
           <Ionicons name="map-outline" size={13} color="#175cd3" />
-          <Text style={styles.featureSketchPlaneBadgeText}>평면 지도</Text>
+          <Text style={styles.featureSketchPlaneBadgeText}>2D 지도</Text>
+        </View>
+        <View pointerEvents="box-none" style={styles.featureSketchModeRow}>
+          {FEATURE_LOCATION_SKETCH_SHAPES.map((shape) => {
+            const isSelected = shape.id === featureLocationShape;
+
+            return (
+              <TouchableOpacity
+                activeOpacity={0.84}
+                accessibilityRole="button"
+                accessibilityState={{ selected: isSelected }}
+                key={shape.id}
+                onPress={() => selectFeatureLocationShape(shape.id)}
+                style={[
+                  styles.featureSketchModeButton,
+                  isSelected && styles.featureSketchModeButtonSelected,
+                ]}
+                testID={`featureSketchMode_${shape.id}`}
+              >
+                <Ionicons
+                  name={shape.icon as keyof typeof Ionicons.glyphMap}
+                  size={15}
+                  color={isSelected ? '#c2410c' : '#526272'}
+                />
+                <Text style={[
+                  styles.featureSketchModeText,
+                  isSelected && styles.featureSketchModeTextSelected,
+                ]}>
+                  {shape.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
         {renderFeatureSketchBoundary()}
         {renderFeatureSketchPreview()}
@@ -618,16 +633,22 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
         styles.featureCreationLayout,
         isFeatureWideLayout && styles.featureCreationLayoutWide,
       ]}>
-        <View style={[
-          styles.featureCreationMapPane,
-          isFeatureWideLayout && styles.featureCreationMapPaneWide,
-        ]}>
+        <View
+          style={[
+            styles.featureCreationMapPane,
+            isFeatureWideLayout && styles.featureCreationMapPaneWide,
+          ]}
+          testID="featureCreationMapPane"
+        >
           {renderFeatureLocationSketchPanel()}
         </View>
-        <View style={[
-          styles.featureCreationFormPane,
-          isFeatureWideLayout && styles.featureCreationFormPaneWide,
-        ]}>
+        <View
+          style={[
+            styles.featureCreationFormPane,
+            isFeatureWideLayout && styles.featureCreationFormPaneWide,
+          ]}
+          testID="featureCreationFormPane"
+        >
           <View style={styles.parentPanel}>
             <Text style={styles.parentLabel} numberOfLines={1}>
               포함 위치: {parentDoc.resource.identifier}
@@ -1242,15 +1263,15 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   featureCreationMapPaneWide: {
-    flex: 1.4,
+    flex: 2.35,
     marginRight: 12,
   },
   featureCreationFormPane: {
     minWidth: 0,
   },
   featureCreationFormPaneWide: {
-    flex: 1,
-    maxWidth: 480,
+    flex: 0.85,
+    maxWidth: 390,
   },
   parentPanel: {
     backgroundColor: '#f8fafc',
@@ -1295,8 +1316,8 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   featureLocationPanel: {
-    backgroundColor: '#ffffff',
-    borderColor: '#b9c7d5',
+    backgroundColor: '#f6f8f5',
+    borderColor: '#9ab28c',
     borderRadius: 6,
     borderWidth: 1,
     marginBottom: 8,
@@ -1332,14 +1353,20 @@ const styles = StyleSheet.create({
     width: 30,
   },
   featureSketchModeRow: {
+    alignItems: 'center',
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginBottom: 8,
+    justifyContent: 'flex-end',
+    left: 118,
+    position: 'absolute',
+    right: 12,
+    top: 10,
+    zIndex: 4,
   },
   featureSketchModeButton: {
     alignItems: 'center',
-    backgroundColor: 'white',
-    borderColor: '#d0d5dd',
+    backgroundColor: 'rgba(255, 255, 255, 0.96)',
+    borderColor: '#98a2b3',
     borderRadius: 6,
     borderWidth: 1,
     flexDirection: 'row',
@@ -1349,8 +1376,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   featureSketchModeButtonSelected: {
-    backgroundColor: '#eff8ff',
-    borderColor: '#84caff',
+    backgroundColor: '#fff7ed',
+    borderColor: '#f97316',
   },
   featureSketchModeText: {
     color: '#526272',
@@ -1359,11 +1386,11 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   featureSketchModeTextSelected: {
-    color: '#175cd3',
+    color: '#c2410c',
   },
   featureSketchCanvas: {
-    backgroundColor: '#f8fbff',
-    borderColor: '#6694ca',
+    backgroundColor: '#eef5ed',
+    borderColor: '#7a9d70',
     borderRadius: 6,
     borderWidth: 1,
     height: 300,
@@ -1371,8 +1398,64 @@ const styles = StyleSheet.create({
     position: 'relative',
     width: '100%',
   },
+  featureSketchMapSurface: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#eef5ed',
+  },
+  featureSketchMapPatch: {
+    borderColor: 'rgba(47, 111, 78, 0.14)',
+    borderRadius: 999,
+    borderWidth: 1,
+    position: 'absolute',
+  },
+  featureSketchMapPatchNorth: {
+    backgroundColor: 'rgba(185, 216, 172, 0.34)',
+    height: '36%',
+    left: '-8%',
+    top: '-10%',
+    transform: [{ rotateZ: '-8deg' }],
+    width: '62%',
+  },
+  featureSketchMapPatchSouth: {
+    backgroundColor: 'rgba(220, 205, 165, 0.28)',
+    bottom: '-13%',
+    height: '44%',
+    right: '-7%',
+    transform: [{ rotateZ: '9deg' }],
+    width: '58%',
+  },
+  featureSketchMapTrack: {
+    backgroundColor: 'rgba(255, 255, 255, 0.66)',
+    borderColor: 'rgba(102, 112, 133, 0.18)',
+    borderWidth: 1,
+    height: 12,
+    position: 'absolute',
+    width: '122%',
+  },
+  featureSketchMapTrackA: {
+    left: '-12%',
+    top: '30%',
+    transform: [{ rotateZ: '-11deg' }],
+  },
+  featureSketchMapTrackB: {
+    left: '-9%',
+    top: '68%',
+    transform: [{ rotateZ: '7deg' }],
+  },
+  featureSketchMapWater: {
+    backgroundColor: 'rgba(178, 221, 255, 0.36)',
+    borderRadius: 999,
+    position: 'absolute',
+  },
+  featureSketchMapWaterA: {
+    height: '18%',
+    right: '9%',
+    top: '12%',
+    transform: [{ rotateZ: '-18deg' }],
+    width: '24%',
+  },
   featureSketchGridLine: {
-    backgroundColor: 'rgba(102, 148, 202, 0.18)',
+    backgroundColor: 'rgba(52, 64, 84, 0.13)',
     position: 'absolute',
   },
   featureSketchGridLineVertical: {
@@ -1405,38 +1488,9 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     marginLeft: 4,
   },
-  featureSketchNorthBand: {
-    alignItems: 'center',
-    backgroundColor: '#ecfdf3',
-    borderBottomColor: '#d0d5dd',
-    borderBottomWidth: 1,
-    height: 20,
-    justifyContent: 'center',
-  },
-  featureSketchNorthText: {
-    color: '#2f6f4e',
-    fontSize: 11,
-    fontWeight: '900',
-  },
-  featureSketchVerticalAxis: {
-    backgroundColor: '#e4e7ec',
-    bottom: 0,
-    left: '50%',
-    position: 'absolute',
-    top: 20,
-    width: 1,
-  },
-  featureSketchHorizontalAxis: {
-    backgroundColor: '#e4e7ec',
-    height: 1,
-    left: 0,
-    position: 'absolute',
-    right: 0,
-    top: '50%',
-  },
   featureSketchBoundaryFallback: {
     alignItems: 'center',
-    borderColor: '#b2ddff',
+    borderColor: '#7a9d70',
     borderRadius: 6,
     borderStyle: 'dashed',
     borderWidth: 2,
@@ -1448,7 +1502,7 @@ const styles = StyleSheet.create({
     top: 18,
   },
   featureSketchBoundaryFallbackText: {
-    color: '#667085',
+    color: '#526272',
     fontSize: 11,
     fontWeight: '800',
   },
@@ -1479,7 +1533,7 @@ const styles = StyleSheet.create({
   },
   featureSketchPoint: {
     alignItems: 'center',
-    backgroundColor: '#175cd3',
+    backgroundColor: '#f97316',
     borderColor: 'white',
     borderRadius: 10,
     borderWidth: 2,
@@ -1491,7 +1545,7 @@ const styles = StyleSheet.create({
     width: 20,
   },
   featureSketchPointActive: {
-    backgroundColor: '#f97316',
+    backgroundColor: '#c2410c',
   },
   featureSketchPointText: {
     color: 'white',
@@ -1500,22 +1554,22 @@ const styles = StyleSheet.create({
   },
   featureSketchShapePreview: {
     alignItems: 'center',
-    backgroundColor: 'rgba(47, 111, 78, 0.18)',
-    borderColor: '#2f6f4e',
+    backgroundColor: 'rgba(249, 115, 22, 0.18)',
+    borderColor: '#f97316',
     borderRadius: 5,
     borderWidth: 2,
-    height: 46,
+    height: 64,
     justifyContent: 'center',
-    marginLeft: -36,
-    marginTop: -23,
+    marginLeft: -50,
+    marginTop: -32,
     position: 'absolute',
-    width: 72,
+    width: 100,
   },
   featureSketchOvalPreview: {
-    borderRadius: 24,
+    borderRadius: 32,
   },
   featureSketchShapeCenter: {
-    backgroundColor: '#2f6f4e',
+    backgroundColor: '#c2410c',
     borderRadius: 4,
     height: 8,
     width: 8,
@@ -1538,12 +1592,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginLeft: 7,
     width: 38,
-  },
-  featureSketchToolText: {
-    color: '#344054',
-    fontSize: 11,
-    fontWeight: '800',
-    marginLeft: 3,
   },
   optionSection: {
     marginBottom: 12,

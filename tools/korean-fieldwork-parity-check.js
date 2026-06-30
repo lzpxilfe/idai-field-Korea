@@ -1030,6 +1030,7 @@ function validateGuidedFeatureDraftDefaults() {
     'desktop/test/unit/components/docedit/core/korean-fieldwork-quick-record-panel.component.spec.ts'
   );
   const tabletAddModalText = readTextFile('mobile/components/Project/DocumentAddModal.tsx');
+  const tabletAddModalSpecText = readTextFile('mobile/components/Project/DocumentAddModal.spec.tsx');
   const desktopRecordContextText = readTextFile(
     'desktop/src/app/components/docedit/core/korean-fieldwork-record-context-panel.component.ts'
   );
@@ -1063,6 +1064,11 @@ function validateGuidedFeatureDraftDefaults() {
   }
   if (!tabletAddModalText.includes('KOREAN_FIELDWORK_FEATURE_TYPE_OPTIONS')) {
     findings.push('tablet add flow does not expose feature type options before creating Feature records');
+  }
+  if (!tabletAddModalText.includes('featureSketchFlatMapSurface')
+      || !tabletAddModalText.includes('2D 지도')
+      || !tabletAddModalSpecText.includes('featureSketchFlatMapSurface')) {
+    findings.push('tablet add flow must place new features on a top-down 2D map surface');
   }
   if (
     !tabletQuickRecordText.includes('getFeatureAttributeSectionTitle')
