@@ -191,6 +191,55 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
     });
 
 
+    it('projects tablet feature placement against the actual survey boundary on desktop', async () => {
+
+        const feature = createDocument('feature-1', 'Feature', 'F1', {}, {
+            featureLocationSketch: JSON.stringify({
+                version: 1,
+                shape: 'oval',
+                center: { x: 64, y: 42 },
+                points: [{ x: 64, y: 42 }],
+                rotation: 15,
+                scale: 120
+            }),
+            featureRecordingStatus: 'investigating'
+        });
+        const boundary = createDocument('boundary-1', 'SurveyBoundary', '경계', {}, {
+            geometry: {
+                type: 'LineString',
+                coordinates: [
+                    [0, 0],
+                    [20, 0],
+                    [10, 10],
+                    [0, 5],
+                    [0, 0]
+                ]
+            }
+        });
+        const component = createComponent({
+            find: jest.fn().mockResolvedValue({ documents: [boundary, feature] })
+        });
+        component.document = feature as any;
+        component.fieldDefinitions = [
+            field('featureRecordingStatus')
+        ] as any;
+
+        await component.ngOnChanges();
+
+        const preview = component.getFeatureLocationSketchPreview()!;
+
+        expect(preview.location.boundaryPath).toBe(
+            'M 22.6 63 L 97.4 63 L 60 17 L 22.6 40 Z'
+        );
+        expect(preview.location.boundaryPath).not.toBe('M 8 8 H 112 V 72 H 8 Z');
+        expect(preview.location.ellipse).toEqual(expect.objectContaining({
+            cx: 74.6,
+            cy: 34.9,
+            transform: 'rotate(15 74.6 34.9)'
+        }));
+    });
+
+
     it('keeps the desktop feature location preview framed as a flat placement map', () => {
 
         const template = fs.readFileSync(

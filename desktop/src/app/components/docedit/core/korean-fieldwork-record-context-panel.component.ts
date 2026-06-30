@@ -254,6 +254,7 @@ const CHILD_RELATIONS = ['liesWithin', 'isRecordedIn', 'isRecordedInFeature'];
 const LINKED_EVIDENCE_RELATIONS = ['depicts', 'isDepictedIn', 'isMapLayerOf', 'isSubjectOf', 'isResultOf'];
 const NOTEBOOK_APPEND_TARGET_FIELDS = ['description', 'featureChecklistNote', 'interpretation', 'shortDescription'];
 const FEATURE_CATEGORY_NAME = 'Feature';
+const SURVEY_BOUNDARY_CATEGORY_NAME = 'SurveyBoundary';
 const FEATURE_SKETCH_SHAPES = new Set<FeatureSketchShape>(['point', 'polygon', 'rectangle', 'oval']);
 const FEATURE_SKETCH_VIEWBOX = '0 0 120 80';
 const FEATURE_SKETCH_WIDTH = 120;
@@ -697,6 +698,7 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
 
     private createdDocuments: Document[] = [];
     private identifierRevisionDraftKey: string|undefined;
+    private projectDocuments: Document[] = [];
 
 
     constructor(private datastore: Datastore,
@@ -1154,10 +1156,12 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
             this.notebookEntries = [];
             this.continuationActions = [];
             this.recordActions = [];
+            this.projectDocuments = [];
             return;
         }
 
         const documents = await this.getProjectDocuments();
+        this.projectDocuments = documents;
         const documentsById = new Map(documents.map(document => [document.resource.id, document]));
 
         this.parentPathLabel = this.formatParentPath(documentsById);
@@ -1616,10 +1620,7 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
             ? points.map(point => this.projectFeatureSketchPoint(point))
             : this.fitFeatureSketchPoints(points);
         const preview: FeatureSketchSvgPreview = {
-            boundaryPath: locationPreview
-                ? `M ${FEATURE_SKETCH_PADDING} ${FEATURE_SKETCH_PADDING} H ${FEATURE_SKETCH_WIDTH - FEATURE_SKETCH_PADDING} `
-                    + `V ${FEATURE_SKETCH_HEIGHT - FEATURE_SKETCH_PADDING} H ${FEATURE_SKETCH_PADDING} Z`
-                : undefined,
+            boundaryPath: locationPreview ? this.getFeatureLocationBoundaryPath() : undefined,
             points: [],
             viewBox: FEATURE_SKETCH_VIEWBOX
         };
@@ -1678,14 +1679,110 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
                                               locationPreview: boolean): FeatureSketchSvgPreview {
 
         return {
-            boundaryPath: locationPreview
-                ? `M ${FEATURE_SKETCH_PADDING} ${FEATURE_SKETCH_PADDING} H ${FEATURE_SKETCH_WIDTH - FEATURE_SKETCH_PADDING} `
-                    + `V ${FEATURE_SKETCH_HEIGHT - FEATURE_SKETCH_PADDING} H ${FEATURE_SKETCH_PADDING} Z`
-                : undefined,
+            boundaryPath: locationPreview ? this.getFeatureLocationBoundaryPath() : undefined,
             emptyLabel,
             points: [],
             viewBox: FEATURE_SKETCH_VIEWBOX
         };
+    }
+
+
+    private getFeatureLocationBoundaryPath(): string {
+
+        const surveyBoundaryPoints = this.getSurveyBoundarySketchPoints();
+        if (surveyBoundaryPoints.length >= 3) {
+            const projectedPoints = surveyBoundaryPoints.map(point => this.projectFeatureSketchPoint(point));
+            const path = projectedPoints.map((point, index) =>
+                `${index === 0 ? 'M' : 'L'} ${this.roundSvg(point.x)} ${this.roundSvg(point.y)}`
+            ).join(' ');
+
+            return `${path} Z`;
+        }
+
+        return `M ${FEATURE_SKETCH_PADDING} ${FEATURE_SKETCH_PADDING} H ${FEATURE_SKETCH_WIDTH - FEATURE_SKETCH_PADDING} `
+            + `V ${FEATURE_SKETCH_HEIGHT - FEATURE_SKETCH_PADDING} H ${FEATURE_SKETCH_PADDING} Z`;
+    }
+
+
+    private getSurveyBoundarySketchPoints(): FeatureSketchPoint[] {
+
+        const boundaryDocument = this.projectDocuments.find(document =>
+            document.resource?.category === SURVEY_BOUNDARY_CATEGORY_NAME
+                && this.getBoundaryCoordinatePairs(document.resource.geometry).length >= 3
+        );
+        if (!boundaryDocument) return [];
+
+        return this.normalizeBoundaryCoordinatePairs(
+            this.getBoundaryCoordinatePairs(boundaryDocument.resource.geometry)
+        );
+    }
+
+
+    private getBoundaryCoordinatePairs(geometry: unknown): number[][] {
+
+        if (!this.isRecord(geometry)) return [];
+
+        if (geometry.type === 'LineString') {
+            return this.getNumericCoordinatePairs(geometry.coordinates);
+        }
+
+        if (geometry.type === 'Polygon' && Array.isArray(geometry.coordinates)) {
+            return this.getNumericCoordinatePairs(geometry.coordinates[0]);
+        }
+
+        return [];
+    }
+
+
+    private getNumericCoordinatePairs(value: unknown): number[][] {
+
+        if (!Array.isArray(value)) return [];
+
+        return value
+            .filter((coordinate): coordinate is unknown[] =>
+                Array.isArray(coordinate) && coordinate.length >= 2)
+            .map(coordinate => [coordinate[0], coordinate[1]])
+            .filter((coordinate): coordinate is number[] =>
+                typeof coordinate[0] === 'number'
+                    && Number.isFinite(coordinate[0])
+                    && typeof coordinate[1] === 'number'
+                    && Number.isFinite(coordinate[1]));
+    }
+
+
+    private normalizeBoundaryCoordinatePairs(coordinatePairs: number[][]): FeatureSketchPoint[] {
+
+        const openPairs = this.getOpenCoordinatePairs(coordinatePairs);
+        if (openPairs.length < 3) return [];
+
+        const xs = openPairs.map(coordinate => coordinate[0]);
+        const ys = openPairs.map(coordinate => coordinate[1]);
+        const minX = Math.min(...xs);
+        const maxX = Math.max(...xs);
+        const minY = Math.min(...ys);
+        const maxY = Math.max(...ys);
+        const xRange = Math.max(maxX - minX, 0.000001);
+        const yRange = Math.max(maxY - minY, 0.000001);
+        const padding = 14;
+        const drawableSize = 100 - (padding * 2);
+
+        return openPairs.map(coordinate => ({
+            x: padding + (((coordinate[0] - minX) / xRange) * drawableSize),
+            y: padding + (((maxY - coordinate[1]) / yRange) * drawableSize)
+        }));
+    }
+
+
+    private getOpenCoordinatePairs(coordinatePairs: number[][]): number[][] {
+
+        if (coordinatePairs.length < 2) return coordinatePairs;
+
+        const first = coordinatePairs[0];
+        const last = coordinatePairs[coordinatePairs.length - 1];
+
+        return first[0] === last[0] && first[1] === last[1]
+            ? coordinatePairs.slice(0, -1)
+            : coordinatePairs;
     }
 
 

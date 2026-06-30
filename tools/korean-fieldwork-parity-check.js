@@ -1095,6 +1095,13 @@ function validateGuidedFeatureDraftDefaults() {
       || !desktopRecordContextSpecText.includes('flat placement map')) {
     findings.push('desktop record context must preview tablet feature placement as a flat placement map surface');
   }
+  if (!desktopRecordContextText.includes('SURVEY_BOUNDARY_CATEGORY_NAME')
+      || !desktopRecordContextText.includes('getSurveyBoundarySketchPoints')
+      || !desktopRecordContextText.includes('getBoundaryCoordinatePairs')
+      || !desktopRecordContextSpecText.includes('actual survey boundary on desktop')
+      || !desktopRecordContextSpecText.includes('M 22.6 63 L 97.4 63 L 60 17 L 22.6 40 Z')) {
+    findings.push('desktop record context must project tablet feature placement against actual survey boundary geometry');
+  }
   if (!desktopDraftDefaultsText.includes('위성지도나 평면도처럼 조사 경계 위에 유구 위치와 형태를 바로 얹으며 시작')
       || desktopDraftDefaultsText.includes('조사 경계 위 평면지도에서 유구 위치와 형태를 그리며 시작')) {
     findings.push('desktop feature draft defaults must use the same map-first placement wording as the tablet add flow');
