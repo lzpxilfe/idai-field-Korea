@@ -43,6 +43,8 @@ import {
 } from './korean-fieldwork-quick-record';
 import { KoreanFieldworkInvestigationModeId } from './korean-fieldwork-investigation-mode';
 
+const ORIENTATION_DIRECTION_OPTIONS = ['N', 'E', 'S', 'W'] as const;
+
 interface KoreanFieldworkQuickRecordPanelProps {
   category: CategoryForm;
   investigationModeId?: KoreanFieldworkInvestigationModeId;
@@ -366,6 +368,20 @@ const KoreanFieldworkQuickRecordPanel: React.FC<KoreanFieldworkQuickRecordPanelP
               value={orientationDraft.end}
             />
           </View>
+          <View style={styles.orientationDirectionPicker}>
+            <OrientationDirectionButtonRow
+              label={'\uc67c\ucabd'}
+              onSelect={(direction) => updateOrientationDraft('start', direction)}
+              selectedDirection={orientationDraft.start}
+              testIDPrefix="quickRecordOrientationStart"
+            />
+            <OrientationDirectionButtonRow
+              label={'\uc624\ub978\ucabd'}
+              onSelect={(direction) => updateOrientationDraft('end', direction)}
+              selectedDirection={orientationDraft.end}
+              testIDPrefix="quickRecordOrientationEnd"
+            />
+          </View>
         </QuickSection>
       )}
 
@@ -524,6 +540,42 @@ const QuickSection: React.FC<{
       <Text style={styles.sectionDescription}>{description}</Text>
     )}
     {children}
+  </View>
+);
+
+const OrientationDirectionButtonRow: React.FC<{
+  label: string;
+  onSelect: (direction: string) => void;
+  selectedDirection: string;
+  testIDPrefix: string;
+}> = ({ label, onSelect, selectedDirection, testIDPrefix }) => (
+  <View style={styles.orientationDirectionButtonRow}>
+    <Text style={styles.orientationDirectionButtonLabel}>{label}</Text>
+    {ORIENTATION_DIRECTION_OPTIONS.map((direction) => {
+      const isSelected = selectedDirection === direction;
+
+      return (
+        <TouchableOpacity
+          activeOpacity={0.84}
+          key={direction}
+          onPress={() => onSelect(direction)}
+          style={[
+            styles.orientationDirectionButton,
+            isSelected && styles.orientationDirectionButtonSelected,
+          ]}
+          testID={`${testIDPrefix}_${direction}`}
+        >
+          <Text
+            style={[
+              styles.orientationDirectionButtonText,
+              isSelected && styles.orientationDirectionButtonTextSelected,
+            ]}
+          >
+            {direction}
+          </Text>
+        </TouchableOpacity>
+      );
+    })}
   </View>
 );
 
@@ -895,6 +947,45 @@ const styles = StyleSheet.create({
     marginHorizontal: 7,
     textAlign: 'center',
     width: 74,
+  },
+  orientationDirectionPicker: {
+    marginTop: 8,
+  },
+  orientationDirectionButtonRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 5,
+  },
+  orientationDirectionButtonLabel: {
+    color: '#526272',
+    fontSize: 11,
+    fontWeight: '900',
+    marginRight: 7,
+    width: 42,
+  },
+  orientationDirectionButton: {
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderColor: '#d0d5dd',
+    borderRadius: 6,
+    borderWidth: 1,
+    height: 34,
+    justifyContent: 'center',
+    marginRight: 6,
+    width: 34,
+  },
+  orientationDirectionButtonSelected: {
+    backgroundColor: '#ecfdf3',
+    borderColor: '#32d583',
+  },
+  orientationDirectionButtonText: {
+    color: '#475467',
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  orientationDirectionButtonTextSelected: {
+    color: '#027a48',
   },
   textInput: {
     backgroundColor: 'white',

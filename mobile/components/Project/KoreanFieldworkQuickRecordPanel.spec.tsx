@@ -348,18 +348,12 @@ describe('KoreanFieldworkQuickRecordPanel', () => {
       '왼쪽 방위, 가운데 각도, 오른쪽 방위를 따로 적으세요. 예: N 30 W'
     )).toBeTruthy();
     expect(getByText('기존 방위 참고: 장축 N-23°-E')).toBeTruthy();
-    fireEvent.changeText(
-      getByTestId('quickRecordInput_orientationStart'),
-      'S'
-    );
+    fireEvent.press(getByTestId('quickRecordOrientationStart_S'));
     fireEvent.changeText(
       getByTestId('quickRecordInput_orientationDegrees'),
       '45'
     );
-    fireEvent.changeText(
-      getByTestId('quickRecordInput_orientationEnd'),
-      'W'
-    );
+    fireEvent.press(getByTestId('quickRecordOrientationEnd_W'));
 
     expect(handleUpdateResourceField).toHaveBeenCalledWith(
       FIELDWORK_QUICK_FIELDS.longAxisOrientation,
@@ -385,18 +379,12 @@ describe('KoreanFieldworkQuickRecordPanel', () => {
       />
     );
 
-    fireEvent.changeText(
-      getByTestId('quickRecordInput_orientationStart'),
-      'N'
-    );
+    fireEvent.press(getByTestId('quickRecordOrientationStart_N'));
     fireEvent.changeText(
       getByTestId('quickRecordInput_orientationDegrees'),
       '30'
     );
-    fireEvent.changeText(
-      getByTestId('quickRecordInput_orientationEnd'),
-      'E'
-    );
+    fireEvent.press(getByTestId('quickRecordOrientationEnd_E'));
 
     expect(handleUpdateResourceField).toHaveBeenCalledWith(
       FIELDWORK_QUICK_FIELDS.longAxisOrientation,
