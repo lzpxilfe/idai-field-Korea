@@ -66,7 +66,7 @@ describe('KoreanFieldworkSoilColorPanel', () => {
     );
   });
 
-  it('adds the next empty numbered swatch row without free-typing a layer color', () => {
+  it('edits each numbered soil layer row and adds the next empty numbered swatch row', () => {
     const handleUpdateResourceFields = jest.fn();
     const { getByTestId, getByText, queryByTestId, queryByText } = render(
       <KoreanFieldworkSoilColorPanel
@@ -88,12 +88,16 @@ describe('KoreanFieldworkSoilColorPanel', () => {
     );
 
     expect(getByText('층별 토색')).toBeTruthy();
-    expect(getByTestId('soilColorLayerValue_1').props.children)
-      .toBe('먼셀값 없음');
-    expect(queryByTestId('soilColorLayerInput_1')).toBeNull();
+    expect(getByTestId('soilColorLayerInput_1').props.value).toBe('');
     expect(queryByTestId('soilColorInput_profileColorSwatches')).toBeNull();
     expect(queryByText('사진 메모')).toBeNull();
     expect(queryByText('촬영 조건')).toBeNull();
+
+    fireEvent.changeText(getByTestId('soilColorLayerInput_1'), '10YR 4/2');
+    expect(handleUpdateResourceFields).toHaveBeenCalledWith({
+      soilProfileColorSwatches: '1: 10YR 4/2',
+      soilProfileActiveLayerNumber: 1,
+    });
 
     fireEvent.press(getByTestId('soilColorHueNumberOption_10'));
     fireEvent.press(getByTestId('soilColorHueFamilyOption_YR'));
@@ -101,7 +105,7 @@ describe('KoreanFieldworkSoilColorPanel', () => {
     fireEvent.press(getByTestId('soilColorChromaOption_3'));
     fireEvent.press(getByTestId('soilColorAddNumberedSwatch'));
 
-    expect(handleUpdateResourceFields).toHaveBeenNthCalledWith(4, {
+    expect(handleUpdateResourceFields).toHaveBeenCalledWith({
       soilProfileColorSwatches: '1: 10YR 4/3',
       soilProfileActiveLayerNumber: 1,
     });
@@ -138,7 +142,7 @@ describe('KoreanFieldworkSoilColorPanel', () => {
 
   it('stores the selected soil layer as the next photo sample target', () => {
     const handleUpdateResourceField = jest.fn();
-    const { getByTestId, queryByTestId } = render(
+    const { getByTestId } = render(
       <KoreanFieldworkSoilColorPanel
         category={createCategoryForm([
           'soilProfileColorSwatches',
@@ -151,7 +155,7 @@ describe('KoreanFieldworkSoilColorPanel', () => {
       />
     );
 
-    expect(queryByTestId('soilColorLayerInput_1')).toBeNull();
+    expect(getByTestId('soilColorLayerInput_1')).toBeTruthy();
     fireEvent.press(getByTestId('soilColorLayerSelect_2'));
 
     expect(handleUpdateResourceField).toHaveBeenCalledWith(
@@ -222,10 +226,10 @@ describe('KoreanFieldworkSoilColorPanel', () => {
     );
 
     expect(queryByText('사진에서 찍은 토색')).toBeNull();
-    expect(getByText('1층 스포이드 후보')).toBeTruthy();
+    expect(getByText('1층 사진 판독 후보')).toBeTruthy();
     expect(queryByTestId('soilColorInput_assistCandidates')).toBeNull();
     fireEvent.press(getByTestId('soilColorLayerSelect_2'));
-    expect(getByText('2층 스포이드 후보')).toBeTruthy();
+    expect(getByText('2층 사진 판독 후보')).toBeTruthy();
     fireEvent.press(getByTestId('soilColorCandidateOption_10YR 4/3'));
 
     expect(handleUpdateResourceFields).toHaveBeenCalledWith({

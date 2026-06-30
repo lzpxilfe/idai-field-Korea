@@ -77,6 +77,85 @@ korean-fieldwork-soil-color-panel {
     }
   }
 
+  .korean-fieldwork-soil-color-builder-preview {
+    align-items: center;
+    color: #4b5563;
+    display: flex;
+    flex-wrap: wrap;
+    font-size: 12px;
+    font-weight: 700;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .korean-fieldwork-soil-color-builder-value {
+    background: #111827;
+    border: 0;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1.1;
+    padding: 6px 10px;
+
+    &:hover {
+      background: #243141;
+      color: #fff;
+    }
+  }
+
+  .korean-fieldwork-soil-color-builder-row {
+    margin-top: 7px;
+  }
+
+  .korean-fieldwork-soil-color-builder-label {
+    color: #667085;
+    font-size: 12px;
+    font-weight: 800;
+    margin-bottom: 4px;
+  }
+
+  .korean-fieldwork-soil-color-layer-list {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    margin-top: 8px;
+  }
+
+  .korean-fieldwork-soil-color-layer-row {
+    align-items: center;
+    background: #fff;
+    border: 1px solid #d0d5dd;
+    border-radius: 6px;
+    display: flex;
+    gap: 8px;
+    padding: 6px;
+
+    &.active {
+      background: #eff8ff;
+      border-color: #84caff;
+    }
+  }
+
+  .korean-fieldwork-soil-color-layer-number {
+    background: #fff;
+    border: 1px solid #d0d5dd;
+    border-radius: 6px;
+    color: #475467;
+    font-size: 13px;
+    font-weight: 800;
+    min-width: 38px;
+    padding: 7px 9px;
+  }
+
+  .korean-fieldwork-soil-color-layer-input {
+    color: #101828;
+    flex: 1;
+    font-size: 13px;
+    font-weight: 700;
+    min-width: 0;
+  }
+
   .korean-fieldwork-soil-color-textarea {
     min-height: 82px;
   }

@@ -26,6 +26,9 @@ describe('KoreanFieldworkSoilColorPanelComponent', () => {
         );
 
         expect(template).toContain('먼셀값');
+        expect(template).toContain('먼셀 조합');
+        expect(template).toContain('setMunsellBuilderPart');
+        expect(template).toContain('korean-fieldwork-soil-color-layer-input');
         expect(template).not.toContain('Munsell 값');
         expect(template).toContain('사진 판독 후보');
         expect(template).toContain('사진에서 읽은 먼셀 후보');
@@ -95,18 +98,19 @@ describe('KoreanFieldworkSoilColorPanelComponent', () => {
     });
 
 
-    it('appends numbered Munsell swatches for soil profile photos', () => {
+    it('edits the selected numbered Munsell swatch row for soil profile photos', () => {
 
         component.document = {
             resource: {
                 category: 'SoilProfilePhoto',
-                soilProfileColorSwatches: '1: 10YR 4/3'
+                soilProfileColorSwatches: '1: 10YR 4/3\n2: '
             }
         } as any;
         component.fieldDefinitions = [
             { name: 'soilProfileColorSwatches', editable: true }
         ] as any;
 
+        component.selectSoilColorRow(2);
         component.applyMunsellPreset('10YR 3/2');
 
         expect(component.document.resource.soilProfileColorSwatches).toBe('1: 10YR 4/3\n2: 10YR 3/2');
@@ -131,7 +135,7 @@ describe('KoreanFieldworkSoilColorPanelComponent', () => {
         component.applyMunsellPreset('7.5YR 4/4');
 
         expect(component.document.resource.soilProfileColorSwatches)
-            .toBe('1: 10YR 4/3\n3: 10YR 5/4\n4:\n5: 7.5YR 4/4');
+            .toBe('1: 10YR 4/3\n3: 10YR 5/4\n4: 7.5YR 4/4');
         expect(emittedStates).toEqual([
             {
                 category: 'SoilProfilePhoto',
@@ -139,9 +143,41 @@ describe('KoreanFieldworkSoilColorPanelComponent', () => {
             },
             {
                 category: 'SoilProfilePhoto',
-                soilProfileColorSwatches: '1: 10YR 4/3\n3: 10YR 5/4\n4:\n5: 7.5YR 4/4'
+                soilProfileColorSwatches: '1: 10YR 4/3\n3: 10YR 5/4\n4: 7.5YR 4/4'
             }
         ]);
+    });
+
+
+    it('builds desktop Munsell values from hue, value, and chroma controls', () => {
+
+        component.document = {
+            resource: {
+                category: 'SoilProfilePhoto',
+                soilProfileColorSwatches: '1: 10YR 4/3\n2: '
+            }
+        } as any;
+        component.fieldDefinitions = [
+            { name: 'soilProfileColorSwatches', editable: true }
+        ] as any;
+
+        component.selectSoilColorRow(2);
+        component.setMunsellBuilderPart('hueNumber', '2.5');
+        component.setMunsellBuilderPart('hueFamily', 'GY');
+        component.setMunsellBuilderPart('value', '2.5');
+        component.setMunsellBuilderPart('chroma', '10');
+
+        expect(component.getMunsellBuilderValue()).toBe('2.5GY 2.5/10');
+        expect(component.document.resource.soilProfileColorSwatches)
+            .toBe('1: 10YR 4/3\n2: 2.5GY 2.5/10');
+
+        component.setMunsellBuilderPart('hueFamily', 'N');
+        expect(component.document.resource.soilProfileColorSwatches)
+            .toBe('1: 10YR 4/3\n2: N 2.5/0');
+
+        component.setMunsellBuilderPart('hueFamily', 'GLEY 1');
+        expect(component.document.resource.soilProfileColorSwatches)
+            .toBe('1: 10YR 4/3\n2: GLEY 1 2.5/N');
     });
 
 

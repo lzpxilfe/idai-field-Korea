@@ -11,8 +11,14 @@ type SoilColorOption = {
     label: string;
 };
 
+type SoilColorLayerRow = {
+    number: number;
+    value: string;
+};
+
 
 const SOIL_COLOR_FIELDS = {
+    activeLayerNumber: 'soilProfileActiveLayerNumber',
     assistCandidates: 'soilColorAssistCandidates',
     assistStatus: 'soilColorAssistStatus',
     captureCondition: 'soilColorCaptureCondition',
@@ -39,13 +45,32 @@ export class KoreanFieldworkSoilColorPanelComponent {
 
     public readonly fields = SOIL_COLOR_FIELDS;
 
-    public readonly munsellPresets: readonly SoilColorOption[] = [
-        { value: '10YR 4/3', label: '10YR 4/3' },
-        { value: '10YR 3/2', label: '10YR 3/2' },
-        { value: '10YR 5/4', label: '10YR 5/4' },
-        { value: '7.5YR 4/4', label: '7.5YR 4/4' },
-        { value: '2.5Y 5/3', label: '2.5Y 5/3' }
-    ];
+    public readonly munsellHueNumberOptions: readonly SoilColorOption[] =
+        ['2.5', '5', '7.5', '10'].map(value => ({ value, label: value }));
+
+    public readonly munsellHueFamilyOptions: readonly SoilColorOption[] = [
+        'R',
+        'YR',
+        'Y',
+        'GY',
+        'G',
+        'BG',
+        'B',
+        'PB',
+        'P',
+        'RP',
+        'GLEY 1',
+        'GLEY 2',
+        'N'
+    ].map(value => ({ value, label: value }));
+
+    public readonly munsellValueOptions: readonly SoilColorOption[] =
+        ['1', '2', '2.5', '3', '4', '5', '6', '7', '8', '9']
+            .map(value => ({ value, label: value }));
+
+    public readonly munsellChromaOptions: readonly SoilColorOption[] =
+        ['0', '1', '2', '3', '4', '5', '6', '8', '10', '12']
+            .map(value => ({ value, label: `/${value}` }));
 
     public readonly moistureOptions: readonly SoilColorOption[] = [
         { value: 'dry', label: '건조' },
@@ -61,6 +86,12 @@ export class KoreanFieldworkSoilColorPanelComponent {
         { value: 'flash', label: '플래시' },
         { value: 'poorCondition', label: '조건 불량' }
     ];
+
+    public activeSoilColorRowNumber = 1;
+    public builderHueNumber = '10';
+    public builderHueFamily = 'YR';
+    public builderValue = '4';
+    public builderChroma = '3';
 
 
     public shouldShow(): boolean {
@@ -111,10 +142,7 @@ export class KoreanFieldworkSoilColorPanelComponent {
         if (this.canRecordLayerMunsell()) {
             this.setLayerMunsell(value);
         } else if (this.canRecordPhotoSwatches()) {
-            this.setValue(
-                SOIL_COLOR_FIELDS.profileColorSwatches,
-                this.appendNumberedMunsellValue(this.getValue(SOIL_COLOR_FIELDS.profileColorSwatches), value)
-            );
+            this.setSoilProfileColorRowValue(this.getActiveSoilColorRowNumber(), value);
         }
     }
 
@@ -127,6 +155,7 @@ export class KoreanFieldworkSoilColorPanelComponent {
             SOIL_COLOR_FIELDS.profileColorSwatches,
             this.appendEmptyNumberedSoilColorRow(this.getValue(SOIL_COLOR_FIELDS.profileColorSwatches))
         );
+        this.activeSoilColorRowNumber = this.getSoilColorRows().slice(-1)[0]?.number ?? 1;
     }
 
 
@@ -137,11 +166,74 @@ export class KoreanFieldworkSoilColorPanelComponent {
         } else if (this.canRecordPhotoSwatches()) {
             this.setTextResourceValue(
                 SOIL_COLOR_FIELDS.profileColorSwatches,
-                this.appendNumberedMunsellValue(this.getValue(SOIL_COLOR_FIELDS.profileColorSwatches), value)
+                this.updateSoilColorRowValue(
+                    this.getValue(SOIL_COLOR_FIELDS.profileColorSwatches),
+                    this.getActiveSoilColorRowNumber(),
+                    value
+                )
             );
             this.setAssistStatus('reviewed');
             this.onChanged.emit();
         }
+    }
+
+    public getSoilColorRows(): SoilColorLayerRow[] {
+
+        return this.parseSoilColorRows(this.getValue(SOIL_COLOR_FIELDS.profileColorSwatches));
+    }
+
+
+    public selectSoilColorRow(rowNumber: number) {
+
+        this.activeSoilColorRowNumber = rowNumber;
+        if (this.hasField(SOIL_COLOR_FIELDS.activeLayerNumber)) {
+            this.document.resource[SOIL_COLOR_FIELDS.activeLayerNumber] = rowNumber;
+        }
+    }
+
+
+    public getActiveSoilColorRowNumber(): number {
+
+        const rows = this.getSoilColorRows();
+        if (rows.some(row => row.number === this.activeSoilColorRowNumber)) {
+            return this.activeSoilColorRowNumber;
+        }
+
+        return rows[0]?.number ?? 1;
+    }
+
+
+    public setSoilProfileColorRowValue(rowNumber: number, value: string) {
+
+        this.selectSoilColorRow(rowNumber);
+        this.setValue(
+            SOIL_COLOR_FIELDS.profileColorSwatches,
+            this.updateSoilColorRowValue(
+                this.getValue(SOIL_COLOR_FIELDS.profileColorSwatches),
+                rowNumber,
+                value
+            )
+        );
+    }
+
+
+    public setMunsellBuilderPart(part: 'hueNumber'|'hueFamily'|'value'|'chroma', value: string) {
+
+        if (part === 'hueNumber') this.builderHueNumber = value;
+        if (part === 'hueFamily') this.builderHueFamily = value;
+        if (part === 'value') this.builderValue = value;
+        if (part === 'chroma') this.builderChroma = value;
+
+        this.applyMunsellPreset(this.getMunsellBuilderValue());
+    }
+
+
+    public getMunsellBuilderValue(): string {
+
+        if (this.builderHueFamily === 'N') return `N ${this.builderValue}/0`;
+        if (this.builderHueFamily.startsWith('GLEY')) return `${this.builderHueFamily} ${this.builderValue}/N`;
+
+        return `${this.builderHueNumber}${this.builderHueFamily} ${this.builderValue}/${this.builderChroma}`;
     }
 
 
@@ -185,41 +277,54 @@ export class KoreanFieldworkSoilColorPanelComponent {
     }
 
 
-    private appendNumberedMunsellValue(currentValue: string, value: string): string {
-
-        const lines: string[] = currentValue
-            .split(/\r?\n/)
-            .map(line => line.trim())
-            .filter(line => line.length > 0);
-
-        lines.push(`${this.getNextSoilColorRowNumber(lines)}: ${value}`);
-
-        return lines.join('\n');
-    }
-
-
-    private appendEmptyNumberedSoilColorRow(currentValue: string): string {
+    private parseSoilColorRows(currentValue: string): SoilColorLayerRow[] {
 
         const lines: string[] = currentValue
             .split(/\r?\n/)
             .map(line => line.trimEnd())
             .filter(line => line.trim().length > 0);
 
-        lines.push(`${this.getNextSoilColorRowNumber(lines)}: `);
+        if (lines.length === 0) return [{ number: 1, value: '' }];
 
-        return lines.join('\n');
+        return lines.map((line, index) => {
+            const match = line.match(/^\s*(\d+)\s*:?\s*(.*)$/);
+            if (!match) return { number: index + 1, value: line.trim() };
+
+            return {
+                number: Number.parseInt(match[1], 10),
+                value: match[2] ?? ''
+            };
+        });
     }
 
 
-    private getNextSoilColorRowNumber(lines: string[]): number {
+    private updateSoilColorRowValue(currentValue: string, rowNumber: number, value: string): string {
 
-        return Math.max(
-            0,
-            ...lines.map(line => {
-                const match = line.match(/^\s*(\d+)\s*:/);
-                return match ? Number.parseInt(match[1], 10) : 0;
-            })
-        ) + 1;
+        const rows = this.parseSoilColorRows(currentValue);
+        const rowIndex = rows.findIndex(row => row.number === rowNumber);
+        const nextRows = rowIndex < 0
+            ? [...rows, { number: rowNumber, value }]
+            : rows.map((row, index) => index === rowIndex ? { ...row, value } : row);
+
+        return this.serializeSoilColorRows(nextRows);
+    }
+
+
+    private appendEmptyNumberedSoilColorRow(currentValue: string): string {
+
+        const rows = this.parseSoilColorRows(currentValue);
+        const nextNumber = Math.max(0, ...rows.map(row => row.number)) + 1;
+
+        return this.serializeSoilColorRows([...rows, { number: nextNumber, value: '' }]);
+    }
+
+
+    private serializeSoilColorRows(rows: SoilColorLayerRow[]): string {
+
+        return rows
+            .sort((left, right) => left.number - right.number)
+            .map(row => `${row.number}: ${row.value}`)
+            .join('\n');
     }
 
 

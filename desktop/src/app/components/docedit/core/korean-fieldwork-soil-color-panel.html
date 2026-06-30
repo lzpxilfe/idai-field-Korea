@@ -5,15 +5,62 @@
     </div>
 
     <div class="korean-fieldwork-soil-color-section">
-        <div class="korean-fieldwork-soil-color-label">먼셀값</div>
-        <div class="korean-fieldwork-soil-color-chip-row">
-            <button *ngFor="let option of munsellPresets"
-                    type="button"
-                    class="btn korean-fieldwork-soil-color-chip"
-                    [class.active]="isMunsellPresetActive(option.value)"
-                    (click)="applyMunsellPreset(option.value)">
-                {{option.label}}
+        <div class="korean-fieldwork-soil-color-label">먼셀 조합</div>
+        <div class="korean-fieldwork-soil-color-builder-preview">
+            <span>{{canRecordPhotoSwatches() ? getActiveSoilColorRowNumber() + '층에 입력' : '현재 먼셀값'}}</span>
+            <button type="button"
+                    class="btn korean-fieldwork-soil-color-builder-value"
+                    (click)="applyMunsellPreset(getMunsellBuilderValue())">
+                {{getMunsellBuilderValue()}}
             </button>
+        </div>
+        <div class="korean-fieldwork-soil-color-builder-row">
+            <div class="korean-fieldwork-soil-color-builder-label">숫자</div>
+            <div class="korean-fieldwork-soil-color-chip-row">
+                <button *ngFor="let option of munsellHueNumberOptions"
+                        type="button"
+                        class="btn korean-fieldwork-soil-color-chip"
+                        [class.active]="builderHueNumber === option.value"
+                        (click)="setMunsellBuilderPart('hueNumber', option.value)">
+                    {{option.label}}
+                </button>
+            </div>
+        </div>
+        <div class="korean-fieldwork-soil-color-builder-row">
+            <div class="korean-fieldwork-soil-color-builder-label">알파벳</div>
+            <div class="korean-fieldwork-soil-color-chip-row">
+                <button *ngFor="let option of munsellHueFamilyOptions"
+                        type="button"
+                        class="btn korean-fieldwork-soil-color-chip"
+                        [class.active]="builderHueFamily === option.value"
+                        (click)="setMunsellBuilderPart('hueFamily', option.value)">
+                    {{option.label}}
+                </button>
+            </div>
+        </div>
+        <div class="korean-fieldwork-soil-color-builder-row">
+            <div class="korean-fieldwork-soil-color-builder-label">명도</div>
+            <div class="korean-fieldwork-soil-color-chip-row">
+                <button *ngFor="let option of munsellValueOptions"
+                        type="button"
+                        class="btn korean-fieldwork-soil-color-chip"
+                        [class.active]="builderValue === option.value"
+                        (click)="setMunsellBuilderPart('value', option.value)">
+                    {{option.label}}
+                </button>
+            </div>
+        </div>
+        <div class="korean-fieldwork-soil-color-builder-row">
+            <div class="korean-fieldwork-soil-color-builder-label">채도</div>
+            <div class="korean-fieldwork-soil-color-chip-row">
+                <button *ngFor="let option of munsellChromaOptions"
+                        type="button"
+                        class="btn korean-fieldwork-soil-color-chip"
+                        [class.active]="builderChroma === option.value"
+                        (click)="setMunsellBuilderPart('chroma', option.value)">
+                    {{option.label}}
+                </button>
+            </div>
         </div>
 
         <input *ngIf="canRecordLayerMunsell()"
@@ -30,11 +77,23 @@
             <span>번호 추가</span>
         </button>
 
-        <textarea *ngIf="canRecordPhotoSwatches()"
-                  class="form-control korean-fieldwork-soil-color-textarea"
-                  [ngModel]="getValue(fields.profileColorSwatches)"
-                  (ngModelChange)="setValue(fields.profileColorSwatches, $event)"
-                  placeholder="1: 10YR 4/3 갈색&#10;2: 10YR 3/2 암회갈색"></textarea>
+        <div *ngIf="canRecordPhotoSwatches()"
+             class="korean-fieldwork-soil-color-layer-list">
+            <div *ngFor="let row of getSoilColorRows()"
+                 class="korean-fieldwork-soil-color-layer-row"
+                 [class.active]="row.number === getActiveSoilColorRowNumber()">
+                <button type="button"
+                        class="btn korean-fieldwork-soil-color-layer-number"
+                        (click)="selectSoilColorRow(row.number)">
+                    {{row.number}}
+                </button>
+                <input class="form-control korean-fieldwork-soil-color-layer-input"
+                       [ngModel]="row.value"
+                       (focus)="selectSoilColorRow(row.number)"
+                       (ngModelChange)="setSoilProfileColorRowValue(row.number, $event)"
+                       placeholder="먼셀값">
+            </div>
+        </div>
     </div>
 
     <div *ngIf="hasField(fields.assistCandidates)"
