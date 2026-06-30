@@ -44,7 +44,7 @@ import type {
 
 const ICON_SIZE = 34;
 const FEATURE_SKETCH_CANVAS_DEFAULT_SIZE = {
-  height: 150,
+  height: 300,
   width: 260,
 };
 const FEATURE_SKETCH_SCALE_STEP = 10;
@@ -452,11 +452,6 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
         style={styles.featureSketchCanvas}
         testID="featureLocationSketchCanvas"
       >
-        <View pointerEvents="none" style={styles.featureSketchNorthBand}>
-          <Text style={styles.featureSketchNorthText}>N</Text>
-        </View>
-        <View pointerEvents="none" style={styles.featureSketchVerticalAxis} />
-        <View pointerEvents="none" style={styles.featureSketchHorizontalAxis} />
         {renderFeatureSketchBoundary()}
         {renderFeatureSketchPreview()}
       </View>
@@ -692,7 +687,10 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
           onPress={(event) => event.stopPropagation()}
           style={styles.cardShell}
         >
-          <Card style={styles.card}>
+          <Card style={[
+            styles.card,
+            isChoosingFeatureType && styles.featureCreationCard,
+          ]}>
           <TitleBar
             title={
               <>
@@ -718,7 +716,12 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
               />
             }
           />
-          <ScrollView style={styles.categories}>
+          <ScrollView
+            style={styles.categories}
+            contentContainerStyle={
+              isChoosingFeatureType ? styles.featureCreationContent : undefined
+            }
+          >
             {isChoosingFeatureType ? renderFeatureTypePicker() : (
               <>
                 <View style={styles.parentPanel}>
@@ -1124,6 +1127,10 @@ const styles = StyleSheet.create({
     padding: 10,
     width: '72%',
   },
+  featureCreationCard: {
+    maxHeight: '94%',
+    width: '94%',
+  },
   cardShell: {
     alignItems: 'center',
     width: '100%',
@@ -1133,6 +1140,9 @@ const styles = StyleSheet.create({
   },
   categories: {
     margin: 10,
+  },
+  featureCreationContent: {
+    paddingBottom: 18,
   },
   parentPanel: {
     backgroundColor: '#f8fafc',
@@ -1177,13 +1187,13 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   featureLocationPanel: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#f7fbff',
     borderColor: '#b9c7d5',
     borderRadius: 6,
     borderWidth: 1,
-    marginBottom: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 9,
+    marginBottom: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
   },
   featureLocationHeader: {
     alignItems: 'flex-start',
@@ -1244,11 +1254,11 @@ const styles = StyleSheet.create({
     color: '#175cd3',
   },
   featureSketchCanvas: {
-    backgroundColor: 'white',
-    borderColor: '#98a2b3',
+    backgroundColor: '#ffffff',
+    borderColor: '#7da7d9',
     borderRadius: 6,
     borderWidth: 1,
-    height: 150,
+    height: 300,
     overflow: 'hidden',
     position: 'relative',
     width: '100%',
@@ -1288,12 +1298,12 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderStyle: 'dashed',
     borderWidth: 2,
-    bottom: 16,
+    bottom: 18,
     justifyContent: 'center',
-    left: 20,
+    left: 18,
     position: 'absolute',
-    right: 20,
-    top: 34,
+    right: 18,
+    top: 18,
   },
   featureSketchBoundaryFallbackText: {
     color: '#667085',
@@ -1312,7 +1322,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
     paddingVertical: 2,
     position: 'absolute',
-    top: 24,
+    top: 12,
   },
   featureSketchBoundaryPoint: {
     backgroundColor: '#175cd3',

@@ -330,6 +330,9 @@ describe('DocumentAddModal', () => {
     expect(getByTestId('featureSketchBoundaryPoint_0')).toBeTruthy();
 
     const canvas = getByTestId('featureLocationSketchCanvas');
+    expect(canvas.props.style).toEqual(
+      expect.objectContaining({ height: 300 })
+    );
     fireEvent(canvas, 'layout', {
       nativeEvent: { layout: { height: 100, width: 200 } },
     });
