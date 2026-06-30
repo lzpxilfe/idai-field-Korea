@@ -35,6 +35,24 @@ describe('korean-fieldwork-notebook-digest', () => {
     });
 
 
+    it('labels legacy FeatureGroup note targets as related features', () => {
+
+        const featureGroup = createDoc('feature-group-1', 'FeatureGroup', '수혈군 A');
+        const memo = createDoc('memo-1', 'PenMemo', 'M-1', {
+            date: '2026-06-24',
+            penMemoReviewedTranscript: '[관찰 내용] 관련 유구 범위 확인.',
+            relations: { depicts: ['feature-group-1'] }
+        });
+
+        const [entry] = getKoreanFieldworkNotebookEntries([featureGroup, memo] as any);
+
+        expect(entry).toMatchObject({
+            targetLabel: '수혈군 A',
+            targetCategoryLabel: '관련 유구'
+        });
+    });
+
+
     it('uses the Korean fieldwork date for desktop daily notebook digests', () => {
 
         const previousTimeZone = process.env.TZ;

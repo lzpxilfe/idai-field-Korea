@@ -181,7 +181,7 @@ export function getKoreanFieldworkOverviewChartData(
                 id: 'feature',
                 label: '유구',
                 value: featureCount,
-                detail: `유구군 ${featureGroupCount} · 피트 ${featureSegmentCount}`,
+                detail: `피트 ${featureSegmentCount}`,
                 tone: featureCount > 0 ? 'success' : 'neutral'
             },
             {
@@ -222,7 +222,6 @@ export function getKoreanFieldworkOverviewChartData(
             ),
             createSegment('operation', '조사', operationCount, investigationUnitCount, 'success'),
             createSegment('trench', '트렌치', trenchCount, investigationUnitCount, 'info'),
-            createSegment('featureGroup', '유구군', featureGroupCount, investigationUnitCount, 'neutral'),
             createSegment('feature', '유구', featureCount, investigationUnitCount, 'warning'),
             createSegment('featureSegment', '피트', featureSegmentCount, investigationUnitCount, 'neutral')
         ],

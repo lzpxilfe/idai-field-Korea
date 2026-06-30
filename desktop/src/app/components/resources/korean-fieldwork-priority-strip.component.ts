@@ -182,7 +182,7 @@ const NOTEBOOK_RECORD_MEMO_TARGET_CATEGORIES = new Set([
 const SELECTED_RECORD_CATEGORY_LABELS: Readonly<Record<string, string>> = {
     Drawing: '도면',
     Feature: '유구',
-    FeatureGroup: '유구군',
+    FeatureGroup: '관련 유구',
     FeatureSegment: '세부 단위',
     Find: '유물',
     FindCollection: '유물 일괄',

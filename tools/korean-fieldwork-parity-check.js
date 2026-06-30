@@ -3417,6 +3417,7 @@ function validateProgressModeAwareness() {
   const desktopWorkbenchText = readTextFile('desktop/src/app/util/korean-fieldwork-workbench.ts');
   const desktopWorkbenchSpecText = readTextFile('desktop/test/unit/util/korean-fieldwork-workbench.spec.ts');
   const desktopPriorityStripText = readTextFile('desktop/src/app/components/resources/korean-fieldwork-priority-strip.component.ts');
+  const desktopNotebookDigestText = readTextFile('desktop/src/app/util/korean-fieldwork-notebook-digest.ts');
   const tabletTrialTrenchChecklistValues = [
     'trenchSoilCleaned',
     'trenchFeatureChecked',
@@ -3465,6 +3466,20 @@ function validateProgressModeAwareness() {
   }
   if (!desktopOverviewText.includes('getKoreanFieldworkChecklistMetrics(documents, investigationMode)')) {
     findings.push('desktop overview chart must use shared tablet checklist metrics');
+  }
+  if (desktopOverviewText.includes("createSegment('featureGroup'")
+      || desktopOverviewText.includes('유구군')
+      || !desktopOverviewSpecText.includes("not.toContain('featureGroup')")) {
+    findings.push('desktop overview chart must hide legacy FeatureGroup as a top-level chart segment like the tablet chart');
+  }
+  for (const { label, text } of [
+    { label: 'desktop progress board', text: desktopText },
+    { label: 'desktop notebook digest', text: desktopNotebookDigestText },
+    { label: 'desktop priority strip', text: desktopPriorityStripText }
+  ]) {
+    if (!text.includes("FeatureGroup: '관련 유구'") || text.includes("FeatureGroup: '유구군'")) {
+      findings.push(`${label} must label legacy FeatureGroup records as 관련 유구`);
+    }
   }
   for (const source of [
     { label: 'tablet', text: tabletOverviewText, specText: tabletOverviewSpecText },

@@ -13,7 +13,7 @@ describe('korean-fieldwork-overview-chart', () => {
             createDoc('trench-1', 'Trench', 'T1', {
                 liesWithin: ['operation-1']
             }),
-            createDoc('feature-group-1', 'FeatureGroup', '유구군 1', {
+            createDoc('feature-group-1', 'FeatureGroup', '관련 유구 1', {
                 liesWithin: ['trench-1']
             }),
             createDoc('feature-1', 'Feature', '수혈 1', {
@@ -52,10 +52,20 @@ describe('korean-fieldwork-overview-chart', () => {
         expect(data.operationCount).toBe(1);
         expect(data.trenchCount).toBe(1);
         expect(data.featureCount).toBe(2);
+        expect(data.featureGroupCount).toBe(1);
         expect(data.featureSegmentCount).toBe(1);
         expect(data.checklistDone).toBe(4);
         expect(data.checklistTotal).toBe(27);
         expect(data.checklistPercent).toBe(15);
+        expect(data.metrics.find(metric => metric.id === 'feature')).toMatchObject({
+            label: '유구',
+            value: 2,
+            detail: '피트 1'
+        });
+        expect(data.investigationSegments.map(segment => segment.id))
+            .not.toContain('featureGroup');
+        expect(data.investigationSegments.map(segment => segment.label))
+            .not.toContain('유구군');
         expect(data.investigationSegments.find(segment =>
             segment.id === 'operation'
         )).toMatchObject({

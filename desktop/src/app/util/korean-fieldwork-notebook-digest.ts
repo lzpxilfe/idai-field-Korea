@@ -164,7 +164,7 @@ const CATEGORY_LABELS: { [categoryName: string]: string } = {
     Drawing: '도면',
     ExcavationArea: '조사구역',
     Feature: '유구',
-    FeatureGroup: '유구군',
+    FeatureGroup: '관련 유구',
     FeatureSegment: '세부 단위',
     Find: '유물',
     FindCollection: '유물군',

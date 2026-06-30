@@ -92,6 +92,19 @@ describe('korean-fieldwork-progress-board', () => {
     });
 
 
+    it('labels legacy FeatureGroup records as related features', () => {
+
+        const [item] = makeKoreanFieldworkProgressItems([
+            createDocument('feature-group-1', 'FeatureGroup')
+        ] as any);
+
+        expect(item).toMatchObject({
+            category: 'FeatureGroup',
+            categoryLabel: '관련 유구'
+        });
+    });
+
+
     it('marks feature parent ranges without feature children as investigation work', () => {
 
         const [item] = makeKoreanFieldworkProgressItems([

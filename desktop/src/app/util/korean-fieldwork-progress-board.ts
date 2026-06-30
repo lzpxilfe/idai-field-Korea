@@ -53,7 +53,7 @@ const CATEGORY_ORDER = ['Operation', 'Trench', 'FeatureGroup', 'Feature', 'Featu
 const CATEGORY_LABELS: Readonly<Record<string, string>> = {
     Operation: '조사',
     Trench: '트렌치',
-    FeatureGroup: '유구군',
+    FeatureGroup: '관련 유구',
     Feature: '유구',
     FeatureSegment: '세부 단위'
 };
