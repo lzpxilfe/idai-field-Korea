@@ -45,8 +45,8 @@ import type {
 
 const ICON_SIZE = 34;
 const FEATURE_SKETCH_CANVAS_DEFAULT_SIZE = {
-  height: 780,
-  width: 1180,
+  height: 920,
+  width: 1440,
 };
 const FEATURE_SKETCH_TABLET_WIDTH = 600;
 const FEATURE_SKETCH_SCALE_STEP = 10;
@@ -107,13 +107,13 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
     windowDimensions.width >= FEATURE_SKETCH_TABLET_WIDTH;
   const featureSketchCanvasHeight = useMemo(
     () => {
-      const reservedHeight = isFeatureWideLayout ? 76 : 142;
+      const reservedHeight = isFeatureWideLayout ? 34 : 92;
       const targetHeight = Math.max(
-        360,
+        520,
         Math.round(windowDimensions.height - reservedHeight)
       );
-      const minimumHeight = isFeatureWideLayout ? 620 : 460;
-      const maximumHeight = isFeatureWideLayout ? 1040 : 760;
+      const minimumHeight = isFeatureWideLayout ? 700 : 520;
+      const maximumHeight = isFeatureWideLayout ? 1180 : 860;
 
       return clamp(
         targetHeight,
@@ -553,10 +553,10 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
         <View
           pointerEvents="none"
           style={styles.featureSketchPlaneBadge}
-          testID="featureSketchTopDownBadge"
+          testID="featureSketchPlacementBadge"
         >
           <Ionicons name="map-outline" size={13} color="#175cd3" />
-          <Text style={styles.featureSketchPlaneBadgeText}>지도처럼 위에서 보기</Text>
+          <Text style={styles.featureSketchPlaneBadgeText}>조사 경계 위 배치</Text>
         </View>
         <View
           pointerEvents="box-none"
@@ -673,17 +673,6 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
           ]}
           testID="featureCreationFormPane"
         >
-          <View style={styles.parentPanel}>
-            <Text style={styles.parentLabel} numberOfLines={1}>
-              포함 위치: {parentDoc.resource.identifier}
-            </Text>
-            <Text style={styles.parentMeta}>
-              성격이 보이면 고르고, 애매하면 유구로 먼저 시작합니다.
-            </Text>
-            <Text style={styles.hierarchyHelp}>
-              {KOREAN_FIELDWORK_HIERARCHY_HELP}
-            </Text>
-          </View>
           <View style={styles.featureNamePanel}>
             <Input
               autoFocus
@@ -698,6 +687,17 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
             />
             <Text style={styles.featureNameHint}>
               유구명만 먼저 적어도 됩니다. 성격과 세부 정보는 조사하면서 계속 채우고 고칠 수 있습니다.
+            </Text>
+          </View>
+          <View style={styles.parentPanel}>
+            <Text style={styles.parentLabel} numberOfLines={1}>
+              포함 위치: {parentDoc.resource.identifier}
+            </Text>
+            <Text style={styles.parentMeta}>
+              성격이 보이면 고르고, 애매하면 유구로 먼저 시작합니다.
+            </Text>
+            <Text style={styles.hierarchyHelp}>
+              {KOREAN_FIELDWORK_HIERARCHY_HELP}
             </Text>
           </View>
           <View style={styles.startUnknownFeature}>
@@ -1250,9 +1250,10 @@ const styles = StyleSheet.create({
     width: '72%',
   },
   featureCreationCard: {
+    borderRadius: 0,
     height: '100%',
     maxHeight: '100%',
-    padding: 2,
+    padding: 0,
     width: '100%',
   },
   cardShell: {
@@ -1269,12 +1270,12 @@ const styles = StyleSheet.create({
   },
   featureCreationCategories: {
     flex: 1,
-    marginHorizontal: 2,
+    marginHorizontal: 0,
     marginVertical: 0,
   },
   featureCreationContent: {
-    paddingBottom: 10,
-    paddingHorizontal: 2,
+    paddingBottom: 0,
+    paddingHorizontal: 0,
     flexGrow: 1,
   },
   featureCreationLayout: {
@@ -1289,15 +1290,15 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   featureCreationMapPaneWide: {
-    flex: 5.2,
-    marginRight: 10,
+    flex: 6.6,
+    marginRight: 8,
   },
   featureCreationFormPane: {
     minWidth: 0,
   },
   featureCreationFormPaneWide: {
-    flex: 0.9,
-    maxWidth: 300,
+    flex: 0.74,
+    maxWidth: 270,
   },
   parentPanel: {
     backgroundColor: '#f8fafc',
@@ -1393,13 +1394,13 @@ const styles = StyleSheet.create({
   },
   featureSketchModeRow: {
     alignItems: 'flex-start',
-    bottom: 72,
-    flexDirection: 'column',
+    bottom: 12,
+    flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
     left: 12,
     position: 'absolute',
-    top: 104,
+    right: 66,
     zIndex: 4,
   },
   featureSketchModeButton: {
@@ -1409,6 +1410,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 1,
     flexDirection: 'row',
+    marginRight: 5,
     marginBottom: 5,
     minHeight: 32,
     minWidth: 84,
@@ -1432,7 +1434,7 @@ const styles = StyleSheet.create({
     borderColor: '#8294a9',
     borderRadius: 4,
     borderWidth: 0,
-    height: 300,
+    height: 520,
     overflow: 'hidden',
     position: 'relative',
     width: '100%',
@@ -1531,7 +1533,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 7,
     paddingVertical: 4,
     position: 'absolute',
-    right: 52,
+    right: 50,
     top: 12,
     zIndex: 2,
   },
@@ -1632,7 +1634,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     position: 'absolute',
     right: 12,
-    top: 104,
+    top: 70,
     zIndex: 3,
   },
   featureSketchToolButton: {

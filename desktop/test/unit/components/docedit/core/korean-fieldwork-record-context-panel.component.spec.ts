@@ -211,7 +211,8 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
 
         expect(template).toContain('class="flat-map-surface"');
         expect(template).toContain('class="flat-map-grid"');
-        expect(template).toContain('지도처럼 위에서 보기');
+        expect(template).toContain('조사 경계 위 배치');
+        expect(template).not.toContain('지도처럼 위에서 보기');
         expect(template).not.toContain('위성지도식 평면');
         expect(template).not.toContain('평면 배치 지도');
         expect(template).toContain('satellite-field');

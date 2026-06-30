@@ -1076,15 +1076,17 @@ function validateGuidedFeatureDraftDefaults() {
     findings.push('tablet add flow does not expose feature type options before creating Feature records');
   }
   if (!tabletAddModalText.includes('featureSketchFlatMapSurface')
-      || !tabletAddModalText.includes('지도처럼 위에서 보기')
+      || !tabletAddModalText.includes('조사 경계 위 배치')
       || !tabletAddModalText.includes('featureSketchModeRail')
       || !tabletAddModalText.includes('featureSketchToolRail')
+      || tabletAddModalText.includes('지도처럼 위에서 보기')
       || tabletAddModalText.includes('평면 배치 지도')
       || !tabletAddModalSpecText.includes('featureSketchFlatMapSurface')) {
     findings.push('tablet add flow must place new features on a flat placement map surface');
   }
   if (!desktopRecordContextTemplateText.includes('flat-map-surface')
-      || !desktopRecordContextTemplateText.includes('지도처럼 위에서 보기')
+      || !desktopRecordContextTemplateText.includes('조사 경계 위 배치')
+      || desktopRecordContextTemplateText.includes('지도처럼 위에서 보기')
       || desktopRecordContextTemplateText.includes('위성지도식 평면')
       || desktopRecordContextTemplateText.includes('평면 배치 지도')
       || !desktopRecordContextTemplateText.includes('satellite-field')
@@ -1353,11 +1355,11 @@ function validatePriorityTaskIds() {
   const desktopPriorityStripTemplateText = readTextFile(
     'desktop/src/app/components/resources/korean-fieldwork-priority-strip.html'
   );
-  const desktopTodayActionsSpecText = readTextFile(
-    'desktop/test/unit/util/korean-fieldwork-today-actions.spec.ts'
-  );
   const desktopPriorityStripSpecText = readTextFile(
     'desktop/test/unit/components/resources/korean-fieldwork-priority-strip.component.spec.ts'
+  );
+  const desktopTodayActionsSpecText = readTextFile(
+    'desktop/test/unit/util/korean-fieldwork-today-actions.spec.ts'
   );
 
   for (const token of [
@@ -1857,6 +1859,12 @@ function validateProjectInvestigationModeWording() {
   const desktopPriorityStripTemplateText = readTextFile(
     'desktop/src/app/components/resources/korean-fieldwork-priority-strip.html'
   );
+  const tabletSelectedRecordWorkbenchText = readTextFile(
+    'mobile/components/Project/KoreanFieldworkSelectedRecordWorkbench.tsx'
+  );
+  const tabletSelectedRecordWorkbenchSpecText = readTextFile(
+    'mobile/components/Project/KoreanFieldworkSelectedRecordWorkbench.spec.tsx'
+  );
   const tabletMapText = readTextFile('mobile/components/Project/Map/Map.tsx');
   const tabletMapStartPanelText = readTextFile(
     'mobile/components/Project/Map/korean-fieldwork-map-start-panel.ts'
@@ -1989,6 +1997,19 @@ function validateProjectInvestigationModeWording() {
   for (const requiredAnchor of ['스케치/약측 기준', '사진/도면 번호']) {
     if (!desktopFeatureGuidanceText.includes(requiredAnchor)) {
       findings.push(`desktop feature guidance templates must bind descriptions to sketch/measurement evidence: ${requiredAnchor}`);
+    }
+  }
+  for (const { label, text } of [
+    { label: 'tablet selected record workbench', text: tabletSelectedRecordWorkbenchText },
+    { label: 'tablet selected record workbench test', text: tabletSelectedRecordWorkbenchSpecText },
+    { label: 'desktop priority strip template', text: desktopPriorityStripTemplateText },
+    { label: 'desktop priority strip test', text: desktopPriorityStripSpecText }
+  ]) {
+    if (!text.includes('선택한 기록')) {
+      findings.push(`${label} must label the selected-record panel as 선택한 기록`);
+    }
+    if (text.includes('선택 기록 작업대')) {
+      findings.push(`${label} still uses confusing selected-record workbench wording`);
     }
   }
   for (const requiredAnchor of [

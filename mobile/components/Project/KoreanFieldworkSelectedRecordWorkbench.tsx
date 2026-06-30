@@ -86,7 +86,7 @@ const KoreanFieldworkSelectedRecordWorkbench: React.FC<
     <View style={styles.container} testID="selectedRecordWorkbench">
       <View style={styles.headerRow}>
         <View style={styles.headerText}>
-          <Text style={styles.kicker}>선택 기록 작업대</Text>
+          <Text style={styles.kicker}>선택한 기록</Text>
           <Text style={styles.title} numberOfLines={1}>
             {title}
           </Text>

@@ -31,7 +31,7 @@ describe('KoreanFieldworkSelectedRecordWorkbench', () => {
     const handleEditDocument = jest.fn();
     const handleOpenMapDocument = jest.fn();
 
-    const { getByTestId } = renderWorkbench(feature, {
+    const { getByTestId, getByText, queryByText } = renderWorkbench(feature, {
       allowedAddCategoryNames: [C.PHOTO, C.SOIL_PROFILE_PHOTO],
       onAddChild: handleAddChild,
       onAddDocumentOfCategory: handleAddDocumentOfCategory,
@@ -39,6 +39,11 @@ describe('KoreanFieldworkSelectedRecordWorkbench', () => {
       onEditDocument: handleEditDocument,
       onOpenMapDocument: handleOpenMapDocument,
     });
+
+    const legacyWorkbenchLabel = ['선택 기록', '작업대'].join(' ');
+
+    expect(getByText('선택한 기록')).toBeTruthy();
+    expect(queryByText(legacyWorkbenchLabel)).toBeNull();
 
     fireEvent.press(getByTestId('selectedRecordOpenMap'));
     fireEvent.press(getByTestId('selectedRecordEdit'));

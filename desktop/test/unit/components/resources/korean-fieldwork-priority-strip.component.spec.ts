@@ -9,12 +9,31 @@ jest.mock('../../../../src/app/services/menu-modal-launcher', () => ({
 }));
 
 import { Subject } from 'rxjs';
+import * as fs from 'fs';
+import * as path from 'path';
 import {
     KoreanFieldworkPriorityStripComponent
 } from '../../../../src/app/components/resources/korean-fieldwork-priority-strip.component';
 
 
 describe('KoreanFieldworkPriorityStripComponent', () => {
+
+    it('labels the selected record panel without workbench jargon', () => {
+
+        const template = fs.readFileSync(
+            path.resolve(
+                __dirname,
+                '../../../../src/app/components/resources/korean-fieldwork-priority-strip.html'
+            ),
+            'utf8'
+        );
+
+        const legacyWorkbenchLabel = ['선택 기록', '작업대'].join(' ');
+
+        expect(template).toContain('선택한 기록');
+        expect(template).not.toContain(legacyWorkbenchLabel);
+    });
+
 
     it('shows priority issues for Korean fieldwork projects', async () => {
 

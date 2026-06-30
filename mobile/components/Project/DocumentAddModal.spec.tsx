@@ -267,10 +267,10 @@ describe('DocumentAddModal', () => {
     expect(getByText(
       '위성지도나 평면도처럼 조사 경계 위에 유구를 바로 얹습니다.'
     )).toBeTruthy();
-    expect(getByText('지도처럼 위에서 보기')).toBeTruthy();
+    expect(getByText('조사 경계 위 배치')).toBeTruthy();
     expect(queryByText('위성지도식 평면')).toBeNull();
     expect(queryByText('평면 배치 지도')).toBeNull();
-    expect(queryByText(/위에서 보고/)).toBeNull();
+    expect(queryByText(/위에서 보기|위에서 보고/)).toBeNull();
     expect(queryByText(/3D|조감/)).toBeNull();
 
     const canvas = getByTestId('featureLocationSketchCanvas');
@@ -341,18 +341,17 @@ describe('DocumentAddModal', () => {
       .toEqual({ selected: true });
 
     const canvas = getByTestId('featureLocationSketchCanvas');
-    expect(getByTestId('featureSketchTopDownBadge')).toBeTruthy();
+    expect(getByTestId('featureSketchPlacementBadge')).toBeTruthy();
     expect(getByTestId('featureSketchModeRail').props.style).toEqual(
       expect.objectContaining({
-        bottom: 72,
-        flexDirection: 'column',
-        top: 104,
+        bottom: 12,
+        flexDirection: 'row',
       })
     );
     expect(getByTestId('featureSketchToolRail').props.style).toEqual(
       expect.objectContaining({
         flexDirection: 'column',
-        top: 104,
+        top: 70,
       })
     );
     expect(canvas.props.style).toEqual(
@@ -362,7 +361,7 @@ describe('DocumentAddModal', () => {
     );
     const canvasStyles = canvas.props.style as Array<{ height?: number }>;
     const dynamicCanvasStyle = canvasStyles[canvasStyles.length - 1];
-    expect(dynamicCanvasStyle.height).toBeGreaterThanOrEqual(620);
+    expect(dynamicCanvasStyle.height).toBeGreaterThanOrEqual(700);
     fireEvent(canvas, 'layout', {
       nativeEvent: { layout: { height: 100, width: 200 } },
     });
