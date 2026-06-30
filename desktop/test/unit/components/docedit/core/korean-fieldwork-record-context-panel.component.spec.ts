@@ -527,6 +527,62 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
     });
 
 
+    it('shows confirmed tablet image uploads on opened desktop photo records', async () => {
+
+        const photo = createDocument('photo-1', 'Photo', 'P1', {}, {
+            fieldworkPhotoUri: 'file:///tablet/photos/photo-1.jpg',
+            digitalSourcePreservation: ['originalPhoto', 'originalImage', 'webOrServerBackup', 'backupVerified'],
+            fieldworkImageUploadStatus: 'uploaded',
+            fieldworkImageUploadedAt: '2026-06-23T01:03:00.000Z',
+            fieldworkImageUploadedUri: 'file:///tablet/photos/photo-1.jpg',
+            fieldworkImageUploadTarget: 'https://field.example/files/fieldwork/photo-1?type=original_image',
+            fieldworkImageUploadedProject: 'fieldwork',
+            fieldworkImageUploadedSizeBytes: 481516,
+            fieldworkImageUploadedMd5: 'tablet-md5',
+            fieldworkImageStoredSizeBytes: 481516,
+            fieldworkImageStoredMd5: 'tablet-md5',
+            fieldworkImageStoredSha256: 'server-sha256'
+        });
+        const component = createComponent({
+            find: jest.fn().mockResolvedValue({ documents: [photo] })
+        });
+        component.document = photo as any;
+        component.fieldDefinitions = [
+            field('fieldworkImageUploadStatus'),
+            field('fieldworkImageUploadedAt')
+        ] as any;
+
+        await component.ngOnChanges();
+
+        expect(component.shouldShow()).toBe(true);
+        expect(component.getStatusChips()).toEqual([
+            { label: '백업 업로드 확인 · 2026-06-23 · SHA256', tone: 'success' }
+        ]);
+    });
+
+
+    it('warns when tablet image uploads still need confirmation on desktop media records', async () => {
+
+        const photo = createDocument('photo-1', 'Photo', 'P1', {}, {
+            fieldworkPhotoUri: 'file:///tablet/photos/photo-1.jpg'
+        });
+        const component = createComponent({
+            find: jest.fn().mockResolvedValue({ documents: [photo] })
+        });
+        component.document = photo as any;
+        component.fieldDefinitions = [
+            field('fieldworkImageUploadStatus')
+        ] as any;
+
+        await component.ngOnChanges();
+
+        expect(component.shouldShow()).toBe(true);
+        expect(component.getStatusChips()).toEqual([
+            { label: '백업 확인 필요', tone: 'warning' }
+        ]);
+    });
+
+
     it('warns when a selected feature type has no core attributes recorded', async () => {
 
         const feature = createDocument('feature-1', 'Feature', 'F1', {}, {

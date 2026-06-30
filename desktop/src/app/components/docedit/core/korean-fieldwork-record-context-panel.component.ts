@@ -7,6 +7,7 @@ import {
     Document,
     EvidenceBundle,
     Field,
+    hasConfirmedKoreanFieldworkImageUpload,
     Labels,
     ProjectConfiguration
 } from 'idai-field-core';
@@ -180,6 +181,16 @@ const KOREAN_FIELDWORK_CONTEXT_FIELDS = [
     'featureFillInterpretation',
     'featureInvestigationChecklist',
     'featureLifecycleReview',
+    'fieldworkImageStoredMd5',
+    'fieldworkImageStoredSha256',
+    'fieldworkImageStoredSizeBytes',
+    'fieldworkImageUploadedAt',
+    'fieldworkImageUploadedMd5',
+    'fieldworkImageUploadedProject',
+    'fieldworkImageUploadedSizeBytes',
+    'fieldworkImageUploadedUri',
+    'fieldworkImageUploadStatus',
+    'fieldworkImageUploadTarget',
     'fieldworkPhotoAnnotationStrokes',
     'featureRecordingStatus',
     'fieldRecordQuality',
@@ -312,6 +323,11 @@ const FEATURE_PERIOD_LABELS: Readonly<Record<string, string>> = {
 
 const FEATURE_PERIOD_CATEGORIES = new Set<string>(['FeatureGroup', 'Feature', 'FeatureSegment']);
 const MEDIA_REVIEW_CATEGORIES = new Set<string>(['Photo', 'SoilProfilePhoto', 'Drawing']);
+const MEDIA_LOCAL_URI_FIELDS: Readonly<Record<string, readonly string[]>> = {
+    Drawing: ['fieldworkPhotoUri', 'imageUri', 'fileUri'],
+    Photo: ['fieldworkPhotoUri', 'imageUri', 'fileUri'],
+    SoilProfilePhoto: ['soilProfilePhotoUri', 'imageUri', 'fieldworkPhotoUri']
+};
 
 const OPERATION_ROLE_RESPONSIBILITY_LABELS: Readonly<Record<string, string>> = {
     principalInvestigator: '조사단장',
@@ -732,6 +748,7 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
         this.pushSurveyPredictionReviewChip(chips, resource);
         this.pushSourceEvidenceVerificationChip(chips, resource);
         this.pushMediaReviewChip(chips, resource);
+        this.pushImageUploadChip(chips, resource);
         this.pushFeaturePeriodChip(chips, resource);
         this.pushMappedChip(chips, resource.featureRecordingStatus, FEATURE_RECORDING_STATUS_LABELS);
         this.pushFeatureAttributeChip(chips);
@@ -1745,7 +1762,12 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
 
     private getDateFieldLabel(fieldName: string): string|undefined {
 
-        const value = this.document.resource[fieldName];
+        return this.getDateValueLabel(this.document.resource[fieldName]);
+    }
+
+
+    private getDateValueLabel(value: unknown): string|undefined {
+
         if (typeof value !== 'string' || value.trim().length === 0) return undefined;
 
         const date = new Date(value);
@@ -2116,6 +2138,56 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
             label: this.shortenChipText(`미디어 ${mediaSummary.label}`, 58),
             tone: mediaSummary.hasWarning ? 'warning' : 'info'
         });
+    }
+
+
+    private pushImageUploadChip(chips: ContextChip[], resource: any) {
+
+        if (!MEDIA_REVIEW_CATEGORIES.has(resource.category)) return;
+
+        const localUri = this.getMediaLocalUri(resource);
+        const hasUploadFields = [
+            resource.fieldworkImageUploadStatus,
+            resource.fieldworkImageUploadedAt,
+            resource.fieldworkImageUploadedUri,
+            resource.fieldworkImageUploadTarget,
+            resource.fieldworkImageUploadedProject,
+            resource.fieldworkImageUploadedMd5,
+            resource.fieldworkImageUploadedSizeBytes,
+            resource.fieldworkImageStoredMd5,
+            resource.fieldworkImageStoredSha256,
+            resource.fieldworkImageStoredSizeBytes
+        ].some(value => value !== undefined && value !== null && `${value}`.trim().length > 0);
+
+        if (hasConfirmedKoreanFieldworkImageUpload(resource, localUri)) {
+            const uploadedAtLabel = this.getDateValueLabel(resource.fieldworkImageUploadedAt);
+            const hasStoredSha256 = this.getTextResourceValue(resource.fieldworkImageStoredSha256) !== undefined;
+            const details = [
+                '업로드 확인',
+                uploadedAtLabel,
+                hasStoredSha256 ? 'SHA256' : undefined
+            ].filter((label): label is string => label !== undefined);
+
+            chips.push({ label: `백업 ${details.join(' · ')}`, tone: 'success' });
+            return;
+        }
+
+        if (localUri || hasUploadFields) {
+            chips.push({
+                label: hasUploadFields ? '백업 업로드 기록 보완 필요' : '백업 확인 필요',
+                tone: 'warning'
+            });
+        }
+    }
+
+
+    private getMediaLocalUri(resource: any): string|undefined {
+
+        const uriFields = MEDIA_LOCAL_URI_FIELDS[resource.category] ?? [];
+
+        return uriFields
+            .map(fieldName => this.getTextResourceValue(resource[fieldName]))
+            .find(uri => uri !== undefined && /^(file|content):\/\//.test(uri));
     }
 
 

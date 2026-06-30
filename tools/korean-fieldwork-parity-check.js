@@ -2846,6 +2846,13 @@ function validateRecordPanelOrder() {
       || !desktopRecordContextPanelSpecText.includes('초점 흔들림')) {
     findings.push('desktop record context panel must summarize tablet media review values inside opened media records');
   }
+  if (!desktopRecordContextPanelText.includes('pushImageUploadChip')
+      || !desktopRecordContextPanelText.includes('hasConfirmedKoreanFieldworkImageUpload')
+      || !desktopRecordContextPanelText.includes('MEDIA_LOCAL_URI_FIELDS')
+      || !desktopRecordContextPanelSpecText.includes('confirmed tablet image uploads')
+      || !desktopRecordContextPanelSpecText.includes('백업 업로드 확인')) {
+    findings.push('desktop record context panel must summarize tablet image upload and backup status inside opened media records');
+  }
   for (const { label, text } of [
     { label: 'desktop notebook digest', text: desktopNotebookDigestText },
     { label: 'tablet field notes', text: tabletFieldNotesText }
