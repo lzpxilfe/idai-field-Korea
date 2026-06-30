@@ -245,7 +245,7 @@ describe('DocumentAddModal', () => {
       },
     } as any;
 
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText, queryByText } = render(
       <LabelsContext.Provider value={{ labels: new Labels(() => ['ko']) }}>
         <ConfigurationContext.Provider value={createConfig([
           createCategory(C.TRENCH),
@@ -264,6 +264,10 @@ describe('DocumentAddModal', () => {
     fireEvent.press(getByTestId(`addCategory_${C.FEATURE}`));
 
     expect(getByText('유구 위치 그리기')).toBeTruthy();
+    expect(getByText(
+      '위성지도·일반지도 같은 평면 기준으로 조사 경계 안에 유구 위치와 형태를 표시합니다.'
+    )).toBeTruthy();
+    expect(queryByText(/위에서 보고/)).toBeNull();
 
     const canvas = getByTestId('featureLocationSketchCanvas');
     fireEvent(canvas, 'layout', {

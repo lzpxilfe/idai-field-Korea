@@ -106,9 +106,9 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
     windowDimensions.width >= FEATURE_SKETCH_TABLET_WIDTH;
   const featureSketchCanvasHeight = useMemo(
     () => clamp(
-      Math.round(windowDimensions.height * (isFeatureWideLayout ? 0.68 : 0.56)),
-      isFeatureWideLayout ? 520 : 400,
-      isFeatureWideLayout ? 720 : 560
+      Math.round(windowDimensions.height * (isFeatureWideLayout ? 0.74 : 0.64)),
+      isFeatureWideLayout ? 580 : 460,
+      isFeatureWideLayout ? 780 : 620
     ),
     [isFeatureWideLayout, windowDimensions.height]
   );
@@ -408,7 +408,7 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
         <View>
           <Text style={styles.featureLocationTitle}>유구 위치 그리기</Text>
           <Text style={styles.featureLocationDetail}>
-            위성사진·평면지도처럼 조사 경계를 위에서 보고 유구 경계를 표시합니다.
+            위성지도·일반지도 같은 평면 기준으로 조사 경계 안에 유구 위치와 형태를 표시합니다.
           </Text>
         </View>
         {featureSketchWasEdited && (
@@ -1156,11 +1156,14 @@ const styles = StyleSheet.create({
     width: '72%',
   },
   featureCreationCard: {
+    height: '96%',
     maxHeight: '98%',
-    width: '98%',
+    width: '99%',
   },
   cardShell: {
     alignItems: 'center',
+    height: '100%',
+    justifyContent: 'center',
     width: '100%',
   },
   heading: {
