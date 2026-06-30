@@ -3,7 +3,7 @@ import {
   KOREAN_FIELDWORK_PROJECT_LABEL,
   KOREAN_FIELDWORK_PROJECT_LANGUAGES,
 } from '@/constants/korean-fieldwork-project';
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
@@ -19,12 +19,20 @@ import Button from '@/components/common/Button';
 import Heading from '@/components/common/Heading';
 import Input from '@/components/common/Input';
 import TitleBar from '@/components/common/TitleBar';
+import KakaoSatellitePicker from '@/components/Project/Map/KakaoSatellitePicker';
+import type {
+  KakaoSatellitePickedBoundary,
+} from '@/components/Project/Map/KakaoSatellitePicker';
 import {
   KOREAN_FIELDWORK_INVESTIGATION_MODES,
-  KoreanFieldworkInvestigationModeId,
   saveKoreanFieldworkBoundarySummary,
   saveKoreanFieldworkInvestigationModeId,
+  saveKoreanFieldworkProjectBoundaryDraft,
 } from '@/components/Project/korean-fieldwork-investigation-mode';
+import type {
+  KoreanFieldworkInvestigationModeId,
+} from '@/components/Project/korean-fieldwork-investigation-mode';
+import { PreferencesContext } from '@/contexts/preferences-context';
 import { colors } from '@/utils/colors';
 import {
   getProjectNameInvalidText,
@@ -39,8 +47,8 @@ interface CreateProjectModalProps {
 
 const KOREAN_FIELDWORK_START_STEPS = [
   '프로젝트 기본 조사 방식을 정합니다.',
-  '조사 경계 기준을 문장으로 남깁니다.',
-  '프로젝트 생성 후 지도에서 경계를 그리거나 가져옵니다.',
+  '지도에서 유적 경계를 직접 그립니다.',
+  '필요하면 경계 메모를 덧붙입니다.',
 ];
 
 const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
@@ -48,6 +56,7 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
   onProjectCreated,
   onClose,
 }) => {
+  const preferences = useContext(PreferencesContext);
   const [project, setProject] = useState<string>('');
   const [projectTouched, setProjectTouched] = useState<boolean>(false);
   const [investigationModeId, setInvestigationModeId] =
@@ -55,53 +64,76 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
   const [boundarySummary, setBoundarySummary] = useState<string>('');
   const [boundarySummaryTouched, setBoundarySummaryTouched] =
     useState<boolean>(false);
+  const [pickedBoundary, setPickedBoundary] =
+    useState<KakaoSatellitePickedBoundary>();
+  const [isBoundaryPickerOpen, setIsBoundaryPickerOpen] =
+    useState<boolean>(false);
   const insets = useSafeAreaInsets();
   const projectNameValidation = validateProjectName(project, existingProjects);
   const { projectId } = projectNameValidation;
-  const isBoundarySummaryValid = boundarySummary.trim().length > 0;
+  const hasBoundaryGeometry = (pickedBoundary?.coordinates.length ?? 0) >= 3;
   const canCreateProject =
-    projectNameValidation.isAvailable && !!investigationModeId && isBoundarySummaryValid;
+    projectNameValidation.isAvailable && !!investigationModeId && hasBoundaryGeometry;
   const showProjectNameError = projectTouched && !projectNameValidation.isAvailable;
   const showInvestigationModeError =
     boundarySummaryTouched && !investigationModeId;
-  const showBoundarySummaryError =
-    boundarySummaryTouched && !isBoundarySummaryValid;
+  const showBoundaryGeometryError =
+    boundarySummaryTouched && !hasBoundaryGeometry;
   const setupStatusText = getCreateProjectSetupStatusText(
     projectNameValidation,
     investigationModeId,
-    isBoundarySummaryValid
+    hasBoundaryGeometry
   );
   const isSetupReady =
-    projectNameValidation.isAvailable && !!investigationModeId && isBoundarySummaryValid;
+    projectNameValidation.isAvailable && !!investigationModeId && hasBoundaryGeometry;
 
   const onCreate = async () => {
     if (!canCreateProject) return;
+
+    const normalizedBoundarySummary =
+      boundarySummary.trim() || getDrawnBoundarySummary(pickedBoundary);
 
     await saveKoreanFieldworkInvestigationModeId(
       projectId,
       investigationModeId as KoreanFieldworkInvestigationModeId
     );
-    await saveKoreanFieldworkBoundarySummary(projectId, boundarySummary);
+    await saveKoreanFieldworkBoundarySummary(projectId, normalizedBoundarySummary);
+    if (pickedBoundary) {
+      await saveKoreanFieldworkProjectBoundaryDraft(projectId, pickedBoundary);
+    }
 
     onProjectCreated(
       projectId,
       KOREAN_FIELDWORK_PROJECT_LANGUAGES.slice()
     );
-    setProject('');
-    setProjectTouched(false);
-    setInvestigationModeId(undefined);
-    setBoundarySummary('');
-    setBoundarySummaryTouched(false);
+    resetForm();
     onClose();
   };
 
   const onCancel = () => {
+    resetForm();
+    onClose();
+  };
+
+  const resetForm = () => {
     setProject('');
     setProjectTouched(false);
     setInvestigationModeId(undefined);
     setBoundarySummary('');
     setBoundarySummaryTouched(false);
-    onClose();
+    setPickedBoundary(undefined);
+    setIsBoundaryPickerOpen(false);
+  };
+
+  const openBoundaryPicker = () => {
+    setBoundarySummaryTouched(true);
+    setIsBoundaryPickerOpen(true);
+  };
+
+  const onPickBoundary = (boundary: KakaoSatellitePickedBoundary) => {
+    setPickedBoundary(boundary);
+    setBoundarySummaryTouched(true);
+    setIsBoundaryPickerOpen(false);
   };
 
   return (
@@ -110,7 +142,15 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
       animationType="slide"
       presentationStyle="formSheet"
     >
-      <KeyboardAvoidingView 
+      <KakaoSatellitePicker
+        javaScriptKey={
+          preferences.preferences.mapProviderSettings.kakaoMapJavaScriptKey
+        }
+        onClose={() => setIsBoundaryPickerOpen(false)}
+        onPickBoundary={onPickBoundary}
+        visible={isBoundaryPickerOpen}
+      />
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={[
           styles.container,
@@ -143,7 +183,7 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
               />
             }
           />
-          
+
           <ScrollView
             contentContainerStyle={styles.formContainer}
             keyboardShouldPersistTaps="handled"
@@ -169,7 +209,7 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
             <View style={styles.setupSection}>
               <Text style={styles.sectionTitle}>프로젝트 기본 설정</Text>
               <Text style={styles.sectionText}>
-                조사 방식은 하루 작업이 아니라 프로젝트를 만들 때 정하는 기준입니다.
+                조사 방식과 경계 도형은 프로젝트를 만들 때 정하는 기준입니다.
               </Text>
               <View style={styles.startSteps}>
                 {KOREAN_FIELDWORK_START_STEPS.map((step, index) => (
@@ -219,9 +259,29 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
                 <Text style={styles.invalidText}>조사 방식을 선택해야 합니다.</Text>
               )}
 
+              <View style={styles.boundaryDrawPanel}>
+                <View style={styles.boundaryDrawText}>
+                  <Text style={styles.boundaryDrawTitle}>유적 경계</Text>
+                  <Text style={styles.boundaryDrawDetail}>
+                    {getPickedBoundaryStatusText(pickedBoundary)}
+                  </Text>
+                </View>
+                <Button
+                  icon={<Ionicons name="map-outline" size={16} />}
+                  onPress={openBoundaryPicker}
+                  testID="project-boundary-draw-button"
+                  title={pickedBoundary ? '다시 그리기' : '지도에서 그리기'}
+                  variant={pickedBoundary ? 'secondary' : 'success'}
+                />
+              </View>
+
+              {showBoundaryGeometryError && (
+                <Text style={styles.invalidText}>지도에서 유적 경계를 그려야 합니다.</Text>
+              )}
+
               <Input
                 testID="project-boundary-summary-input"
-                label="조사 경계"
+                label="경계 메모"
                 value={boundarySummary}
                 onChangeText={(value) => {
                   setBoundarySummaryTouched(true);
@@ -230,9 +290,8 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
                 autoCapitalize="none"
                 autoCorrect={false}
                 placeholder="예: 1구역 북쪽 능선부터 남쪽 농로까지"
-                helpText="처음 정한 경계 기준입니다. 지도에서 도형을 그리거나 지원되는 파일 가져오기로 확정합니다."
-                invalidText="조사 경계 기준을 입력해야 합니다."
-                isValid={showBoundarySummaryError ? false : undefined}
+                helpText="선택 사항입니다. 비워두면 지도에서 그린 경계점 수가 메모로 저장됩니다."
+                isValid
                 style={styles.boundaryInput}
               />
 
@@ -255,6 +314,54 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
 };
 
 const styles = StyleSheet.create({
+  boundaryDrawDetail: {
+    color: '#667085',
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 17,
+    marginTop: 4,
+  },
+  boundaryDrawPanel: {
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderColor: '#d0d5dd',
+    borderRadius: 6,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 14,
+    padding: 12,
+  },
+  boundaryDrawText: {
+    flex: 1,
+  },
+  boundaryDrawTitle: {
+    color: '#27343b',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  boundaryInput: {
+    marginTop: 12,
+    width: '100%',
+  },
+  boundaryNotice: {
+    alignItems: 'center',
+    backgroundColor: '#eff8ff',
+    borderColor: '#b2ddff',
+    borderRadius: 6,
+    borderWidth: 1,
+    flexDirection: 'row',
+    marginTop: 16,
+    padding: 10,
+  },
+  boundaryText: {
+    color: '#175cd3',
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '800',
+    lineHeight: 17,
+    marginLeft: 8,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.containerBackground,
@@ -271,18 +378,49 @@ const styles = StyleSheet.create({
   input: {
     width: '100%',
   },
-  boundaryInput: {
-    marginTop: 12,
-    width: '100%',
+  invalidText: {
+    color: colors.danger,
+    fontSize: 12,
+    fontWeight: '800',
+    margin: 5,
   },
-  setupSection: {
-    marginTop: 24,
+  modeButton: {
+    backgroundColor: 'white',
+    borderColor: '#d0d5dd',
+    borderRadius: 6,
+    borderWidth: 1,
+    margin: 4,
+    minHeight: 92,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    width: '47%',
   },
-  sectionTitle: {
-    color: '#27343b',
-    fontSize: 17,
+  modeButtonSelected: {
+    backgroundColor: '#ecfdf3',
+    borderColor: '#7fbc8c',
+  },
+  modeDetail: {
+    color: '#667085',
+    fontSize: 11,
+    fontWeight: '700',
+    lineHeight: 15,
+    marginTop: 5,
+  },
+  modeDetailSelected: {
+    color: '#2f6f4e',
+  },
+  modeGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginHorizontal: -4,
+  },
+  modeLabel: {
+    color: '#344054',
+    fontSize: 14,
     fontWeight: '900',
-    marginBottom: 6,
+  },
+  modeLabelSelected: {
+    color: '#1f5f43',
   },
   sectionText: {
     color: '#667085',
@@ -291,8 +429,14 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     marginBottom: 12,
   },
-  startSteps: {
-    marginBottom: 14,
+  sectionTitle: {
+    color: '#27343b',
+    fontSize: 17,
+    fontWeight: '900',
+    marginBottom: 6,
+  },
+  setupSection: {
+    marginTop: 24,
   },
   startStep: {
     alignItems: 'center',
@@ -318,94 +462,46 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     lineHeight: 17,
   },
-  modeGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginHorizontal: -4,
-  },
-  modeButton: {
-    backgroundColor: 'white',
-    borderColor: '#d0d5dd',
-    borderRadius: 6,
-    borderWidth: 1,
-    margin: 4,
-    minHeight: 92,
-    paddingHorizontal: 10,
-    paddingVertical: 9,
-    width: '47%',
-  },
-  modeButtonSelected: {
-    backgroundColor: '#ecfdf3',
-    borderColor: '#7fbc8c',
-  },
-  modeLabel: {
-    color: '#344054',
-    fontSize: 14,
-    fontWeight: '900',
-  },
-  modeLabelSelected: {
-    color: '#1f5f43',
-  },
-  modeDetail: {
-    color: '#667085',
-    fontSize: 11,
-    fontWeight: '700',
-    lineHeight: 15,
-    marginTop: 5,
-  },
-  modeDetailSelected: {
-    color: '#2f6f4e',
-  },
-  invalidText: {
-    color: colors.danger,
-    fontSize: 12,
-    fontWeight: '800',
-    margin: 5,
-  },
-  boundaryNotice: {
-    alignItems: 'center',
-    backgroundColor: '#eff8ff',
-    borderColor: '#b2ddff',
-    borderRadius: 6,
-    borderWidth: 1,
-    flexDirection: 'row',
-    marginTop: 16,
-    padding: 10,
-  },
-  boundaryText: {
-    color: '#175cd3',
-    flex: 1,
-    fontSize: 12,
-    fontWeight: '800',
-    lineHeight: 17,
-    marginLeft: 8,
+  startSteps: {
+    marginBottom: 14,
   },
 });
 
 const getCreateProjectSetupStatusText = (
   projectNameValidation: ReturnType<typeof validateProjectName>,
   investigationModeId: KoreanFieldworkInvestigationModeId | undefined,
-  isBoundarySummaryValid: boolean
+  hasBoundaryGeometry: boolean
 ): string => {
   if (!projectNameValidation.isAvailable) {
     return projectNameValidation.isPresent
       ? getProjectNameInvalidText(projectNameValidation)
-      : '프로젝트 이름, 조사 방식, 조사 경계를 채우면 만들 수 있습니다.';
+      : '프로젝트 이름을 적고, 조사 방식을 고른 뒤 지도에서 경계를 그리면 만들 수 있습니다.';
   }
 
-  if (!investigationModeId && !isBoundarySummaryValid) {
-    return '조사 방식과 조사 경계를 정하면 만들 수 있습니다.';
+  if (!investigationModeId && !hasBoundaryGeometry) {
+    return '조사 방식을 고르고 지도에서 경계를 그리면 만들 수 있습니다.';
   }
 
   if (!investigationModeId) {
     return '조사 방식을 선택하면 만들 수 있습니다.';
   }
 
-  if (!isBoundarySummaryValid) {
-    return '조사 경계를 적으면 만들 수 있습니다.';
+  if (!hasBoundaryGeometry) {
+    return '지도에서 유적 경계를 그리면 만들 수 있습니다.';
   }
 
-  return '준비 완료. 생성 뒤 지도에서 이 경계를 그리거나 가져와 확정하세요.';
+  return '준비 완료. 생성하면 이 경계 도형이 조사 경계 기록으로 저장됩니다.';
 };
+
+const getPickedBoundaryStatusText = (
+  boundary?: KakaoSatellitePickedBoundary
+): string =>
+  boundary
+    ? `경계점 ${boundary.coordinates.length}개를 찍었습니다. 생성하면 조사 경계 기록으로 저장됩니다.`
+    : '지도에서 조사 지역의 꼭짓점을 3개 이상 찍어 경계를 만듭니다.';
+
+const getDrawnBoundarySummary = (
+  boundary?: KakaoSatellitePickedBoundary
+): string => `지도에서 그린 조사 경계 (${boundary?.coordinates.length ?? 0}점)`;
 
 export default CreateProjectModal;

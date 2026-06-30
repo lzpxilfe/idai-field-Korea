@@ -1,3 +1,4 @@
+import type { Document } from 'idai-field-core';
 import {
   ConfigReader,
   ConfigurationDocument,
@@ -14,14 +15,34 @@ import {
 } from '@/constants/korean-fieldwork-project';
 import {
   createKoreanFieldworkProjectSetupResourceUpdates,
+  loadKoreanFieldworkProjectBoundaryDraft,
   loadKoreanFieldworkProjectSetupDefaults,
+  removeKoreanFieldworkProjectBoundaryDraft,
 } from '@/components/Project/korean-fieldwork-investigation-mode';
+import type {
+  KoreanFieldworkBoundaryMapTypeId,
+  KoreanFieldworkProjectSetupDefaults,
+} from '@/components/Project/korean-fieldwork-investigation-mode';
+import {
+  createOperationDraft,
+  createSurveyBoundaryDraft,
+  getBoundaryGeometryCenter,
+  projectWgs84BoundaryToSurveyBoundaryGeometry,
+  REFERENCE_BASEMAP_PROVIDER_KAKAO_HYBRID,
+  REFERENCE_BASEMAP_PROVIDER_KAKAO_ROADMAP,
+  REFERENCE_BASEMAP_PROVIDER_KAKAO_SKYVIEW,
+  SURVEY_BOUNDARY_ACCURACY_DEFAULT,
+  SURVEY_BOUNDARY_SOURCE_DEFAULT,
+} from '@/components/Project/Map/korean-fieldwork-drafts';
 import {
   isSampleProject,
   SAMPLE_PROJECT_LABEL,
 } from '@/constants/sample-project';
 
 PouchDB.plugin(require('@neighbourhoodie/pouchdb-asyncstorage-adapter').default)
+
+const INITIAL_OPERATION_ID = 'initial-fieldwork-operation';
+const INITIAL_SURVEY_BOUNDARY_ID = 'initial-survey-boundary';
 
 const usePouchDbDatastore = (project: string): PouchdbDatastore | undefined => {
   const [pouchdbDatastore, setpouchdbDatastore] = useState<PouchdbDatastore>();
@@ -72,13 +93,27 @@ const buildpouchdbDatastore = async (
     (name: string) => new PouchDB(name),
     new IdGenerator()
   );
+  const projectSetupDefaults = isSampleProject(project)
+    ? {}
+    : await loadKoreanFieldworkProjectSetupDefaults(project)
+        .catch(() => ({}));
 
   await datastore.createDb(
     project,
-    await createProjectDocument(project),
+    await createProjectDocument(project, projectSetupDefaults),
     await createConfigurationDocument(project),
     isSampleProject(project)
   );
+
+  if (!isSampleProject(project)) {
+    await createInitialBoundaryDocuments(
+      datastore,
+      project,
+      projectSetupDefaults
+    ).catch((error) => {
+      console.warn('Unable to create initial project boundary documents', error);
+    });
+  }
   
   if (isSampleProject(project)) {
     const loader = new SampleDataLoaderBase('en');
@@ -89,12 +124,10 @@ const buildpouchdbDatastore = async (
   return datastore;
 };
 
-const createProjectDocument = async (project: string) => {
-  const projectSetupDefaults = isSampleProject(project)
-    ? {}
-    : await loadKoreanFieldworkProjectSetupDefaults(project)
-        .catch(() => ({}));
-
+const createProjectDocument = async (
+  project: string,
+  projectSetupDefaults: KoreanFieldworkProjectSetupDefaults = {}
+) => {
   return {
     _id: 'project',
     resource: {
@@ -128,4 +161,67 @@ const createConfigurationDocument = async (
   configurationDocument.resource.projectLanguages = KOREAN_FIELDWORK_PROJECT_LANGUAGES.slice();
   configurationDocument.resource.customConfigurationName = KOREAN_FIELDWORK_CONFIGURATION_NAME;
   return configurationDocument;
+};
+
+const createInitialBoundaryDocuments = async (
+  datastore: PouchdbDatastore,
+  project: string,
+  projectSetupDefaults: KoreanFieldworkProjectSetupDefaults
+) => {
+  const boundaryDraft = await loadKoreanFieldworkProjectBoundaryDraft(project);
+  if (!boundaryDraft) return;
+
+  const db = datastore.getDb();
+  const alreadyCreated = await db.get(INITIAL_SURVEY_BOUNDARY_ID)
+    .then(() => true)
+    .catch(() => false);
+  if (alreadyCreated) {
+    await removeKoreanFieldworkProjectBoundaryDraft(project);
+    return;
+  }
+
+  const geometry = projectWgs84BoundaryToSurveyBoundaryGeometry(
+    boundaryDraft.coordinates
+  );
+  if (!geometry) return;
+
+  const boundarySummary = projectSetupDefaults.boundarySummary?.trim()
+    || getGeneratedBoundarySummary(boundaryDraft.coordinates.length);
+  const operationDraft = createOperationDraft({
+    boundarySummary,
+    investigationModeId: projectSetupDefaults.investigationModeId,
+  });
+  operationDraft.resource.id = INITIAL_OPERATION_ID;
+  const operationDocument = {
+    resource: operationDraft.resource,
+  } as Document;
+  const boundaryDocument = createSurveyBoundaryDraft(
+    operationDocument,
+    getBoundaryGeometryCenter(geometry),
+    boundarySummary,
+    {
+      boundaryAccuracy: SURVEY_BOUNDARY_ACCURACY_DEFAULT,
+      boundarySource: SURVEY_BOUNDARY_SOURCE_DEFAULT,
+      geometry,
+      referenceBasemapProvider: getReferenceBasemapProviderForMapType(
+        boundaryDraft.mapTypeId
+      ),
+    }
+  );
+  boundaryDocument.resource.id = INITIAL_SURVEY_BOUNDARY_ID;
+
+  await datastore.bulkCreate([operationDraft, boundaryDocument], '');
+  await removeKoreanFieldworkProjectBoundaryDraft(project);
+};
+
+const getGeneratedBoundarySummary = (coordinateCount: number): string =>
+  `지도에서 그린 조사 경계 (${coordinateCount}점)`;
+
+const getReferenceBasemapProviderForMapType = (
+  mapTypeId?: KoreanFieldworkBoundaryMapTypeId
+): string => {
+  if (mapTypeId === 'ROADMAP') return REFERENCE_BASEMAP_PROVIDER_KAKAO_ROADMAP;
+  if (mapTypeId === 'SKYVIEW') return REFERENCE_BASEMAP_PROVIDER_KAKAO_SKYVIEW;
+
+  return REFERENCE_BASEMAP_PROVIDER_KAKAO_HYBRID;
 };

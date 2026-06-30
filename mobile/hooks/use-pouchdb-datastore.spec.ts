@@ -7,6 +7,15 @@ const mockCreateDbDeferreds = new Map<string, {
   promise: Promise<void>;
   resolve: () => void;
 }>();
+const mockLoadProjectSetupDefaults = jest.fn<Promise<any>, any[]>(
+  () => Promise.resolve({})
+);
+const mockLoadProjectBoundaryDraft = jest.fn<Promise<any>, any[]>(
+  () => Promise.resolve(undefined)
+);
+const mockRemoveProjectBoundaryDraft = jest.fn<Promise<any>, any[]>(
+  () => Promise.resolve(undefined)
+);
 
 jest.mock('pouchdb-core', () => {
   const PouchDB = jest.fn((name: string) => {
@@ -14,7 +23,7 @@ jest.mock('pouchdb-core', () => {
       allDocs: jest.fn(),
       close: jest.fn(),
       destroy: jest.fn(),
-      get: jest.fn(),
+      get: jest.fn(() => Promise.reject(new Error('not found'))),
       info: jest.fn(() => Promise.resolve({ db_name: name })),
       name,
       put: jest.fn(),
@@ -35,6 +44,7 @@ jest.mock('idai-field-core', () => {
     private db: any;
     private mockCreatePouchDb: (name: string) => any;
 
+    public bulkCreate = jest.fn(() => Promise.resolve([]));
     public close = jest.fn(() => this.db?.close?.());
     public getDb = jest.fn(() => this.db);
     public setupChangesEmitter = jest.fn();
@@ -72,7 +82,49 @@ jest.mock('idai-field-core', () => {
 
 jest.mock('@/components/Project/korean-fieldwork-investigation-mode', () => ({
   createKoreanFieldworkProjectSetupResourceUpdates: jest.fn(() => ({})),
-  loadKoreanFieldworkProjectSetupDefaults: jest.fn(() => Promise.resolve({})),
+  loadKoreanFieldworkProjectBoundaryDraft: (...args: any[]) =>
+    mockLoadProjectBoundaryDraft(...args),
+  loadKoreanFieldworkProjectSetupDefaults: (...args: any[]) =>
+    mockLoadProjectSetupDefaults(...args),
+  removeKoreanFieldworkProjectBoundaryDraft: (...args: any[]) =>
+    mockRemoveProjectBoundaryDraft(...args),
+}));
+
+jest.mock('@/components/Project/Map/korean-fieldwork-drafts', () => ({
+  createOperationDraft: jest.fn(({ boundarySummary, investigationModeId } = {}) => ({
+    resource: {
+      identifier: '조사구역',
+      category: 'Operation',
+      relations: {},
+      ...(boundarySummary ? { projectBoundarySummary: boundarySummary } : {}),
+      ...(investigationModeId ? { projectInvestigationMode: investigationModeId } : {}),
+    },
+  })),
+  createSurveyBoundaryDraft: jest.fn((parentDoc, center, boundarySummary, options) => ({
+    resource: {
+      identifier: 'survey-boundary',
+      category: 'SurveyBoundary',
+      relations: { isRecordedIn: [parentDoc.resource.id] },
+      geometry: options.geometry,
+      referenceBasemapProvider: options.referenceBasemapProvider,
+      surveyBoundaryNote: boundarySummary,
+    },
+  })),
+  getBoundaryGeometryCenter: jest.fn(() => ({ x: 1, y: 2 })),
+  projectWgs84BoundaryToSurveyBoundaryGeometry: jest.fn(() => ({
+    type: 'LineString',
+    coordinates: [
+      [0, 0],
+      [1, 0],
+      [1, 1],
+      [0, 0],
+    ],
+  })),
+  REFERENCE_BASEMAP_PROVIDER_KAKAO_HYBRID: 'kakaoHybrid',
+  REFERENCE_BASEMAP_PROVIDER_KAKAO_ROADMAP: 'kakaoRoadmap',
+  REFERENCE_BASEMAP_PROVIDER_KAKAO_SKYVIEW: 'kakaoSkyview',
+  SURVEY_BOUNDARY_ACCURACY_DEFAULT: 'defaultAccuracy',
+  SURVEY_BOUNDARY_SOURCE_DEFAULT: 'defaultSource',
 }));
 
 jest.mock('@/constants/korean-fieldwork-project', () => ({
@@ -91,6 +143,9 @@ describe('usePouchDbDatastore', () => {
     mockDatastoreInstances.length = 0;
     mockDbsByName.clear();
     mockCreateDbDeferreds.clear();
+    mockLoadProjectSetupDefaults.mockResolvedValue({});
+    mockLoadProjectBoundaryDraft.mockResolvedValue(undefined);
+    mockRemoveProjectBoundaryDraft.mockResolvedValue(undefined);
   });
 
   it('opens the project database without preloading all documents and attachments', async () => {
@@ -103,6 +158,53 @@ describe('usePouchDbDatastore', () => {
     const db = mockDbsByName.get('fieldwork-fast');
     expect(db?.allDocs).not.toHaveBeenCalled();
     expect(mockDatastoreInstances[0].setupChangesEmitter).toHaveBeenCalledTimes(1);
+  });
+
+  it('seeds a drawn project boundary when opening a newly created project', async () => {
+    mockLoadProjectSetupDefaults.mockResolvedValueOnce({
+      boundarySummary: 'A구역',
+      investigationModeId: 'excavation',
+    });
+    mockLoadProjectBoundaryDraft.mockResolvedValueOnce({
+      coordinates: [
+        { latitude: 37.1, longitude: 127.1 },
+        { latitude: 37.1, longitude: 127.2 },
+        { latitude: 37.2, longitude: 127.2 },
+      ],
+      mapTypeId: 'SKYVIEW',
+    });
+
+    const { result } = renderHook(() => usePouchDbDatastore('fieldwork-boundary'));
+
+    await waitFor(() => {
+      expect(result.current).toBeDefined();
+    });
+
+    expect(mockDatastoreInstances[0].bulkCreate).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({
+          resource: expect.objectContaining({
+            category: 'Operation',
+            id: 'initial-fieldwork-operation',
+            projectBoundarySummary: 'A구역',
+            projectInvestigationMode: 'excavation',
+          }),
+        }),
+        expect.objectContaining({
+          resource: expect.objectContaining({
+            category: 'SurveyBoundary',
+            geometry: expect.any(Object),
+            id: 'initial-survey-boundary',
+            referenceBasemapProvider: 'kakaoSkyview',
+            relations: { isRecordedIn: ['initial-fieldwork-operation'] },
+            surveyBoundaryNote: 'A구역',
+          }),
+        }),
+      ],
+      ''
+    );
+    expect(mockRemoveProjectBoundaryDraft)
+      .toHaveBeenCalledWith('fieldwork-boundary');
   });
 
   it('clears the active datastore while a new project database is opening', async () => {

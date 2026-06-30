@@ -4,15 +4,19 @@ import {
   createKoreanFieldworkBoundarySummaryStorageKey,
   createKoreanFieldworkDefaultInstitutionNameStorageKey,
   createKoreanFieldworkInvestigationModeStorageKey,
+  createKoreanFieldworkProjectBoundaryDraftStorageKey,
   getKoreanFieldworkInvestigationMode,
   getKoreanFieldworkProjectSetupDefaultsFromDocument,
   loadKoreanFieldworkDefaultInstitutionName,
   loadKoreanFieldworkBoundarySummary,
+  loadKoreanFieldworkProjectBoundaryDraft,
   loadKoreanFieldworkProjectSetupDefaults,
   loadKoreanFieldworkInvestigationModeId,
+  removeKoreanFieldworkProjectBoundaryDraft,
   saveKoreanFieldworkDefaultInstitutionName,
   saveKoreanFieldworkBoundarySummary,
   saveKoreanFieldworkInvestigationModeId,
+  saveKoreanFieldworkProjectBoundaryDraft,
 } from './korean-fieldwork-investigation-mode';
 
 describe('Korean fieldwork investigation mode', () => {
@@ -70,6 +74,50 @@ describe('Korean fieldwork investigation mode', () => {
     expect(AsyncStorage.removeItem).toHaveBeenCalledWith(
       createKoreanFieldworkBoundarySummaryStorageKey('area-2026')
     );
+  });
+
+  it('persists a drawn project boundary draft by project', async () => {
+    const boundaryDraft = {
+      center: { latitude: 37.133333, longitude: 127.166667 },
+      coordinates: [
+        { latitude: 37.1, longitude: 127.1 },
+        { latitude: 37.1, longitude: 127.2 },
+        { latitude: 37.2, longitude: 127.2 },
+      ],
+      mapTypeId: 'HYBRID' as const,
+    };
+
+    await saveKoreanFieldworkProjectBoundaryDraft('area-2026', boundaryDraft);
+
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+      createKoreanFieldworkProjectBoundaryDraftStorageKey('area-2026'),
+      expect.any(String)
+    );
+    expect(JSON.parse((AsyncStorage.setItem as jest.Mock).mock.calls[0][1]))
+      .toEqual(boundaryDraft);
+    await expect(loadKoreanFieldworkProjectBoundaryDraft('area-2026'))
+      .resolves.toEqual(boundaryDraft);
+
+    await removeKoreanFieldworkProjectBoundaryDraft('area-2026');
+
+    expect(AsyncStorage.removeItem).toHaveBeenCalledWith(
+      createKoreanFieldworkProjectBoundaryDraftStorageKey('area-2026')
+    );
+  });
+
+  it('removes project boundary drafts with fewer than three usable points', async () => {
+    await saveKoreanFieldworkProjectBoundaryDraft('area-2026', {
+      coordinates: [
+        { latitude: 37.1, longitude: 127.1 },
+        { latitude: 37.1, longitude: 127.2 },
+      ],
+    });
+
+    expect(AsyncStorage.removeItem).toHaveBeenCalledWith(
+      createKoreanFieldworkProjectBoundaryDraftStorageKey('area-2026')
+    );
+    await expect(loadKoreanFieldworkProjectBoundaryDraft('area-2026'))
+      .resolves.toBeUndefined();
   });
 
   it('persists the default institution name separately from worker name', async () => {

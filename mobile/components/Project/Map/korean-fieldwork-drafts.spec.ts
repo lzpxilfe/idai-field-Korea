@@ -7,9 +7,12 @@ import {
   FEATURE_GEOMETRY_EDIT_STATUS_ROUGH_SKETCH,
   FEATURE_GEOMETRY_REVISION_HISTORY_DEFAULT,
   FEATURE_RECORDING_STATUS_CANDIDATE,
+  getBoundaryGeometryCenter,
+  getWgs84BoundaryCenter,
   GEOMETRY_CONFIDENCE_ROUGH,
   GEOMETRY_SOURCE_GPS_APPROXIMATE,
   LAYER_SEQUENCE_MEANING_DEFAULT,
+  projectWgs84BoundaryToSurveyBoundaryGeometry,
   REFERENCE_BASEMAP_PROVIDER_DEFAULT,
   REFERENCE_BASEMAP_PROVIDER_KAKAO_HYBRID,
   SOIL_PROFILE_PHOTO_QUALITY_DEFAULT,
@@ -385,6 +388,44 @@ describe('Korean fieldwork map drafts', () => {
       referenceBasemapProvider: REFERENCE_BASEMAP_PROVIDER_KAKAO_HYBRID,
       surveyBoundaryAccuracy: SURVEY_BOUNDARY_ACCURACY_DEFAULT,
       surveyBoundarySource: SURVEY_BOUNDARY_SOURCE_DEFAULT,
+    });
+  });
+
+  it('projects drawn WGS84 project boundaries into closed map geometry', () => {
+    const geometry = projectWgs84BoundaryToSurveyBoundaryGeometry([
+      { latitude: 37.1, longitude: 127.1 },
+      { latitude: 37.1, longitude: 127.2 },
+      { latitude: 37.2, longitude: 127.2 },
+    ]);
+
+    expect(geometry?.type).toBe('LineString');
+    expect(geometry?.coordinates).toHaveLength(4);
+    expect(geometry?.coordinates[0]).toEqual(geometry?.coordinates[3]);
+    for (const coordinate of geometry?.coordinates ?? []) {
+      expect(Number.isFinite(coordinate[0])).toBe(true);
+      expect(Number.isFinite(coordinate[1])).toBe(true);
+    }
+    expect(getBoundaryGeometryCenter(geometry!)).toEqual({
+      x: expect.any(Number),
+      y: expect.any(Number),
+    });
+  });
+
+  it('rejects drawn WGS84 project boundaries with fewer than three points', () => {
+    expect(projectWgs84BoundaryToSurveyBoundaryGeometry([
+      { latitude: 37.1, longitude: 127.1 },
+      { latitude: 37.1, longitude: 127.2 },
+    ])).toBeUndefined();
+  });
+
+  it('averages WGS84 boundary coordinates for picker previews', () => {
+    expect(getWgs84BoundaryCenter([
+      { latitude: 37.1, longitude: 127.1 },
+      { latitude: 37.1, longitude: 127.2 },
+      { latitude: 37.2, longitude: 127.2 },
+    ])).toEqual({
+      latitude: 37.13333333333333,
+      longitude: 127.16666666666667,
     });
   });
 });

@@ -21,6 +21,22 @@ export interface KoreanFieldworkProjectSetupDefaults {
   investigationModeId?: KoreanFieldworkInvestigationModeId;
 }
 
+export type KoreanFieldworkBoundaryMapTypeId =
+  'ROADMAP'
+  | 'SKYVIEW'
+  | 'HYBRID';
+
+export interface KoreanFieldworkBoundaryLocation {
+  latitude: number;
+  longitude: number;
+}
+
+export interface KoreanFieldworkProjectBoundaryDraft {
+  center?: KoreanFieldworkBoundaryLocation;
+  coordinates: KoreanFieldworkBoundaryLocation[];
+  mapTypeId?: KoreanFieldworkBoundaryMapTypeId;
+}
+
 export const KOREAN_FIELDWORK_INVESTIGATION_MODES: readonly KoreanFieldworkInvestigationMode[] = [
   {
     id: 'trialTrench',
@@ -81,6 +97,8 @@ export const KOREAN_FIELDWORK_INVESTIGATION_MODES: readonly KoreanFieldworkInves
 const STORAGE_KEY_PREFIX = 'koreanFieldwork.investigationMode.v1';
 const BOUNDARY_SUMMARY_STORAGE_KEY_PREFIX =
   'koreanFieldwork.boundarySummary.v1';
+const PROJECT_BOUNDARY_DRAFT_STORAGE_KEY_PREFIX =
+  'koreanFieldwork.projectBoundaryDraft.v1';
 const DEFAULT_INSTITUTION_NAME_STORAGE_KEY =
   'koreanFieldwork.defaultInstitutionName.v1';
 
@@ -91,6 +109,10 @@ export const createKoreanFieldworkInvestigationModeStorageKey = (
 export const createKoreanFieldworkBoundarySummaryStorageKey = (
   projectId: string
 ): string => `${BOUNDARY_SUMMARY_STORAGE_KEY_PREFIX}.${projectId}`;
+
+export const createKoreanFieldworkProjectBoundaryDraftStorageKey = (
+  projectId: string
+): string => `${PROJECT_BOUNDARY_DRAFT_STORAGE_KEY_PREFIX}.${projectId}`;
 
 export const createKoreanFieldworkDefaultInstitutionNameStorageKey =
   (): string => DEFAULT_INSTITUTION_NAME_STORAGE_KEY;
@@ -237,6 +259,49 @@ export const saveKoreanFieldworkBoundarySummary = async (
   await AsyncStorage.setItem(storageKey, normalizedSummary);
 };
 
+export const loadKoreanFieldworkProjectBoundaryDraft = async (
+  projectId: string
+): Promise<KoreanFieldworkProjectBoundaryDraft | undefined> => {
+  const storedValue = await AsyncStorage.getItem(
+    createKoreanFieldworkProjectBoundaryDraftStorageKey(projectId)
+  );
+  if (!storedValue) return undefined;
+
+  try {
+    return normalizeKoreanFieldworkProjectBoundaryDraft(JSON.parse(storedValue));
+  } catch {
+    return undefined;
+  }
+};
+
+export const saveKoreanFieldworkProjectBoundaryDraft = async (
+  projectId: string,
+  boundaryDraft: KoreanFieldworkProjectBoundaryDraft
+) => {
+  const normalizedBoundaryDraft =
+    normalizeKoreanFieldworkProjectBoundaryDraft(boundaryDraft);
+  const storageKey =
+    createKoreanFieldworkProjectBoundaryDraftStorageKey(projectId);
+
+  if (!normalizedBoundaryDraft) {
+    await AsyncStorage.removeItem(storageKey);
+    return;
+  }
+
+  await AsyncStorage.setItem(
+    storageKey,
+    JSON.stringify(normalizedBoundaryDraft)
+  );
+};
+
+export const removeKoreanFieldworkProjectBoundaryDraft = async (
+  projectId: string
+) => {
+  await AsyncStorage.removeItem(
+    createKoreanFieldworkProjectBoundaryDraftStorageKey(projectId)
+  );
+};
+
 export const loadKoreanFieldworkDefaultInstitutionName = async (
 ): Promise<string | undefined> => {
   const storedValue = await AsyncStorage.getItem(
@@ -260,3 +325,50 @@ export const saveKoreanFieldworkDefaultInstitutionName = async (
 
   await AsyncStorage.setItem(storageKey, normalizedInstitutionName);
 };
+
+const normalizeKoreanFieldworkProjectBoundaryDraft = (
+  value: unknown
+): KoreanFieldworkProjectBoundaryDraft | undefined => {
+  if (typeof value !== 'object' || value === null) return undefined;
+
+  const draft = value as Record<string, unknown>;
+  const coordinates = normalizeKoreanFieldworkBoundaryLocations(
+    draft.coordinates
+  );
+  if (coordinates.length < 3) return undefined;
+
+  return {
+    coordinates,
+    ...(isKoreanFieldworkBoundaryLocation(draft.center)
+      ? { center: draft.center }
+      : {}),
+    ...(isKoreanFieldworkBoundaryMapTypeId(draft.mapTypeId)
+      ? { mapTypeId: draft.mapTypeId }
+      : {}),
+  };
+};
+
+const normalizeKoreanFieldworkBoundaryLocations = (
+  value: unknown
+): KoreanFieldworkBoundaryLocation[] =>
+  Array.isArray(value)
+    ? value.filter(isKoreanFieldworkBoundaryLocation)
+    : [];
+
+const isKoreanFieldworkBoundaryLocation = (
+  value: unknown
+): value is KoreanFieldworkBoundaryLocation => {
+  if (typeof value !== 'object' || value === null) return false;
+
+  const location = value as Record<string, unknown>;
+
+  return typeof location.latitude === 'number'
+    && Number.isFinite(location.latitude)
+    && typeof location.longitude === 'number'
+    && Number.isFinite(location.longitude);
+};
+
+const isKoreanFieldworkBoundaryMapTypeId = (
+  value: unknown
+): value is KoreanFieldworkBoundaryMapTypeId =>
+  value === 'ROADMAP' || value === 'SKYVIEW' || value === 'HYBRID';

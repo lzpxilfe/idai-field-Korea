@@ -6,11 +6,37 @@ import {
 } from '@testing-library/react-native';
 import React from 'react';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
-import CreateProjectModal from './CreateProjectModal';
-import {
-} from '../Project/korean-fieldwork-investigation-mode';
 import { KOREAN_FIELDWORK_PROJECT_LANGUAGES } from '@/constants/korean-fieldwork-project';
+import {
+  createKoreanFieldworkBoundarySummaryStorageKey,
+  createKoreanFieldworkProjectBoundaryDraftStorageKey,
+} from '../Project/korean-fieldwork-investigation-mode';
+import CreateProjectModal from './CreateProjectModal';
 
+jest.mock('@/components/Project/Map/KakaoSatellitePicker', () => {
+  const React = require('react');
+  const { Text, TouchableOpacity } = require('react-native');
+
+  return {
+    __esModule: true,
+    default: ({ visible, onPickBoundary }: any) => visible ? (
+      <TouchableOpacity
+        onPress={() => onPickBoundary({
+          center: { latitude: 37.133333, longitude: 127.166667 },
+          coordinates: [
+            { latitude: 37.1, longitude: 127.1 },
+            { latitude: 37.1, longitude: 127.2 },
+            { latitude: 37.2, longitude: 127.2 },
+          ],
+          mapTypeId: 'HYBRID',
+        })}
+        testID="mock-boundary-picker-save"
+      >
+        <Text>경계 저장</Text>
+      </TouchableOpacity>
+    ) : null,
+  };
+});
 
 const safeAreaInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 
@@ -20,7 +46,7 @@ describe('CreateProjectModal', () => {
     await AsyncStorage.clear();
   });
 
-  it('requires project setup basics before creating the project', () => {
+  it('requires project setup basics and a drawn boundary before creating the project', () => {
     const handleProjectCreated = jest.fn();
     const { getByTestId, queryByText } = render(
       <SafeAreaInsetsContext.Provider value={safeAreaInsets}>
@@ -33,16 +59,17 @@ describe('CreateProjectModal', () => {
 
     expect(queryByText('프로젝트 이름을 입력해야 합니다.')).toBeNull();
     expect(queryByText('조사 방식을 선택해야 합니다.')).toBeNull();
-    expect(queryByText('조사 경계 기준을 입력해야 합니다.')).toBeNull();
-    expect(queryByText('프로젝트 이름, 조사 방식, 조사 경계를 채우면 만들 수 있습니다.'))
-      .toBeTruthy();
+    expect(queryByText('지도에서 유적 경계를 그려야 합니다.')).toBeNull();
+    expect(queryByText(
+      '프로젝트 이름을 적고, 조사 방식을 고른 뒤 지도에서 경계를 그리면 만들 수 있습니다.'
+    )).toBeTruthy();
     expect(queryByText('프로젝트 기본 조사 방식을 정합니다.')).toBeTruthy();
-    expect(queryByText('조사 경계 기준을 문장으로 남깁니다.')).toBeTruthy();
-    expect(queryByText('프로젝트 생성 후 지도에서 경계를 그리거나 가져옵니다.')).toBeTruthy();
+    expect(queryByText('지도에서 유적 경계를 직접 그립니다.')).toBeTruthy();
+    expect(queryByText('필요하면 경계 메모를 덧붙입니다.')).toBeTruthy();
 
     fireEvent.changeText(getByTestId('project-input'), 'fieldwork-1');
 
-    expect(queryByText('조사 방식과 조사 경계를 정하면 만들 수 있습니다.'))
+    expect(queryByText('조사 방식을 고르고 지도에서 경계를 그리면 만들 수 있습니다.'))
       .toBeTruthy();
 
     fireEvent.press(getByTestId('create-project-submit'));
@@ -51,15 +78,28 @@ describe('CreateProjectModal', () => {
 
     fireEvent.press(getByTestId('project-investigation-mode_excavation'));
 
-    expect(queryByText('조사 경계를 적으면 만들 수 있습니다.'))
+    expect(queryByText('지도에서 유적 경계를 그리면 만들 수 있습니다.'))
       .toBeTruthy();
 
     fireEvent.press(getByTestId('create-project-submit'));
 
     expect(handleProjectCreated).not.toHaveBeenCalled();
+
+    fireEvent.press(getByTestId('project-boundary-draw-button'));
+
+    expect(queryByText('지도에서 유적 경계를 그려야 합니다.')).toBeTruthy();
+
+    fireEvent.press(getByTestId('mock-boundary-picker-save'));
+
+    expect(queryByText(
+      '경계점 3개를 찍었습니다. 생성하면 조사 경계 기록으로 저장됩니다.'
+    )).toBeTruthy();
+    expect(queryByText(
+      '준비 완료. 생성하면 이 경계 도형이 조사 경계 기록으로 저장됩니다.'
+    )).toBeTruthy();
   });
 
-  it('points completed setup toward drawing or importing the boundary on the map', () => {
+  it('points completed setup toward saving the drawn boundary as a project record', () => {
     const handleProjectCreated = jest.fn();
     const { getByTestId, getByText } = render(
       <SafeAreaInsetsContext.Provider value={safeAreaInsets}>
@@ -72,15 +112,17 @@ describe('CreateProjectModal', () => {
 
     fireEvent.changeText(getByTestId('project-input'), 'fieldwork-1');
     fireEvent.press(getByTestId('project-investigation-mode_excavation'));
+    fireEvent.press(getByTestId('project-boundary-draw-button'));
+    fireEvent.press(getByTestId('mock-boundary-picker-save'));
     fireEvent.changeText(
       getByTestId('project-boundary-summary-input'),
       '1구역 북쪽 능선부터 남쪽 농로까지'
     );
 
-    expect(getByText('준비 완료. 생성 뒤 지도에서 이 경계를 그리거나 가져와 확정하세요.'))
+    expect(getByText('준비 완료. 생성하면 이 경계 도형이 조사 경계 기록으로 저장됩니다.'))
       .toBeTruthy();
     expect(getByText(
-      '처음 정한 경계 기준입니다. 지도에서 도형을 그리거나 지원되는 파일 가져오기로 확정합니다.'
+      '선택 사항입니다. 비워두면 지도에서 그린 경계점 수가 메모로 저장됩니다.'
     )).toBeTruthy();
   });
 
@@ -98,6 +140,8 @@ describe('CreateProjectModal', () => {
 
     fireEvent.changeText(getByTestId('project-input'), '  fieldwork-1  ');
     fireEvent.press(getByTestId('project-investigation-mode_excavation'));
+    fireEvent.press(getByTestId('project-boundary-draw-button'));
+    fireEvent.press(getByTestId('mock-boundary-picker-save'));
     fireEvent.changeText(
       getByTestId('project-boundary-summary-input'),
       '1구역 북쪽 능선부터 남쪽 농로까지'
@@ -130,10 +174,8 @@ describe('CreateProjectModal', () => {
 
     fireEvent.changeText(getByTestId('project-input'), '  area-2026  ');
     fireEvent.press(getByTestId('project-investigation-mode_excavation'));
-    fireEvent.changeText(
-      getByTestId('project-boundary-summary-input'),
-      'A구역 북쪽 능선'
-    );
+    fireEvent.press(getByTestId('project-boundary-draw-button'));
+    fireEvent.press(getByTestId('mock-boundary-picker-save'));
     fireEvent.press(getByTestId('create-project-submit'));
 
     await waitFor(() => {
@@ -146,6 +188,24 @@ describe('CreateProjectModal', () => {
       'korean-fieldwork-area-2026',
       expect.anything()
     );
+    await expect(AsyncStorage.getItem(
+      createKoreanFieldworkBoundarySummaryStorageKey('area-2026')
+    )).resolves.toBe('지도에서 그린 조사 경계 (3점)');
+
+    const storedBoundaryDraft = JSON.parse(
+      await AsyncStorage.getItem(
+        createKoreanFieldworkProjectBoundaryDraftStorageKey('area-2026')
+      ) ?? '{}'
+    );
+    expect(storedBoundaryDraft).toEqual({
+      center: { latitude: 37.133333, longitude: 127.166667 },
+      coordinates: [
+        { latitude: 37.1, longitude: 127.1 },
+        { latitude: 37.1, longitude: 127.2 },
+        { latitude: 37.2, longitude: 127.2 },
+      ],
+      mapTypeId: 'HYBRID',
+    });
   });
 
   it('prevents creating a project with an unsafe database name', () => {
@@ -161,10 +221,8 @@ describe('CreateProjectModal', () => {
 
     fireEvent.changeText(getByTestId('project-input'), 'field/work:1');
     fireEvent.press(getByTestId('project-investigation-mode_excavation'));
-    fireEvent.changeText(
-      getByTestId('project-boundary-summary-input'),
-      '1구역 북쪽 능선부터 남쪽 농로까지'
-    );
+    fireEvent.press(getByTestId('project-boundary-draw-button'));
+    fireEvent.press(getByTestId('mock-boundary-picker-save'));
     fireEvent.press(getByTestId('create-project-submit'));
 
     expect(getAllByText(
