@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Location from 'expo-location';
 import {
   fireEvent,
   render,
@@ -15,38 +16,69 @@ import CreateProjectModal from './CreateProjectModal';
 
 jest.mock('@/components/Project/Map/KakaoSatellitePicker', () => {
   const React = require('react');
-  const { Text, TouchableOpacity } = require('react-native');
+  const { Text, TouchableOpacity, View } = require('react-native');
 
   return {
     __esModule: true,
-    default: ({ visible, onPickBoundary }: any) => visible ? (
-      <TouchableOpacity
-        onPress={() => onPickBoundary({
-          center: { latitude: 37.133333, longitude: 127.166667 },
-          coordinates: [
-            { latitude: 37.1, longitude: 127.1 },
-            { latitude: 37.1, longitude: 127.2 },
-            { latitude: 37.2, longitude: 127.2 },
-          ],
-          mapTypeId: 'HYBRID',
-        })}
-        testID="mock-boundary-picker-save"
-      >
-        <Text>경계 저장</Text>
-      </TouchableOpacity>
+    default: ({ initialLocation, visible, onPickBoundary }: any) => visible ? (
+      <View>
+        <Text testID="mock-boundary-picker-initial-location">
+          {initialLocation
+            ? `${initialLocation.latitude},${initialLocation.longitude}`
+            : 'none'}
+        </Text>
+        <TouchableOpacity
+          onPress={() => onPickBoundary({
+            center: { latitude: 37.133333, longitude: 127.166667 },
+            coordinates: [
+              { latitude: 37.1, longitude: 127.1 },
+              { latitude: 37.1, longitude: 127.2 },
+              { latitude: 37.2, longitude: 127.2 },
+            ],
+            mapTypeId: 'HYBRID',
+          })}
+          testID="mock-boundary-picker-save"
+        >
+          <Text>경계 저장</Text>
+        </TouchableOpacity>
+      </View>
     ) : null,
   };
 });
+
+jest.mock('expo-location', () => ({
+  Accuracy: {
+    Balanced: 3,
+  },
+  getCurrentPositionAsync: jest.fn(() => Promise.resolve({
+    coords: {
+      latitude: 36.45,
+      longitude: 127.12,
+    },
+  })),
+  requestForegroundPermissionsAsync: jest.fn(() => Promise.resolve({
+    status: 'granted',
+  })),
+}));
 
 const safeAreaInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 
 describe('CreateProjectModal', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
+    (Location.requestForegroundPermissionsAsync as jest.Mock).mockResolvedValue({
+      status: 'granted',
+    });
+    (Location.getCurrentPositionAsync as jest.Mock).mockResolvedValue({
+      coords: {
+        latitude: 36.45,
+        longitude: 127.12,
+      },
+    });
     await AsyncStorage.clear();
   });
 
-  it('requires project setup basics and a drawn boundary before creating the project', () => {
+  it('requires project setup basics and a drawn boundary before creating the project', async () => {
     const handleProjectCreated = jest.fn();
     const { getByTestId, queryByText } = render(
       <SafeAreaInsetsContext.Provider value={safeAreaInsets}>
@@ -88,6 +120,9 @@ describe('CreateProjectModal', () => {
     fireEvent.press(getByTestId('project-boundary-draw-button'));
 
     expect(queryByText('지도에서 유적 경계를 그려야 합니다.')).toBeTruthy();
+    await waitFor(() => {
+      expect(getByTestId('mock-boundary-picker-save')).toBeTruthy();
+    });
 
     fireEvent.press(getByTestId('mock-boundary-picker-save'));
 
@@ -99,7 +134,50 @@ describe('CreateProjectModal', () => {
     )).toBeTruthy();
   });
 
-  it('points completed setup toward saving the drawn boundary as a project record', () => {
+  it('centers the boundary picker on the current device location when available', async () => {
+    const { getByTestId } = render(
+      <SafeAreaInsetsContext.Provider value={safeAreaInsets}>
+        <CreateProjectModal
+          onProjectCreated={jest.fn()}
+          onClose={jest.fn()}
+        />
+      </SafeAreaInsetsContext.Provider>
+    );
+
+    fireEvent.press(getByTestId('project-boundary-draw-button'));
+
+    await waitFor(() => {
+      expect(getByTestId('mock-boundary-picker-initial-location').props.children)
+        .toBe('36.45,127.12');
+    });
+    expect(Location.requestForegroundPermissionsAsync).toHaveBeenCalled();
+    expect(Location.getCurrentPositionAsync).toHaveBeenCalledWith({
+      accuracy: Location.Accuracy.Balanced,
+    });
+  });
+
+  it('opens the boundary picker even when current location is unavailable', async () => {
+    (Location.requestForegroundPermissionsAsync as jest.Mock).mockResolvedValueOnce({
+      status: 'denied',
+    });
+    const { getByTestId } = render(
+      <SafeAreaInsetsContext.Provider value={safeAreaInsets}>
+        <CreateProjectModal
+          onProjectCreated={jest.fn()}
+          onClose={jest.fn()}
+        />
+      </SafeAreaInsetsContext.Provider>
+    );
+
+    fireEvent.press(getByTestId('project-boundary-draw-button'));
+
+    await waitFor(() => {
+      expect(getByTestId('mock-boundary-picker-initial-location').props.children)
+        .toBe('none');
+    });
+  });
+
+  it('points completed setup toward saving the drawn boundary as a project record', async () => {
     const handleProjectCreated = jest.fn();
     const { getByTestId, getByText } = render(
       <SafeAreaInsetsContext.Provider value={safeAreaInsets}>
@@ -112,8 +190,7 @@ describe('CreateProjectModal', () => {
 
     fireEvent.changeText(getByTestId('project-input'), 'fieldwork-1');
     fireEvent.press(getByTestId('project-investigation-mode_excavation'));
-    fireEvent.press(getByTestId('project-boundary-draw-button'));
-    fireEvent.press(getByTestId('mock-boundary-picker-save'));
+    await drawBoundary(getByTestId);
     fireEvent.changeText(
       getByTestId('project-boundary-summary-input'),
       '1구역 북쪽 능선부터 남쪽 농로까지'
@@ -140,8 +217,7 @@ describe('CreateProjectModal', () => {
 
     fireEvent.changeText(getByTestId('project-input'), '  fieldwork-1  ');
     fireEvent.press(getByTestId('project-investigation-mode_excavation'));
-    fireEvent.press(getByTestId('project-boundary-draw-button'));
-    fireEvent.press(getByTestId('mock-boundary-picker-save'));
+    await drawBoundary(getByTestId);
     fireEvent.changeText(
       getByTestId('project-boundary-summary-input'),
       '1구역 북쪽 능선부터 남쪽 농로까지'
@@ -174,8 +250,7 @@ describe('CreateProjectModal', () => {
 
     fireEvent.changeText(getByTestId('project-input'), '  area-2026  ');
     fireEvent.press(getByTestId('project-investigation-mode_excavation'));
-    fireEvent.press(getByTestId('project-boundary-draw-button'));
-    fireEvent.press(getByTestId('mock-boundary-picker-save'));
+    await drawBoundary(getByTestId);
     fireEvent.press(getByTestId('create-project-submit'));
 
     await waitFor(() => {
@@ -208,7 +283,7 @@ describe('CreateProjectModal', () => {
     });
   });
 
-  it('prevents creating a project with an unsafe database name', () => {
+  it('prevents creating a project with an unsafe database name', async () => {
     const handleProjectCreated = jest.fn();
     const { getAllByText, getByTestId } = render(
       <SafeAreaInsetsContext.Provider value={safeAreaInsets}>
@@ -221,8 +296,7 @@ describe('CreateProjectModal', () => {
 
     fireEvent.changeText(getByTestId('project-input'), 'field/work:1');
     fireEvent.press(getByTestId('project-investigation-mode_excavation'));
-    fireEvent.press(getByTestId('project-boundary-draw-button'));
-    fireEvent.press(getByTestId('mock-boundary-picker-save'));
+    await drawBoundary(getByTestId);
     fireEvent.press(getByTestId('create-project-submit'));
 
     expect(getAllByText(
@@ -232,3 +306,13 @@ describe('CreateProjectModal', () => {
     expect(handleProjectCreated).not.toHaveBeenCalled();
   });
 });
+
+const drawBoundary = async (
+  getByTestId: ReturnType<typeof render>['getByTestId']
+) => {
+  fireEvent.press(getByTestId('project-boundary-draw-button'));
+  await waitFor(() => {
+    expect(getByTestId('mock-boundary-picker-save')).toBeTruthy();
+  });
+  fireEvent.press(getByTestId('mock-boundary-picker-save'));
+};

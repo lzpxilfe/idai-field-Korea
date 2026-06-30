@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import {
   KOREAN_FIELDWORK_PROJECT_LABEL,
   KOREAN_FIELDWORK_PROJECT_LANGUAGES,
@@ -68,6 +69,10 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
     useState<KakaoSatellitePickedBoundary>();
   const [isBoundaryPickerOpen, setIsBoundaryPickerOpen] =
     useState<boolean>(false);
+  const [isPreparingBoundaryPicker, setIsPreparingBoundaryPicker] =
+    useState<boolean>(false);
+  const [boundaryPickerInitialLocation, setBoundaryPickerInitialLocation] =
+    useState<KakaoSatellitePickedBoundary['center']>();
   const insets = useSafeAreaInsets();
   const projectNameValidation = validateProjectName(project, existingProjects);
   const { projectId } = projectNameValidation;
@@ -125,8 +130,14 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
     setIsBoundaryPickerOpen(false);
   };
 
-  const openBoundaryPicker = () => {
+  const openBoundaryPicker = async () => {
     setBoundarySummaryTouched(true);
+    setIsPreparingBoundaryPicker(true);
+
+    const currentLocation = await getCurrentBoundaryPickerLocation();
+    if (currentLocation) setBoundaryPickerInitialLocation(currentLocation);
+
+    setIsPreparingBoundaryPicker(false);
     setIsBoundaryPickerOpen(true);
   };
 
@@ -143,6 +154,7 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
       presentationStyle="formSheet"
     >
       <KakaoSatellitePicker
+        initialLocation={boundaryPickerInitialLocation}
         javaScriptKey={
           preferences.preferences.mapProviderSettings.kakaoMapJavaScriptKey
         }
@@ -263,14 +275,21 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
                 <View style={styles.boundaryDrawText}>
                   <Text style={styles.boundaryDrawTitle}>유적 경계</Text>
                   <Text style={styles.boundaryDrawDetail}>
-                    {getPickedBoundaryStatusText(pickedBoundary)}
+                    {getPickedBoundaryStatusText(
+                      pickedBoundary,
+                      isPreparingBoundaryPicker
+                    )}
                   </Text>
                 </View>
                 <Button
                   icon={<Ionicons name="map-outline" size={16} />}
-                  onPress={openBoundaryPicker}
+                  isDisabled={isPreparingBoundaryPicker}
+                  onPress={() => { void openBoundaryPicker(); }}
                   testID="project-boundary-draw-button"
-                  title={pickedBoundary ? '다시 그리기' : '지도에서 그리기'}
+                  title={getBoundaryDrawButtonTitle(
+                    pickedBoundary,
+                    isPreparingBoundaryPicker
+                  )}
                   variant={pickedBoundary ? 'secondary' : 'success'}
                 />
               </View>
@@ -494,14 +513,48 @@ const getCreateProjectSetupStatusText = (
 };
 
 const getPickedBoundaryStatusText = (
-  boundary?: KakaoSatellitePickedBoundary
+  boundary?: KakaoSatellitePickedBoundary,
+  isPreparingBoundaryPicker: boolean = false
 ): string =>
-  boundary
-    ? `경계점 ${boundary.coordinates.length}개를 찍었습니다. 생성하면 조사 경계 기록으로 저장됩니다.`
-    : '지도에서 조사 지역의 꼭짓점을 3개 이상 찍어 경계를 만듭니다.';
+  isPreparingBoundaryPicker
+    ? '현재 위치를 확인한 뒤 그 위치를 중심으로 지도를 엽니다.'
+    : (
+        boundary
+          ? `경계점 ${boundary.coordinates.length}개를 찍었습니다. 생성하면 조사 경계 기록으로 저장됩니다.`
+          : '지도에서 조사 지역의 꼭짓점을 3개 이상 찍어 경계를 만듭니다.'
+      );
+
+const getBoundaryDrawButtonTitle = (
+  boundary: KakaoSatellitePickedBoundary | undefined,
+  isPreparingBoundaryPicker: boolean
+): string => {
+  if (isPreparingBoundaryPicker) return '현재 위치 확인 중';
+
+  return boundary ? '다시 그리기' : '지도에서 그리기';
+};
 
 const getDrawnBoundarySummary = (
   boundary?: KakaoSatellitePickedBoundary
 ): string => `지도에서 그린 조사 경계 (${boundary?.coordinates.length ?? 0}점)`;
+
+const getCurrentBoundaryPickerLocation = async (
+): Promise<KakaoSatellitePickedBoundary['center']> => {
+  try {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') return undefined;
+
+    const currentLocation = await Location.getCurrentPositionAsync({
+      accuracy: Location.Accuracy.Balanced,
+    });
+    const { latitude, longitude } = currentLocation.coords;
+
+    return Number.isFinite(latitude) && Number.isFinite(longitude)
+      ? { latitude, longitude }
+      : undefined;
+  } catch (error) {
+    console.warn('Unable to initialize project boundary picker location', error);
+    return undefined;
+  }
+};
 
 export default CreateProjectModal;
