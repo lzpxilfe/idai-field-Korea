@@ -37,7 +37,7 @@ export const getKoreanFieldworkRecordListEmptyState = ({
     return {
       icon: 'filter-list-off',
       title: '선택한 조건에 맞는 기록이 없습니다',
-      text: '분류나 작업 상태를 전체로 바꾸면 숨겨진 기록을 다시 볼 수 있습니다.',
+      text: '분류를 전체로 바꾸면 숨겨진 기록을 다시 볼 수 있습니다.',
     };
   }
 

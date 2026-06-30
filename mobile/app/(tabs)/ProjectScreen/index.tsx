@@ -26,15 +26,10 @@ import DocumentAddModal from '@/components/Project/DocumentAddModal';
 import KoreanFieldworkDailyJournalCalendar from '@/components/Project/KoreanFieldworkDailyJournalCalendar';
 import KoreanFieldworkDailyNotebookDigest from '@/components/Project/KoreanFieldworkDailyNotebookDigest';
 import KoreanFieldworkFieldNotePanel from '@/components/Project/KoreanFieldworkFieldNotePanel';
-import KoreanFieldworkHierarchyBoard from '@/components/Project/KoreanFieldworkHierarchyBoard';
 import KoreanFieldworkInvestigationModePanel from '@/components/Project/KoreanFieldworkInvestigationModePanel';
 import KoreanFieldworkNotebookLedger from '@/components/Project/KoreanFieldworkNotebookLedger';
 import KoreanFieldworkOverviewChart from '@/components/Project/KoreanFieldworkOverviewChart';
-import KoreanFieldworkProgressBoard from '@/components/Project/KoreanFieldworkProgressBoard';
 import KoreanFieldworkSelectedRecordWorkbench from '@/components/Project/KoreanFieldworkSelectedRecordWorkbench';
-import KoreanFieldworkScopePanel from '@/components/Project/KoreanFieldworkScopePanel';
-import KoreanFieldworkUnitMatrix from '@/components/Project/KoreanFieldworkUnitMatrix';
-import KoreanFieldworkWorkbenchPanel from '@/components/Project/KoreanFieldworkWorkbenchPanel';
 import {
   KOREAN_FIELDWORK_CATEGORY_LABELS,
   getKoreanFieldworkDisplayIdentifier,
@@ -55,17 +50,6 @@ import {
   KoreanFieldworkNotebookContinuationFocus,
 } from '@/components/Project/korean-fieldwork-field-notes';
 import {
-  makeKoreanFieldworkCloseoutSummary,
-  KoreanFieldworkCloseoutStatus,
-  KoreanFieldworkCloseoutSummary,
-} from '@/components/Project/korean-fieldwork-closeout';
-import {
-  getKoreanFieldworkCloseoutBatchUpdates,
-  getKoreanFieldworkCloseoutIssueActions,
-  KoreanFieldworkCloseoutBatchUpdate,
-} from '@/components/Project/korean-fieldwork-closeout-actions';
-import { KoreanFieldworkIssueResolutionAction } from '@/components/Project/korean-fieldwork-issue-resolution';
-import {
   formatKoreanFieldworkParentPath,
   getKoreanFieldworkRecordStatusChips,
   KoreanFieldworkStatusChip,
@@ -85,12 +69,6 @@ import {
   KoreanFieldworkPriorityTaskAction,
 } from '@/components/Project/korean-fieldwork-today-actions';
 import {
-  getKoreanFieldworkRecordWorkFilterCounts,
-  KOREAN_FIELDWORK_RECORD_WORK_FILTERS,
-  KoreanFieldworkRecordWorkFilterId,
-  matchesKoreanFieldworkRecordWorkFilter,
-} from '@/components/Project/korean-fieldwork-record-work-filters';
-import {
   getKoreanFieldworkRecordListEmptyState,
 } from '@/components/Project/korean-fieldwork-record-list-empty-state';
 import {
@@ -109,7 +87,6 @@ import {
 import {
   getKoreanFieldworkUserVisibleDocuments,
   getKoreanFieldworkUserVisibleTodaySummary,
-  isKoreanFieldworkInitialBoundaryDocument,
 } from '@/components/Project/korean-fieldwork-system-records';
 import {
   getLegacyRootDocumentsForOperation,
@@ -246,7 +223,6 @@ const DocumentsList: React.FC = () => {
     clearHierarchy,
     hierarchyPath,
     onDocumentSelected,
-    popFromHierarchy,
     pushToHierarchy,
     repository,
   } = useContext(ProjectContext);
@@ -256,11 +232,8 @@ const DocumentsList: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<FilterId>('all');
   const [activeWorkspaceTab, setActiveWorkspaceTab] =
     useState<FieldworkWorkspaceTabId>('records');
-  const [activeWorkFilter, setActiveWorkFilter] =
-    useState<KoreanFieldworkRecordWorkFilterId>('all');
   const [query, setQuery] = useState('');
   const [addModalParent, setAddModalParent] = useState<Document>();
-  const [showFieldworkDetails, setShowFieldworkDetails] = useState(false);
   const [selectedWorkbenchDocumentId, setSelectedWorkbenchDocumentId] =
     useState<string>();
   const [selectedInvestigationModeId, setSelectedInvestigationModeId] =
@@ -361,50 +334,25 @@ const DocumentsList: React.FC = () => {
       recordBoardDocuments,
     ]
   );
-  const workFilterCounts = useMemo(
-    () => getKoreanFieldworkRecordWorkFilterCounts(
-      categoryFilteredDocuments,
-      documents,
-      userVisibleTodaySummary.issueCountByDocumentId,
-      now
-    ),
-    [
-      categoryFilteredDocuments,
-      documents,
-      now,
-      userVisibleTodaySummary.issueCountByDocumentId,
-    ]
-  );
   const filteredDocuments = useMemo(() => categoryFilteredDocuments.filter((document) => {
-    const matchesWorkFilter = matchesKoreanFieldworkRecordWorkFilter(
-      document,
-      activeWorkFilter,
-      documents,
-      userVisibleTodaySummary.issueCountByDocumentId,
-      now
-    );
     const matchesQuery = !normalizedQuery
       || getSearchableText(document, getCategoryLabel(document.resource.category))
         .includes(normalizedQuery);
 
-    return matchesWorkFilter && matchesQuery;
+    return matchesQuery;
   }), [
-    activeWorkFilter,
     categoryFilteredDocuments,
-    documents,
     getCategoryLabel,
-    now,
     normalizedQuery,
-    userVisibleTodaySummary.issueCountByDocumentId,
   ]);
   const recordListEmptyState = useMemo(
     () => getKoreanFieldworkRecordListEmptyState({
       activeCategoryFilterId: activeFilter,
-      activeWorkFilterId: activeWorkFilter,
+      activeWorkFilterId: 'all',
       query,
       totalDocumentCount: recordBoardDocuments.length,
     }),
-    [activeFilter, activeWorkFilter, query, recordBoardDocuments.length]
+    [activeFilter, query, recordBoardDocuments.length]
   );
 
   const groupedDocuments = useMemo(() => RECORD_GROUPS
@@ -438,10 +386,6 @@ const DocumentsList: React.FC = () => {
       investigationModeId
     ),
     [actionSummary, actionTargets, currentScopeParent, investigationModeId]
-  );
-  const closeoutSummary = useMemo(
-    () => makeKoreanFieldworkCloseoutSummary(userVisibleDocuments, 5),
-    [userVisibleDocuments]
   );
   const recordingBaseCount = useMemo(
     () => documents.filter((document) =>
@@ -509,26 +453,11 @@ const DocumentsList: React.FC = () => {
     ),
     [config]
   );
-  const defaultWorkbenchDocument = useMemo(
-    () => [
-      actionTargets.issueDocument,
-      actionTargets.featureCandidate,
-      filteredDocuments[0],
-    ].find((document): document is Document =>
-      !!document && !isKoreanFieldworkInitialBoundaryDocument(document)
-    ),
-    [
-      actionTargets.featureCandidate,
-      actionTargets.issueDocument,
-      filteredDocuments,
-    ]
-  );
   const selectedWorkbenchDocument = useMemo(
     () => selectedWorkbenchDocumentId
-      ? documentsById.get(selectedWorkbenchDocumentId) ?? defaultWorkbenchDocument
-      : defaultWorkbenchDocument,
+      ? documentsById.get(selectedWorkbenchDocumentId)
+      : undefined,
     [
-      defaultWorkbenchDocument,
       documentsById,
       selectedWorkbenchDocumentId,
     ]
@@ -837,61 +766,9 @@ const DocumentsList: React.FC = () => {
   const openDailyJournalLog = (dailyLog: Document) => {
     selectWorkbenchDocument(dailyLog, { expand: true });
   };
-  const applyCloseoutBatchUpdates = (
-    batchUpdates: KoreanFieldworkCloseoutBatchUpdate[]
-  ) => {
-    if (!repository || batchUpdates.length === 0) return;
-
-    Promise.all(batchUpdates.map((batchUpdate) =>
-      repository.update({
-        ...batchUpdate.document,
-        resource: {
-          ...batchUpdate.document.resource,
-          ...batchUpdate.updates,
-        },
-      })
-    ))
-      .then(() => {
-        const issueCount = batchUpdates.reduce(
-          (count, batchUpdate) => count + batchUpdate.issueCount,
-          0
-        );
-        showToast(
-          ToastType.Success,
-          `마감 점검 ${issueCount}건을 현장 확인 처리했습니다.`
-        );
-      })
-      .catch((error) => {
-        showToast(
-          ToastType.Error,
-          `마감 점검을 처리하지 못했습니다. ${error}`
-        );
-      });
-  };
-  const runCloseoutResolution = (
-    document: Document,
-    action: KoreanFieldworkIssueResolutionAction
-  ) => {
-    if (action.type === 'createDocument' && action.categoryName) {
-      navigateAddCategory(action.categoryName, document);
-      return;
-    }
-
-    if (action.type === 'updateFields' && action.updates) {
-      applyCloseoutBatchUpdates([{
-        document,
-        updates: action.updates,
-        issueCount: 1,
-      }]);
-    }
-  };
   const openDailyLog = () => {
     runQuickAction(quickActions.dailyLog.action);
   };
-  const openFirstCandidate = () => {
-    runQuickAction(quickActions.featureCandidate.action);
-  };
-  const openFirstIssue = () => runQuickAction(quickActions.closeout.action);
   const runQuickAction = (action?: KoreanFieldworkPriorityTaskAction) => {
     if (!action) return;
 
@@ -918,9 +795,7 @@ const DocumentsList: React.FC = () => {
     setSelectedWorkbenchDocumentId(undefined);
     setIsSelectedWorkbenchExpanded(false);
     setFieldNoteContinuation(undefined);
-    setShowFieldworkDetails(false);
     setActiveFilter('all');
-    setActiveWorkFilter('all');
     setQuery('');
   };
 
@@ -996,61 +871,26 @@ const DocumentsList: React.FC = () => {
               onReturnToInvestigationOverview={returnToInvestigationOverview}
               />
 
-              <View style={styles.metricsBand}>
-              <Metric
-                label="전체 기록"
-                value={recordBoardDocuments.length}
-                icon="inventory-2"
+              <FieldworkFlowPanel
+                boundaryDetail={boundarySummary
+                  || `${todaySummary.surveyBoundaries.length}개 경계 기록`}
+                hasBoundary={
+                  !!boundarySummary || todaySummary.surveyBoundaries.length > 0
+                }
+                issueCount={userVisibleTodaySummary.openIssues.length}
+                issueDisabled={quickActions.closeout.disabled}
+                issueDetail={quickActions.closeout.detail}
+                onIssuePress={() => runQuickAction(quickActions.closeout.action)}
+                onOpenMap={openMap}
+                onUnitPress={() =>
+                  runQuickAction(quickActions.featureCandidate.action)}
+                unitDetail={quickActions.featureCandidate.detail}
+                unitDisabled={quickActions.featureCandidate.disabled}
+                unitIcon={quickActions.featureCandidate.icon}
+                unitLabel={quickActions.featureCandidate.label}
               />
-              <Metric
-                label="조사 경계"
-                value={userVisibleTodaySummary.surveyBoundaries.length}
-                icon="polyline"
-              />
-              <Metric
-                label="유구"
-                value={userVisibleTodaySummary.featureCandidates.length}
-                icon="add-location-alt"
-              />
-              <Metric
-                label="확인 필요"
-                value={userVisibleTodaySummary.openIssues.length}
-                icon="priority-high"
-                warning={userVisibleTodaySummary.openIssues.length > 0}
-              />
-              </View>
             </>
             )}
-
-        <View style={styles.actionBand}>
-          {activeWorkspaceTab === 'journal' ? (
-            <QuickAction
-              icon={quickActions.dailyLog.icon}
-              label={quickActions.dailyLog.label}
-              detail={quickActions.dailyLog.detail}
-              disabled={quickActions.dailyLog.disabled}
-              onPress={openDailyLog}
-            />
-          ) : (
-            <>
-              <QuickAction
-                icon={quickActions.featureCandidate.icon}
-                label={quickActions.featureCandidate.label}
-                detail={quickActions.featureCandidate.detail}
-                disabled={quickActions.featureCandidate.disabled}
-                onPress={openFirstCandidate}
-              />
-              <QuickAction
-                icon={quickActions.closeout.icon}
-                label={quickActions.closeout.label}
-                detail={quickActions.closeout.detail}
-                disabled={quickActions.closeout.disabled}
-                onPress={openFirstIssue}
-                warning={quickActions.closeout.warning}
-              />
-            </>
-          )}
-        </View>
 
         {activeWorkspaceTab === 'journal' && (
         <>
@@ -1139,85 +979,6 @@ const DocumentsList: React.FC = () => {
         )}
 
         {activeWorkspaceTab === 'records' && (
-        <TouchableOpacity
-          activeOpacity={0.86}
-          onPress={() => setShowFieldworkDetails((current) => !current)}
-          style={styles.detailToggle}
-          testID="fieldworkDetailToggle"
-        >
-          <View style={styles.detailToggleText}>
-            <Text style={styles.detailToggleLabel}>
-              {showFieldworkDetails ? '현장 보조판 접기' : '현장 보조판 보기'}
-            </Text>
-            <Text style={styles.detailToggleDescription} numberOfLines={1}>
-              필요할 때 작업대·진행·범위만 확인
-            </Text>
-          </View>
-          <MaterialIcons
-            name={showFieldworkDetails ? 'expand-less' : 'expand-more'}
-            size={22}
-            color="#344054"
-          />
-        </TouchableOpacity>
-        )}
-
-        {activeWorkspaceTab === 'records' && showFieldworkDetails && (
-          <>
-            <KoreanFieldworkWorkbenchPanel
-              summary={userVisibleTodaySummary}
-              documents={userVisibleDocuments}
-              investigationModeId={investigationModeId}
-              getAllowedAddCategoryNames={getAllowedAddCategoryNames}
-              onAddDocumentOfCategory={(parentDoc, categoryName) =>
-                navigateAddCategory(categoryName, parentDoc)}
-              onEditDocument={editDocumentById}
-            />
-
-            <KoreanFieldworkScopePanel
-              documents={userVisibleDocuments}
-              hierarchyPath={hierarchyPath}
-              issueCount={userVisibleTodaySummary.openIssues.length}
-              onAddChild={openAddChildModal}
-              onBackScope={popFromHierarchy}
-              onClearScope={clearHierarchy}
-              onOpenMap={openMap}
-            />
-
-            <KoreanFieldworkProgressBoard
-              summary={userVisibleTodaySummary}
-              documents={userVisibleDocuments}
-              investigationModeId={investigationModeId}
-              onAddDocumentOfCategory={(parentDoc, categoryName) =>
-                navigateAddCategory(categoryName, parentDoc)}
-              onOpenDocument={onDocumentSelected}
-              onOpenMap={openMap}
-            />
-
-            <KoreanFieldworkUnitMatrix
-              summary={userVisibleTodaySummary}
-              documents={userVisibleDocuments}
-              scopeParent={currentScopeParent}
-              investigationModeId={investigationModeId}
-              onOpenDocument={onDocumentSelected}
-              onAddDocumentOfCategory={(parentDoc, categoryName) =>
-                navigateAddCategory(categoryName, parentDoc)}
-            />
-
-            <KoreanFieldworkHierarchyBoard
-              documents={userVisibleDocuments}
-              documentsById={documentsById}
-              hierarchyPath={hierarchyPath}
-              issueCountByDocumentId={
-                userVisibleTodaySummary.issueCountByDocumentId
-              }
-              onOpenDocument={onDocumentSelected}
-              onDrillDown={pushToHierarchy}
-              onAddChild={openAddChildModal}
-            />
-          </>
-        )}
-
-        {activeWorkspaceTab === 'records' && (
         <>
         <View style={styles.searchBand}>
           <View style={styles.searchBox}>
@@ -1261,64 +1022,7 @@ const DocumentsList: React.FC = () => {
               </TouchableOpacity>
             ))}
           </ScrollView>
-          <View style={styles.workFilterHeader}>
-            <Text style={styles.workFilterTitle}>작업 상태</Text>
-            <Text style={styles.workFilterCount}>
-              {workFilterCounts[activeWorkFilter]}건
-            </Text>
-          </View>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.workFilterRow}
-          >
-            {KOREAN_FIELDWORK_RECORD_WORK_FILTERS.map((filter) => {
-              const isActive = activeWorkFilter === filter.id;
-              return (
-                <TouchableOpacity
-                  key={filter.id}
-                  activeOpacity={0.86}
-                  style={[
-                    styles.workFilterChip,
-                    isActive && styles.workFilterChipActive,
-                  ]}
-                  onPress={() => setActiveWorkFilter(filter.id)}
-                >
-                  <MaterialIcons
-                    name={filter.icon as keyof typeof MaterialIcons.glyphMap}
-                    size={15}
-                    color={isActive ? 'white' : '#344054'}
-                  />
-                  <Text
-                    style={[
-                      styles.workFilterChipText,
-                      isActive && styles.workFilterChipTextActive,
-                    ]}
-                  >
-                    {filter.label}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.workFilterChipCount,
-                      isActive && styles.workFilterChipTextActive,
-                    ]}
-                  >
-                    {workFilterCounts[filter.id]}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
         </View>
-
-        <CloseoutPanel
-          summary={closeoutSummary}
-          documentsById={documentsById}
-          getAllowedAddCategoryNames={getAllowedAddCategoryNames}
-          onOpenDocument={onDocumentSelected}
-          onRunBatchUpdates={applyCloseoutBatchUpdates}
-          onRunResolution={runCloseoutResolution}
-        />
 
         <View style={styles.recordsBand}>
           <View style={styles.sectionHeader}>
@@ -1392,59 +1096,120 @@ const DocumentsList: React.FC = () => {
   );
 };
 
-const Metric: React.FC<{
-  label: string;
-  value: number;
-  icon: keyof typeof MaterialIcons.glyphMap;
-  warning?: boolean;
-}> = ({ label, value, icon, warning = false }) => (
-  <View style={[styles.metric, warning && styles.metricWarning]}>
-    <MaterialIcons
-      name={icon}
-      size={18}
-      color={warning ? colors.danger : '#365f6b'}
-    />
-    <Text style={[styles.metricValue, warning && styles.warningText]}>
-      {value}
-    </Text>
-    <Text style={styles.metricLabel} numberOfLines={1}>{label}</Text>
+const FieldworkFlowPanel: React.FC<{
+  boundaryDetail: string;
+  hasBoundary: boolean;
+  issueCount: number;
+  issueDetail: string;
+  issueDisabled?: boolean;
+  onIssuePress: () => void;
+  onOpenMap: () => void;
+  onUnitPress: () => void;
+  unitDetail: string;
+  unitDisabled?: boolean;
+  unitIcon: keyof typeof MaterialIcons.glyphMap;
+  unitLabel: string;
+}> = ({
+  boundaryDetail,
+  hasBoundary,
+  issueCount,
+  issueDetail,
+  issueDisabled = false,
+  onIssuePress,
+  onOpenMap,
+  onUnitPress,
+  unitDetail,
+  unitDisabled = false,
+  unitIcon,
+  unitLabel,
+}) => (
+  <View style={styles.flowPanel} testID="fieldworkFlowPanel">
+    <View style={styles.flowHeader}>
+      <Text style={styles.flowTitle}>현장 흐름</Text>
+      <Text style={styles.flowMeta}>경계에서 기록까지</Text>
+    </View>
+    <View style={styles.flowSteps}>
+      <FieldworkFlowStep
+        detail={boundaryDetail}
+        icon="polyline"
+        isComplete={hasBoundary}
+        label="조사 경계"
+        onPress={onOpenMap}
+        testID="fieldworkFlowBoundary"
+      />
+      <FieldworkFlowStep
+        detail={unitDetail}
+        icon={unitIcon}
+        isDisabled={unitDisabled}
+        label={unitLabel}
+        onPress={onUnitPress}
+        testID="fieldworkFlowUnit"
+      />
+      <FieldworkFlowStep
+        detail={issueCount > 0 ? `${issueCount}건 확인 필요` : issueDetail}
+        icon={issueCount > 0 ? 'priority-high' : 'task-alt'}
+        isComplete={issueCount === 0}
+        isDisabled={issueDisabled}
+        isWarning={issueCount > 0}
+        label="전체 상태"
+        onPress={onIssuePress}
+        testID="fieldworkFlowStatus"
+      />
+    </View>
   </View>
 );
 
-const QuickAction: React.FC<{
-  icon: keyof typeof MaterialIcons.glyphMap;
-  label: string;
+const FieldworkFlowStep: React.FC<{
   detail: string;
+  icon: keyof typeof MaterialIcons.glyphMap;
+  isComplete?: boolean;
+  isDisabled?: boolean;
+  isWarning?: boolean;
+  label: string;
   onPress: () => void;
-  disabled?: boolean;
-  warning?: boolean;
+  testID: string;
 }> = ({
-  icon,
-  label,
   detail,
+  icon,
+  isComplete = false,
+  isDisabled = false,
+  isWarning = false,
+  label,
   onPress,
-  disabled = false,
-  warning = false,
+  testID,
 }) => (
   <TouchableOpacity
     activeOpacity={0.86}
-    disabled={disabled}
-    style={[
-      styles.quickAction,
-      warning && styles.quickActionWarning,
-      disabled && styles.quickActionDisabled,
-    ]}
+    disabled={isDisabled}
     onPress={onPress}
+    style={[
+      styles.flowStep,
+      isComplete && styles.flowStepComplete,
+      isWarning && styles.flowStepWarning,
+      isDisabled && styles.flowStepDisabled,
+    ]}
+    testID={testID}
   >
-    <MaterialIcons
-      name={icon}
-      size={21}
-      color={disabled ? '#98a2b3' : warning ? colors.danger : '#2f5f4a'}
-    />
-    <View style={styles.quickActionText}>
-      <Text style={styles.quickActionLabel} numberOfLines={1}>{label}</Text>
-      <Text style={styles.quickActionDetail} numberOfLines={1}>{detail}</Text>
+    <View style={[
+      styles.flowStepIcon,
+      isComplete && styles.flowStepIconComplete,
+      isWarning && styles.flowStepIconWarning,
+    ]}>
+      <MaterialIcons
+        name={icon}
+        size={17}
+        color={isWarning ? colors.danger : isComplete ? '#027a48' : '#175cd3'}
+      />
     </View>
+    <View style={styles.flowStepText}>
+      <Text style={styles.flowStepLabel} numberOfLines={1}>{label}</Text>
+      <Text style={styles.flowStepDetail} numberOfLines={2}>{detail}</Text>
+    </View>
+    <MaterialIcons
+      name="chevron-right"
+      size={18}
+      color={isDisabled ? '#98a2b3' : '#667085'}
+    />
   </TouchableOpacity>
 );
 
@@ -1485,238 +1250,6 @@ const WorkspaceTabButton: React.FC<{
     </Text>
   </TouchableOpacity>
 );
-
-const CloseoutPanel: React.FC<{
-  summary: KoreanFieldworkCloseoutSummary;
-  documentsById: Map<string, Document>;
-  getAllowedAddCategoryNames: (document: Document) => string[];
-  onOpenDocument: (document: Document) => void;
-  onRunBatchUpdates: (batchUpdates: KoreanFieldworkCloseoutBatchUpdate[]) => void;
-  onRunResolution: (
-    document: Document,
-    action: KoreanFieldworkIssueResolutionAction
-  ) => void;
-}> = ({
-  summary,
-  documentsById,
-  getAllowedAddCategoryNames,
-  onOpenDocument,
-  onRunBatchUpdates,
-  onRunResolution,
-}) => (
-  <View style={[styles.closeoutPanel, closeoutPanelStyle(summary.status)]}>
-    <View style={styles.closeoutHeader}>
-      <View style={styles.closeoutTitleRow}>
-        <MaterialIcons
-          name={closeoutIcon(summary.status)}
-          size={19}
-          color={closeoutColor(summary.status)}
-        />
-        <Text style={[styles.closeoutTitle, { color: closeoutColor(summary.status) }]}>
-          오늘 마감 점검 · {summary.title}
-        </Text>
-      </View>
-      <View style={styles.closeoutCountRow}>
-        <CloseoutCount label="먼저" value={summary.counts.critical} tone="critical" />
-        <CloseoutCount label="이어서" value={summary.counts.warning} tone="warning" />
-        <CloseoutCount label="살펴보기" value={summary.counts.info} tone="info" />
-      </View>
-    </View>
-    <Text style={styles.closeoutDetail}>{summary.detail}</Text>
-    <CloseoutBatchResolveButton
-      issueActions={getKoreanFieldworkCloseoutIssueActions(
-        summary.issues,
-        documentsById,
-        getAllowedAddCategoryNames
-      )}
-      onRunBatchUpdates={onRunBatchUpdates}
-    />
-    {getKoreanFieldworkCloseoutIssueActions(
-      summary.issues,
-      documentsById,
-      getAllowedAddCategoryNames
-    ).map(({ issue, document, resolutionAction }) => {
-
-      return (
-        <TouchableOpacity
-          key={`${issue.documentId}-${issue.ruleId}`}
-          activeOpacity={0.86}
-          style={[styles.closeoutIssueRow, closeoutIssueStyle(issue.severity)]}
-          disabled={!document}
-          onPress={() => document && onOpenDocument(document)}
-        >
-          <View style={[styles.closeoutSeverityBar, closeoutSeverityBarStyle(issue.severity)]} />
-          <View style={styles.closeoutIssueText}>
-            <Text style={styles.closeoutIssueIdentifier} numberOfLines={1}>
-              {issue.identifier}
-            </Text>
-            <Text style={styles.closeoutIssueAction} numberOfLines={2}>
-              {issue.recommendedAction}
-            </Text>
-          </View>
-          {document && resolutionAction ? (
-            <CloseoutIssueActionButton
-              action={resolutionAction}
-              issueKey={`${issue.documentId}-${issue.ruleId}`}
-              onPress={(event) => {
-                event?.stopPropagation?.();
-                onRunResolution(document, resolutionAction);
-              }}
-            />
-          ) : document && (
-            <MaterialIcons name="chevron-right" size={18} color="#667085" />
-          )}
-        </TouchableOpacity>
-      );
-    })}
-  </View>
-);
-
-const CloseoutBatchResolveButton: React.FC<{
-  issueActions: ReturnType<typeof getKoreanFieldworkCloseoutIssueActions>;
-  onRunBatchUpdates: (batchUpdates: KoreanFieldworkCloseoutBatchUpdate[]) => void;
-}> = ({ issueActions, onRunBatchUpdates }) => {
-  const batchUpdates = getKoreanFieldworkCloseoutBatchUpdates(issueActions);
-  const issueCount = batchUpdates.reduce(
-    (count, batchUpdate) => count + batchUpdate.issueCount,
-    0
-  );
-
-  if (batchUpdates.length === 0) return null;
-
-  return (
-    <TouchableOpacity
-      activeOpacity={0.86}
-      onPress={() => onRunBatchUpdates(batchUpdates)}
-      style={styles.closeoutBatchButton}
-      testID="closeoutBatchResolve"
-    >
-      <MaterialIcons name="done-all" size={18} color="#027a48" />
-      <Text style={styles.closeoutBatchButtonText}>
-        바로 정리 {issueCount}건
-      </Text>
-    </TouchableOpacity>
-  );
-};
-
-const CloseoutIssueActionButton: React.FC<{
-  action: KoreanFieldworkIssueResolutionAction;
-  issueKey: string;
-  onPress: (event?: GestureResponderEvent) => void;
-}> = ({ action, issueKey, onPress }) => (
-  <TouchableOpacity
-    accessibilityLabel={action.label}
-    activeOpacity={0.86}
-    onPress={onPress}
-    style={styles.closeoutIssueActionButton}
-    testID={`closeoutResolve_${issueKey}`}
-  >
-    <MaterialIcons
-      name={action.icon as keyof typeof MaterialIcons.glyphMap}
-      size={16}
-      color={action.tone === 'danger' ? colors.danger : '#2f5f4a'}
-    />
-    <Text style={styles.closeoutIssueActionButtonText} numberOfLines={1}>
-      {action.label}
-    </Text>
-  </TouchableOpacity>
-);
-
-const CloseoutCount: React.FC<{
-  label: string;
-  value: number;
-  tone: 'critical'|'warning'|'info';
-}> = ({ label, value, tone }) => (
-  <View style={[styles.closeoutCount, closeoutCountStyle(tone)]}>
-    <Text style={[styles.closeoutCountValue, { color: closeoutCountColor(tone) }]}>
-      {value}
-    </Text>
-    <Text style={styles.closeoutCountLabel}>{label}</Text>
-  </View>
-);
-
-const closeoutPanelStyle = (status: KoreanFieldworkCloseoutStatus) => {
-  switch (status) {
-    case 'blocked':
-      return styles.closeoutPanelBlocked;
-    case 'needsReview':
-      return styles.closeoutPanelReview;
-    default:
-      return styles.closeoutPanelClear;
-  }
-};
-
-const closeoutCountStyle = (tone: 'critical'|'warning'|'info') => {
-  switch (tone) {
-    case 'critical':
-      return styles.closeoutCountBlocked;
-    case 'warning':
-      return styles.closeoutCountReview;
-    default:
-      return styles.closeoutCountInfo;
-  }
-};
-
-const closeoutIcon = (
-  status: KoreanFieldworkCloseoutStatus
-): keyof typeof MaterialIcons.glyphMap => {
-  switch (status) {
-    case 'blocked':
-      return 'report';
-    case 'needsReview':
-      return 'fact-check';
-    default:
-      return 'verified';
-  }
-};
-
-const closeoutColor = (status: KoreanFieldworkCloseoutStatus): string => {
-  switch (status) {
-    case 'blocked':
-      return colors.danger;
-    case 'needsReview':
-      return '#b54708';
-    default:
-      return '#027a48';
-  }
-};
-
-const closeoutCountColor = (tone: 'critical'|'warning'|'info'): string => {
-  switch (tone) {
-    case 'critical':
-      return colors.danger;
-    case 'warning':
-      return '#b54708';
-    default:
-      return '#175cd3';
-  }
-};
-
-const closeoutIssueStyle = (
-  severity: 'critical'|'warning'|'info'
-) => {
-  switch (severity) {
-    case 'critical':
-      return styles.closeoutIssueCritical;
-    case 'warning':
-      return styles.closeoutIssueWarning;
-    default:
-      return styles.closeoutIssueInfo;
-  }
-};
-
-const closeoutSeverityBarStyle = (
-  severity: 'critical'|'warning'|'info'
-) => {
-  switch (severity) {
-    case 'critical':
-      return styles.closeoutSeverityCritical;
-    case 'warning':
-      return styles.closeoutSeverityWarning;
-    default:
-      return styles.closeoutSeverityInfo;
-  }
-};
 
 const RecordSection: React.FC<{
   title: string;
@@ -2261,14 +1794,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginLeft: 6,
   },
-  metricsBand: {
-    backgroundColor: 'white',
-    borderBottomColor: '#d0d5dd',
-    borderBottomWidth: 1,
-    flexDirection: 'row',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
   workspaceTabs: {
     backgroundColor: 'white',
     borderBottomColor: '#d0d5dd',
@@ -2303,100 +1828,87 @@ const styles = StyleSheet.create({
   workspaceTabTextActive: {
     color: 'white',
   },
-  metric: {
+  flowPanel: {
+    backgroundColor: 'white',
+    borderBottomColor: '#d0d5dd',
+    borderBottomWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  flowHeader: {
     alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  flowTitle: {
+    color: '#27343b',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  flowMeta: {
+    color: '#667085',
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  flowSteps: {
+    flexDirection: 'row',
+  },
+  flowStep: {
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
     borderColor: '#d0d5dd',
     borderRadius: 6,
     borderWidth: 1,
     flex: 1,
-    marginHorizontal: 4,
-    minHeight: 70,
-    paddingHorizontal: 6,
-    paddingVertical: 8,
+    flexDirection: 'row',
+    marginRight: 7,
+    minHeight: 68,
+    paddingHorizontal: 8,
   },
-  metricWarning: {
-    backgroundColor: '#fff4f4',
+  flowStepComplete: {
+    backgroundColor: '#ecfdf3',
+    borderColor: '#abefc6',
+  },
+  flowStepWarning: {
+    backgroundColor: '#fff7f7',
     borderColor: '#f0b7bd',
   },
-  metricValue: {
-    color: '#263238',
-    fontSize: 19,
-    fontWeight: '800',
-    marginTop: 3,
+  flowStepDisabled: {
+    opacity: 0.55,
   },
-  metricLabel: {
-    color: '#586069',
+  flowStepIcon: {
+    alignItems: 'center',
+    backgroundColor: '#eff8ff',
+    borderRadius: 6,
+    height: 32,
+    justifyContent: 'center',
+    width: 32,
+  },
+  flowStepIconComplete: {
+    backgroundColor: '#d1fadf',
+  },
+  flowStepIconWarning: {
+    backgroundColor: '#fff1f3',
+  },
+  flowStepText: {
+    flex: 1,
+    marginLeft: 8,
+    minWidth: 0,
+  },
+  flowStepLabel: {
+    color: '#27343b',
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  flowStepDetail: {
+    color: '#667085',
     fontSize: 11,
-    fontWeight: '700',
+    lineHeight: 15,
     marginTop: 2,
   },
   warningText: {
     color: colors.danger,
-  },
-  actionBand: {
-    backgroundColor: '#f8fafc',
-    borderBottomColor: '#d0d5dd',
-    borderBottomWidth: 1,
-    flexDirection: 'row',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  detailToggle: {
-    alignItems: 'center',
-    backgroundColor: 'white',
-    borderBottomColor: '#d0d5dd',
-    borderBottomWidth: 1,
-    flexDirection: 'row',
-    minHeight: 56,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  detailToggleText: {
-    flex: 1,
-    minWidth: 0,
-  },
-  detailToggleLabel: {
-    color: '#27343b',
-    fontSize: 14,
-    fontWeight: '900',
-  },
-  detailToggleDescription: {
-    color: '#667085',
-    fontSize: 12,
-    marginTop: 2,
-  },
-  quickAction: {
-    alignItems: 'center',
-    backgroundColor: 'white',
-    borderColor: '#d0d5dd',
-    borderRadius: 6,
-    borderWidth: 1,
-    flex: 1,
-    flexDirection: 'row',
-    marginHorizontal: 4,
-    minHeight: 58,
-    paddingHorizontal: 10,
-  },
-  quickActionWarning: {
-    backgroundColor: '#fff7f7',
-    borderColor: '#f0b7bd',
-  },
-  quickActionDisabled: {
-    opacity: 0.55,
-  },
-  quickActionText: {
-    flex: 1,
-    marginLeft: 8,
-  },
-  quickActionLabel: {
-    color: '#27343b',
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  quickActionDetail: {
-    color: '#667085',
-    fontSize: 12,
-    marginTop: 2,
   },
   searchBand: {
     backgroundColor: 'white',
@@ -2446,216 +1958,6 @@ const styles = StyleSheet.create({
   },
   filterChipTextActive: {
     color: 'white',
-  },
-  workFilterHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingTop: 12,
-  },
-  workFilterTitle: {
-    color: '#344054',
-    fontSize: 12,
-    fontWeight: '900',
-  },
-  workFilterCount: {
-    color: '#667085',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  workFilterRow: {
-    paddingTop: 8,
-  },
-  workFilterChip: {
-    alignItems: 'center',
-    backgroundColor: '#f8fafc',
-    borderColor: '#cbd5e1',
-    borderRadius: 6,
-    borderWidth: 1,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginRight: 8,
-    minHeight: 36,
-    paddingHorizontal: 10,
-  },
-  workFilterChipActive: {
-    backgroundColor: '#175cd3',
-    borderColor: '#175cd3',
-  },
-  workFilterChipText: {
-    color: '#344054',
-    fontSize: 12,
-    fontWeight: '800',
-    marginLeft: 5,
-  },
-  workFilterChipTextActive: {
-    color: 'white',
-  },
-  workFilterChipCount: {
-    color: '#344054',
-    fontSize: 12,
-    fontWeight: '900',
-    marginLeft: 6,
-    minWidth: 14,
-    textAlign: 'right',
-  },
-  closeoutPanel: {
-    borderBottomWidth: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 11,
-  },
-  closeoutPanelBlocked: {
-    backgroundColor: '#fff8f8',
-    borderBottomColor: '#f0b7bd',
-  },
-  closeoutPanelReview: {
-    backgroundColor: '#fffbeb',
-    borderBottomColor: '#fedf89',
-  },
-  closeoutPanelClear: {
-    backgroundColor: '#f6fef9',
-    borderBottomColor: '#abefc6',
-  },
-  closeoutHeader: {
-    alignItems: 'flex-start',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  closeoutTitleRow: {
-    alignItems: 'center',
-    flex: 1,
-    flexDirection: 'row',
-    paddingRight: 8,
-  },
-  closeoutTitle: {
-    fontSize: 14,
-    fontWeight: '900',
-    marginLeft: 6,
-  },
-  closeoutDetail: {
-    color: '#475467',
-    fontSize: 12,
-    lineHeight: 17,
-    marginTop: 5,
-  },
-  closeoutBatchButton: {
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: '#ecfdf3',
-    borderColor: '#abefc6',
-    borderRadius: 6,
-    borderWidth: 1,
-    flexDirection: 'row',
-    marginTop: 9,
-    minHeight: 36,
-    paddingHorizontal: 10,
-  },
-  closeoutBatchButtonText: {
-    color: '#027a48',
-    fontSize: 12,
-    fontWeight: '900',
-    marginLeft: 5,
-  },
-  closeoutCountRow: {
-    flexDirection: 'row',
-  },
-  closeoutCount: {
-    alignItems: 'center',
-    borderRadius: 6,
-    borderWidth: 1,
-    marginLeft: 4,
-    minWidth: 42,
-    paddingHorizontal: 6,
-    paddingVertical: 4,
-  },
-  closeoutCountBlocked: {
-    backgroundColor: '#fff1f3',
-    borderColor: '#fecdca',
-  },
-  closeoutCountReview: {
-    backgroundColor: '#fffaeb',
-    borderColor: '#fedf89',
-  },
-  closeoutCountInfo: {
-    backgroundColor: '#eff8ff',
-    borderColor: '#b2ddff',
-  },
-  closeoutCountValue: {
-    fontSize: 13,
-    fontWeight: '900',
-  },
-  closeoutCountLabel: {
-    color: '#667085',
-    fontSize: 10,
-    fontWeight: '800',
-    marginTop: 1,
-  },
-  closeoutIssueRow: {
-    alignItems: 'center',
-    backgroundColor: 'white',
-    borderRadius: 6,
-    borderWidth: 1,
-    flexDirection: 'row',
-    marginTop: 7,
-    minHeight: 50,
-    overflow: 'hidden',
-    paddingRight: 9,
-  },
-  closeoutIssueCritical: {
-    borderColor: '#fecdca',
-  },
-  closeoutIssueWarning: {
-    borderColor: '#fedf89',
-  },
-  closeoutIssueInfo: {
-    borderColor: '#b2ddff',
-  },
-  closeoutSeverityBar: {
-    alignSelf: 'stretch',
-    width: 4,
-  },
-  closeoutSeverityCritical: {
-    backgroundColor: colors.danger,
-  },
-  closeoutSeverityWarning: {
-    backgroundColor: '#dc6803',
-  },
-  closeoutSeverityInfo: {
-    backgroundColor: '#1570ef',
-  },
-  closeoutIssueText: {
-    flex: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-  },
-  closeoutIssueIdentifier: {
-    color: '#27343b',
-    fontSize: 12,
-    fontWeight: '900',
-  },
-  closeoutIssueAction: {
-    color: '#475467',
-    fontSize: 12,
-    lineHeight: 16,
-    marginTop: 2,
-  },
-  closeoutIssueActionButton: {
-    alignItems: 'center',
-    backgroundColor: '#f0fdf4',
-    borderColor: '#bbf7d0',
-    borderRadius: 6,
-    borderWidth: 1,
-    flexDirection: 'row',
-    maxWidth: 132,
-    minHeight: 34,
-    paddingHorizontal: 8,
-  },
-  closeoutIssueActionButtonText: {
-    color: '#2f5f4a',
-    flexShrink: 1,
-    fontSize: 11,
-    fontWeight: '900',
-    marginLeft: 4,
   },
   recordsBand: {
     paddingHorizontal: 16,
