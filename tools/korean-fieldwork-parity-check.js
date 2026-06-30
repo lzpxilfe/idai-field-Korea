@@ -102,6 +102,9 @@ const featureRows = [
       'desktop/src/app/components/docedit/core/forms/geometry.scss',
       'desktop/src/app/components/docedit/core/korean-fieldwork-quick-record-panel.component.ts',
       'desktop/src/app/components/docedit/core/korean-fieldwork-feature-guidance-panel.component.ts',
+      'desktop/src/app/components/resources/map/map/editable-map.component.ts',
+      'desktop/src/app/components/resources/map/map/editable-map.html',
+      'desktop/src/app/components/resources/map/map/map.scss',
       'desktop/src/app/util/korean-fieldwork-feature-guidance.ts'
     ],
     tabletTests: [
@@ -115,6 +118,7 @@ const featureRows = [
       'desktop/test/unit/components/docedit/core/korean-fieldwork-record-context-panel.component.spec.ts',
       'desktop/test/unit/components/docedit/core/korean-fieldwork-quick-record-panel.component.spec.ts',
       'desktop/test/unit/components/docedit/core/korean-fieldwork-feature-guidance-panel.component.spec.ts',
+      'desktop/test/unit/components/resources/editable-map.component.spec.ts',
       'desktop/test/unit/util/korean-fieldwork-feature-guidance.spec.ts'
     ]
   },
@@ -1051,6 +1055,18 @@ function validateGuidedFeatureDraftDefaults() {
   const desktopRecordContextSpecText = readTextFile(
     'desktop/test/unit/components/docedit/core/korean-fieldwork-record-context-panel.component.spec.ts'
   );
+  const desktopEditableMapText = readTextFile(
+    'desktop/src/app/components/resources/map/map/editable-map.component.ts'
+  );
+  const desktopEditableMapTemplateText = readTextFile(
+    'desktop/src/app/components/resources/map/map/editable-map.html'
+  );
+  const desktopEditableMapStyleText = readTextFile(
+    'desktop/src/app/components/resources/map/map/map.scss'
+  );
+  const desktopEditableMapSpecText = readTextFile(
+    'desktop/test/unit/components/resources/editable-map.component.spec.ts'
+  );
   const desktopPriorityStripText = readTextFile(
     'desktop/src/app/components/resources/korean-fieldwork-priority-strip.component.ts'
   );
@@ -1113,6 +1129,16 @@ function validateGuidedFeatureDraftDefaults() {
   if (!desktopGeometryFormStyleText.includes('clamp(360px, 48vh, 620px)')
       || !desktopGeometryFormStyleText.includes('min-height: 360px')) {
     findings.push('desktop geometry coordinate editor must be tall enough for map-first feature placement review');
+  }
+  if (!desktopEditableMapText.includes('isKoreanFieldworkFeaturePlacementEditor')
+      || !desktopEditableMapText.includes('유구 평면 배치')
+      || !desktopEditableMapText.includes('조사 경계 위')
+      || !desktopEditableMapTemplateText.includes('map-editor-context-panel')
+      || !desktopEditableMapTemplateText.includes('mdi-map-marker-path')
+      || !desktopEditableMapStyleText.includes('#map-editor-context-panel')
+      || !desktopEditableMapSpecText.includes('flat map placement')
+      || !desktopEditableMapSpecText.includes('not a 3D overview')) {
+    findings.push('desktop editable map must keep feature creation framed as flat survey-boundary placement');
   }
   if (!desktopDraftDefaultsText.includes('위성지도나 평면도처럼 조사 경계 위에 유구 위치와 형태를 바로 얹으며 시작')
       || desktopDraftDefaultsText.includes('조사 경계 위 평면지도에서 유구 위치와 형태를 그리며 시작')) {

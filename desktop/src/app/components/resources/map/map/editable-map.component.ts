@@ -123,6 +123,45 @@ export class EditableMapComponent extends LayerMapComponent {
     }
 
 
+    public isKoreanFieldworkFeaturePlacementEditor(): boolean {
+
+        return this.isEditing
+            && this.documentInEditing?.resource?.category === 'Feature'
+            && this.getEditorType() === 'polygon';
+    }
+
+
+    public getEditorContextTitle(): string {
+
+        if (this.isKoreanFieldworkFeaturePlacementEditor()) return '유구 평면 배치';
+
+        switch (this.getEditorType()) {
+            case 'polygon':
+                return 'Polygon';
+            case 'polyline':
+                return 'Polyline';
+            case 'point':
+                return 'Point';
+            default:
+                return 'Geometry';
+        }
+    }
+
+
+    public getEditorContextDetail(): string {
+
+        if (this.isKoreanFieldworkFeaturePlacementEditor()) {
+            const pointCount = this.getEditablePolygonPointCount();
+            return pointCount >= 3
+                ? `조사 경계 위 ${pointCount}점 범위`
+                : '조사 경계 위 배치 준비';
+        }
+
+        const identifier = this.documentInEditing?.resource?.identifier;
+        return identifier ? `${identifier}` : '';
+    }
+
+
     public addPolygon() {
 
         this.zone.runOutsideAngular(() => {
@@ -538,6 +577,17 @@ export class EditableMapComponent extends LayerMapComponent {
                 this.startPointEditing();
                 break;
         }
+    }
+
+
+    private getEditablePolygonPointCount(): number {
+
+        const polygon: L.Polygon|undefined = this.selectedPolygon ?? this.editablePolygons?.[0];
+        const latLngs = polygon?.getLatLngs?.();
+        if (!Array.isArray(latLngs)) return 0;
+
+        const firstRing = latLngs[0];
+        return Array.isArray(firstRing) ? firstRing.length : latLngs.length;
     }
 
 

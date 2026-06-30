@@ -176,6 +176,7 @@ function getDesktopFieldworkTestPaths() {
     'construct-grid.spec.ts',
     'create-project-modal.component.spec.ts',
     'download-project.component.spec.ts',
+    'editable-map.component.spec.ts',
     'express-server.spec.ts',
     'export-images.spec.ts',
     'image-export-modal.component.spec.ts',

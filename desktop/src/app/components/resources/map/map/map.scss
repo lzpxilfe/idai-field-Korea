@@ -41,6 +41,7 @@
 
 #mouse-position-coordinates-x,
 #mouse-position-coordinates-y,
+#map-editor-context-panel,
 #map-editor-button-delete,
 #map-editor-button-delete-disabled,
 #map-editor-button-add-polygon,
@@ -73,6 +74,52 @@
 
 #map-editor-buttons {
   z-index: 1008;
+
+  #map-editor-context-panel {
+    align-items: center;
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid rgba(23, 92, 211, 0.25);
+    border-radius: 6px;
+    box-shadow: 0 8px 22px rgba(16, 24, 40, 0.18);
+    color: #344054;
+    display: flex;
+    gap: 8px;
+    left: 50%;
+    max-width: calc(100vw - 420px);
+    min-width: 260px;
+    padding: 7px 10px;
+    pointer-events: none;
+    top: 8px;
+    transform: translateX(-50%);
+
+    .mdi {
+      color: #175cd3;
+      flex: 0 0 auto;
+      font-size: 22px;
+      line-height: 1;
+    }
+  }
+
+  .map-editor-context-text {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .map-editor-context-title {
+    color: #1d2939;
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1.1;
+  }
+
+  .map-editor-context-detail {
+    color: #475467;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
 
   .mdi-24px {
     position: relative;

@@ -8,6 +8,15 @@
             (onImagesDownloaded)="updateLayerImages()"></layer-menu>
 
 <div id="map-editor-buttons" *ngIf="isEditing">
+    <div id="map-editor-context-panel">
+        <span class="mdi"
+              [class.mdi-map-marker-path]="isKoreanFieldworkFeaturePlacementEditor()"
+              [class.mdi-vector-polygon]="!isKoreanFieldworkFeaturePlacementEditor()"></span>
+        <div class="map-editor-context-text">
+            <div class="map-editor-context-title">{{getEditorContextTitle()}}</div>
+            <div class="map-editor-context-detail">{{getEditorContextDetail()}}</div>
+        </div>
+    </div>
     <div *ngIf="mousePositionCoordinates" id="mouse-position-coordinates-x" class="badge bg-secondary">
         <b>X:</b> {{mousePositionCoordinates[0]}}
     </div>
