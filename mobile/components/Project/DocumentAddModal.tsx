@@ -45,12 +45,13 @@ import type {
 
 const ICON_SIZE = 34;
 const FEATURE_SKETCH_CANVAS_DEFAULT_SIZE = {
-  height: 460,
-  width: 520,
+  height: 640,
+  width: 860,
 };
-const FEATURE_SKETCH_TABLET_WIDTH = 760;
+const FEATURE_SKETCH_TABLET_WIDTH = 720;
 const FEATURE_SKETCH_SCALE_STEP = 10;
 const FEATURE_SKETCH_ROTATION_STEP = 15;
+const FEATURE_SKETCH_GRID_PERCENTS = [25, 50, 75];
 const FEATURE_LOCATION_SKETCH_SHAPES = [
   { id: 'point', label: '점', icon: 'location-outline' },
   { id: 'polygon', label: '점 연결', icon: 'git-merge-outline' },
@@ -106,9 +107,9 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
     windowDimensions.width >= FEATURE_SKETCH_TABLET_WIDTH;
   const featureSketchCanvasHeight = useMemo(
     () => clamp(
-      Math.round(windowDimensions.height * (isFeatureWideLayout ? 0.74 : 0.64)),
-      isFeatureWideLayout ? 580 : 460,
-      isFeatureWideLayout ? 780 : 620
+      Math.round(windowDimensions.height * (isFeatureWideLayout ? 0.78 : 0.70)),
+      isFeatureWideLayout ? 620 : 500,
+      isFeatureWideLayout ? 860 : 680
     ),
     [isFeatureWideLayout, windowDimensions.height]
   );
@@ -402,6 +403,87 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
     );
   };
 
+  const renderFeatureSketchGrid = () => (
+    <>
+      {FEATURE_SKETCH_GRID_PERCENTS.map((percent) => (
+        <View
+          key={`vertical-grid-${percent}`}
+          pointerEvents="none"
+          style={[
+            styles.featureSketchGridLine,
+            styles.featureSketchGridLineVertical,
+            { left: toPercent(percent) },
+          ]}
+        />
+      ))}
+      {FEATURE_SKETCH_GRID_PERCENTS.map((percent) => (
+        <View
+          key={`horizontal-grid-${percent}`}
+          pointerEvents="none"
+          style={[
+            styles.featureSketchGridLine,
+            styles.featureSketchGridLineHorizontal,
+            { top: toPercent(percent) },
+          ]}
+        />
+      ))}
+    </>
+  );
+
+  const renderFeatureSketchToolbar = () => (
+    <View pointerEvents="box-none" style={styles.featureSketchToolbar}>
+      <TouchableOpacity
+        activeOpacity={0.84}
+        accessibilityLabel="마지막 점 되돌리기"
+        onPress={undoFeatureSketchPoint}
+        style={styles.featureSketchToolButton}
+        testID="featureSketchUndo"
+      >
+        <Ionicons name="arrow-undo-outline" size={18} color="#344054" />
+      </TouchableOpacity>
+      {isFeatureShapeTransformVisible(featureLocationShape) && (
+        <>
+          <TouchableOpacity
+            activeOpacity={0.84}
+            accessibilityLabel="왼쪽으로 평면 회전"
+            onPress={() => adjustFeatureSketchRotation(-FEATURE_SKETCH_ROTATION_STEP)}
+            style={styles.featureSketchToolButton}
+            testID="featureSketchRotateLeft"
+          >
+            <Ionicons name="return-up-back-outline" size={18} color="#344054" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            activeOpacity={0.84}
+            accessibilityLabel="오른쪽으로 평면 회전"
+            onPress={() => adjustFeatureSketchRotation(FEATURE_SKETCH_ROTATION_STEP)}
+            style={styles.featureSketchToolButton}
+            testID="featureSketchRotateRight"
+          >
+            <Ionicons name="return-up-forward-outline" size={18} color="#344054" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            activeOpacity={0.84}
+            accessibilityLabel="유구 표시 작게"
+            onPress={() => adjustFeatureSketchScale(-FEATURE_SKETCH_SCALE_STEP)}
+            style={styles.featureSketchToolButton}
+            testID="featureSketchScaleDown"
+          >
+            <Ionicons name="remove-outline" size={18} color="#344054" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            activeOpacity={0.84}
+            accessibilityLabel="유구 표시 크게"
+            onPress={() => adjustFeatureSketchScale(FEATURE_SKETCH_SCALE_STEP)}
+            style={styles.featureSketchToolButton}
+            testID="featureSketchScaleUp"
+          >
+            <Ionicons name="add-outline" size={18} color="#344054" />
+          </TouchableOpacity>
+        </>
+      )}
+    </View>
+  );
+
   const renderFeatureLocationSketchPanel = () => (
     <View style={styles.featureLocationPanel}>
       <View style={styles.featureLocationHeader}>
@@ -468,59 +550,14 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
         ]}
         testID="featureLocationSketchCanvas"
       >
+        {renderFeatureSketchGrid()}
+        <View pointerEvents="none" style={styles.featureSketchPlaneBadge}>
+          <Ionicons name="map-outline" size={13} color="#175cd3" />
+          <Text style={styles.featureSketchPlaneBadgeText}>평면 지도</Text>
+        </View>
         {renderFeatureSketchBoundary()}
         {renderFeatureSketchPreview()}
-      </View>
-      <View style={styles.featureSketchToolbar}>
-        <TouchableOpacity
-          activeOpacity={0.84}
-          onPress={undoFeatureSketchPoint}
-          style={styles.featureSketchToolButton}
-          testID="featureSketchUndo"
-        >
-          <Ionicons name="arrow-undo-outline" size={16} color="#344054" />
-          <Text style={styles.featureSketchToolText}>취소</Text>
-        </TouchableOpacity>
-        {isFeatureShapeTransformVisible(featureLocationShape) && (
-          <>
-            <TouchableOpacity
-              activeOpacity={0.84}
-              onPress={() => adjustFeatureSketchRotation(-FEATURE_SKETCH_ROTATION_STEP)}
-              style={styles.featureSketchToolButton}
-              testID="featureSketchRotateLeft"
-            >
-              <Ionicons name="return-up-back-outline" size={16} color="#344054" />
-              <Text style={styles.featureSketchToolText}>회전</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              activeOpacity={0.84}
-              onPress={() => adjustFeatureSketchRotation(FEATURE_SKETCH_ROTATION_STEP)}
-              style={styles.featureSketchToolButton}
-              testID="featureSketchRotateRight"
-            >
-              <Ionicons name="return-up-forward-outline" size={16} color="#344054" />
-              <Text style={styles.featureSketchToolText}>회전</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              activeOpacity={0.84}
-              onPress={() => adjustFeatureSketchScale(-FEATURE_SKETCH_SCALE_STEP)}
-              style={styles.featureSketchToolButton}
-              testID="featureSketchScaleDown"
-            >
-              <Ionicons name="remove-outline" size={16} color="#344054" />
-              <Text style={styles.featureSketchToolText}>크기</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              activeOpacity={0.84}
-              onPress={() => adjustFeatureSketchScale(FEATURE_SKETCH_SCALE_STEP)}
-              style={styles.featureSketchToolButton}
-              testID="featureSketchScaleUp"
-            >
-              <Ionicons name="add-outline" size={16} color="#344054" />
-              <Text style={styles.featureSketchToolText}>크기</Text>
-            </TouchableOpacity>
-          </>
-        )}
+        {renderFeatureSketchToolbar()}
       </View>
     </View>
   );
@@ -577,11 +614,20 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
     );
 
     return (
-      <View style={styles.featureCreationLayout}>
-        <View style={styles.featureCreationMapPane}>
+      <View style={[
+        styles.featureCreationLayout,
+        isFeatureWideLayout && styles.featureCreationLayoutWide,
+      ]}>
+        <View style={[
+          styles.featureCreationMapPane,
+          isFeatureWideLayout && styles.featureCreationMapPaneWide,
+        ]}>
           {renderFeatureLocationSketchPanel()}
         </View>
-        <View style={styles.featureCreationFormPane}>
+        <View style={[
+          styles.featureCreationFormPane,
+          isFeatureWideLayout && styles.featureCreationFormPaneWide,
+        ]}>
           <View style={styles.parentPanel}>
             <Text style={styles.parentLabel} numberOfLines={1}>
               포함 위치: {parentDoc.resource.identifier}
@@ -741,7 +787,10 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
             }
           />
           <ScrollView
-            style={styles.categories}
+            style={[
+              styles.categories,
+              isChoosingFeatureType && styles.featureCreationCategories,
+            ]}
             contentContainerStyle={
               isChoosingFeatureType ? styles.featureCreationContent : undefined
             }
@@ -1156,8 +1205,9 @@ const styles = StyleSheet.create({
     width: '72%',
   },
   featureCreationCard: {
-    height: '96%',
-    maxHeight: '98%',
+    height: '98%',
+    maxHeight: '99%',
+    padding: 6,
     width: '99%',
   },
   cardShell: {
@@ -1172,6 +1222,10 @@ const styles = StyleSheet.create({
   categories: {
     margin: 10,
   },
+  featureCreationCategories: {
+    marginHorizontal: 6,
+    marginVertical: 4,
+  },
   featureCreationContent: {
     paddingHorizontal: 2,
     paddingBottom: 18,
@@ -1179,12 +1233,24 @@ const styles = StyleSheet.create({
   featureCreationLayout: {
     flexDirection: 'column',
   },
+  featureCreationLayoutWide: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+  },
   featureCreationMapPane: {
     flex: 1,
     minWidth: 0,
   },
+  featureCreationMapPaneWide: {
+    flex: 1.4,
+    marginRight: 12,
+  },
   featureCreationFormPane: {
     minWidth: 0,
+  },
+  featureCreationFormPaneWide: {
+    flex: 1,
+    maxWidth: 480,
   },
   parentPanel: {
     backgroundColor: '#f8fafc',
@@ -1233,9 +1299,9 @@ const styles = StyleSheet.create({
     borderColor: '#b9c7d5',
     borderRadius: 6,
     borderWidth: 1,
-    marginBottom: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 11,
+    marginBottom: 8,
+    paddingHorizontal: 9,
+    paddingVertical: 9,
   },
   featureLocationHeader: {
     alignItems: 'flex-start',
@@ -1296,14 +1362,48 @@ const styles = StyleSheet.create({
     color: '#175cd3',
   },
   featureSketchCanvas: {
-    backgroundColor: '#ffffff',
-    borderColor: '#7da7d9',
+    backgroundColor: '#f8fbff',
+    borderColor: '#6694ca',
     borderRadius: 6,
     borderWidth: 1,
     height: 300,
     overflow: 'hidden',
     position: 'relative',
     width: '100%',
+  },
+  featureSketchGridLine: {
+    backgroundColor: 'rgba(102, 148, 202, 0.18)',
+    position: 'absolute',
+  },
+  featureSketchGridLineVertical: {
+    bottom: 0,
+    top: 0,
+    width: 1,
+  },
+  featureSketchGridLineHorizontal: {
+    height: 1,
+    left: 0,
+    right: 0,
+  },
+  featureSketchPlaneBadge: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.94)',
+    borderColor: '#b2ddff',
+    borderRadius: 6,
+    borderWidth: 1,
+    flexDirection: 'row',
+    left: 12,
+    paddingHorizontal: 7,
+    paddingVertical: 4,
+    position: 'absolute',
+    top: 12,
+    zIndex: 2,
+  },
+  featureSketchPlaneBadgeText: {
+    color: '#175cd3',
+    fontSize: 11,
+    fontWeight: '900',
+    marginLeft: 4,
   },
   featureSketchNorthBand: {
     alignItems: 'center',
@@ -1364,7 +1464,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
     paddingVertical: 2,
     position: 'absolute',
-    top: 12,
+    top: 42,
   },
   featureSketchBoundaryPoint: {
     backgroundColor: '#175cd3',
@@ -1421,20 +1521,23 @@ const styles = StyleSheet.create({
     width: 8,
   },
   featureSketchToolbar: {
+    bottom: 12,
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginTop: 7,
+    position: 'absolute',
+    right: 12,
+    zIndex: 3,
   },
   featureSketchToolButton: {
     alignItems: 'center',
-    backgroundColor: 'white',
-    borderColor: '#d0d5dd',
-    borderRadius: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.96)',
+    borderColor: '#98a2b3',
+    borderRadius: 19,
     borderWidth: 1,
-    flexDirection: 'row',
-    marginRight: 6,
-    minHeight: 30,
-    paddingHorizontal: 8,
+    height: 38,
+    justifyContent: 'center',
+    marginLeft: 7,
+    width: 38,
   },
   featureSketchToolText: {
     color: '#344054',

@@ -2092,6 +2092,18 @@
           "inputType": "text",
           "constraintIndexed": true
         },
+        "featureLocationSketch": {
+          "inputType": "text",
+          "constraintIndexed": true
+        },
+        "featureFreeDrawingStrokes": {
+          "inputType": "text",
+          "constraintIndexed": true
+        },
+        "featureFreeDrawingUpdatedAt": {
+          "inputType": "input",
+          "constraintIndexed": true
+        },
         "fieldIdentifier": {
           "inputType": "input",
           "constraintIndexed": true
@@ -2638,6 +2650,9 @@
             "featureGeometryReferenceLayerId",
             "featureGeometryRevisionHistory",
             "featureGeometryRevisionNote",
+            "featureLocationSketch",
+            "featureFreeDrawingStrokes",
+            "featureFreeDrawingUpdatedAt",
             "fieldIdentifier",
             "reportIdentifier",
             "identifierRevisionHistory",

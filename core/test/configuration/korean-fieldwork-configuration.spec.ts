@@ -308,6 +308,16 @@ describe('KoreanFieldwork project configuration', () => {
         expect(featureForm.fields.featureGeometryReferenceLayerId.inputType).toBe('input');
         expect(featureForm.fields.featureGeometryRevisionHistory.inputType).toBe('text');
         expect(featureForm.fields.featureGeometryRevisionNote.inputType).toBe('text');
+        expect(featureForm.fields.featureLocationSketch.inputType).toBe('text');
+        expect(featureForm.fields.featureFreeDrawingStrokes.inputType).toBe('text');
+        expect(featureForm.fields.featureFreeDrawingUpdatedAt.inputType).toBe('input');
+        expect(featureGroupForm.fields.featureLocationSketch).toBeUndefined();
+        expect(featureSegmentForm.fields.featureLocationSketch).toBeUndefined();
+        expect(koreanFieldworkGroup.fields).toEqual(expect.arrayContaining([
+            'featureLocationSketch',
+            'featureFreeDrawingStrokes',
+            'featureFreeDrawingUpdatedAt'
+        ]));
         [
             'fieldIdentifier',
             'reportIdentifier',

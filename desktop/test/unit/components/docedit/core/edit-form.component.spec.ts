@@ -119,6 +119,34 @@ describe('EditFormComponent Korean fieldwork detail visibility', () => {
     });
 
 
+    it('does not treat tablet sketch fields as imported raw storage', () => {
+
+        component.groups = [{
+            name: 'koreanFieldwork',
+            fields: [
+                { name: 'featureLocationSketch', editable: true },
+                { name: 'featureFreeDrawingStrokes', editable: true },
+                { name: 'featureFreeDrawingUpdatedAt', editable: true }
+            ] as any
+        }] as any;
+        component.fieldDefinitions.push(
+            { name: 'featureLocationSketch', editable: true } as any,
+            { name: 'featureFreeDrawingStrokes', editable: true } as any,
+            { name: 'featureFreeDrawingUpdatedAt', editable: true } as any
+        );
+        component.document.resource.featureLocationSketch = '{"shape":"oval"}';
+        component.document.resource.featureFreeDrawingStrokes = '{"version":1,"strokes":[]}';
+        component.document.resource.featureFreeDrawingUpdatedAt = '2026-06-30T08:15:00.000Z';
+
+        expect(component.shouldShowKoreanFieldworkRawStorageToggle()).toBe(false);
+
+        component.showKoreanFieldworkDetailedForm = true;
+
+        expect(component.shouldShow('koreanFieldwork')).toBe(false);
+        expect(component.getHiddenFieldNames()).toEqual([]);
+    });
+
+
     it('keeps ordinary non-Korean forms visible', () => {
 
         component.document.resource.category = 'Pottery';

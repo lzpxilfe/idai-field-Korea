@@ -2340,6 +2340,9 @@ function validateRawFormFieldRules() {
   const tabletText = readTextFile(tabletSource);
   const desktopText = readTextFile(desktopSource);
   const desktopTemplateText = readTextFile('desktop/src/app/components/docedit/core/edit-form.html');
+  const koreanFieldworkConfigText = readTextFile('core/config/Config-KoreanFieldwork.json');
+  const koreanFieldworkKoText = readTextFile('core/config/Language-KoreanFieldwork.ko.json');
+  const koreanFieldworkEnText = readTextFile('core/config/Language-KoreanFieldwork.en.json');
   const tabletGroupLabelText = readTextFile('mobile/components/common/I18NLabel.tsx');
   const coreKoreanLibraryLabelsText = readTextFile('core/config/Library/Language.ko.json');
   const tabletDraftContextText = readTextFile('mobile/components/Project/KoreanFieldworkDraftContextPanel.tsx');
@@ -2379,6 +2382,11 @@ function validateRawFormFieldRules() {
   const tabletUsesDerivedFeatureAttributeFields = (
     tabletText.match(/\.\.\.KOREAN_FIELDWORK_FEATURE_ATTRIBUTE_FIELD_NAMES/g) ?? []
   ).length >= 2;
+  const tabletSketchFieldNames = [
+    'featureLocationSketch',
+    'featureFreeDrawingStrokes',
+    'featureFreeDrawingUpdatedAt'
+  ];
 
   findings.push(
     ...compareStringSets(
@@ -2404,6 +2412,21 @@ function validateRawFormFieldRules() {
 
   if (!desktopText.includes('...KOREAN_FIELDWORK_FEATURE_GUIDANCE_FIELD_NAMES')) {
     findings.push('desktop raw form must derive guided feature fields from presets');
+  }
+
+  for (const fieldName of tabletSketchFieldNames) {
+    if (!tabletText.includes(`'${fieldName}'`)) {
+      findings.push(`tablet raw form panel-field list missing tablet sketch field: ${fieldName}`);
+    }
+    if (!desktopText.includes(`'${fieldName}'`)) {
+      findings.push(`desktop raw form panel-field list missing tablet sketch field: ${fieldName}`);
+    }
+    if (!koreanFieldworkConfigText.includes(`"${fieldName}"`)) {
+      findings.push(`KoreanFieldwork config missing tablet sketch field: ${fieldName}`);
+    }
+    if (!koreanFieldworkKoText.includes(`"${fieldName}"`) || !koreanFieldworkEnText.includes(`"${fieldName}"`)) {
+      findings.push(`KoreanFieldwork languages missing tablet sketch field label: ${fieldName}`);
+    }
   }
 
   if (!tabletText.includes(rawStorageSummary)) {

@@ -347,6 +347,30 @@ describe('DocumentForm Korean fieldwork detail fields', () => {
     expect(queryByText('가져온 기존 항목')).toBeNull();
     expect(queryByTestId('fullFormToggle')).toBeNull();
   });
+
+  it('keeps tablet feature sketch fields out of imported existing items', () => {
+    const { queryByTestId, queryByText } = renderDocumentForm(
+      createCategoryForm([
+        {
+          name: 'koreanFieldwork',
+          fields: [
+            { name: 'featureLocationSketch', inputType: 'input', editable: true },
+            { name: 'featureFreeDrawingStrokes', inputType: 'input', editable: true },
+            { name: 'featureFreeDrawingUpdatedAt', inputType: 'input', editable: true },
+          ],
+        },
+      ]),
+      {
+        featureLocationSketch: '{"shape":"oval"}',
+        featureFreeDrawingStrokes: '{"version":1,"strokes":[]}',
+        featureFreeDrawingUpdatedAt: '2026-06-30T08:15:00.000Z',
+      },
+      true
+    );
+
+    expect(queryByText('가져온 기존 항목')).toBeNull();
+    expect(queryByTestId('fullFormToggle')).toBeNull();
+  });
 });
 
 const renderDocumentForm = (

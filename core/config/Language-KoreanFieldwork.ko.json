@@ -772,6 +772,15 @@
         "featureGeometryRevisionNote": {
           "label": "유구선 보정 메모"
         },
+        "featureLocationSketch": {
+          "label": "유구 위치 스케치 JSON"
+        },
+        "featureFreeDrawingStrokes": {
+          "label": "유구 자유 스케치 JSON"
+        },
+        "featureFreeDrawingUpdatedAt": {
+          "label": "유구 자유 스케치 수정 시각"
+        },
         "fieldIdentifier": {
           "label": "현장번호"
         },

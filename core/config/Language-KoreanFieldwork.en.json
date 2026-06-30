@@ -766,6 +766,15 @@
         "featureGeometryRevisionNote": {
           "label": "Geometry revision note"
         },
+        "featureLocationSketch": {
+          "label": "Feature location sketch JSON"
+        },
+        "featureFreeDrawingStrokes": {
+          "label": "Feature free sketch JSON"
+        },
+        "featureFreeDrawingUpdatedAt": {
+          "label": "Feature free sketch updated at"
+        },
         "fieldIdentifier": {
           "label": "Field identifier"
         },

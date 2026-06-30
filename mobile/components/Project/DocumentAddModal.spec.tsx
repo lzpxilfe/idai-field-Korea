@@ -343,7 +343,7 @@ describe('DocumentAddModal', () => {
     );
     const canvasStyles = canvas.props.style as Array<{ height?: number }>;
     const dynamicCanvasStyle = canvasStyles[canvasStyles.length - 1];
-    expect(dynamicCanvasStyle.height).toBeGreaterThanOrEqual(360);
+    expect(dynamicCanvasStyle.height).toBeGreaterThanOrEqual(500);
     fireEvent(canvas, 'layout', {
       nativeEvent: { layout: { height: 100, width: 200 } },
     });
