@@ -48,8 +48,11 @@ const DRAFT_IDENTIFIER_PREFIXES: Readonly<Record<string, string>> = {
 };
 
 export interface KoreanFieldworkDraftResourceOptions {
+  featureGeometryRevisionNote?: string;
+  featureLocationSketch?: string;
   featureType?: string;
   identifier?: string;
+  shortDescription?: string;
 }
 
 export const createKoreanFieldworkDraftResource = (
@@ -75,6 +78,11 @@ export const createKoreanFieldworkDraftResource = (
     const featureInterpretationTypeValue = getKoreanFieldworkFeatureInterpretationTypeValue(
       featureTypeOption?.value
     );
+    const normalizedFeatureGeometryRevisionNote =
+      options.featureGeometryRevisionNote?.trim();
+    const normalizedFeatureLocationSketch =
+      options.featureLocationSketch?.trim();
+    const normalizedShortDescription = options.shortDescription?.trim();
 
     return {
       ...resource,
@@ -85,6 +93,15 @@ export const createKoreanFieldworkDraftResource = (
       featureRecordingStatus: FEATURE_RECORDING_STATUS_CANDIDATE,
       featureGeometryEditStatus: FEATURE_GEOMETRY_EDIT_STATUS_ROUGH_SKETCH,
       featureGeometryRevisionHistory: FEATURE_GEOMETRY_REVISION_HISTORY_DEFAULT,
+      ...(normalizedFeatureGeometryRevisionNote
+        ? { featureGeometryRevisionNote: normalizedFeatureGeometryRevisionNote }
+        : {}),
+      ...(normalizedFeatureLocationSketch
+        ? { featureLocationSketch: normalizedFeatureLocationSketch }
+        : {}),
+      ...(normalizedShortDescription
+        ? { shortDescription: normalizedShortDescription }
+        : {}),
       featureInvestigationChecklist: [],
       featureSoilProfilePhotoCount: 0,
     };

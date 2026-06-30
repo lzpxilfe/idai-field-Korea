@@ -137,6 +137,32 @@ describe('Korean fieldwork document drafts', () => {
     });
   });
 
+  it('stores rough feature location sketch metadata in Feature drafts', () => {
+    const trenchDoc = createDoc('trench-1', C.TRENCH, {
+      isRecordedIn: ['operation-1'],
+    });
+    const config = allowRelations({
+      [`${C.FEATURE}:${C.TRENCH}`]: ['liesWithin'],
+    });
+
+    const draft = createKoreanFieldworkDraftResource(
+      trenchDoc,
+      C.FEATURE,
+      config,
+      {
+        featureGeometryRevisionNote: ' 위치 스케치: 타원, 중심 75%, 50% ',
+        featureLocationSketch: ' {"shape":"oval"} ',
+        shortDescription: ' 위치 스케치: 타원 ',
+      }
+    );
+
+    expect(draft).toMatchObject({
+      featureGeometryRevisionNote: '위치 스케치: 타원, 중심 75%, 50%',
+      featureLocationSketch: '{"shape":"oval"}',
+      shortDescription: '위치 스케치: 타원',
+    });
+  });
+
   it('starts kiln Feature drafts with kiln interpretation metadata', () => {
     const trenchDoc = createDoc('trench-1', C.TRENCH, {
       isRecordedIn: ['operation-1'],

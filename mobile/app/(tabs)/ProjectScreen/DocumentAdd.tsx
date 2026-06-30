@@ -61,8 +61,11 @@ const DocumentAdd: React.FC = () => {
   const parentDocId = getParam(params.parentDocId);
   const categoryName = getParam(params.categoryName);
   const featureType = getParam(params.featureType);
+  const featureGeometryRevisionNote = getParam(params.featureGeometryRevisionNote);
+  const featureLocationSketch = getParam(params.featureLocationSketch);
   const identifier = getParam(params.identifier);
   const returnTarget = getKoreanFieldworkReturnTarget(params.returnTo);
+  const shortDescription = getParam(params.shortDescription);
   const parentDoc = useDocument(repository, parentDocId);
 
   const { showToast } = useToast();
@@ -82,12 +85,24 @@ const DocumentAdd: React.FC = () => {
 
       setNewResource(
         createKoreanFieldworkDraftResource(parentDoc, categoryName, config, {
+          featureGeometryRevisionNote,
+          featureLocationSketch,
           featureType,
           identifier,
+          shortDescription,
         })
       );
     },
-    [parentDoc, categoryName, config, featureType, identifier]
+    [
+      parentDoc,
+      categoryName,
+      config,
+      featureGeometryRevisionNote,
+      featureLocationSketch,
+      featureType,
+      identifier,
+      shortDescription,
+    ]
   );
 
   useEffect(() => setResourceToDefault(), [setResourceToDefault, category]);

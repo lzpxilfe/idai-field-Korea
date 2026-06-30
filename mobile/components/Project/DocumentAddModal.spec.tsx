@@ -149,6 +149,67 @@ describe('DocumentAddModal', () => {
     });
   });
 
+  it('passes a rough location sketch when adding a feature', () => {
+    const onAddCategory = jest.fn();
+    const parentDoc = {
+      resource: {
+        id: 'trench-1',
+        identifier: 'T1',
+        category: C.TRENCH,
+        relations: {},
+      },
+    } as any;
+
+    const { getByTestId, getByText } = render(
+      <LabelsContext.Provider value={{ labels: new Labels(() => ['ko']) }}>
+        <ConfigurationContext.Provider value={createConfig([
+          createCategory(C.TRENCH),
+          createCategory(C.FEATURE),
+        ])}
+        >
+          <DocumentAddModal
+            onAddCategory={onAddCategory}
+            onClose={jest.fn()}
+            parentDoc={parentDoc}
+          />
+        </ConfigurationContext.Provider>
+      </LabelsContext.Provider>
+    );
+
+    fireEvent.press(getByTestId(`addCategory_${C.FEATURE}`));
+
+    expect(getByText('유구 위치 스케치')).toBeTruthy();
+
+    fireEvent(getByTestId('featureLocationSketchCanvas'), 'layout', {
+      nativeEvent: { layout: { height: 100, width: 200 } },
+    });
+    fireEvent.press(getByTestId('featureSketchMode_oval'));
+    fireEvent.press(getByTestId('featureLocationSketchCanvas'), {
+      nativeEvent: { locationX: 150, locationY: 50 },
+    });
+    fireEvent.press(getByTestId('featureSketchRotateRight'));
+    fireEvent.press(getByTestId('featureSketchScaleUp'));
+    fireEvent.changeText(getByTestId('featureIdentifierInput'), '1호 수혈');
+    fireEvent.press(getByTestId('featureType_pit'));
+
+    expect(onAddCategory).toHaveBeenCalledWith(C.FEATURE, parentDoc, {
+      featureGeometryRevisionNote:
+        '위치 스케치: 타원, 중심 75%, 50%, 크기 110%, 회전 15°',
+      featureLocationSketch: JSON.stringify({
+        version: 1,
+        shape: 'oval',
+        center: { x: 75, y: 50 },
+        points: [{ x: 75, y: 50 }],
+        rotation: 15,
+        scale: 110,
+      }),
+      featureType: 'pit',
+      identifier: '1호 수혈',
+      shortDescription:
+        '위치 스케치: 타원, 중심 75%, 50%, 크기 110%, 회전 15°',
+    });
+  });
+
   it('closes when the backdrop is pressed', () => {
     const onClose = jest.fn();
     const parentDoc = {

@@ -1,7 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { CategoryForm, Document, Tree } from 'idai-field-core';
 import React, { useCallback, useContext, useMemo, useState } from 'react';
+import type { DimensionValue } from 'react-native';
 import {
+  GestureResponderEvent,
+  LayoutChangeEvent,
   Modal,
   Pressable,
   ScrollView,
@@ -35,6 +38,24 @@ import {
 } from './korean-fieldwork-feature-types';
 
 const ICON_SIZE = 34;
+const FEATURE_SKETCH_CANVAS_DEFAULT_SIZE = {
+  height: 150,
+  width: 260,
+};
+const FEATURE_SKETCH_SCALE_STEP = 10;
+const FEATURE_SKETCH_ROTATION_STEP = 15;
+const FEATURE_LOCATION_SKETCH_SHAPES = [
+  { id: 'point', label: '점', icon: 'location-outline' },
+  { id: 'polygon', label: '점 연결', icon: 'git-merge-outline' },
+  { id: 'rectangle', label: '사각형', icon: 'square-outline' },
+  { id: 'oval', label: '타원', icon: 'ellipse-outline' },
+] as const;
+type FeatureLocationSketchShape =
+  typeof FEATURE_LOCATION_SKETCH_SHAPES[number]['id'];
+type FeatureSketchPoint = {
+  x: number;
+  y: number;
+};
 
 interface AddModalProps {
   onAddCategory: (
@@ -58,6 +79,16 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
   const [featureIdentifierWasRequested, setFeatureIdentifierWasRequested] =
     useState(false);
   const [isChoosingFeatureType, setIsChoosingFeatureType] = useState(false);
+  const [featureLocationShape, setFeatureLocationShape] =
+    useState<FeatureLocationSketchShape>('point');
+  const [featureSketchPoints, setFeatureSketchPoints] = useState<FeatureSketchPoint[]>([]);
+  const [featureSketchCenter, setFeatureSketchCenter] =
+    useState<FeatureSketchPoint>({ x: 50, y: 50 });
+  const [featureSketchScale, setFeatureSketchScale] = useState(100);
+  const [featureSketchRotation, setFeatureSketchRotation] = useState(0);
+  const [featureSketchWasEdited, setFeatureSketchWasEdited] = useState(false);
+  const [featureSketchCanvasSize, setFeatureSketchCanvasSize] =
+    useState(FEATURE_SKETCH_CANVAS_DEFAULT_SIZE);
 
   const isAllowedCategory = useCallback(
     (category: CategoryForm) =>
@@ -98,6 +129,7 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
       setExpandedFeatureGuideType(undefined);
       setFeatureIdentifier('');
       setFeatureIdentifierWasRequested(false);
+      resetFeatureLocationSketch();
       setIsChoosingFeatureType(true);
       return;
     }
@@ -129,6 +161,224 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
     );
   };
 
+  const resetFeatureLocationSketch = () => {
+    setFeatureLocationShape('point');
+    setFeatureSketchPoints([]);
+    setFeatureSketchCenter({ x: 50, y: 50 });
+    setFeatureSketchScale(100);
+    setFeatureSketchRotation(0);
+    setFeatureSketchWasEdited(false);
+  };
+
+  const selectFeatureLocationShape = (shape: FeatureLocationSketchShape) => {
+    setFeatureLocationShape(shape);
+    setFeatureSketchWasEdited(true);
+    if (shape !== 'polygon' && featureSketchPoints.length > 1) {
+      setFeatureSketchPoints([featureSketchCenter]);
+    }
+  };
+
+  const handleFeatureSketchLayout = (event: LayoutChangeEvent) => {
+    const { height, width } = event.nativeEvent.layout;
+    if (height > 0 && width > 0) {
+      setFeatureSketchCanvasSize({ height, width });
+    }
+  };
+
+  const handleFeatureSketchPress = (event: GestureResponderEvent) => {
+    const point = getSketchPointFromPress(
+      event,
+      featureSketchCanvasSize
+    );
+    setFeatureSketchWasEdited(true);
+
+    if (featureLocationShape === 'polygon') {
+      setFeatureSketchPoints((points) => [...points, point].slice(-8));
+      setFeatureSketchCenter(point);
+      return;
+    }
+
+    setFeatureSketchCenter(point);
+    setFeatureSketchPoints([point]);
+  };
+
+  const adjustFeatureSketchScale = (delta: number) => {
+    setFeatureSketchWasEdited(true);
+    setFeatureSketchScale((scale) => clamp(scale + delta, 60, 160));
+  };
+
+  const adjustFeatureSketchRotation = (delta: number) => {
+    setFeatureSketchWasEdited(true);
+    setFeatureSketchRotation((rotation) => {
+      const nextRotation = rotation + delta;
+      if (nextRotation > 180) return nextRotation - 360;
+      if (nextRotation < -180) return nextRotation + 360;
+      return nextRotation;
+    });
+  };
+
+  const undoFeatureSketchPoint = () => {
+    setFeatureSketchWasEdited(true);
+    if (featureLocationShape === 'polygon') {
+      setFeatureSketchPoints((points) => points.slice(0, -1));
+      return;
+    }
+
+    setFeatureSketchPoints([]);
+  };
+
+  const renderFeatureSketchPreview = () => {
+    if (featureLocationShape === 'rectangle' || featureLocationShape === 'oval') {
+      return (
+        <View
+          pointerEvents="none"
+          style={[
+            styles.featureSketchShapePreview,
+            featureLocationShape === 'oval' && styles.featureSketchOvalPreview,
+            getFeatureSketchShapeStyle(
+              featureSketchCenter,
+              featureSketchScale,
+              featureSketchRotation
+            ),
+          ]}
+          testID="featureSketchShapePreview"
+        >
+          <View style={styles.featureSketchShapeCenter} />
+        </View>
+      );
+    }
+
+    const points = featureLocationShape === 'polygon'
+      ? featureSketchPoints
+      : (featureSketchPoints.length > 0 ? featureSketchPoints : [featureSketchCenter]);
+
+    return points.map((point, index) => (
+      <View
+        key={`${point.x}-${point.y}-${index}`}
+        pointerEvents="none"
+        style={[styles.featureSketchPoint, getFeatureSketchPointStyle(point)]}
+        testID={`featureSketchPoint_${index}`}
+      >
+        <Text style={styles.featureSketchPointText}>{index + 1}</Text>
+      </View>
+    ));
+  };
+
+  const renderFeatureLocationSketchPanel = () => (
+    <View style={styles.featureLocationPanel}>
+      <View style={styles.featureLocationHeader}>
+        <View>
+          <Text style={styles.featureLocationTitle}>유구 위치 스케치</Text>
+          <Text style={styles.featureLocationDetail}>
+            대략 위치와 형태를 먼저 남기고, 지도 보정은 나중에 이어서 합니다.
+          </Text>
+        </View>
+        {featureSketchWasEdited && (
+          <TouchableOpacity
+            activeOpacity={0.82}
+            onPress={resetFeatureLocationSketch}
+            style={styles.featureSketchIconButton}
+            testID="featureSketchReset"
+          >
+            <Ionicons name="refresh-outline" size={17} color="#475467" />
+          </TouchableOpacity>
+        )}
+      </View>
+      <View style={styles.featureSketchModeRow}>
+        {FEATURE_LOCATION_SKETCH_SHAPES.map((shape) => {
+          const isSelected = shape.id === featureLocationShape;
+
+          return (
+            <TouchableOpacity
+              activeOpacity={0.84}
+              accessibilityRole="button"
+              accessibilityState={{ selected: isSelected }}
+              key={shape.id}
+              onPress={() => selectFeatureLocationShape(shape.id)}
+              style={[
+                styles.featureSketchModeButton,
+                isSelected && styles.featureSketchModeButtonSelected,
+              ]}
+              testID={`featureSketchMode_${shape.id}`}
+            >
+              <Ionicons
+                name={shape.icon as keyof typeof Ionicons.glyphMap}
+                size={15}
+                color={isSelected ? '#175cd3' : '#526272'}
+              />
+              <Text style={[
+                styles.featureSketchModeText,
+                isSelected && styles.featureSketchModeTextSelected,
+              ]}>
+                {shape.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+      <Pressable
+        onLayout={handleFeatureSketchLayout}
+        onPress={handleFeatureSketchPress}
+        style={styles.featureSketchCanvas}
+        testID="featureLocationSketchCanvas"
+      >
+        <View pointerEvents="none" style={styles.featureSketchNorthBand}>
+          <Text style={styles.featureSketchNorthText}>N</Text>
+        </View>
+        <View pointerEvents="none" style={styles.featureSketchVerticalAxis} />
+        <View pointerEvents="none" style={styles.featureSketchHorizontalAxis} />
+        {renderFeatureSketchPreview()}
+      </Pressable>
+      <View style={styles.featureSketchToolbar}>
+        <TouchableOpacity
+          activeOpacity={0.84}
+          onPress={undoFeatureSketchPoint}
+          style={styles.featureSketchToolButton}
+          testID="featureSketchUndo"
+        >
+          <Ionicons name="arrow-undo-outline" size={16} color="#344054" />
+          <Text style={styles.featureSketchToolText}>취소</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          activeOpacity={0.84}
+          onPress={() => adjustFeatureSketchRotation(-FEATURE_SKETCH_ROTATION_STEP)}
+          style={styles.featureSketchToolButton}
+          testID="featureSketchRotateLeft"
+        >
+          <Ionicons name="return-up-back-outline" size={16} color="#344054" />
+          <Text style={styles.featureSketchToolText}>회전</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          activeOpacity={0.84}
+          onPress={() => adjustFeatureSketchRotation(FEATURE_SKETCH_ROTATION_STEP)}
+          style={styles.featureSketchToolButton}
+          testID="featureSketchRotateRight"
+        >
+          <Ionicons name="return-up-forward-outline" size={16} color="#344054" />
+          <Text style={styles.featureSketchToolText}>회전</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          activeOpacity={0.84}
+          onPress={() => adjustFeatureSketchScale(-FEATURE_SKETCH_SCALE_STEP)}
+          style={styles.featureSketchToolButton}
+          testID="featureSketchScaleDown"
+        >
+          <Ionicons name="remove-outline" size={16} color="#344054" />
+          <Text style={styles.featureSketchToolText}>크기</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          activeOpacity={0.84}
+          onPress={() => adjustFeatureSketchScale(FEATURE_SKETCH_SCALE_STEP)}
+          style={styles.featureSketchToolButton}
+          testID="featureSketchScaleUp"
+        >
+          <Ionicons name="add-outline" size={16} color="#344054" />
+          <Text style={styles.featureSketchToolText}>크기</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
   const renderFeatureTypePicker = () => {
     const featureCategory = categoriesByName.get(KOREAN_FIELDWORK_CATEGORIES.FEATURE);
     if (!featureCategory) return null;
@@ -157,6 +407,14 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
         {
           featureType,
           identifier: normalizedFeatureIdentifier,
+          ...getFeatureLocationSketchDraftParams({
+            center: featureSketchCenter,
+            isEdited: featureSketchWasEdited,
+            points: featureSketchPoints,
+            rotation: featureSketchRotation,
+            scale: featureSketchScale,
+            shape: featureLocationShape,
+          }),
         }
       );
     };
@@ -204,6 +462,7 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
             유구명만 먼저 적어도 됩니다. 성격과 세부 정보는 조사하면서 계속 채우고 고칠 수 있습니다.
           </Text>
         </View>
+        {renderFeatureLocationSketchPanel()}
         <View style={styles.startUnknownFeature}>
           <View style={styles.featureTypeHeader}>
             <TouchableOpacity
@@ -333,6 +592,7 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
                   ? () => {
                     setExpandedFeatureGuideType(undefined);
                     setFeatureIdentifierWasRequested(false);
+                    resetFeatureLocationSketch();
                     setIsChoosingFeatureType(false);
                   }
                   : onClose}
@@ -403,6 +663,127 @@ const compareKoreanFieldworkCategories = (
     : orderA - orderB;
 };
 
+const getFeatureLocationSketchDraftParams = ({
+  center,
+  isEdited,
+  points,
+  rotation,
+  scale,
+  shape,
+}: {
+  center: FeatureSketchPoint;
+  isEdited: boolean;
+  points: FeatureSketchPoint[];
+  rotation: number;
+  scale: number;
+  shape: FeatureLocationSketchShape;
+}): Record<string, string> => {
+  if (!isEdited) return {};
+
+  const sketchPoints = shape === 'polygon'
+    ? points
+    : (points.length > 0 ? points : [center]);
+  const payload = {
+    version: 1,
+    shape,
+    center: roundSketchPoint(center),
+    points: sketchPoints.map(roundSketchPoint),
+    rotation,
+    scale,
+  };
+  const note = getFeatureLocationSketchNote(payload);
+
+  return {
+    featureGeometryRevisionNote: note,
+    featureLocationSketch: JSON.stringify(payload),
+    shortDescription: note,
+  };
+};
+
+const getFeatureLocationSketchNote = ({
+  center,
+  points,
+  rotation,
+  scale,
+  shape,
+}: {
+  center: FeatureSketchPoint;
+  points: FeatureSketchPoint[];
+  rotation: number;
+  scale: number;
+  shape: FeatureLocationSketchShape;
+}): string => {
+  if (shape === 'polygon') {
+    return `위치 스케치: 점 연결 ${points.length}점, 마지막 ${formatSketchPoint(
+      points[points.length - 1] ?? center
+    )}`;
+  }
+
+  return `위치 스케치: ${getFeatureLocationSketchShapeLabel(shape)}, 중심 ${formatSketchPoint(
+    center
+  )}, 크기 ${scale}%, 회전 ${rotation}°`;
+};
+
+const getFeatureLocationSketchShapeLabel = (
+  shape: FeatureLocationSketchShape
+): string => {
+  switch (shape) {
+    case 'oval':
+      return '타원';
+    case 'polygon':
+      return '점 연결';
+    case 'rectangle':
+      return '사각형';
+    default:
+      return '점';
+  }
+};
+
+const getSketchPointFromPress = (
+  event: GestureResponderEvent,
+  canvasSize: { height: number; width: number }
+): FeatureSketchPoint => {
+  const width = Math.max(1, canvasSize.width);
+  const height = Math.max(1, canvasSize.height);
+
+  return {
+    x: clamp((event.nativeEvent.locationX / width) * 100, 0, 100),
+    y: clamp((event.nativeEvent.locationY / height) * 100, 0, 100),
+  };
+};
+
+const getFeatureSketchPointStyle = (point: FeatureSketchPoint) => ({
+  left: toPercent(point.x),
+  top: toPercent(point.y),
+});
+
+const getFeatureSketchShapeStyle = (
+  center: FeatureSketchPoint,
+  scale: number,
+  rotation: number
+) => ({
+  left: toPercent(center.x),
+  top: toPercent(center.y),
+  transform: [
+    { scale: scale / 100 },
+    { rotate: `${rotation}deg` },
+  ],
+});
+
+const roundSketchPoint = (point: FeatureSketchPoint): FeatureSketchPoint => ({
+  x: Math.round(point.x),
+  y: Math.round(point.y),
+});
+
+const formatSketchPoint = (point: FeatureSketchPoint): string =>
+  `${Math.round(point.x)}%, ${Math.round(point.y)}%`;
+
+const toPercent = (value: number): DimensionValue =>
+  `${value}%` as DimensionValue;
+
+const clamp = (value: number, min: number, max: number): number =>
+  Math.min(max, Math.max(min, value));
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -467,6 +848,174 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     marginHorizontal: 5,
     marginTop: 2,
+  },
+  featureLocationPanel: {
+    backgroundColor: '#f8fafc',
+    borderColor: '#b9c7d5',
+    borderRadius: 6,
+    borderWidth: 1,
+    marginBottom: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+  },
+  featureLocationHeader: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  featureLocationTitle: {
+    color: '#1f2937',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  featureLocationDetail: {
+    color: '#526272',
+    fontSize: 11,
+    lineHeight: 15,
+    marginTop: 2,
+  },
+  featureSketchIconButton: {
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderColor: '#d0d5dd',
+    borderRadius: 15,
+    borderWidth: 1,
+    height: 30,
+    justifyContent: 'center',
+    marginLeft: 8,
+    width: 30,
+  },
+  featureSketchModeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 8,
+  },
+  featureSketchModeButton: {
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderColor: '#d0d5dd',
+    borderRadius: 6,
+    borderWidth: 1,
+    flexDirection: 'row',
+    marginBottom: 5,
+    marginRight: 6,
+    minHeight: 32,
+    paddingHorizontal: 8,
+  },
+  featureSketchModeButtonSelected: {
+    backgroundColor: '#eff8ff',
+    borderColor: '#84caff',
+  },
+  featureSketchModeText: {
+    color: '#526272',
+    fontSize: 11,
+    fontWeight: '800',
+    marginLeft: 4,
+  },
+  featureSketchModeTextSelected: {
+    color: '#175cd3',
+  },
+  featureSketchCanvas: {
+    backgroundColor: 'white',
+    borderColor: '#98a2b3',
+    borderRadius: 6,
+    borderWidth: 1,
+    height: 150,
+    overflow: 'hidden',
+    position: 'relative',
+    width: '100%',
+  },
+  featureSketchNorthBand: {
+    alignItems: 'center',
+    backgroundColor: '#ecfdf3',
+    borderBottomColor: '#d0d5dd',
+    borderBottomWidth: 1,
+    height: 20,
+    justifyContent: 'center',
+  },
+  featureSketchNorthText: {
+    color: '#2f6f4e',
+    fontSize: 11,
+    fontWeight: '900',
+  },
+  featureSketchVerticalAxis: {
+    backgroundColor: '#e4e7ec',
+    bottom: 0,
+    left: '50%',
+    position: 'absolute',
+    top: 20,
+    width: 1,
+  },
+  featureSketchHorizontalAxis: {
+    backgroundColor: '#e4e7ec',
+    height: 1,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: '50%',
+  },
+  featureSketchPoint: {
+    alignItems: 'center',
+    backgroundColor: '#175cd3',
+    borderColor: 'white',
+    borderRadius: 10,
+    borderWidth: 2,
+    height: 20,
+    justifyContent: 'center',
+    marginLeft: -10,
+    marginTop: -10,
+    position: 'absolute',
+    width: 20,
+  },
+  featureSketchPointText: {
+    color: 'white',
+    fontSize: 9,
+    fontWeight: '900',
+  },
+  featureSketchShapePreview: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(47, 111, 78, 0.18)',
+    borderColor: '#2f6f4e',
+    borderRadius: 5,
+    borderWidth: 2,
+    height: 46,
+    justifyContent: 'center',
+    marginLeft: -36,
+    marginTop: -23,
+    position: 'absolute',
+    width: 72,
+  },
+  featureSketchOvalPreview: {
+    borderRadius: 24,
+  },
+  featureSketchShapeCenter: {
+    backgroundColor: '#2f6f4e',
+    borderRadius: 4,
+    height: 8,
+    width: 8,
+  },
+  featureSketchToolbar: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 7,
+  },
+  featureSketchToolButton: {
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderColor: '#d0d5dd',
+    borderRadius: 6,
+    borderWidth: 1,
+    flexDirection: 'row',
+    marginRight: 6,
+    minHeight: 30,
+    paddingHorizontal: 8,
+  },
+  featureSketchToolText: {
+    color: '#344054',
+    fontSize: 11,
+    fontWeight: '800',
+    marginLeft: 3,
   },
   optionSection: {
     marginBottom: 12,
