@@ -24,7 +24,10 @@ import Map from './Map/Map';
 import { router, useGlobalSearchParams } from 'expo-router';
 import SearchBar from './SearchBar';
 import { ProjectContext } from '@/contexts/project-context';
-import { KoreanFieldworkInvestigationModeId } from './korean-fieldwork-investigation-mode';
+import type {
+  KoreanFieldworkInvestigationModeId,
+  KoreanFieldworkProjectBoundaryDraft,
+} from './korean-fieldwork-investigation-mode';
 import { MaterialIcons } from '@expo/vector-icons';
 import {
   getKoreanFieldworkUserVisibleDocuments,
@@ -39,6 +42,7 @@ interface DocumentsMapProps {
   selectParent: (doc: Document) => void;
   investigationModeId?: KoreanFieldworkInvestigationModeId;
   boundarySummary?: string;
+  boundaryDraft?: KoreanFieldworkProjectBoundaryDraft;
 }
 
 const DocumentsMap: React.FC<DocumentsMapProps> = ({
@@ -49,6 +53,7 @@ const DocumentsMap: React.FC<DocumentsMapProps> = ({
   selectParent,
   investigationModeId,
   boundarySummary,
+  boundaryDraft,
 }): ReactElement => {
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
   const [isDeleteModelOpen, setIsDeleteModelOpen] = useState<boolean>(false);
@@ -245,6 +250,7 @@ const DocumentsMap: React.FC<DocumentsMapProps> = ({
     <View style={{ flex: 1 }}>
       {isAddModalOpen && (
         <DocumentAddModal
+          boundaryDraft={boundaryDraft}
           initialCategoryName={addModalInitialCategoryName}
           initialDraftParams={addModalInitialDraftParams}
           investigationModeId={investigationModeId}

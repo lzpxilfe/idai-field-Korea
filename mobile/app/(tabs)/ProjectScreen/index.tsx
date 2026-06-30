@@ -834,6 +834,7 @@ const DocumentsList: React.FC = () => {
     <View style={styles.screen}>
       {addModalParent && (
         <DocumentAddModal
+          boundaryDraft={projectBoundaryDraft}
           initialCategoryName={addModalInitialCategoryName}
           initialDraftParams={addModalInitialDraftParams}
           investigationModeId={investigationModeId}

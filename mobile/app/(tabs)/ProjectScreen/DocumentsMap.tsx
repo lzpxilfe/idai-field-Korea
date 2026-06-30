@@ -1,7 +1,13 @@
-import React, { useContext } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import DocumentsMap from '@/components/Project/DocumentsMap';
+import {
+  loadKoreanFieldworkProjectBoundaryDraft,
+} from '@/components/Project/korean-fieldwork-investigation-mode';
+import type {
+  KoreanFieldworkProjectBoundaryDraft,
+} from '@/components/Project/korean-fieldwork-investigation-mode';
 import { ProjectContext } from '@/contexts/project-context';
 import { PreferencesContext } from '@/contexts/preferences-context';
 import useKoreanFieldworkProjectSetupDefaults from '@/hooks/use-korean-fieldwork-project-setup-defaults';
@@ -13,6 +19,31 @@ const DocumentMapContainer: React.FC = () => {
   const projectId = preferencesContext.preferences.currentProject;
   const { investigationModeId, boundarySummary } =
     useKoreanFieldworkProjectSetupDefaults(projectId, repository);
+  const [boundaryDraft, setBoundaryDraft] =
+    useState<KoreanFieldworkProjectBoundaryDraft>();
+
+  useEffect(() => {
+    let isMounted = true;
+
+    if (!projectId) {
+      setBoundaryDraft(undefined);
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    loadKoreanFieldworkProjectBoundaryDraft(projectId)
+      .then((draft) => {
+        if (isMounted) setBoundaryDraft(draft);
+      })
+      .catch(() => {
+        if (isMounted) setBoundaryDraft(undefined);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [projectId]);
 
   if (!repository || syncStatus === undefined) {
     return <ProjectMapLoadingState />;
@@ -27,6 +58,7 @@ const DocumentMapContainer: React.FC = () => {
       selectParent={onParentSelected}
       investigationModeId={investigationModeId}
       boundarySummary={boundarySummary}
+      boundaryDraft={boundaryDraft}
     />
   );
 };

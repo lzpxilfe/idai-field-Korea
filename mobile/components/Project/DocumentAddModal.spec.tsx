@@ -222,11 +222,15 @@ describe('DocumentAddModal', () => {
 
     expect(getByText('유구 위치 스케치')).toBeTruthy();
 
-    fireEvent(getByTestId('featureLocationSketchCanvas'), 'layout', {
+    const canvas = getByTestId('featureLocationSketchCanvas');
+    fireEvent(canvas, 'layout', {
       nativeEvent: { layout: { height: 100, width: 200 } },
     });
     fireEvent.press(getByTestId('featureSketchMode_oval'));
-    fireEvent.press(getByTestId('featureLocationSketchCanvas'), {
+    fireEvent(canvas, 'responderGrant', {
+      nativeEvent: { locationX: 150, locationY: 50 },
+    });
+    fireEvent(canvas, 'responderRelease', {
       nativeEvent: { locationX: 150, locationY: 50 },
     });
     fireEvent.press(getByTestId('featureSketchRotateRight'));
@@ -250,6 +254,65 @@ describe('DocumentAddModal', () => {
       shortDescription:
         '위치 스케치: 타원, 중심 75%, 50%, 크기 110%, 회전 15°',
     });
+  });
+
+  it('shows the project boundary and live polygon line while placing a feature', () => {
+    const parentDoc = {
+      resource: {
+        id: 'trench-1',
+        identifier: 'T1',
+        category: C.TRENCH,
+        relations: {},
+      },
+    } as any;
+
+    const { getByTestId } = render(
+      <LabelsContext.Provider value={{ labels: new Labels(() => ['ko']) }}>
+        <ConfigurationContext.Provider value={createConfig([
+          createCategory(C.TRENCH),
+          createCategory(C.FEATURE),
+        ])}
+        >
+          <DocumentAddModal
+            boundaryDraft={createBoundaryDraft()}
+            initialCategoryName={C.FEATURE}
+            onAddCategory={jest.fn()}
+            onClose={jest.fn()}
+            parentDoc={parentDoc}
+          />
+        </ConfigurationContext.Provider>
+      </LabelsContext.Provider>
+    );
+
+    expect(getByTestId('featureSketchBoundaryPoint_0')).toBeTruthy();
+
+    const canvas = getByTestId('featureLocationSketchCanvas');
+    fireEvent(canvas, 'layout', {
+      nativeEvent: { layout: { height: 100, width: 200 } },
+    });
+    fireEvent.press(getByTestId('featureSketchMode_polygon'));
+    fireEvent(canvas, 'responderGrant', {
+      nativeEvent: { locationX: 40, locationY: 25 },
+    });
+    fireEvent(canvas, 'responderRelease', {
+      nativeEvent: { locationX: 40, locationY: 25 },
+    });
+    fireEvent(canvas, 'responderGrant', {
+      nativeEvent: { locationX: 120, locationY: 50 },
+    });
+    fireEvent(canvas, 'responderMove', {
+      nativeEvent: { locationX: 150, locationY: 60 },
+    });
+
+    expect(getByTestId('featureSketchLine')).toBeTruthy();
+    expect(getByTestId('featureSketchPoint_1').props.style).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          left: '75%',
+          top: '60%',
+        }),
+      ])
+    );
   });
 
   it('closes when the backdrop is pressed', () => {
@@ -298,3 +361,12 @@ const createConfig = (categories: Forest<CategoryForm>) => ({
     && parentCategoryName === C.TRENCH
     && relationName === 'liesWithin',
 } as any);
+
+const createBoundaryDraft = () => ({
+  coordinates: [
+    { latitude: 37.1, longitude: 127.1 },
+    { latitude: 37.1, longitude: 127.2 },
+    { latitude: 37.0, longitude: 127.2 },
+    { latitude: 37.0, longitude: 127.1 },
+  ],
+});
