@@ -90,6 +90,42 @@ describe('korean-fieldwork-notebook-digest', () => {
     });
 
 
+    it('summarizes tablet daily journal personnel, safety, and boundary memo fields', () => {
+
+        const dailyLog = createDoc('daily-log-1', 'DailyLog', '2026-06-24 일지', {
+            date: '2026-06-24',
+            dailyLogInvestigatorCount: 2,
+            dailyLogLaborerCount: 5,
+            dailyLogEquipmentCount: 1,
+            dailyLogEquipmentSize: '0.6㎥',
+            dailyLogSafetyEducationPhoto: true,
+            dailyLogSafetyEducationStretching: false,
+            dailyLogBoundaryMemoStrokes: JSON.stringify({
+                version: 1,
+                strokes: [
+                    { points: [{ x: 120, y: 220 }, { x: 320, y: 420 }] }
+                ]
+            })
+        });
+
+        const digest = makeKoreanFieldworkDailyNotebookDigest([dailyLog] as any, today);
+
+        expect(digest.dailyJournalSummaries).toEqual([
+            expect.objectContaining({
+                document: dailyLog,
+                documentLabel: '2026-06-24 일지',
+                personnelLabel: '투입 7명 (조사원 2명 / 인부 5명)',
+                equipmentLabel: '장비 1대/0.6㎥',
+                safetyLabel: '안전교육 · 사진 · 체조 미확인',
+                boundaryMemoLabel: '경계 메모 1획/2점',
+                hasPersonnel: true,
+                hasSafetyComplete: false,
+                hasBoundaryMemo: true
+            })
+        ]);
+    });
+
+
     it('builds notebook entries from tablet fieldNote saved on selected records', () => {
 
         const feature = createDoc('feature-1', 'Feature', 'F-1', {

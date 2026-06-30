@@ -26,6 +26,19 @@ export interface KoreanFieldworkNotebookEntry {
     handwritingSummaryLabel: string;
 }
 
+export interface KoreanFieldworkDailyJournalSummary {
+    document: Document;
+    documentLabel: string;
+    personnelLabel: string;
+    equipmentLabel: string;
+    safetyLabel: string;
+    boundaryMemoLabel: string;
+    detail: string;
+    hasPersonnel: boolean;
+    hasSafetyComplete: boolean;
+    hasBoundaryMemo: boolean;
+}
+
 export type KoreanFieldworkNotebookContinuationFocus = 'nextWork'|'evidenceNumbers';
 
 export interface KoreanFieldworkFieldNoteContinuationSeed {
@@ -38,6 +51,7 @@ export interface KoreanFieldworkDailyNotebookDigest {
     dateLabel: string;
     entries: KoreanFieldworkNotebookEntry[];
     dailyLogDocuments: Document[];
+    dailyJournalSummaries: KoreanFieldworkDailyJournalSummary[];
     primaryDailyLog?: Document;
     nextWorkEntries: KoreanFieldworkNotebookEntry[];
     evidenceMissingEntries: KoreanFieldworkNotebookEntry[];
@@ -60,6 +74,16 @@ const PEN_MEMO_CATEGORY = 'PenMemo';
 const DAILY_LOG_CATEGORY = 'DailyLog';
 const RECORD_FIELD_NOTE_SOURCE_LABEL = '기록 메모';
 const KOREAN_FIELDWORK_TIME_ZONE_OFFSET_MINUTES = 9 * 60;
+const DAILY_JOURNAL_FIELD = {
+    boundaryMemoStrokes: 'dailyLogBoundaryMemoStrokes',
+    equipmentCount: 'dailyLogEquipmentCount',
+    equipmentSize: 'dailyLogEquipmentSize',
+    investigatorCount: 'dailyLogInvestigatorCount',
+    laborerCount: 'dailyLogLaborerCount',
+    safetyEducationPhoto: 'dailyLogSafetyEducationPhoto',
+    safetyEducationStretching: 'dailyLogSafetyEducationStretching',
+    workerCount: 'dailyLogWorkerCount'
+} as const;
 
 const EVIDENCE_NUMBER_CATEGORIES = new Set([
     'Photo',
@@ -127,6 +151,9 @@ export function makeKoreanFieldworkDailyNotebookDigest(
         dateLabel,
         entries,
         dailyLogDocuments,
+        dailyJournalSummaries: dailyLogDocuments
+            .map(createDailyJournalSummary)
+            .filter((summary): summary is KoreanFieldworkDailyJournalSummary => !!summary),
         primaryDailyLog: dailyLogDocuments[0],
         nextWorkEntries: entries.filter(entry => entry.nextWork),
         evidenceMissingEntries: entries.filter(entry => entry.needsEvidenceNumbers)
@@ -478,6 +505,57 @@ function findDailyLogContextDocument(contextLabel: string, documents: Document[]
 }
 
 
+function createDailyJournalSummary(dailyLogDocument: Document): KoreanFieldworkDailyJournalSummary|undefined {
+
+    const investigatorCount = getNumberField(dailyLogDocument, DAILY_JOURNAL_FIELD.investigatorCount);
+    const laborerCount = getNumberField(dailyLogDocument, DAILY_JOURNAL_FIELD.laborerCount);
+    const workerCount = getNumberField(dailyLogDocument, DAILY_JOURNAL_FIELD.workerCount)
+        ?? sumDefinedNumbers([investigatorCount, laborerCount]);
+    const equipmentCount = getNumberField(dailyLogDocument, DAILY_JOURNAL_FIELD.equipmentCount);
+    const equipmentSize = getStringField(dailyLogDocument, DAILY_JOURNAL_FIELD.equipmentSize);
+    const safetyPhotoDone = getBooleanField(dailyLogDocument, DAILY_JOURNAL_FIELD.safetyEducationPhoto);
+    const safetyStretchingDone = getBooleanField(dailyLogDocument, DAILY_JOURNAL_FIELD.safetyEducationStretching);
+    const boundaryMemoStats = getStoredHandwritingStats(
+        dailyLogDocument.resource[DAILY_JOURNAL_FIELD.boundaryMemoStrokes]
+    );
+    const hasPersonnel = [
+        investigatorCount,
+        laborerCount,
+        workerCount,
+        equipmentCount,
+        equipmentSize
+    ].some(value => value !== undefined && value !== '');
+    const hasSafety = safetyPhotoDone || safetyStretchingDone;
+    const hasBoundaryMemo = boundaryMemoStats.pointCount > 0;
+    if (!hasPersonnel && !hasSafety && !hasBoundaryMemo) return undefined;
+
+    const personnelLabel = getDailyJournalPersonnelLabel(investigatorCount, laborerCount, workerCount);
+    const equipmentLabel = getDailyJournalEquipmentLabel(equipmentCount, equipmentSize);
+    const safetyLabel = getDailyJournalSafetyLabel(safetyPhotoDone, safetyStretchingDone);
+    const boundaryMemoLabel = hasBoundaryMemo
+        ? `경계 메모 ${boundaryMemoStats.strokeCount}획/${boundaryMemoStats.pointCount}점`
+        : '경계 메모 없음';
+
+    return {
+        document: dailyLogDocument,
+        documentLabel: getDocumentLabel(dailyLogDocument),
+        personnelLabel,
+        equipmentLabel,
+        safetyLabel,
+        boundaryMemoLabel,
+        detail: [
+            personnelLabel,
+            equipmentLabel,
+            safetyLabel,
+            boundaryMemoLabel
+        ].filter(value => value.length > 0).join(' · '),
+        hasPersonnel,
+        hasSafetyComplete: safetyPhotoDone && safetyStretchingDone,
+        hasBoundaryMemo
+    };
+}
+
+
 function getDocumentFieldNoteText(document: Document): string {
 
     return [
@@ -636,6 +714,90 @@ function getStringField(document: Document, fieldName: string): string {
 }
 
 
+function getNumberField(document: Document, fieldName: string): number|undefined {
+
+    const value = document.resource[fieldName];
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+
+    if (typeof value === 'string') {
+        const normalizedValue = value.trim();
+        if (!normalizedValue) return undefined;
+
+        const parsedValue = Number(normalizedValue);
+        return Number.isFinite(parsedValue) ? parsedValue : undefined;
+    }
+
+    return undefined;
+}
+
+
+function getBooleanField(document: Document, fieldName: string): boolean {
+
+    return document.resource[fieldName] === true;
+}
+
+
+function sumDefinedNumbers(values: Array<number|undefined>): number|undefined {
+
+    const definedValues = values.filter((value): value is number => value !== undefined);
+    if (definedValues.length === 0) return undefined;
+
+    return definedValues.reduce((sum, value) => sum + value, 0);
+}
+
+
+function getDailyJournalPersonnelLabel(
+        investigatorCount: number|undefined,
+        laborerCount: number|undefined,
+        workerCount: number|undefined
+): string {
+
+    const parts = [
+        investigatorCount !== undefined ? `조사원 ${formatCount(investigatorCount)}명` : '',
+        laborerCount !== undefined ? `인부 ${formatCount(laborerCount)}명` : ''
+    ].filter(value => value.length > 0);
+
+    if (parts.length > 0) {
+        return [
+            `투입 ${formatCount(workerCount ?? sumDefinedNumbers([investigatorCount, laborerCount]) ?? 0)}명`,
+            parts.join(' / ')
+        ].join(' (') + ')';
+    }
+
+    return workerCount !== undefined
+        ? `투입 ${formatCount(workerCount)}명`
+        : '투입 미기입';
+}
+
+
+function getDailyJournalEquipmentLabel(equipmentCount: number|undefined, equipmentSize: string): string {
+
+    if (equipmentCount === undefined && !equipmentSize) return '장비 미기입';
+    if (equipmentCount === undefined) return `장비 ${equipmentSize}`;
+    if (!equipmentSize) return `장비 ${formatCount(equipmentCount)}대`;
+
+    return `장비 ${formatCount(equipmentCount)}대/${equipmentSize}`;
+}
+
+
+function getDailyJournalSafetyLabel(safetyPhotoDone: boolean, safetyStretchingDone: boolean): string {
+
+    if (safetyPhotoDone && safetyStretchingDone) return '안전교육 완료';
+
+    return [
+        '안전교육',
+        safetyPhotoDone ? '사진' : '사진 미확인',
+        safetyStretchingDone ? '체조' : '체조 미확인'
+    ].join(' · ');
+}
+
+
+function formatCount(value: number): string {
+
+    return Number.isInteger(value) ? value.toString() : value.toFixed(1).replace(/\.0$/, '');
+}
+
+
 function getRelationIds(document: Document, relationName: string): string[] {
 
     const value = document.resource.relations?.[relationName];
@@ -652,6 +814,31 @@ function getNotebookHandwritingStats(text: string): { strokeCount: number, point
         strokeCount: strokes.length,
         pointCount: strokes.reduce((sum, stroke) => sum + stroke.points.length, 0)
     };
+}
+
+
+function getStoredHandwritingStats(value: unknown): { strokeCount: number, pointCount: number } {
+
+    const strokes = getStoredHandwritingStrokes(value);
+
+    return {
+        strokeCount: strokes.length,
+        pointCount: strokes.reduce((sum, stroke) => sum + stroke.points.length, 0)
+    };
+}
+
+
+function getStoredHandwritingStrokes(value: unknown): KoreanFieldworkNotebookHandwritingStroke[] {
+
+    if (typeof value === 'string') {
+        try {
+            return getParsedNotebookHandwritingStrokes(JSON.parse(value));
+        } catch (_err) {
+            return getNotebookHandwritingStrokes(value);
+        }
+    }
+
+    return getParsedNotebookHandwritingStrokes(value);
 }
 
 

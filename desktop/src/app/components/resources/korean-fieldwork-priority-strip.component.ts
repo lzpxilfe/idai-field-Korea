@@ -48,6 +48,7 @@ import {
 } from '../../util/korean-fieldwork-overview-chart';
 import {
     KoreanFieldworkDailyNotebookDigest,
+    KoreanFieldworkDailyJournalSummary,
     KoreanFieldworkNotebookEntry,
     KoreanFieldworkNotebookContinuationFocus,
     getKoreanFieldworkNotebookContinuationSeed,
@@ -679,6 +680,20 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
         this.getNotebookNextWorkEntries().length > 0
         || this.getNotebookEvidenceMissingEntries().length > 0;
 
+    public getNotebookDailyJournalSummaries = () =>
+        this.notebookDigest?.dailyJournalSummaries.slice(0, 3) ?? [];
+
+    public hasNotebookDailyJournalSummaries = () =>
+        this.getNotebookDailyJournalSummaries().length > 0;
+
+    public getNotebookDailyJournalSummaryTone(summary: KoreanFieldworkDailyJournalSummary): 'success'|'info'|'warning' {
+
+        if (!summary.hasSafetyComplete) return 'warning';
+        if (!summary.hasBoundaryMemo) return 'info';
+
+        return 'success';
+    }
+
     public getNotebookSelectedRecordEntries = () =>
         getKoreanFieldworkNotebookEntriesForDocument(
             this.getNotebookSelectedRecordDocument(),
@@ -1150,6 +1165,16 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
 
         try {
             await this.routing.jumpToResource(entry.sourceDocument);
+        } catch (errWithParams) {
+            this.messages.add(errWithParams);
+        }
+    }
+
+
+    public async openNotebookDailyJournalSummary(summary: KoreanFieldworkDailyJournalSummary) {
+
+        try {
+            await this.routing.jumpToResource(summary.document);
         } catch (errWithParams) {
             this.messages.add(errWithParams);
         }
@@ -1660,6 +1685,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
     private getNotebookPanelCount = () =>
         (this.notebookDigest?.nextWorkEntries.length ?? 0)
         + (this.notebookDigest?.evidenceMissingEntries.length ?? 0)
+        + (this.notebookDigest?.dailyJournalSummaries.length ?? 0)
         + this.getNotebookRecentEntries().length
         + this.getNotebookSelectedRecordEntries().length
         + (this.canRunNotebookDailyLogAction() ? 1 : 0)

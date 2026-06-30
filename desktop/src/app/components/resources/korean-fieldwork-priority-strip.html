@@ -567,6 +567,26 @@
                 {{getNotebookRecordMemoActionLabel()}}
             </button>
         </div>
+        <div *ngIf="hasNotebookDailyJournalSummaries()"
+             class="korean-fieldwork-notebook-journal-summary-list">
+            <button *ngFor="let summary of getNotebookDailyJournalSummaries()"
+                    type="button"
+                    class="korean-fieldwork-notebook-journal-summary"
+                    [class.success]="getNotebookDailyJournalSummaryTone(summary) === 'success'"
+                    [class.info]="getNotebookDailyJournalSummaryTone(summary) === 'info'"
+                    [class.warning]="getNotebookDailyJournalSummaryTone(summary) === 'warning'"
+                    [ngbTooltip]="summary.detail"
+                    container="body"
+                    placement="bottom"
+                    (click)="openNotebookDailyJournalSummary(summary)">
+                <span class="korean-fieldwork-notebook-strip-kind">일지</span>
+                <span class="korean-fieldwork-notebook-journal-title">{{summary.documentLabel}}</span>
+                <span class="korean-fieldwork-notebook-journal-detail">{{summary.personnelLabel}}</span>
+                <span class="korean-fieldwork-notebook-journal-detail">{{summary.equipmentLabel}}</span>
+                <span class="korean-fieldwork-notebook-journal-detail">{{summary.safetyLabel}}</span>
+                <span class="korean-fieldwork-notebook-journal-detail">{{summary.boundaryMemoLabel}}</span>
+            </button>
+        </div>
         <div *ngIf="hasNotebookSelectedRecordEntries()" class="korean-fieldwork-notebook-strip-items selected">
             <div *ngFor="let entry of getNotebookSelectedRecordEntries()"
                  class="korean-fieldwork-notebook-strip-item selected">
@@ -679,7 +699,10 @@
                 </button>
             </div>
         </div>
-        <div *ngIf="!hasNotebookFollowUps() && !hasNotebookSelectedRecordEntries() && !hasNotebookRecentEntries()"
+        <div *ngIf="!hasNotebookFollowUps()
+                    && !hasNotebookSelectedRecordEntries()
+                    && !hasNotebookRecentEntries()
+                    && !hasNotebookDailyJournalSummaries()"
              class="korean-fieldwork-notebook-strip-empty">
             오늘 야장에서 바로 보강할 항목은 없습니다.
         </div>

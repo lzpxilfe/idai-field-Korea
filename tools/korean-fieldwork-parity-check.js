@@ -186,6 +186,7 @@ const featureRows = [
     id: 'daily-notebook',
     title: 'Daily notebook, follow-up notes, and narrative assist',
     tablet: [
+      'mobile/components/Project/KoreanFieldworkDailyJournalCalendar.tsx',
       'mobile/components/Project/KoreanFieldworkFieldNotePanel.tsx',
       'mobile/components/Project/KoreanFieldworkNotebookLedger.tsx',
       'mobile/components/Project/KoreanFieldworkDailyNotebookDigest.tsx',
@@ -196,11 +197,15 @@ const featureRows = [
     ],
     desktop: [
       'desktop/src/app/components/docedit/core/korean-fieldwork-narrative-assist-panel.component.ts',
+      'desktop/src/app/components/resources/korean-fieldwork-priority-strip.component.ts',
+      'desktop/src/app/components/resources/korean-fieldwork-priority-strip.html',
+      'desktop/src/app/components/resources/korean-fieldwork-priority-strip.scss',
       'desktop/src/app/util/korean-fieldwork-evidence-review.ts',
       'desktop/src/app/util/korean-fieldwork-notebook-digest.ts',
       'desktop/src/app/util/korean-fieldwork-narrative-assist.ts'
     ],
     tabletTests: [
+      'mobile/components/Project/KoreanFieldworkDailyJournalCalendar.spec.tsx',
       'mobile/components/Project/KoreanFieldworkFieldNotePanel.spec.tsx',
       'mobile/components/Project/KoreanFieldworkNotebookLedger.spec.tsx',
       'mobile/components/Project/KoreanFieldworkDailyNotebookDigest.spec.tsx',
@@ -212,6 +217,7 @@ const featureRows = [
     ],
     desktopTests: [
       'desktop/test/unit/components/docedit/core/korean-fieldwork-narrative-assist-panel.component.spec.ts',
+      'desktop/test/unit/components/resources/korean-fieldwork-priority-strip.component.spec.ts',
       'desktop/test/unit/util/korean-fieldwork-evidence-review.spec.ts',
       'desktop/test/unit/util/korean-fieldwork-notebook-digest.spec.ts',
       'desktop/test/unit/util/korean-fieldwork-narrative-assist.spec.ts'

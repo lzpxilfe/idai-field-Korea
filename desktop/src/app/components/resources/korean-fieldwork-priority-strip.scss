@@ -1537,6 +1537,88 @@ korean-fieldwork-priority-strip {
     }
   }
 
+  .korean-fieldwork-notebook-journal-summary-list {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 8px;
+    min-width: 0;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+
+  .korean-fieldwork-notebook-journal-summary {
+    background: #ffffff;
+    border: 1px solid #d0d5dd;
+    border-left: 4px solid #98a2b3;
+    border-radius: 5px;
+    color: #1d2939;
+    display: grid;
+    flex: 0 0 310px;
+    gap: 3px;
+    min-height: 70px;
+    min-width: 0;
+    padding: 6px 8px;
+    text-align: left;
+
+    &.success {
+      background: #ecfdf3;
+      border-color: #abefc6;
+      border-left-color: #12b76a;
+    }
+
+    &.info {
+      background: #eff8ff;
+      border-color: #b2ddff;
+      border-left-color: #1570ef;
+    }
+
+    &.warning {
+      background: #fffbeb;
+      border-color: #fedf89;
+      border-left-color: #f79009;
+    }
+
+    &:hover {
+      background: #f9fafb;
+    }
+  }
+
+  .korean-fieldwork-notebook-journal-summary.success .korean-fieldwork-notebook-strip-kind {
+    background: #d1fadf;
+    color: #027a48;
+  }
+
+  .korean-fieldwork-notebook-journal-summary.info .korean-fieldwork-notebook-strip-kind {
+    background: #d1e9ff;
+    color: #175cd3;
+  }
+
+  .korean-fieldwork-notebook-journal-summary.warning .korean-fieldwork-notebook-strip-kind {
+    background: #fffaeb;
+    color: #b54708;
+  }
+
+  .korean-fieldwork-notebook-journal-title,
+  .korean-fieldwork-notebook-journal-detail {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .korean-fieldwork-notebook-journal-title {
+    color: #175cd3;
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 1.2;
+  }
+
+  .korean-fieldwork-notebook-journal-detail {
+    color: #344054;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
   .korean-fieldwork-notebook-strip-items {
     display: flex;
     flex: 1 1 auto;

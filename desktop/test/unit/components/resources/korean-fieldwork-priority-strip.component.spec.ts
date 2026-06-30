@@ -986,6 +986,64 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
         expect(routing.jumpToResource).toHaveBeenCalledWith(dailyLog);
     });
 
+    it('shows tablet daily journal summaries in the desktop notebook panel', async () => {
+
+        const dailyLog = createDocument('daily-1', 'DailyLog', {
+            date: getTodayLabel(),
+            dailyLogInvestigatorCount: 1,
+            dailyLogLaborerCount: 3,
+            dailyLogEquipmentCount: 1,
+            dailyLogEquipmentSize: '10톤',
+            dailyLogSafetyEducationPhoto: true,
+            dailyLogSafetyEducationStretching: true,
+            dailyLogBoundaryMemoStrokes: {
+                version: 1,
+                strokes: [
+                    { points: [{ x: 120, y: 240 }, { x: 360, y: 420 }] }
+                ]
+            },
+            relations: { isRecordedIn: ['operation-1'] }
+        });
+        const routing = {
+            jumpToResource: jest.fn()
+        };
+        const component = createComponent(
+            {
+                find: jest.fn().mockResolvedValue({
+                    documents: [
+                        createDocument('project', 'Project'),
+                        createDocument('operation-1', 'Operation'),
+                        dailyLog
+                    ]
+                }),
+                get: jest.fn()
+            },
+            createActionProjectConfiguration(),
+            routing
+        );
+
+        await component.refresh();
+
+        expect(component.hasNotebookDailyJournalSummaries()).toBe(true);
+        expect(component.getNotebookSummaryLabel()).toBe('기록 0 · 다음 0 · 번호 0');
+        expect(component.getNotebookDailyJournalSummaries()[0]).toMatchObject({
+            document: dailyLog,
+            personnelLabel: '투입 4명 (조사원 1명 / 인부 3명)',
+            equipmentLabel: '장비 1대/10톤',
+            safetyLabel: '안전교육 완료',
+            boundaryMemoLabel: '경계 메모 1획/2점',
+            hasSafetyComplete: true,
+            hasBoundaryMemo: true
+        });
+        expect(component.getNotebookDailyJournalSummaryTone(
+            component.getNotebookDailyJournalSummaries()[0]
+        )).toBe('success');
+
+        await component.openNotebookDailyJournalSummary(component.getNotebookDailyJournalSummaries()[0]);
+
+        expect(routing.jumpToResource).toHaveBeenCalledWith(dailyLog);
+    });
+
     it('runs selected record workbench commands from the records panel', async () => {
 
         jest.spyOn(Date, 'now').mockReturnValue(1700000000000);
