@@ -48,7 +48,7 @@ const FEATURE_SKETCH_CANVAS_DEFAULT_SIZE = {
   height: 780,
   width: 1180,
 };
-const FEATURE_SKETCH_TABLET_WIDTH = 640;
+const FEATURE_SKETCH_TABLET_WIDTH = 600;
 const FEATURE_SKETCH_SCALE_STEP = 10;
 const FEATURE_SKETCH_ROTATION_STEP = 15;
 const FEATURE_SKETCH_GRID_PERCENTS = [25, 50, 75];
@@ -106,11 +106,21 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
   const isFeatureWideLayout =
     windowDimensions.width >= FEATURE_SKETCH_TABLET_WIDTH;
   const featureSketchCanvasHeight = useMemo(
-    () => clamp(
-      Math.round(windowDimensions.height - (isFeatureWideLayout ? 96 : 190)),
-      isFeatureWideLayout ? 680 : 500,
-      isFeatureWideLayout ? 980 : 760
-    ),
+    () => {
+      const reservedHeight = isFeatureWideLayout ? 76 : 142;
+      const targetHeight = Math.max(
+        360,
+        Math.round(windowDimensions.height - reservedHeight)
+      );
+      const minimumHeight = isFeatureWideLayout ? 620 : 460;
+      const maximumHeight = isFeatureWideLayout ? 1040 : 760;
+
+      return clamp(
+        targetHeight,
+        Math.min(minimumHeight, targetHeight),
+        maximumHeight
+      );
+    },
     [isFeatureWideLayout, windowDimensions.height]
   );
   const [featureLocationShape, setFeatureLocationShape] =
@@ -447,7 +457,11 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
   );
 
   const renderFeatureSketchToolbar = () => (
-    <View pointerEvents="box-none" style={styles.featureSketchToolbar}>
+    <View
+      pointerEvents="box-none"
+      style={styles.featureSketchToolbar}
+      testID="featureSketchToolRail"
+    >
       <TouchableOpacity
         activeOpacity={0.84}
         accessibilityLabel="마지막 점 되돌리기"
@@ -536,11 +550,19 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
             </TouchableOpacity>
           )}
         </View>
-        <View pointerEvents="none" style={styles.featureSketchPlaneBadge}>
+        <View
+          pointerEvents="none"
+          style={styles.featureSketchPlaneBadge}
+          testID="featureSketchTopDownBadge"
+        >
           <Ionicons name="map-outline" size={13} color="#175cd3" />
-          <Text style={styles.featureSketchPlaneBadgeText}>위성지도식 평면</Text>
+          <Text style={styles.featureSketchPlaneBadgeText}>지도처럼 위에서 보기</Text>
         </View>
-        <View pointerEvents="box-none" style={styles.featureSketchModeRow}>
+        <View
+          pointerEvents="box-none"
+          style={styles.featureSketchModeRow}
+          testID="featureSketchModeRail"
+        >
           {FEATURE_LOCATION_SKETCH_SHAPES.map((shape) => {
             const isSelected = shape.id === featureLocationShape;
 
@@ -1267,15 +1289,15 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   featureCreationMapPaneWide: {
-    flex: 4,
-    marginRight: 8,
+    flex: 5.2,
+    marginRight: 10,
   },
   featureCreationFormPane: {
     minWidth: 0,
   },
   featureCreationFormPaneWide: {
     flex: 0.9,
-    maxWidth: 320,
+    maxWidth: 300,
   },
   parentPanel: {
     backgroundColor: '#f8fafc',
@@ -1370,14 +1392,14 @@ const styles = StyleSheet.create({
     width: 30,
   },
   featureSketchModeRow: {
-    alignItems: 'center',
-    bottom: 60,
-    flexDirection: 'row',
+    alignItems: 'flex-start',
+    bottom: 72,
+    flexDirection: 'column',
     flexWrap: 'wrap',
-    justifyContent: 'flex-start',
+    justifyContent: 'center',
     left: 12,
     position: 'absolute',
-    right: 12,
+    top: 104,
     zIndex: 4,
   },
   featureSketchModeButton: {
@@ -1388,8 +1410,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     flexDirection: 'row',
     marginBottom: 5,
-    marginRight: 6,
     minHeight: 32,
+    minWidth: 84,
     paddingHorizontal: 8,
   },
   featureSketchModeButtonSelected: {
@@ -1506,11 +1528,11 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 1,
     flexDirection: 'row',
-    left: 12,
     paddingHorizontal: 7,
     paddingVertical: 4,
     position: 'absolute',
-    top: 82,
+    right: 52,
+    top: 12,
     zIndex: 2,
   },
   featureSketchPlaneBadgeText: {
@@ -1606,11 +1628,11 @@ const styles = StyleSheet.create({
     width: 8,
   },
   featureSketchToolbar: {
-    bottom: 12,
-    flexDirection: 'row',
+    flexDirection: 'column',
     flexWrap: 'wrap',
     position: 'absolute',
     right: 12,
+    top: 104,
     zIndex: 3,
   },
   featureSketchToolButton: {
@@ -1621,7 +1643,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     height: 38,
     justifyContent: 'center',
-    marginLeft: 7,
+    marginBottom: 7,
     width: 38,
   },
   optionSection: {

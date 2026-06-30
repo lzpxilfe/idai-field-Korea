@@ -1086,7 +1086,9 @@ function validateGuidedFeatureDraftDefaults() {
     findings.push('tablet add flow does not expose feature type options before creating Feature records');
   }
   if (!tabletAddModalText.includes('featureSketchFlatMapSurface')
-      || !tabletAddModalText.includes('위성지도식 평면')
+      || !tabletAddModalText.includes('지도처럼 위에서 보기')
+      || !tabletAddModalText.includes('featureSketchModeRail')
+      || !tabletAddModalText.includes('featureSketchToolRail')
       || tabletAddModalText.includes('평면 배치 지도')
       || !tabletAddModalSpecText.includes('featureSketchFlatMapSurface')) {
     findings.push('tablet add flow must place new features on a flat placement map surface');
