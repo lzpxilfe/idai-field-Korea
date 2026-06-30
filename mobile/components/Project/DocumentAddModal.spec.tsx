@@ -263,13 +263,14 @@ describe('DocumentAddModal', () => {
 
     fireEvent.press(getByTestId(`addCategory_${C.FEATURE}`));
 
-    expect(getByText('조사 경계 지도')).toBeTruthy();
+    expect(getByText('유구 위치 지도')).toBeTruthy();
     expect(getByText(
-      '지도 평면 기준으로 조사 경계 안에 유구 위치와 형태를 표시합니다.'
+      '위성지도나 평면도처럼 조사 경계 위에 유구를 바로 얹습니다.'
     )).toBeTruthy();
-    expect(getByText('평면 배치 지도')).toBeTruthy();
-    expect(queryByText('위성지도식 평면')).toBeNull();
+    expect(getByText('위성지도식 평면')).toBeTruthy();
+    expect(queryByText('평면 배치 지도')).toBeNull();
     expect(queryByText(/위에서 보고/)).toBeNull();
+    expect(queryByText(/3D|조감/)).toBeNull();
 
     const canvas = getByTestId('featureLocationSketchCanvas');
     fireEvent(canvas, 'layout', {

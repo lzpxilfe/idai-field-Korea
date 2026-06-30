@@ -107,8 +107,8 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
     windowDimensions.width >= FEATURE_SKETCH_TABLET_WIDTH;
   const featureSketchCanvasHeight = useMemo(
     () => clamp(
-      Math.round(windowDimensions.height * (isFeatureWideLayout ? 0.84 : 0.66)),
-      isFeatureWideLayout ? 700 : 500,
+      Math.round(windowDimensions.height - (isFeatureWideLayout ? 96 : 190)),
+      isFeatureWideLayout ? 680 : 500,
       isFeatureWideLayout ? 980 : 760
     ),
     [isFeatureWideLayout, windowDimensions.height]
@@ -502,24 +502,6 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
 
   const renderFeatureLocationSketchPanel = () => (
     <View style={styles.featureLocationPanel} testID="featureLocationSketchPanel">
-      <View style={styles.featureLocationHeader}>
-        <View>
-          <Text style={styles.featureLocationTitle}>조사 경계 지도</Text>
-          <Text style={styles.featureLocationDetail}>
-            지도 평면 기준으로 조사 경계 안에 유구 위치와 형태를 표시합니다.
-          </Text>
-        </View>
-        {featureSketchWasEdited && (
-          <TouchableOpacity
-            activeOpacity={0.82}
-            onPress={resetFeatureLocationSketch}
-            style={styles.featureSketchIconButton}
-            testID="featureSketchReset"
-          >
-            <Ionicons name="refresh-outline" size={17} color="#475467" />
-          </TouchableOpacity>
-        )}
-      </View>
       <View
         onLayout={handleFeatureSketchLayout}
         onMoveShouldSetResponder={() => true}
@@ -536,9 +518,27 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
       >
         {renderFeatureSketchMapSurface()}
         {renderFeatureSketchGrid()}
+        <View pointerEvents="box-none" style={styles.featureLocationHeader}>
+          <View style={styles.featureLocationHeaderCopy}>
+            <Text style={styles.featureLocationTitle}>유구 위치 지도</Text>
+            <Text style={styles.featureLocationDetail}>
+              위성지도나 평면도처럼 조사 경계 위에 유구를 바로 얹습니다.
+            </Text>
+          </View>
+          {featureSketchWasEdited && (
+            <TouchableOpacity
+              activeOpacity={0.82}
+              onPress={resetFeatureLocationSketch}
+              style={styles.featureSketchIconButton}
+              testID="featureSketchReset"
+            >
+              <Ionicons name="refresh-outline" size={17} color="#475467" />
+            </TouchableOpacity>
+          )}
+        </View>
         <View pointerEvents="none" style={styles.featureSketchPlaneBadge}>
           <Ionicons name="map-outline" size={13} color="#175cd3" />
-          <Text style={styles.featureSketchPlaneBadgeText}>평면 배치 지도</Text>
+          <Text style={styles.featureSketchPlaneBadgeText}>위성지도식 평면</Text>
         </View>
         <View pointerEvents="box-none" style={styles.featureSketchModeRow}>
           {FEATURE_LOCATION_SKETCH_SHAPES.map((shape) => {
@@ -1324,25 +1324,38 @@ const styles = StyleSheet.create({
     borderColor: '#b8c4d0',
     borderRadius: 5,
     borderWidth: 1,
-    marginBottom: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 6,
+    marginBottom: 0,
+    overflow: 'hidden',
   },
   featureLocationHeader: {
     alignItems: 'flex-start',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    left: 12,
+    position: 'absolute',
+    right: 12,
+    top: 12,
+    zIndex: 5,
+  },
+  featureLocationHeaderCopy: {
+    backgroundColor: 'rgba(255, 255, 255, 0.94)',
+    borderColor: '#d0d5dd',
+    borderRadius: 6,
+    borderWidth: 1,
+    flexShrink: 1,
+    maxWidth: 360,
+    paddingHorizontal: 9,
+    paddingVertical: 7,
   },
   featureLocationTitle: {
     color: '#1f2937',
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '900',
   },
   featureLocationDetail: {
     color: '#526272',
-    fontSize: 11,
-    lineHeight: 15,
+    fontSize: 12,
+    lineHeight: 16,
     marginTop: 2,
   },
   featureSketchIconButton: {
@@ -1358,13 +1371,13 @@ const styles = StyleSheet.create({
   },
   featureSketchModeRow: {
     alignItems: 'center',
+    bottom: 60,
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'flex-end',
-    left: 118,
+    justifyContent: 'flex-start',
+    left: 12,
     position: 'absolute',
     right: 12,
-    top: 10,
     zIndex: 4,
   },
   featureSketchModeButton: {
@@ -1396,7 +1409,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f8f2',
     borderColor: '#8294a9',
     borderRadius: 4,
-    borderWidth: 1,
+    borderWidth: 0,
     height: 300,
     overflow: 'hidden',
     position: 'relative',
@@ -1497,7 +1510,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 7,
     paddingVertical: 4,
     position: 'absolute',
-    top: 12,
+    top: 82,
     zIndex: 2,
   },
   featureSketchPlaneBadgeText: {

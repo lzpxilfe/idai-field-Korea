@@ -1072,14 +1072,14 @@ function validateGuidedFeatureDraftDefaults() {
     findings.push('tablet add flow does not expose feature type options before creating Feature records');
   }
   if (!tabletAddModalText.includes('featureSketchFlatMapSurface')
-      || !tabletAddModalText.includes('평면 배치 지도')
-      || tabletAddModalText.includes('위성지도식 평면')
+      || !tabletAddModalText.includes('위성지도식 평면')
+      || tabletAddModalText.includes('평면 배치 지도')
       || !tabletAddModalSpecText.includes('featureSketchFlatMapSurface')) {
     findings.push('tablet add flow must place new features on a flat placement map surface');
   }
   if (!desktopRecordContextTemplateText.includes('flat-map-surface')
-      || !desktopRecordContextTemplateText.includes('평면 배치 지도')
-      || desktopRecordContextTemplateText.includes('위성지도식 평면')
+      || !desktopRecordContextTemplateText.includes('위성지도식 평면')
+      || desktopRecordContextTemplateText.includes('평면 배치 지도')
       || !desktopRecordContextTemplateText.includes('satellite-field')
       || !desktopRecordContextStyleText.includes('.flat-map-surface')
       || !desktopRecordContextStyleText.includes('.satellite-road')
