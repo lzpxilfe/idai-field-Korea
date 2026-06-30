@@ -543,6 +543,33 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
     });
 
 
+    it('keeps tablet operation role responsibilities visible on desktop operation records', async () => {
+
+        const operation = createDocument('operation-1', 'Operation', 'OP1', {}, {
+            operationRoleResponsibility: JSON.stringify([
+                'safetyLead',
+                'photographyLead',
+                'dailyLogAuthor',
+                'roleGapIdentified'
+            ])
+        });
+        const component = createComponent({
+            find: jest.fn().mockResolvedValue({ documents: [operation] })
+        });
+        component.document = operation as any;
+        component.fieldDefinitions = [
+            field('operationRoleResponsibility')
+        ] as any;
+
+        await component.ngOnChanges();
+
+        expect(component.shouldShow()).toBe(true);
+        expect(component.getStatusChips()).toEqual([
+            { label: '역할 안전 담당 · 사진 담당 · 작업일지 작성자 +1', tone: 'warning' }
+        ]);
+    });
+
+
     it('keeps tablet imported boundary file details visible on desktop boundary records', async () => {
 
         const boundary = createDocument('boundary-1', 'SurveyBoundary', 'B1', {}, {

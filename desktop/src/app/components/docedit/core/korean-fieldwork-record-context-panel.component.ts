@@ -174,6 +174,7 @@ const KOREAN_FIELDWORK_CONTEXT_FIELDS = [
     'featureRecordingStatus',
     'fieldRecordQuality',
     'longAxisOrientation',
+    'operationRoleResponsibility',
     'shortAxisOrientation',
     'projectBoundarySummary',
     'projectInvestigationMode',
@@ -267,6 +268,32 @@ const GEOMETRY_EDIT_STATUS_LABELS: Readonly<Record<string, ContextChip>> = {
     measured: { label: '실측', tone: 'success' }
 };
 
+const OPERATION_ROLE_RESPONSIBILITY_LABELS: Readonly<Record<string, string>> = {
+    principalInvestigator: '조사단장',
+    responsibleInvestigator: '책임조사원',
+    fieldDirector: '현장팀장',
+    fieldInvestigator: '조사원',
+    juniorInvestigator: '준조사원',
+    fieldAssistant: '보조원',
+    surveyLead: '측량 담당',
+    photographyLead: '사진 담당',
+    drawingLead: '도면 담당',
+    safetyLead: '안전 담당',
+    complaintCommunicationLead: '민원·기관소통 담당',
+    artifactProcessingLead: '유물정리 담당',
+    sampleCollectionLead: '시료채취 담당',
+    dailyLogAuthor: '작업일지 작성자',
+    reportPreparationLead: '보고서 담당',
+    reviewer: '검토자',
+    roleGapIdentified: '역할 공백 확인',
+    pendingDecision: '추가 확인'
+};
+
+const OPERATION_ROLE_RESPONSIBILITY_WARNING_VALUES = new Set([
+    'roleGapIdentified',
+    'pendingDecision'
+]);
+
 @Component({
     selector: 'korean-fieldwork-record-context-panel',
     templateUrl: './korean-fieldwork-record-context-panel.html',
@@ -337,6 +364,7 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
         this.pushProjectSetupChips(chips, resource);
         this.pushSurveyBoundaryChips(chips, resource);
         if (orientationChip) chips.push(orientationChip);
+        this.pushOperationRoleResponsibilityChip(chips, resource);
         this.pushMappedChip(chips, resource.featureRecordingStatus, FEATURE_RECORDING_STATUS_LABELS);
         this.pushFeatureAttributeChip(chips);
         this.pushMappedChip(chips, resource.verificationState, VERIFICATION_STATE_LABELS);
@@ -1582,6 +1610,64 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
         if (typeof value !== 'string') return;
         const chip = labels[value];
         if (chip) chips.push(chip);
+    }
+
+
+    private pushOperationRoleResponsibilityChip(chips: ContextChip[], resource: any) {
+
+        const values = this.getStringArrayResourceValues(resource.operationRoleResponsibility);
+        if (values.length === 0) return;
+
+        const visibleLabels = values
+            .slice(0, 3)
+            .map(value => OPERATION_ROLE_RESPONSIBILITY_LABELS[value] ?? value);
+        const hiddenCount = values.length - visibleLabels.length;
+        const labelSuffix = hiddenCount > 0
+            ? `${visibleLabels.join(' · ')} +${hiddenCount}`
+            : visibleLabels.join(' · ');
+
+        chips.push({
+            label: `역할 ${labelSuffix}`,
+            tone: values.some(value => OPERATION_ROLE_RESPONSIBILITY_WARNING_VALUES.has(value))
+                ? 'warning'
+                : 'success'
+        });
+    }
+
+
+    private getStringArrayResourceValues(value: unknown): string[] {
+
+        const rawValues = Array.isArray(value)
+            ? value
+            : this.parseStringArrayResourceValue(value);
+        const seenValues = new Set<string>();
+
+        return rawValues
+            .filter((item): item is string => typeof item === 'string')
+            .map(item => item.trim())
+            .filter(item => {
+                if (item.length === 0 || seenValues.has(item)) return false;
+                seenValues.add(item);
+                return true;
+            });
+    }
+
+
+    private parseStringArrayResourceValue(value: unknown): unknown[] {
+
+        if (typeof value !== 'string') return [];
+
+        const trimmedValue = value.trim();
+        if (trimmedValue.length === 0) return [];
+
+        try {
+            const parsedValue = JSON.parse(trimmedValue);
+            if (Array.isArray(parsedValue)) return parsedValue;
+        } catch {
+            // Imported records may contain one plain checkbox value; keep it visible.
+        }
+
+        return [trimmedValue];
     }
 
 

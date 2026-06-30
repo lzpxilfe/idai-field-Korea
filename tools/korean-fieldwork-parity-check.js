@@ -2069,8 +2069,10 @@ function validateProjectInvestigationModeWording() {
   }
   if (!desktopRecordContextPanelText.includes('pushProjectSetupChips')
       || !desktopRecordContextPanelText.includes('projectBoundarySummary')
+      || !desktopRecordContextPanelText.includes('pushOperationRoleResponsibilityChip')
+      || !desktopRecordContextPanelText.includes('operationRoleResponsibility')
       || !desktopRecordContextPanelText.includes('getKoreanFieldworkInvestigationModeOption')) {
-    findings.push('desktop record context panel must keep tablet project setup visible on opened Operation records');
+    findings.push('desktop record context panel must keep tablet project setup and operation role responsibilities visible on opened Operation records');
   }
   if (desktopRecordContextPanelText.includes('PROJECT_INVESTIGATION_MODE_LABELS')) {
     findings.push('desktop record context panel must use the shared project setup investigation-mode labels');
@@ -2079,6 +2081,10 @@ function validateProjectInvestigationModeWording() {
       || !desktopRecordContextPanelSpecText.includes('조사 표본·시굴조사')
       || !desktopRecordContextPanelSpecText.includes('경계 1구역 북쪽 능선부터 남쪽 농로…')) {
     findings.push('desktop record context panel test must cover tablet project setup chips on Operation records with tablet wording');
+  }
+  if (!desktopRecordContextPanelSpecText.includes('keeps tablet operation role responsibilities visible on desktop operation records')
+      || !desktopRecordContextPanelSpecText.includes('역할 안전 담당 · 사진 담당 · 작업일지 작성자 +1')) {
+    findings.push('desktop record context panel test must cover tablet operation role responsibility chips on Operation records');
   }
   if (!desktopRecordContextPanelText.includes('pushSurveyBoundaryChips')
       || !desktopRecordContextPanelText.includes('getKoreanFieldworkBoundaryMethodLabel')
