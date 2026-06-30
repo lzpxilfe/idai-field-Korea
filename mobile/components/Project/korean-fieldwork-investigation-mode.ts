@@ -124,6 +124,10 @@ export const getKoreanFieldworkInvestigationMode = (
     ? KOREAN_FIELDWORK_INVESTIGATION_MODES.find((mode) => mode.id === id)
     : undefined;
 
+export const shouldUseKoreanFieldworkTrenchWorkflow = (
+  investigationModeId?: KoreanFieldworkInvestigationModeId
+): boolean => investigationModeId === undefined || investigationModeId === 'trialTrench';
+
 export const loadKoreanFieldworkInvestigationModeId = async (
   projectId: string
 ): Promise<KoreanFieldworkInvestigationModeId | undefined> => {

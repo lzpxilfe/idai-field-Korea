@@ -13,7 +13,10 @@ import {
   getKoreanFieldworkPrimaryParent,
   KoreanFieldworkStatusTone,
 } from './korean-fieldwork-record-summary';
-import { KoreanFieldworkInvestigationModeId } from './korean-fieldwork-investigation-mode';
+import {
+  KoreanFieldworkInvestigationModeId,
+  shouldUseKoreanFieldworkTrenchWorkflow,
+} from './korean-fieldwork-investigation-mode';
 import {
   getKoreanFieldworkChecklistQuickOptions,
   isKoreanFieldworkChecklistRecord,
@@ -341,7 +344,7 @@ const getNextChildCategory = (
 ): string | undefined => {
   if (
     parentCategoryName === C.OPERATION
-    && investigationModeId === 'excavation'
+    && !shouldUseKoreanFieldworkTrenchWorkflow(investigationModeId)
   ) {
     return C.FEATURE;
   }

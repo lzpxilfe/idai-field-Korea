@@ -6,7 +6,10 @@ import {
   getKoreanFieldworkDisplayIdentifier,
   KOREAN_FIELDWORK_CATEGORIES,
 } from './korean-fieldwork-categories';
-import { KoreanFieldworkInvestigationModeId } from './korean-fieldwork-investigation-mode';
+import {
+  KoreanFieldworkInvestigationModeId,
+  shouldUseKoreanFieldworkTrenchWorkflow,
+} from './korean-fieldwork-investigation-mode';
 import { getKoreanFieldworkPrimaryParent } from './korean-fieldwork-record-summary';
 
 const C = KOREAN_FIELDWORK_CATEGORIES;
@@ -172,15 +175,12 @@ export const getKoreanFieldworkPriorityTasks = (
 
   appendCommonPriorityTasks(tasks, summary, targets);
 
-  switch (investigationModeId) {
-    case 'trialTrench':
-      appendTrialTrenchPriorityTasks(tasks, documents, targets);
-      break;
-    case 'excavation':
-      appendExcavationPriorityTasks(tasks, documents, targets);
-      break;
-    default:
-      appendGenericPriorityTasks(tasks, documents, targets);
+  if (investigationModeId === 'trialTrench') {
+    appendTrialTrenchPriorityTasks(tasks, documents, targets);
+  } else if (!shouldUseKoreanFieldworkTrenchWorkflow(investigationModeId)) {
+    appendExcavationPriorityTasks(tasks, documents, targets);
+  } else {
+    appendGenericPriorityTasks(tasks, documents, targets);
   }
 
   summary.openIssues.slice(0, maxTasks).forEach((issue) => {
@@ -456,7 +456,7 @@ export const getFeatureDraftParent = (
     document.resource.category === C.TRENCH
   );
 
-  if (!investigationModeId || investigationModeId === 'trialTrench') {
+  if (shouldUseKoreanFieldworkTrenchWorkflow(investigationModeId)) {
     return trench ?? (
       investigationModeId === 'trialTrench'
         ? undefined

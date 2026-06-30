@@ -14,7 +14,10 @@ import {
   KoreanFieldworkStatusTone,
 } from './korean-fieldwork-record-summary';
 import { getKoreanFieldworkEvidenceChips } from './korean-fieldwork-record-evidence';
-import { KoreanFieldworkInvestigationModeId } from './korean-fieldwork-investigation-mode';
+import {
+  KoreanFieldworkInvestigationModeId,
+  shouldUseKoreanFieldworkTrenchWorkflow,
+} from './korean-fieldwork-investigation-mode';
 import {
   getKoreanFieldworkChecklistQuickOptions,
   isKoreanFieldworkChecklistRecord,
@@ -208,7 +211,7 @@ const getProgressStage = (
 
   if (
     document.resource.category === C.OPERATION
-    && investigationModeId === 'excavation'
+    && !shouldUseKoreanFieldworkTrenchWorkflow(investigationModeId)
     && !descendants.some((descendant) => descendant.resource.category === C.FEATURE)
   ) {
     return toStage(
@@ -221,6 +224,7 @@ const getProgressStage = (
 
   if (
     document.resource.category === C.OPERATION
+    && shouldUseKoreanFieldworkTrenchWorkflow(investigationModeId)
     && !descendants.some((descendant) => descendant.resource.category === C.TRENCH)
   ) {
     return toStage(
@@ -338,7 +342,7 @@ const getProgressAction = (
 
     if (
       document.resource.category === C.OPERATION
-      && investigationModeId === 'excavation'
+      && !shouldUseKoreanFieldworkTrenchWorkflow(investigationModeId)
     ) {
       return {
         type: 'createDocument',
@@ -360,6 +364,7 @@ const getProgressAction = (
 
   if (stageId === 'evidence') {
     const evidenceParent = document.resource.category === C.OPERATION
+      && shouldUseKoreanFieldworkTrenchWorkflow(investigationModeId)
       ? descendants.find((descendant) => descendant.resource.category === C.TRENCH)
       : undefined;
 

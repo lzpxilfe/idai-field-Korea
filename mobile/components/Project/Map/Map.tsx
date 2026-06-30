@@ -52,12 +52,14 @@ import {
   OPERATION_WRAP_CONFIRMATION_TITLE,
 } from '../korean-fieldwork-operation-wrap';
 import {
-  FEATURE_CANDIDATE_PARENT_CATEGORIES,
   KOREAN_FIELDWORK_CATEGORIES,
   SOIL_PROFILE_PHOTO_TARGET_CATEGORIES,
 } from '../korean-fieldwork-categories';
 import MapBottomSheet from './MapBottomSheet';
-import { KoreanFieldworkInvestigationModeId } from '../korean-fieldwork-investigation-mode';
+import {
+  KoreanFieldworkInvestigationModeId,
+  shouldUseKoreanFieldworkTrenchWorkflow,
+} from '../korean-fieldwork-investigation-mode';
 import { isKoreanFieldworkChecklistRecord } from '../korean-fieldwork-quick-record';
 import BoundaryFileImportModal from './BoundaryFileImportModal';
 import {
@@ -209,6 +211,8 @@ const Map: React.FC<MapProps> = (props) => {
     (document) => document.resource.category === KOREAN_FIELDWORK_CATEGORIES.OPERATION
   );
   const [primaryOperation] = operationDocuments;
+  const usesTrenchWorkflow =
+    shouldUseKoreanFieldworkTrenchWorkflow(props.investigationModeId);
   const legacyRootDocuments = operationDocuments.length === 0
     ? getLegacyRootDocumentsForOperation(props.documents)
     : [];
@@ -224,12 +228,18 @@ const Map: React.FC<MapProps> = (props) => {
     !!location &&
     !!config?.getCategory(KOREAN_FIELDWORK_CATEGORIES.SURVEY_BOUNDARY);
 
-  const featureParent = getFeatureCandidateParent(highlightedDoc, props.documents);
+  const featureParent = getFeatureCandidateParent(
+    highlightedDoc,
+    props.documents,
+    props.investigationModeId
+  );
   const canCreateFeatureCandidate =
     !!featureParent && !!location && !!config?.getCategory(KOREAN_FIELDWORK_CATEGORIES.FEATURE);
   const canCreateOperation = !!config?.getCategory(KOREAN_FIELDWORK_CATEGORIES.OPERATION);
   const canCreateTrench =
-    !!primaryOperation && !!config?.getCategory(KOREAN_FIELDWORK_CATEGORIES.TRENCH);
+    usesTrenchWorkflow
+    && !!primaryOperation
+    && !!config?.getCategory(KOREAN_FIELDWORK_CATEGORIES.TRENCH);
   const hasRenderableMapContent = geoDocuments.length > 0 || layerDocuments.length > 0;
   const hasSurveyBoundaryGeometry = geoDocuments.some((document) =>
     document.resource.category === KOREAN_FIELDWORK_CATEGORIES.SURVEY_BOUNDARY
@@ -678,12 +688,14 @@ const Map: React.FC<MapProps> = (props) => {
                   isDisabled={!canCreateSurveyBoundaryInPrimaryOperation}
                   onPress={createPrimarySurveyBoundaryDraft}
                 />
-                <Button
-                  variant="secondary"
-                  title="트렌치 추가"
-                  isDisabled={!canCreateTrench}
-                  onPress={createTrenchInPrimaryOperation}
-                />
+                {usesTrenchWorkflow && (
+                  <Button
+                    variant="secondary"
+                    title="트렌치 추가"
+                    isDisabled={!canCreateTrench}
+                    onPress={createTrenchInPrimaryOperation}
+                  />
+                )}
                 <Button
                   variant="primary"
                   title="조사 기본정보"
@@ -948,13 +960,20 @@ const isMapLocation = (
 
 const getFeatureCandidateParent = (
   highlightedDoc: Document | undefined,
-  documents: Document[]
+  documents: Document[],
+  investigationModeId?: KoreanFieldworkInvestigationModeId
 ): Document | undefined => {
-  if (
-    highlightedDoc &&
-    FEATURE_CANDIDATE_PARENT_CATEGORIES.includes(highlightedDoc.resource.category)
-  ) {
-    return highlightedDoc;
+  if (highlightedDoc) {
+    if (highlightedDoc.resource.category === KOREAN_FIELDWORK_CATEGORIES.OPERATION) {
+      return highlightedDoc;
+    }
+
+    if (
+      highlightedDoc.resource.category === KOREAN_FIELDWORK_CATEGORIES.TRENCH
+      && shouldUseKoreanFieldworkTrenchWorkflow(investigationModeId)
+    ) {
+      return highlightedDoc;
+    }
   }
 
   return documents.find(

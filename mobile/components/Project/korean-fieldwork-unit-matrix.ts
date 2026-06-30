@@ -19,7 +19,10 @@ import {
   KoreanFieldworkEvidenceChip,
 } from './korean-fieldwork-record-evidence';
 import { isKoreanFieldworkDocumentInScope } from './korean-fieldwork-scope';
-import { KoreanFieldworkInvestigationModeId } from './korean-fieldwork-investigation-mode';
+import {
+  KoreanFieldworkInvestigationModeId,
+  shouldUseKoreanFieldworkTrenchWorkflow,
+} from './korean-fieldwork-investigation-mode';
 import {
   getKoreanFieldworkChecklistQuickOptions,
   isKoreanFieldworkChecklistRecord,
@@ -263,7 +266,9 @@ const getNextChildCategoryName = (
   investigationModeId?: KoreanFieldworkInvestigationModeId
 ): string | undefined => {
   if (categoryName === C.OPERATION) {
-    return investigationModeId === 'excavation' ? C.FEATURE : C.TRENCH;
+    return shouldUseKoreanFieldworkTrenchWorkflow(investigationModeId)
+      ? C.TRENCH
+      : C.FEATURE;
   }
 
   if (categoryName === C.TRENCH) return C.FEATURE;

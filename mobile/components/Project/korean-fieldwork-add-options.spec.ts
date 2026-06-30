@@ -29,7 +29,7 @@ describe('korean fieldwork add options', () => {
     expect(options.other).toEqual([]);
   });
 
-  it('keeps trench creation as a special-case option for excavation operations', () => {
+  it('removes trench creation from excavation operation add options', () => {
     const options = getKoreanFieldworkAddOptions(
       C.OPERATION,
       [
@@ -46,12 +46,29 @@ describe('korean fieldwork add options', () => {
       C.SURVEY_BOUNDARY,
       C.PEN_MEMO,
     ]);
-    expect(options.special).toEqual([
-      expect.objectContaining({
-        categoryName: C.TRENCH,
-        description: expect.stringContaining('예외적으로 트렌치'),
-      }),
+    expect(options.special).toEqual([]);
+    expect(options.other).toEqual([]);
+  });
+
+  it('keeps trench creation in trial trench operation add options', () => {
+    const options = getKoreanFieldworkAddOptions(
+      C.OPERATION,
+      [
+        C.TRENCH,
+        C.FEATURE,
+        C.SURVEY_BOUNDARY,
+        C.PEN_MEMO,
+      ],
+      'trialTrench'
+    );
+
+    expect(options.primary.map((option) => option.categoryName)).toEqual([
+      C.TRENCH,
+      C.FEATURE,
+      C.SURVEY_BOUNDARY,
+      C.PEN_MEMO,
     ]);
+    expect(options.special).toEqual([]);
     expect(options.other).toEqual([]);
   });
 

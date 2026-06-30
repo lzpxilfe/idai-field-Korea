@@ -5,7 +5,10 @@ import {
   KOREAN_FIELDWORK_CATEGORY_ORDER,
   KOREAN_FIELDWORK_HIDDEN_ADD_CATEGORIES,
 } from './korean-fieldwork-categories';
-import { KoreanFieldworkInvestigationModeId } from './korean-fieldwork-investigation-mode';
+import {
+  KoreanFieldworkInvestigationModeId,
+  shouldUseKoreanFieldworkTrenchWorkflow,
+} from './korean-fieldwork-investigation-mode';
 
 export interface KoreanFieldworkAddOption {
   categoryName: string;
@@ -123,7 +126,13 @@ export const getKoreanFieldworkAddOptions = (
   allowedCategoryNames: readonly string[],
   investigationModeId?: KoreanFieldworkInvestigationModeId
 ): KoreanFieldworkAddOptionGroups => {
-  const allowedSet = new Set(allowedCategoryNames.filter(isVisibleAddCategory));
+  const allowedSet = new Set(allowedCategoryNames
+    .filter(isVisibleAddCategory)
+    .filter((categoryName) => isAllowedForInvestigationMode(
+      parentCategoryName,
+      categoryName,
+      investigationModeId
+    )));
   const specialNames = getSpecialOptionNames(
     parentCategoryName,
     allowedSet,
@@ -175,16 +184,21 @@ const getSpecialOptionNames = (
   allowedCategoryNames: Set<string>,
   investigationModeId?: KoreanFieldworkInvestigationModeId
 ): string[] => {
-  if (
-    parentCategoryName === C.OPERATION
-    && investigationModeId === 'excavation'
-    && allowedCategoryNames.has(C.TRENCH)
-  ) {
-    return [C.TRENCH];
-  }
-
+  void parentCategoryName;
+  void allowedCategoryNames;
+  void investigationModeId;
   return [];
 };
+
+const isAllowedForInvestigationMode = (
+  parentCategoryName: string,
+  categoryName: string,
+  investigationModeId?: KoreanFieldworkInvestigationModeId
+): boolean => !(
+  parentCategoryName === C.OPERATION
+  && categoryName === C.TRENCH
+  && !shouldUseKoreanFieldworkTrenchWorkflow(investigationModeId)
+);
 
 const compareKoreanFieldworkCategoryNames = (
   categoryNameA: string,
