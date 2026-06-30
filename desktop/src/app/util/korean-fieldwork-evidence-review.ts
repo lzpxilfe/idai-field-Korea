@@ -19,6 +19,7 @@ export interface KoreanFieldworkEvidenceReview extends EvidenceBundle {
     penMemoTranscriptionSummaries: KoreanFieldworkPenMemoTranscriptionSummary[];
     penMemoSketchSummaries: KoreanFieldworkPenMemoSketchSummary[];
     soilColorCandidateSummaries: KoreanFieldworkSoilColorCandidateSummary[];
+    soilColorSwatchSummaries: KoreanFieldworkSoilColorSwatchSummary[];
 }
 
 export interface KoreanFieldworkPenMemoSketchSummary {
@@ -63,6 +64,12 @@ export interface KoreanFieldworkSoilColorCandidateSummary {
     sampleSourceLabel?: string;
 }
 
+export interface KoreanFieldworkSoilColorSwatchSummary {
+    document: Document;
+    entries: string[];
+    label: string;
+}
+
 const FIELDWORK_PHOTO_ANNOTATION_FIELD = 'fieldworkPhotoAnnotationStrokes';
 const FIELDWORK_PHOTO_ANNOTATION_UPDATED_AT_FIELD = 'fieldworkPhotoAnnotationUpdatedAt';
 const SOIL_PROFILE_PHOTO_ANNOTATION_FIELDS = [
@@ -84,6 +91,7 @@ export function makeKoreanFieldworkEvidenceReview(
     const penMemoTranscriptionSummaries = getPenMemoTranscriptionSummaries(pendingPenMemoTranscriptions);
     const penMemoSketchSummaries = getPenMemoSketchSummaries(bundle.penMemos);
     const soilColorCandidateSummaries = getSoilColorCandidateSummaries(reviewSoilProfilePhotos);
+    const soilColorSwatchSummaries = getSoilColorSwatchSummaries(reviewSoilProfilePhotos);
     const photoAnnotationSummaries = getPhotoAnnotationSummaries(reviewPhotos, reviewSoilProfilePhotos);
     const missingEvidenceKinds = getMissingEvidenceKinds(
         bundle,
@@ -109,7 +117,8 @@ export function makeKoreanFieldworkEvidenceReview(
         pendingPenMemoTranscriptions,
         penMemoTranscriptionSummaries,
         penMemoSketchSummaries,
-        soilColorCandidateSummaries
+        soilColorCandidateSummaries,
+        soilColorSwatchSummaries
     };
 }
 
@@ -211,6 +220,26 @@ export function getSoilColorCandidateSummaries(
                 ? `${label} · ${sampleSourceLabel}`
                 : label,
             ...(sampleSourceLabel ? { sampleSourceLabel } : {})
+        }];
+    });
+}
+
+
+export function getSoilColorSwatchSummaries(
+        soilProfilePhotos: Document[]
+): KoreanFieldworkSoilColorSwatchSummary[] {
+
+    return soilProfilePhotos.flatMap(document => {
+        const entries = getSoilProfileColorSwatchEntries(document.resource.soilProfileColorSwatches);
+        if (entries.length === 0) return [];
+
+        return [{
+            document,
+            entries,
+            label: [
+                `층별 토색 ${entries.length}개`,
+                entries.slice(0, 3).join(', ')
+            ].filter(label => label.trim().length > 0).join(' · ')
         }];
     });
 }
@@ -333,6 +362,68 @@ function getTextValue(value: unknown): string|undefined {
     const text = typeof value === 'string' ? value.trim() : '';
 
     return text.length > 0 ? text : undefined;
+}
+
+
+function getSoilProfileColorSwatchEntries(value: unknown): string[] {
+
+    if (typeof value !== 'string') return getSoilProfileColorSwatchEntriesFromParsedValue(value);
+
+    const trimmedValue = value.trim();
+    if (!trimmedValue || trimmedValue === '[]') return [];
+
+    if (trimmedValue.startsWith('[')) {
+        try {
+            return getSoilProfileColorSwatchEntriesFromParsedValue(JSON.parse(trimmedValue));
+        } catch (_err) {
+            // Fall through to line parsing below.
+        }
+    }
+
+    return trimmedValue
+        .split(/\r?\n/)
+        .map(line => getNormalizedSoilColorSwatchLine(line))
+        .filter((line): line is string => !!line);
+}
+
+
+function getSoilProfileColorSwatchEntriesFromParsedValue(value: unknown): string[] {
+
+    if (!Array.isArray(value)) return [];
+
+    return value
+        .map((entry, index) => getSoilProfileColorSwatchEntryFromParsedValue(entry, index))
+        .filter((entry): entry is string => !!entry);
+}
+
+
+function getSoilProfileColorSwatchEntryFromParsedValue(value: unknown, index: number): string|undefined {
+
+    if (typeof value === 'string') return getNormalizedSoilColorSwatchLine(value);
+    if (!isRecord(value)) return undefined;
+
+    const munsell = getTextValue(value.munsell);
+    const label = getTextValue(value.label);
+    const layer = getTextValue(value.layer)
+        ?? getTextValue(value.layerNumber)
+        ?? getTextValue(value.number)
+        ?? `${index + 1}`;
+    const colorValue = munsell ?? label;
+
+    return colorValue ? `${layer}: ${colorValue}` : undefined;
+}
+
+
+function getNormalizedSoilColorSwatchLine(value: string): string|undefined {
+
+    const line = value.trim();
+    if (!line) return undefined;
+
+    const match = line.match(/^\s*(\d+)\s*:?\s*(.*)$/);
+    if (!match) return line;
+
+    const colorValue = match[2]?.trim() ?? '';
+    return colorValue ? `${match[1]}: ${colorValue}` : undefined;
 }
 
 

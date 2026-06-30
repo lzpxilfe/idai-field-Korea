@@ -499,6 +499,56 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
     });
 
 
+    it('appends tablet layer-by-layer soil colors even when no photo candidates exist', async () => {
+
+        const feature = createDocument('feature-1', 'Feature', 'F1', {}, {
+            description: '기존 토색 기록.'
+        });
+        const soilProfilePhoto = createDocument('soil-photo-1', 'SoilProfilePhoto', 'SP1', {
+            depicts: ['feature-1']
+        }, {
+            soilProfileColorSwatches: '1: 10YR 4/3\n2: 7.5YR 4/4',
+            soilProfileColorNote: '2층은 수분 많음.'
+        });
+        const component = createComponent({
+            find: jest.fn().mockResolvedValue({
+                documents: [feature, soilProfilePhoto]
+            })
+        });
+        const handleChanged = jest.fn();
+        component.onChanged.subscribe(handleChanged);
+        component.document = feature as any;
+        component.fieldDefinitions = [
+            field('featureRecordingStatus'),
+            textField('description', '설명')
+        ] as any;
+
+        await component.ngOnChanges();
+
+        const [insight] = component.getEvidenceInsights();
+        expect(insight).toMatchObject({
+            id: 'soilColorSwatches:soil-photo-1',
+            label: '층별 토색',
+            detail: 'SP1 · 층별 토색 2개 · 1: 10YR 4/3, 2: 7.5YR 4/4',
+            appendText: [
+                '[토층사진 SP1]',
+                '층별 토색: 1: 10YR 4/3\n2: 7.5YR 4/4',
+                '토색 메모: 2층은 수분 많음.'
+            ].join('\n')
+        });
+
+        component.applyEvidenceInsight(insight);
+        component.applyEvidenceInsight(insight);
+
+        expect(feature.resource.description).toContain('기존 토색 기록.');
+        expect(feature.resource.description).toContain('[토층사진 SP1]');
+        expect(feature.resource.description).toContain('층별 토색: 1: 10YR 4/3\n2: 7.5YR 4/4');
+        expect(feature.resource.description).toContain('토색 메모: 2층은 수분 많음.');
+        expect(feature.resource.description.match(/\[토층사진 SP1\]/g)).toHaveLength(1);
+        expect(handleChanged).toHaveBeenCalledTimes(1);
+    });
+
+
     it('creates continuation records with inherited operation context', async () => {
 
         jest.spyOn(Date, 'now').mockReturnValue(1700000000000);

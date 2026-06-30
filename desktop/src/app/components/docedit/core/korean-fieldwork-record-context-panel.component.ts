@@ -43,7 +43,8 @@ import {
     getKoreanFieldworkReviewSoilProfilePhotoDocuments,
     getPhotoAnnotationSummaries,
     getPenMemoTranscriptionSummaryLabel,
-    getSoilColorCandidateSummaries
+    getSoilColorCandidateSummaries,
+    getSoilColorSwatchSummaries
 } from '../../../util/korean-fieldwork-evidence-review';
 import {
     KoreanFieldworkRecordActionItem,
@@ -807,7 +808,11 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
         const reviewPhotos = getKoreanFieldworkReviewPhotoDocuments(this.document, bundle);
         const reviewSoilProfilePhotos = getKoreanFieldworkReviewSoilProfilePhotoDocuments(this.document, bundle);
         const canAppendEvidenceInsight = !!this.getNarrativeAppendTargetField();
-        const soilColorInsights = getSoilColorCandidateSummaries(reviewSoilProfilePhotos)
+        const soilColorCandidateSummaries = getSoilColorCandidateSummaries(reviewSoilProfilePhotos);
+        const soilColorCandidateDocumentIds = new Set(
+            soilColorCandidateSummaries.map(summary => summary.document.resource.id)
+        );
+        const soilColorInsights = soilColorCandidateSummaries
             .map(summary => {
                 const insight: EvidenceInsight = {
                     detail: `${this.getDocumentLabel(summary.document)} · ${summary.label}`,
@@ -818,6 +823,21 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
                         : 'info' as const
                 };
                 const appendText = this.getSoilColorInsightAppendText(summary);
+
+                return canAppendEvidenceInsight && appendText
+                    ? { ...insight, appendText }
+                    : insight;
+            });
+        const soilColorSwatchInsights = getSoilColorSwatchSummaries(reviewSoilProfilePhotos)
+            .filter(summary => !soilColorCandidateDocumentIds.has(summary.document.resource.id))
+            .map(summary => {
+                const insight: EvidenceInsight = {
+                    detail: `${this.getDocumentLabel(summary.document)} · ${summary.label}`,
+                    id: `soilColorSwatches:${summary.document.resource.id}`,
+                    label: '층별 토색',
+                    tone: 'info' as const
+                };
+                const appendText = this.getSoilColorSwatchInsightAppendText(summary);
 
                 return canAppendEvidenceInsight && appendText
                     ? { ...insight, appendText }
@@ -849,7 +869,7 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
                     : insight;
             });
 
-        return [...soilColorInsights, ...photoAnnotationInsights, ...penMemoSketchInsights]
+        return [...soilColorInsights, ...soilColorSwatchInsights, ...photoAnnotationInsights, ...penMemoSketchInsights]
             .filter(insight => insight.detail.trim().length > 0)
             .slice(0, 4);
     }
@@ -942,6 +962,24 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
             this.getNotebookAppendLine('토색 후보', candidates),
             this.getNotebookAppendLine('샘플 위치', summary.sampleSourceLabel),
             this.getNotebookAppendLine('토색 번호', swatches),
+            this.getNotebookAppendLine('토색 메모', colorNote),
+            this.getNotebookAppendLine('촬영 조건', captureNote)
+        ].filter((line): line is string => !!line && line.length > 0);
+
+        return lines.length > 1 ? lines.join('\n') : '';
+    }
+
+
+    private getSoilColorSwatchInsightAppendText(
+            summary: { document: Document; entries: string[] }
+    ): string {
+
+        const documentLabel = this.getDocumentLabel(summary.document);
+        const colorNote = this.getNonEmptyDocumentStringField(summary.document, 'soilProfileColorNote');
+        const captureNote = this.getNonEmptyDocumentStringField(summary.document, 'soilProfileCaptureNote');
+        const lines = [
+            `[토층사진 ${documentLabel}]`,
+            this.getNotebookAppendLine('층별 토색', summary.entries.join('\n')),
             this.getNotebookAppendLine('토색 메모', colorNote),
             this.getNotebookAppendLine('촬영 조건', captureNote)
         ].filter((line): line is string => !!line && line.length > 0);

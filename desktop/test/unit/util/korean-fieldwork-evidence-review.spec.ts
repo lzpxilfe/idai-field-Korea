@@ -7,6 +7,7 @@ import {
     getPenMemoTranscriptionSummaryLabel,
     getPendingPenMemoTranscriptionDocuments,
     getSoilColorCandidateSummaries,
+    getSoilColorSwatchSummaries,
     makeKoreanFieldworkEvidenceReview
 } from '../../../src/app/util/korean-fieldwork-evidence-review';
 
@@ -373,6 +374,41 @@ describe('korean-fieldwork-evidence-review', () => {
                 label: '먼셀 후보 10YR 4/3, 7.5YR 4/3 · 사진 선택 지점 20%/50% 평균 RGB 111/87/61',
                 sampleSourceLabel: '사진 선택 지점 20%/50% 평균 RGB 111/87/61'
             })
+        ]);
+    });
+
+
+    it('summarizes tablet layer-by-layer soil color swatches without photo candidates', () => {
+
+        const summaries = getSoilColorSwatchSummaries([
+            createDocument('soil-photo-lines', 'SoilProfilePhoto', {
+                soilProfileColorSwatches: '1: 10YR 4/3\n2: \n3: 7.5YR 4/4'
+            }),
+            createDocument('soil-photo-json', 'SoilProfilePhoto', {
+                soilProfileColorSwatches: JSON.stringify([
+                    { munsell: '2.5Y 5/3', hex: '#91845f', source: 'tablet-eyedropper' }
+                ])
+            }),
+            createDocument('soil-photo-empty', 'SoilProfilePhoto', {
+                soilProfileColorSwatches: '[]'
+            })
+        ] as any);
+
+        expect(summaries.map(summary => ({
+            id: summary.document.resource.id,
+            entries: summary.entries,
+            label: summary.label
+        }))).toEqual([
+            {
+                id: 'soil-photo-lines',
+                entries: ['1: 10YR 4/3', '3: 7.5YR 4/4'],
+                label: '층별 토색 2개 · 1: 10YR 4/3, 3: 7.5YR 4/4'
+            },
+            {
+                id: 'soil-photo-json',
+                entries: ['1: 2.5Y 5/3'],
+                label: '층별 토색 1개 · 1: 2.5Y 5/3'
+            }
         ]);
     });
 
