@@ -313,7 +313,7 @@ describe('KoreanFieldwork project configuration', () => {
         expect(featureForm.fields.featureFreeDrawingUpdatedAt.inputType).toBe('input');
         expect(featureGroupForm.fields.featureLocationSketch).toBeUndefined();
         expect(featureSegmentForm.fields.featureLocationSketch).toBeUndefined();
-        expect(koreanFieldworkGroup.fields).toEqual(expect.arrayContaining([
+        expect(koreanFieldworkGroup.fields).toEqual(jasmine.arrayContaining([
             'featureLocationSketch',
             'featureFreeDrawingStrokes',
             'featureFreeDrawingUpdatedAt'
@@ -372,13 +372,13 @@ describe('KoreanFieldwork project configuration', () => {
             'featureGeometryReferenceLayerId',
             'featureGeometryRevisionHistory',
             'featureGeometryRevisionNote',
+            'featureLocationSketch',
+            'featureFreeDrawingStrokes',
+            'featureFreeDrawingUpdatedAt',
             'fieldIdentifier',
             'reportIdentifier',
             'identifierRevisionHistory',
-            'identifierRevisionNote',
-            'featureInvestigationChecklist',
-            'featureSoilProfilePhotoCount',
-            'featureChecklistNote'
+            'identifierRevisionNote'
         ]);
         expect(featureForm.groups.find((group: any) => group.name === 'position').fields)
             .toContain('longAxisOrientation');
