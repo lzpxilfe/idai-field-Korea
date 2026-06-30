@@ -36,6 +36,8 @@ describe('KoreanFieldworkWorkbenchPanel', () => {
     );
 
     expect(getByText('현장 작업대')).toBeTruthy();
+    expect(getByText('조사 경계')).toBeTruthy();
+    expect(getAllByText('유구').length).toBeGreaterThan(0);
     expect(getByText('수혈 1')).toBeTruthy();
     expect(getAllByText('조사 전').length).toBeGreaterThan(0);
 
@@ -89,8 +91,8 @@ describe('KoreanFieldworkWorkbenchPanel', () => {
     expect(getByText('과정 1/9')).toBeTruthy();
   });
 
-  it('does not render when every record is already settled', () => {
-    const { queryByTestId } = render(
+  it('keeps the survey boundary layer visible even when scope records are settled', () => {
+    const { getByTestId, getByText } = render(
       <KoreanFieldworkWorkbenchPanel
         summary={createSummary([])}
         documents={[
@@ -104,7 +106,40 @@ describe('KoreanFieldworkWorkbenchPanel', () => {
       />
     );
 
-    expect(queryByTestId('koreanFieldworkWorkbenchPanel')).toBeNull();
+    expect(getByTestId('koreanFieldworkWorkbenchPanel')).toBeTruthy();
+    expect(getByText('조사 경계')).toBeTruthy();
+    expect(getByText('조사구역 1')).toBeTruthy();
+  });
+
+  it('groups feature records by feature type on request', () => {
+    const handleEditDocument = jest.fn();
+    const { getByTestId, getByText } = render(
+      <KoreanFieldworkWorkbenchPanel
+        summary={createSummary([])}
+        documents={[
+          createDoc('feature-1', C.FEATURE, '1호 수혈', {}, {
+            featureType: 'pit',
+            featureRecordingStatus: 'confirmed',
+            featureInvestigationChecklist: [],
+          }),
+          createDoc('feature-2', C.FEATURE, '2호 구', {}, {
+            featureType: 'ditch',
+            featureRecordingStatus: 'confirmed',
+            featureInvestigationChecklist: [],
+          }),
+        ] as any}
+        onEditDocument={handleEditDocument}
+      />
+    );
+
+    fireEvent.press(getByTestId('workbenchFeatureView_byType'));
+
+    expect(getByText('수혈')).toBeTruthy();
+    expect(getByText('구상유구')).toBeTruthy();
+
+    fireEvent.press(getByTestId('workbenchFeature_feature-1'));
+
+    expect(handleEditDocument).toHaveBeenCalledWith('feature-1', C.FEATURE);
   });
 });
 

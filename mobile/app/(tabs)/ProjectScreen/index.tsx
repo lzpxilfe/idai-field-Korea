@@ -123,6 +123,7 @@ import useToast from '@/hooks/use-toast';
 import { colors } from '@/utils/colors';
 
 type FilterId = 'all'|'operation'|'feature'|'find'|'media'|'review';
+type FieldworkWorkspaceTabId = 'records'|'journal';
 
 interface RecordFilter {
   id: FilterId;
@@ -179,9 +180,8 @@ const RECORD_FILTERS: RecordFilter[] = [
   },
   {
     id: 'review',
-    label: '일지·점검',
+    label: '점검',
     categories: [
-      KOREAN_FIELDWORK_CATEGORIES.DAILY_LOG,
       KOREAN_FIELDWORK_CATEGORIES.FIELD_RECORD_QUALITY_REVIEW,
       KOREAN_FIELDWORK_CATEGORIES.SOURCE_EVIDENCE_INDEX,
     ],
@@ -229,10 +229,9 @@ const RECORD_GROUPS: RecordGroup[] = [
     ],
   },
   {
-    title: '일지와 점검',
-    subtitle: '오늘의 조사 상태와 마감 전 확인',
+    title: '점검과 색인',
+    subtitle: '마감 전 확인과 근거 색인',
     categories: [
-      KOREAN_FIELDWORK_CATEGORIES.DAILY_LOG,
       KOREAN_FIELDWORK_CATEGORIES.FIELD_RECORD_QUALITY_REVIEW,
       KOREAN_FIELDWORK_CATEGORIES.SOURCE_EVIDENCE_INDEX,
     ],
@@ -254,6 +253,8 @@ const DocumentsList: React.FC = () => {
   const preferencesContext = useContext(PreferencesContext);
   const { labels } = useContext(LabelsContext);
   const [activeFilter, setActiveFilter] = useState<FilterId>('all');
+  const [activeWorkspaceTab, setActiveWorkspaceTab] =
+    useState<FieldworkWorkspaceTabId>('records');
   const [activeWorkFilter, setActiveWorkFilter] =
     useState<KoreanFieldworkRecordWorkFilterId>('all');
   const [query, setQuery] = useState('');
@@ -289,6 +290,12 @@ const DocumentsList: React.FC = () => {
   const userVisibleDocuments = useMemo(
     () => getKoreanFieldworkUserVisibleDocuments(documents),
     [documents]
+  );
+  const recordBoardDocuments = useMemo(
+    () => userVisibleDocuments.filter((document) =>
+      document.resource.category !== KOREAN_FIELDWORK_CATEGORIES.DAILY_LOG
+    ),
+    [userVisibleDocuments]
   );
   const currentScopeParent = hierarchyPath[hierarchyPath.length - 1];
   const todaySummary = useMemo(
@@ -340,14 +347,14 @@ const DocumentsList: React.FC = () => {
   }, [config, labels]);
 
   const categoryFilteredDocuments = useMemo(
-    () => userVisibleDocuments.filter((document) => {
+    () => recordBoardDocuments.filter((document) => {
       const filterCategories = activeFilterDefinition.categories;
       return filterCategories.length === 0
         || filterCategories.includes(document.resource.category);
     }),
     [
       activeFilterDefinition,
-      userVisibleDocuments,
+      recordBoardDocuments,
     ]
   );
   const workFilterCounts = useMemo(
@@ -391,9 +398,9 @@ const DocumentsList: React.FC = () => {
       activeCategoryFilterId: activeFilter,
       activeWorkFilterId: activeWorkFilter,
       query,
-      totalDocumentCount: userVisibleDocuments.length,
+      totalDocumentCount: recordBoardDocuments.length,
     }),
-    [activeFilter, activeWorkFilter, query, userVisibleDocuments.length]
+    [activeFilter, activeWorkFilter, query, recordBoardDocuments.length]
   );
 
   const groupedDocuments = useMemo(() => RECORD_GROUPS
@@ -867,24 +874,41 @@ const DocumentsList: React.FC = () => {
 
         {hasFieldRecords && (
           <>
-            <KoreanFieldworkOverviewChart
+            <View style={styles.workspaceTabs}>
+              <WorkspaceTabButton
+                icon="account-tree"
+                isActive={activeWorkspaceTab === 'records'}
+                label="기록"
+                onPress={() => setActiveWorkspaceTab('records')}
+              />
+              <WorkspaceTabButton
+                icon="event-note"
+                isActive={activeWorkspaceTab === 'journal'}
+                label="조사일지"
+                onPress={() => setActiveWorkspaceTab('journal')}
+              />
+            </View>
+
+            {activeWorkspaceTab === 'records' && (
+            <>
+              <KoreanFieldworkOverviewChart
               summary={userVisibleTodaySummary}
               documents={userVisibleDocuments}
               currentScopeLabel={overviewScopeLabel}
               investigationModeId={investigationModeId}
               onReturnToInvestigationOverview={returnToInvestigationOverview}
-            />
+              />
 
-            <View style={styles.metricsBand}>
+              <View style={styles.metricsBand}>
               <Metric
                 label="전체 기록"
-                value={userVisibleDocuments.length}
+                value={recordBoardDocuments.length}
                 icon="inventory-2"
               />
               <Metric
-                label="오늘 일지"
-                value={userVisibleTodaySummary.dailyLogs.length}
-                icon="event-note"
+                label="조사 경계"
+                value={userVisibleTodaySummary.surveyBoundaries.length}
+                icon="polyline"
               />
               <Metric
                 label="유구"
@@ -897,34 +921,41 @@ const DocumentsList: React.FC = () => {
                 icon="priority-high"
                 warning={userVisibleTodaySummary.openIssues.length > 0}
               />
-            </View>
+              </View>
+            </>
+            )}
 
         <View style={styles.actionBand}>
-          <QuickAction
-            icon={quickActions.dailyLog.icon}
-            label={quickActions.dailyLog.label}
-            detail={quickActions.dailyLog.detail}
-            disabled={quickActions.dailyLog.disabled}
-            onPress={openDailyLog}
-          />
-          <QuickAction
-            icon={quickActions.featureCandidate.icon}
-            label={quickActions.featureCandidate.label}
-            detail={quickActions.featureCandidate.detail}
-            disabled={quickActions.featureCandidate.disabled}
-            onPress={openFirstCandidate}
-          />
-          <QuickAction
-            icon={quickActions.closeout.icon}
-            label={quickActions.closeout.label}
-            detail={quickActions.closeout.detail}
-            disabled={quickActions.closeout.disabled}
-            onPress={openFirstIssue}
-            warning={quickActions.closeout.warning}
-          />
+          {activeWorkspaceTab === 'journal' ? (
+            <QuickAction
+              icon={quickActions.dailyLog.icon}
+              label={quickActions.dailyLog.label}
+              detail={quickActions.dailyLog.detail}
+              disabled={quickActions.dailyLog.disabled}
+              onPress={openDailyLog}
+            />
+          ) : (
+            <>
+              <QuickAction
+                icon={quickActions.featureCandidate.icon}
+                label={quickActions.featureCandidate.label}
+                detail={quickActions.featureCandidate.detail}
+                disabled={quickActions.featureCandidate.disabled}
+                onPress={openFirstCandidate}
+              />
+              <QuickAction
+                icon={quickActions.closeout.icon}
+                label={quickActions.closeout.label}
+                detail={quickActions.closeout.detail}
+                disabled={quickActions.closeout.disabled}
+                onPress={openFirstIssue}
+                warning={quickActions.closeout.warning}
+              />
+            </>
+          )}
         </View>
 
-        {priorityTasks.length > 0 && (
+        {activeWorkspaceTab === 'records' && priorityTasks.length > 0 && (
           <View style={styles.priorityTaskBand}>
             <KoreanFieldworkPriorityTaskList
               tasks={priorityTasks}
@@ -937,6 +968,7 @@ const DocumentsList: React.FC = () => {
           </View>
         )}
 
+        {activeWorkspaceTab === 'journal' && (
         <KoreanFieldworkDailyNotebookDigest
           canOpenDailyLog={!quickActions.dailyLog.disabled}
           documents={userVisibleDocuments}
@@ -944,6 +976,7 @@ const DocumentsList: React.FC = () => {
           onContinueEntry={continueNotebookEntry}
           onOpenDailyLog={openDailyLog}
         />
+        )}
 
         {selectedWorkbenchDocument && (
           <>
@@ -970,7 +1003,7 @@ const DocumentsList: React.FC = () => {
                 setIsSelectedWorkbenchExpanded((current) => !current)}
               onUpdateResourceFields={updateWorkbenchResourceFields}
             />
-            {isSelectedWorkbenchExpanded && (
+            {activeWorkspaceTab === 'journal' && isSelectedWorkbenchExpanded && (
               <KoreanFieldworkFieldNotePanel
                 selectedDocument={selectedWorkbenchDocument}
                 documents={documents}
@@ -1000,6 +1033,15 @@ const DocumentsList: React.FC = () => {
           </>
         )}
 
+        {activeWorkspaceTab === 'journal' && (
+          <KoreanFieldworkNotebookLedger
+            documents={userVisibleDocuments}
+            onContinueEntry={continueNotebookEntry}
+            onOpenDocument={selectWorkbenchDocument}
+          />
+        )}
+
+        {activeWorkspaceTab === 'records' && (
         <TouchableOpacity
           activeOpacity={0.86}
           onPress={() => setShowFieldworkDetails((current) => !current)}
@@ -1011,7 +1053,7 @@ const DocumentsList: React.FC = () => {
               {showFieldworkDetails ? '현장 보조판 접기' : '현장 보조판 보기'}
             </Text>
             <Text style={styles.detailToggleDescription} numberOfLines={1}>
-              필요할 때 메모·진행·범위만 확인
+              필요할 때 작업대·진행·범위만 확인
             </Text>
           </View>
           <MaterialIcons
@@ -1020,15 +1062,10 @@ const DocumentsList: React.FC = () => {
             color="#344054"
           />
         </TouchableOpacity>
+        )}
 
-        {showFieldworkDetails && (
+        {activeWorkspaceTab === 'records' && showFieldworkDetails && (
           <>
-            <KoreanFieldworkNotebookLedger
-              documents={userVisibleDocuments}
-              onContinueEntry={continueNotebookEntry}
-              onOpenDocument={selectWorkbenchDocument}
-            />
-
             <KoreanFieldworkWorkbenchPanel
               summary={userVisibleTodaySummary}
               documents={userVisibleDocuments}
@@ -1083,6 +1120,8 @@ const DocumentsList: React.FC = () => {
           </>
         )}
 
+        {activeWorkspaceTab === 'records' && (
+        <>
         <View style={styles.searchBand}>
           <View style={styles.searchBox}>
             <MaterialIcons name="search" size={20} color="#586069" />
@@ -1247,6 +1286,8 @@ const DocumentsList: React.FC = () => {
             />
           )}
         </View>
+        </>
+        )}
           </>
         )}
       </ScrollView>
@@ -1307,6 +1348,44 @@ const QuickAction: React.FC<{
       <Text style={styles.quickActionLabel} numberOfLines={1}>{label}</Text>
       <Text style={styles.quickActionDetail} numberOfLines={1}>{detail}</Text>
     </View>
+  </TouchableOpacity>
+);
+
+const WorkspaceTabButton: React.FC<{
+  icon: keyof typeof MaterialIcons.glyphMap;
+  isActive: boolean;
+  label: string;
+  onPress: () => void;
+}> = ({
+  icon,
+  isActive,
+  label,
+  onPress,
+}) => (
+  <TouchableOpacity
+    activeOpacity={0.86}
+    accessibilityRole="button"
+    accessibilityState={{ selected: isActive }}
+    onPress={onPress}
+    style={[
+      styles.workspaceTab,
+      isActive && styles.workspaceTabActive,
+    ]}
+  >
+    <MaterialIcons
+      name={icon}
+      size={17}
+      color={isActive ? 'white' : '#344054'}
+    />
+    <Text
+      style={[
+        styles.workspaceTabText,
+        isActive && styles.workspaceTabTextActive,
+      ]}
+      numberOfLines={1}
+    >
+      {label}
+    </Text>
   </TouchableOpacity>
 );
 
@@ -2092,6 +2171,40 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 12,
     paddingVertical: 10,
+  },
+  workspaceTabs: {
+    backgroundColor: 'white',
+    borderBottomColor: '#d0d5dd',
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  workspaceTab: {
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    borderColor: '#d0d5dd',
+    borderRadius: 6,
+    borderWidth: 1,
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginHorizontal: 4,
+    minHeight: 42,
+    paddingHorizontal: 10,
+  },
+  workspaceTabActive: {
+    backgroundColor: '#27343b',
+    borderColor: '#27343b',
+  },
+  workspaceTabText: {
+    color: '#344054',
+    fontSize: 13,
+    fontWeight: '900',
+    marginLeft: 6,
+  },
+  workspaceTabTextActive: {
+    color: 'white',
   },
   metric: {
     alignItems: 'center',

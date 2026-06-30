@@ -74,6 +74,18 @@ describe('Korean fieldwork workbench', () => {
     )).toEqual([]);
   });
 
+  it('keeps daily logs out of tablet workbench decision cards', () => {
+    const dailyLog = createDoc('daily-log-1', C.DAILY_LOG, '6월 30일 일지', {}, {
+      fieldRecordQuality: [],
+      recordCreationTiming: '',
+    });
+
+    expect(getKoreanFieldworkWorkbenchItems(
+      createSummary([]),
+      [dailyLog] as any
+    )).toEqual([]);
+  });
+
   it('counts pen memo review as a tablet workflow step', () => {
     const feature = createDoc('feature-1', C.FEATURE, '유구 1', {}, {
       featureRecordingStatus: 'confirmed',
