@@ -9,6 +9,7 @@ import * as sharpModule from 'sharp';
 import { ImageUploader } from '../../../src/app/components/image/upload/image-uploader';
 import {
     createSoilColorAssistUpdatesForImageUpload,
+    createSoilColorAssistUpdatesForImageUploadAtPoint,
     getNearestMunsellCandidates
 } from '../../../src/app/util/korean-fieldwork-soil-color-photo-assist';
 
@@ -65,6 +66,31 @@ describe('Korean fieldwork soil color photo assist', () => {
     });
 
 
+    it('samples Munsell candidates from a selected uploaded image point', async () => {
+
+        const buffer = await createSplitJpegBuffer(
+            { red: 111, green: 87, blue: 61 },
+            { red: 139, green: 128, blue: 88 }
+        );
+
+        const leftUpdates = await createSoilColorAssistUpdatesForImageUploadAtPoint(
+            'SoilProfilePhoto',
+            buffer,
+            { x: 2000, y: 5000 }
+        );
+        const rightUpdates = await createSoilColorAssistUpdatesForImageUploadAtPoint(
+            'SoilProfilePhoto',
+            buffer,
+            { x: 8000, y: 5000 }
+        );
+
+        expect(leftUpdates.soilColorAssistCandidates).toContain('사진 선택 지점 20%/50%');
+        expect(leftUpdates.soilColorAssistCandidates).toContain('1: 10YR 4/3');
+        expect(rightUpdates.soilColorAssistCandidates).toContain('사진 선택 지점 80%/50%');
+        expect(rightUpdates.soilColorAssistCandidates).toContain('1: 2.5Y 5/3');
+    });
+
+
     it('writes upload candidates only when the configured fields exist', async () => {
 
         const document: any = { resource: { category: 'SoilProfilePhoto' } };
@@ -117,6 +143,37 @@ const createSolidJpegBuffer = (rgb: {
         width: 24
     }
 }).jpeg({ quality: 90 }).toBuffer();
+
+
+const createSplitJpegBuffer = async (
+    leftRgb: { blue: number; green: number; red: number },
+    rightRgb: { blue: number; green: number; red: number }
+): Promise<Buffer> => {
+
+    const width = 48;
+    const height = 24;
+    const channels = 4;
+    const data = Buffer.alloc(width * height * channels);
+
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            const rgb = x < width / 2 ? leftRgb : rightRgb;
+            const offset = ((y * width) + x) * channels;
+            data[offset] = rgb.red;
+            data[offset + 1] = rgb.green;
+            data[offset + 2] = rgb.blue;
+            data[offset + 3] = 255;
+        }
+    }
+
+    return getSharp()(data, {
+        raw: {
+            channels,
+            height,
+            width
+        }
+    }).jpeg({ quality: 100 }).toBuffer();
+};
 
 
 function getSharp(): any {

@@ -3232,6 +3232,8 @@ function validateSoilColorReviewWorkflow() {
   const desktopWorkbenchSpecText = readTextFile('desktop/test/unit/util/korean-fieldwork-workbench.spec.ts');
   const desktopCandidateText = readTextFile('desktop/src/app/util/korean-fieldwork-soil-color-candidates.ts');
   const desktopCandidateSpecText = readTextFile('desktop/test/unit/util/korean-fieldwork-soil-color-candidates.spec.ts');
+  const desktopAssistText = readTextFile('desktop/src/app/util/korean-fieldwork-soil-color-photo-assist.ts');
+  const desktopAssistSpecText = readTextFile('desktop/test/unit/util/korean-fieldwork-soil-color-photo-assist.spec.ts');
   const desktopEvidenceReviewText = readTextFile('desktop/src/app/util/korean-fieldwork-evidence-review.ts');
   const desktopEvidenceReviewSpecText = readTextFile('desktop/test/unit/util/korean-fieldwork-evidence-review.spec.ts');
   const desktopRecordContextPanelText = readTextFile(
@@ -3355,6 +3357,14 @@ function validateSoilColorReviewWorkflow() {
       || !desktopRecordContextPanelText.includes('샘플 위치')
       || !desktopRecordContextPanelSpecText.includes('샘플 위치')) {
     findings.push('desktop evidence review must carry tablet eyedropper sample locations into review and narrative append text');
+  }
+  if (!desktopAssistText.includes('createSoilColorAssistUpdatesForImageUploadAtPoint')
+      || !desktopAssistText.includes('getPointSampleLabel')
+      || !desktopAssistText.includes('사진 선택 지점')
+      || !desktopAssistSpecText.includes('selected uploaded image point')
+      || !desktopAssistSpecText.includes('사진 선택 지점 20%/50%')
+      || !desktopAssistSpecText.includes('사진 선택 지점 80%/50%')) {
+    findings.push('desktop soil color photo assist must sample Munsell candidates from selected uploaded image points');
   }
 
   for (const source of assistGenerators) {
