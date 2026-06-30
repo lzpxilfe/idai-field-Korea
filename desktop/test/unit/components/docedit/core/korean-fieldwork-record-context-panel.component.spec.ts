@@ -351,6 +351,54 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
     });
 
 
+    it('shows tablet daily journal boundary handwriting on opened DailyLog records', () => {
+
+        const dailyLog = createDocument('daily-log-1', 'DailyLog', '2026-06-30 일지', {}, {
+            dailyLogBoundaryMemoStrokes: JSON.stringify({
+                version: 1,
+                strokes: [
+                    { points: [{ x: 1200, y: 2200 }, { x: 3200, y: 4200 }] }
+                ]
+            }),
+            dailyLogBoundaryMemoUpdatedAt: '2026-06-30T09:15:00.000Z'
+        });
+        const component = createComponent({
+            find: jest.fn().mockResolvedValue({ documents: [dailyLog] })
+        });
+        component.document = dailyLog as any;
+        component.fieldDefinitions = [
+            field('dailyLogBoundaryMemoStrokes')
+        ] as any;
+
+        expect(component.shouldShow()).toBe(true);
+        expect(component.hasDailyJournalBoundaryMemoPreview()).toBe(true);
+
+        const preview = component.getDailyJournalBoundaryMemoPreview()!;
+
+        expect(preview.summary).toBe('경계 메모 1획/2점.');
+        expect(preview.updatedAt).toBe('2026-06-30');
+        expect(preview.viewBox).toBe('0 0 120 72');
+        expect(preview.path).toContain('M ');
+        expect(preview.path).toContain('L ');
+    });
+
+
+    it('keeps the tablet daily journal boundary preview section in the desktop record context template', () => {
+
+        const template = fs.readFileSync(
+            path.resolve(
+                __dirname,
+                '../../../../../src/app/components/docedit/core/korean-fieldwork-record-context-panel.html'
+            ),
+            'utf8'
+        );
+
+        expect(template).toContain('getDailyJournalBoundaryMemoPreview() as boundaryMemoPreview');
+        expect(template).toContain('작업일지 경계 메모');
+        expect(template).toContain('태블릿 작업일지 경계 메모');
+    });
+
+
     it('shows direct tablet photos on desktop find records', async () => {
 
         const find = createDocument('find-1', 'Find', 'FIND1', {}, {

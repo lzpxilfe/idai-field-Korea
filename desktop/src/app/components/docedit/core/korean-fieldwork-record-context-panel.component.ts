@@ -142,7 +142,16 @@ interface FeatureFreeDrawingPreview {
     viewBox: string;
 }
 
+interface DailyJournalBoundaryMemoPreview {
+    path: string;
+    summary: string;
+    updatedAt?: string;
+    viewBox: string;
+}
+
 const KOREAN_FIELDWORK_CONTEXT_FIELDS = [
+    'dailyLogBoundaryMemoStrokes',
+    'dailyLogBoundaryMemoUpdatedAt',
     'featureFreeDrawingStrokes',
     'featureFreeDrawingUpdatedAt',
     'featureInvestigationChecklist',
@@ -206,6 +215,9 @@ const FEATURE_SKETCH_HEIGHT = 80;
 const FEATURE_SKETCH_PADDING = 8;
 const FEATURE_FREE_DRAWING_STROKES_FIELD = 'featureFreeDrawingStrokes';
 const FEATURE_FREE_DRAWING_UPDATED_AT_FIELD = 'featureFreeDrawingUpdatedAt';
+const DAILY_LOG_CATEGORY_NAME = 'DailyLog';
+const DAILY_LOG_BOUNDARY_MEMO_STROKES_FIELD = 'dailyLogBoundaryMemoStrokes';
+const DAILY_LOG_BOUNDARY_MEMO_UPDATED_AT_FIELD = 'dailyLogBoundaryMemoUpdatedAt';
 
 const FEATURE_RECORDING_STATUS_LABELS: Readonly<Record<string, ContextChip>> = {
     candidate: { label: '조사 전', tone: 'warning' },
@@ -408,6 +420,28 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
             path: preview.path,
             summary: this.getFeatureFreeDrawingSummary(),
             updatedAt: this.getFeatureFreeDrawingUpdatedAtLabel(),
+            viewBox: preview.viewBox
+        };
+    }
+
+
+    public hasDailyJournalBoundaryMemoPreview = () =>
+        this.getDailyJournalBoundaryMemoPreview() !== undefined;
+
+
+    public getDailyJournalBoundaryMemoPreview(): DailyJournalBoundaryMemoPreview|undefined {
+
+        if (this.document?.resource?.category !== DAILY_LOG_CATEGORY_NAME) return undefined;
+
+        const preview = getPenMemoSketchPreview(
+            this.document.resource[DAILY_LOG_BOUNDARY_MEMO_STROKES_FIELD]
+        );
+        if (!preview) return undefined;
+
+        return {
+            path: preview.path,
+            summary: preview.label.replace(/^스케치 메모/, '경계 메모'),
+            updatedAt: this.getDateFieldLabel(DAILY_LOG_BOUNDARY_MEMO_UPDATED_AT_FIELD),
             viewBox: preview.viewBox
         };
     }
@@ -1280,7 +1314,13 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
 
     private getFeatureFreeDrawingUpdatedAtLabel(): string|undefined {
 
-        const value = this.document.resource[FEATURE_FREE_DRAWING_UPDATED_AT_FIELD];
+        return this.getDateFieldLabel(FEATURE_FREE_DRAWING_UPDATED_AT_FIELD);
+    }
+
+
+    private getDateFieldLabel(fieldName: string): string|undefined {
+
+        const value = this.document.resource[fieldName];
         if (typeof value !== 'string' || value.trim().length === 0) return undefined;
 
         const date = new Date(value);

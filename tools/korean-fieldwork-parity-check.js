@@ -2559,6 +2559,9 @@ function validateRecordPanelOrder() {
   const desktopRecordContextPanelTemplateText = readTextFile(
     'desktop/src/app/components/docedit/core/korean-fieldwork-record-context-panel.html'
   );
+  const desktopRecordContextPanelStyleText = readTextFile(
+    'desktop/src/app/components/docedit/core/korean-fieldwork-record-context-panel.scss'
+  );
   const desktopRecordContextPanelSpecText = readTextFile(
     'desktop/test/unit/components/docedit/core/korean-fieldwork-record-context-panel.component.spec.ts'
   );
@@ -2673,6 +2676,13 @@ function validateRecordPanelOrder() {
       || !desktopNotebookDigestSpecText.includes('boundaryMemoPreview')
       || !desktopPriorityStripSpecText.includes('boundaryMemoPreview')) {
     findings.push('desktop notebook panel must preview tablet daily-journal boundary handwriting, not only count it');
+  }
+  if (!desktopRecordContextPanelText.includes('getDailyJournalBoundaryMemoPreview')
+      || !desktopRecordContextPanelText.includes('dailyLogBoundaryMemoStrokes')
+      || !desktopRecordContextPanelTemplateText.includes('korean-fieldwork-record-context-daily-boundary')
+      || !desktopRecordContextPanelStyleText.includes('korean-fieldwork-record-context-daily-boundary-svg')
+      || !desktopRecordContextPanelSpecText.includes('opened DailyLog records')) {
+    findings.push('desktop record context must preview tablet daily-journal boundary handwriting on opened DailyLog records');
   }
   if (!tabletHierarchyBoardText.includes('이어진 기록')
       || !tabletHierarchyBoardText.includes('포함 위치')) {
