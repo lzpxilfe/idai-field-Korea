@@ -1115,10 +1115,13 @@ function validateGuidedFeatureDraftDefaults() {
       || desktopRecordContextTemplateText.includes('위성지도식 평면')
       || desktopRecordContextTemplateText.includes('평면 배치 지도')
       || !desktopRecordContextTemplateText.includes('satellite-field')
+      || !desktopRecordContextTemplateText.includes('map-reference-card')
+      || !desktopRecordContextTemplateText.includes('shape-reference-card')
       || !desktopRecordContextStyleText.includes('.flat-map-surface')
       || !desktopRecordContextStyleText.includes('.satellite-road')
-      || !desktopRecordContextStyleText.includes('height: 148px;')
-      || !desktopRecordContextStyleText.includes('repeat(auto-fit, minmax(210px, 1fr))')
+      || !desktopRecordContextStyleText.includes('height: clamp(220px, 30vh, 360px);')
+      || !desktopRecordContextStyleText.includes('minmax(360px, 1.75fr) minmax(230px, 0.85fr)')
+      || desktopRecordContextStyleText.includes('height: 148px;')
       || !desktopRecordContextSpecText.includes('flat placement map')) {
     findings.push('desktop record context must preview tablet feature placement as a flat placement map surface');
   }

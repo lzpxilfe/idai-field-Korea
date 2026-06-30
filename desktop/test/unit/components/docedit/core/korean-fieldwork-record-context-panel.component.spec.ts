@@ -292,6 +292,8 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
 
         expect(template).toContain('class="flat-map-surface"');
         expect(template).toContain('class="flat-map-grid"');
+        expect(template).toContain('map-reference-card');
+        expect(template).toContain('shape-reference-card');
         expect(template).toContain('조사 경계 위 배치');
         expect(template).not.toContain('지도처럼 위에서 보기');
         expect(template).not.toContain('위성지도식 평면');
@@ -303,8 +305,10 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
         expect(styles).toContain('.satellite-road');
         expect(styles).toContain('.flat-map-grid path');
         expect(styles).toContain('.flat-map-badge text');
-        expect(styles).toContain('height: 148px;');
-        expect(styles).toContain('grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));');
+        expect(styles).toContain('grid-template-columns: minmax(360px, 1.75fr) minmax(230px, 0.85fr);');
+        expect(styles).toContain('height: clamp(220px, 30vh, 360px);');
+        expect(styles).toContain('shape-reference-card .korean-fieldwork-record-context-feature-sketch-svg');
+        expect(styles).not.toContain('height: 148px;');
     });
 
 
