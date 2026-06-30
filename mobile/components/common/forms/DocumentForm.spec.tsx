@@ -13,6 +13,17 @@ jest.mock('expo-camera', () => ({
   CameraView: 'CameraView',
 }));
 jest.mock('@/components/Project/ScanBarcodeButton', () => () => null);
+jest.mock('./EditFormField', () => {
+  const React = require('react');
+  const { Text } = require('react-native');
+
+  return ({ field, currentValue }: any) =>
+    React.createElement(
+      Text,
+      { testID: `inputField_${field.name}` },
+      currentValue === undefined ? '' : String(currentValue)
+    );
+});
 
 describe('DocumentForm Korean fieldwork detail fields', () => {
   it('does not show empty raw-data groups as selectable detail tabs for ordinary forms', () => {
@@ -279,6 +290,56 @@ describe('DocumentForm Korean fieldwork detail fields', () => {
       {
         pitDwellingExposureBaulk: ['initialStratigraphyChecked'],
         potteryKilnIdentification: ['firingFeature'],
+      },
+      true
+    );
+
+    expect(queryByText('가져온 기존 항목')).toBeNull();
+    expect(queryByTestId('fullFormToggle')).toBeNull();
+  });
+  it('treats serialized empty arrays as blank imported values', () => {
+    const { queryByTestId, queryByText } = renderDocumentForm(
+      createCategoryForm([
+        {
+          name: 'stem',
+          fields: [
+            { name: 'legacyEmptyList', inputType: 'input', editable: true },
+          ],
+        },
+        {
+          name: 'koreanFieldwork',
+          fields: [{ name: 'period', inputType: 'dropdown', editable: true }],
+        },
+      ]),
+      {
+        period: 'joseon',
+        legacyEmptyList: '[]',
+      },
+      true
+    );
+
+    expect(queryByText('가져온 기존 항목')).toBeNull();
+    expect(queryByTestId('fullFormToggle')).toBeNull();
+  });
+
+  it('keeps soil profile internal tablet fields out of imported existing items', () => {
+    const { queryByTestId, queryByText } = renderDocumentForm(
+      createCategoryForm([
+        {
+          name: 'stem',
+          fields: [
+            { name: 'soilProfileActiveLayerNumber', inputType: 'input', editable: true },
+            { name: 'soilProfileLayerMarkers', inputType: 'input', editable: true },
+            { name: 'soilProfileLayerIds', inputType: 'input', editable: true },
+            { name: 'fieldworkPhotoAnnotationStrokes', inputType: 'input', editable: true },
+          ],
+        },
+      ], 'SoilProfilePhoto'),
+      {
+        soilProfileActiveLayerNumber: 2,
+        soilProfileLayerMarkers: '[]',
+        soilProfileLayerIds: '[]',
+        fieldworkPhotoAnnotationStrokes: '[]',
       },
       true
     );

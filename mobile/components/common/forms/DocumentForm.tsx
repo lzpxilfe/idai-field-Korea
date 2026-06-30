@@ -114,9 +114,16 @@ const KOREAN_FIELDWORK_PANEL_FIELD_NAMES = new Set([
   'soilColorNote',
   'soilColorReviewed',
   'soilColorRoi',
+  'soilProfileActiveLayerNumber',
   'soilProfileCaptureNote',
   'soilProfileColorNote',
   'soilProfileColorSwatches',
+  'soilProfileLayerIds',
+  'soilProfileLayerMarkers',
+  'fieldworkPhotoAnnotationStrokes',
+  'fieldworkPhotoAnnotationUpdatedAt',
+  'soilProfilePhotoAnnotationStrokes',
+  'soilProfilePhotoAnnotationUpdatedAt',
   'surfaceBuildingJudgement',
   'tombBurialStructureInvestigation',
   'tombInteriorRecoveryRecord',
@@ -406,7 +413,10 @@ const rawFieldHasValue = (
 
 const hasValue = (value: unknown): boolean => {
   if (value === undefined || value === null) return false;
-  if (typeof value === 'string') return value.trim().length > 0;
+  if (typeof value === 'string') {
+    const trimmedValue = value.trim();
+    return trimmedValue.length > 0 && trimmedValue !== '[]';
+  }
   if (Array.isArray(value)) return value.length > 0;
   if (typeof value === 'object') return Object.keys(value).length > 0;
   return true;
