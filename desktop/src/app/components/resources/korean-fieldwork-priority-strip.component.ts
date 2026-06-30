@@ -105,6 +105,7 @@ import {
 } from '../../util/korean-fieldwork-closeout-actions';
 import {
     canCreateKoreanFieldworkChildRecord,
+    createNextFeatureIdentifier,
     createKoreanFieldworkDraftResource,
     getKoreanFieldworkContinuationActions
 } from '../../util/korean-fieldwork-document-drafts';
@@ -128,11 +129,13 @@ interface KoreanFieldworkRecordWorkEmptyState {
 }
 
 interface PendingFeatureDraft {
+    identifier: string;
     parentDocumentId: string;
     parentLabel: string;
 }
 
 interface KoreanFieldworkCreateDocumentDraftOptions {
+    identifier?: string;
     recordMemoContinuation?: ReturnType<typeof getKoreanFieldworkNotebookContinuationSeed>;
     recordMemoTemplate?: boolean;
 }
@@ -466,6 +469,22 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
 
     public getPendingFeatureDraftParentLabel = () =>
         this.pendingFeatureDraft?.parentLabel ?? '선택 기록';
+
+    public getPendingFeatureDraftIdentifier = () =>
+        this.pendingFeatureDraft?.identifier ?? '';
+
+    public getPendingFeatureDraftIdentifierPlaceholder = () =>
+        createNextFeatureIdentifier('unknown', this.projectDocuments);
+
+    public updatePendingFeatureDraftIdentifier(identifier: string) {
+
+        if (!this.pendingFeatureDraft) return;
+
+        this.pendingFeatureDraft = {
+            ...this.pendingFeatureDraft,
+            identifier
+        };
+    }
 
     public getFeatureDraftPresets = (): readonly KoreanFieldworkFeatureGuidancePreset[] =>
         KOREAN_FIELDWORK_FEATURE_GUIDANCE_PRESETS;
@@ -1070,11 +1089,13 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
         if (!pendingFeatureDraft) return;
 
         try {
+            const identifier = this.getPendingFeatureIdentifierForPreset(preset);
             this.pendingFeatureDraft = undefined;
             await this.createDocumentDraft(
                 pendingFeatureDraft.parentDocumentId,
                 FEATURE_CATEGORY_NAME,
-                preset.featureType
+                preset.featureType,
+                { identifier }
             );
             await this.refresh();
         } catch (errWithParams) {
@@ -1371,6 +1392,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
 
         if (categoryName === FEATURE_CATEGORY_NAME) {
             this.pendingFeatureDraft = {
+                identifier: '',
                 parentDocumentId,
                 parentLabel: this.getDocumentLabel(parentDocumentId)
             };
@@ -1396,6 +1418,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
             {
                 boundarySummary: this.getProjectBoundarySummaryDraftValue(categoryName),
                 featureType,
+                identifier: options.identifier,
                 recordMemoContinuation: options.recordMemoContinuation,
                 recordMemoTemplate: options.recordMemoTemplate
             }
@@ -1419,6 +1442,15 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
         return document?.resource.identifier
             || document?.resource.id
             || '선택 기록';
+    }
+
+
+    private getPendingFeatureIdentifierForPreset(preset: KoreanFieldworkFeatureGuidancePreset): string {
+
+        const typedIdentifier = this.pendingFeatureDraft?.identifier?.trim();
+
+        return typedIdentifier
+            || createNextFeatureIdentifier(preset.featureType, this.projectDocuments);
     }
 
 

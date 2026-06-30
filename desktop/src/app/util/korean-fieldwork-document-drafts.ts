@@ -26,6 +26,7 @@ export interface KoreanFieldworkDraftResourceOptions {
     boundarySummary?: string;
     boundarySource?: string;
     featureType?: string;
+    identifier?: string;
     recordMemoContinuation?: KoreanFieldworkFieldNoteContinuationSeed;
     recordMemoTemplate?: boolean;
     referenceBasemapProvider?: string;
@@ -191,7 +192,7 @@ export function createKoreanFieldworkDraftResource(
         : undefined;
 
     return {
-        identifier: createDraftIdentifier(categoryName, featurePreset?.featureType),
+        identifier: createDraftIdentifier(categoryName, featurePreset?.featureType, options.identifier),
         relations: createKoreanFieldworkDraftRelations(parentDoc, categoryName, projectConfiguration),
         category: categoryName,
         ...getKoreanFieldworkDefaultFieldValues(category, {
@@ -271,13 +272,29 @@ export function canCreateKoreanFieldworkChildRecord(
 }
 
 
-export function createDraftIdentifier(categoryName: string, featureType?: string): string {
+export function createDraftIdentifier(
+        categoryName: string,
+        featureType?: string,
+        preferredIdentifier?: string): string {
+
+    const normalizedPreferredIdentifier = preferredIdentifier?.trim();
+    if (normalizedPreferredIdentifier) return normalizedPreferredIdentifier;
 
     const prefix = categoryName === CATEGORIES.FEATURE && featureType
         ? FEATURE_TYPE_IDENTIFIER_PREFIXES[featureType] ?? DRAFT_IDENTIFIER_PREFIXES[categoryName]
         : DRAFT_IDENTIFIER_PREFIXES[categoryName] ?? toKebabCase(categoryName);
 
     return `${prefix}-${Date.now()}`;
+}
+
+
+export function createNextFeatureIdentifier(featureType: string|undefined,
+                                            existingDocuments: readonly Document[]): string {
+
+    const prefix = getFeatureIdentifierPrefix(featureType);
+    const nextNumber = getNextFeatureIdentifierNumber(featureType, prefix, existingDocuments);
+
+    return `${nextNumber}호 ${prefix}`;
 }
 
 
@@ -383,6 +400,87 @@ function makeRecordMemoTemplate(input: KoreanFieldworkFieldNoteInput|undefined):
 function makeFieldNoteSectionLine(label: string, value: string|undefined): string {
 
     return `[${label}]${value ? ` ${value}` : ''}`;
+}
+
+
+function getFeatureIdentifierPrefix(featureType: string|undefined): string {
+
+    return FEATURE_TYPE_IDENTIFIER_PREFIXES[featureType ?? 'unknown']
+        ?? FEATURE_TYPE_IDENTIFIER_PREFIXES.unknown;
+}
+
+
+function getNextFeatureIdentifierNumber(featureType: string|undefined,
+                                        prefix: string,
+                                        existingDocuments: readonly Document[]): number {
+
+    const maxNumber = existingDocuments
+        .filter(document => document.resource.category === CATEGORIES.FEATURE)
+        .reduce((maxIdentifierNumber, document) => {
+            const identifier = document.resource.identifier ?? '';
+            const identifierNumber = getFeatureIdentifierNumber(identifier, prefix);
+            if (identifierNumber !== undefined) {
+                return Math.max(maxIdentifierNumber, identifierNumber);
+            }
+
+            if (getDocumentFeatureType(document) !== featureType) {
+                return maxIdentifierNumber;
+            }
+
+            return Math.max(
+                maxIdentifierNumber,
+                getFirstPositiveNumber(identifier) ?? 0
+            );
+        }, 0);
+
+    return maxNumber + 1;
+}
+
+
+function getDocumentFeatureType(document: Document): string {
+
+    const featureType = (document.resource as Record<string, unknown>).featureType;
+
+    return typeof featureType === 'string' ? featureType : '';
+}
+
+
+function getFeatureIdentifierNumber(identifier: string, prefix: string): number|undefined {
+
+    const normalizedIdentifier = identifier.replace(/\s+/g, ' ').trim();
+    if (!normalizedIdentifier) return undefined;
+
+    const escapedPrefix = escapeRegExp(prefix);
+    const patterns = [
+        new RegExp(`(?:^|\\s)(\\d+)\\s*호\\s*${escapedPrefix}(?:\\s|$)`),
+        new RegExp(`(?:^|\\s)${escapedPrefix}\\s*(\\d+)\\s*호(?:\\s|$)`),
+        new RegExp(`(?:^|\\s)${escapedPrefix}[-_\\s]*(\\d+)(?:\\s|$)`)
+    ];
+
+    for (const pattern of patterns) {
+        const match = normalizedIdentifier.match(pattern);
+        const number = match ? Number.parseInt(match[1], 10) : 0;
+        if (number > 0) return number;
+    }
+
+    return normalizedIdentifier.includes(prefix)
+        ? getFirstPositiveNumber(normalizedIdentifier)
+        : undefined;
+}
+
+
+function getFirstPositiveNumber(value: string): number|undefined {
+
+    const match = value.match(/\d+/);
+    const number = match ? Number.parseInt(match[0], 10) : 0;
+
+    return number > 0 ? number : undefined;
+}
+
+
+function escapeRegExp(value: string): string {
+
+    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 

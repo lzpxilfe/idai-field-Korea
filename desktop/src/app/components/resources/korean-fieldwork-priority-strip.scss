@@ -1770,7 +1770,7 @@ korean-fieldwork-priority-strip {
     display: grid;
     gap: 7px;
     grid-column: 1 / -1;
-    grid-template-columns: minmax(180px, 1fr) minmax(220px, 2fr) auto;
+    grid-template-columns: minmax(190px, 1fr) minmax(180px, 0.8fr) minmax(220px, 2fr) auto;
     min-height: 38px;
     min-width: 0;
     padding: 6px 8px;
@@ -1812,6 +1812,37 @@ korean-fieldwork-priority-strip {
     flex-wrap: wrap;
     gap: 5px;
     min-width: 0;
+  }
+
+  .korean-fieldwork-feature-draft-picker-name {
+    align-items: stretch;
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+
+    span {
+      color: #175cd3;
+      font-size: 10px;
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    input {
+      background: #ffffff;
+      border: 1px solid #b2ddff;
+      border-radius: 4px;
+      color: #1f2937;
+      font-size: 12px;
+      font-weight: 800;
+      min-height: 26px;
+      min-width: 0;
+      padding: 3px 7px;
+
+      &::placeholder {
+        color: #667085;
+        font-weight: 700;
+      }
+    }
   }
 
   .korean-fieldwork-feature-draft-picker-option,

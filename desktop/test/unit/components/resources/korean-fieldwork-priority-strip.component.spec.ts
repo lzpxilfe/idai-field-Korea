@@ -446,6 +446,87 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
     });
 
 
+    it('names pending desktop feature drafts from typed names or next field numbers', async () => {
+
+        const operation = createDocument('operation-1', 'Operation');
+        const datastore = {
+            find: jest.fn().mockResolvedValue({
+                documents: [
+                    createDocument('project', 'Project'),
+                    operation,
+                    createDocument('boundary-1', 'SurveyBoundary', {
+                        relations: { isRecordedIn: ['operation-1'] }
+                    }),
+                    createDocument('feature-1', 'Feature', {
+                        identifier: '1호 수혈',
+                        featureType: 'pit',
+                        relations: { liesWithin: ['operation-1'] }
+                    }),
+                    createDocument('feature-2', 'Feature', {
+                        identifier: '수혈 2호',
+                        featureType: 'pit',
+                        relations: { liesWithin: ['operation-1'] }
+                    })
+                ]
+            }),
+            get: jest.fn().mockResolvedValue(operation)
+        };
+        const doceditLauncher = {
+            editDocument: jest.fn().mockResolvedValue(undefined)
+        };
+        const component = createComponent(
+            datastore,
+            createActionProjectConfiguration(),
+            { jumpToResource: jest.fn() },
+            { deselect: jest.fn(), setMode: jest.fn() },
+            { openInformationModal: jest.fn() },
+            { navigate: jest.fn() },
+            doceditLauncher
+        );
+
+        await component.refresh();
+        component.setActivePanel('today');
+        await component.runTodayQuickAction(component.getTodayQuickActions()[1]);
+
+        expect(component.hasPendingFeatureDraft()).toBe(true);
+        expect(component.getPendingFeatureDraftIdentifier()).toBe('');
+        expect(component.getPendingFeatureDraftIdentifierPlaceholder()).toBe('1호 유구');
+
+        const pitPreset = component.getFeatureDraftPresets()
+            .find(preset => preset.featureType === 'pit')!;
+
+        await component.createPendingFeatureDraft(pitPreset);
+
+        expect(doceditLauncher.editDocument).toHaveBeenCalledWith(
+            expect.objectContaining({
+                resource: expect.objectContaining({
+                    identifier: '3호 수혈',
+                    category: 'Feature',
+                    featureType: 'pit'
+                })
+            })
+        );
+
+        await component.runTodayQuickAction(component.getTodayQuickActions()[1]);
+        component.updatePendingFeatureDraftIdentifier('  북쪽 배수로  ');
+
+        const ditchPreset = component.getFeatureDraftPresets()
+            .find(preset => preset.featureType === 'ditch')!;
+
+        await component.createPendingFeatureDraft(ditchPreset);
+
+        expect(doceditLauncher.editDocument).toHaveBeenCalledWith(
+            expect.objectContaining({
+                resource: expect.objectContaining({
+                    identifier: '북쪽 배수로',
+                    category: 'Feature',
+                    featureType: 'ditch'
+                })
+            })
+        );
+    });
+
+
     it('runs workflow actions from the sequence strip', async () => {
 
         const datastore = {
@@ -1376,7 +1457,7 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
         expect(doceditLauncher.editDocument).toHaveBeenCalledWith(
             expect.objectContaining({
                 resource: expect.objectContaining({
-                    identifier: '가마-1700000000000',
+                    identifier: '1호 가마',
                     category: 'Feature',
                     relations: expect.objectContaining({ liesWithin: ['trench-1'] }),
                     featureType: 'kiln',

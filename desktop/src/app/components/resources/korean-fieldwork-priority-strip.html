@@ -391,9 +391,16 @@
             <span class="korean-fieldwork-feature-draft-picker-title">유구 성격 선택</span>
             <span class="korean-fieldwork-feature-draft-picker-detail">
                 <span>포함 위치: {{getPendingFeatureDraftParentLabel()}}</span>
-                <span>성격이 보이면 고르고, 애매하면 유구로 먼저 만듭니다.</span>
+                <span>유구명을 쓰거나 비워두면 선택한 성격에 맞춰 다음 번호를 붙입니다.</span>
             </span>
         </span>
+        <label class="korean-fieldwork-feature-draft-picker-name">
+            <span>유구명</span>
+            <input type="text"
+                   [ngModel]="getPendingFeatureDraftIdentifier()"
+                   (ngModelChange)="updatePendingFeatureDraftIdentifier($event)"
+                   [placeholder]="getPendingFeatureDraftIdentifierPlaceholder()">
+        </label>
         <span class="korean-fieldwork-feature-draft-picker-options">
             <button *ngFor="let preset of getFeatureDraftPresets()"
                     type="button"

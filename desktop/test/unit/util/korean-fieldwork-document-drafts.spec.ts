@@ -1,5 +1,6 @@
 import {
     createDraftIdentifier,
+    createNextFeatureIdentifier,
     createKoreanFieldworkDraftRelations,
     createKoreanFieldworkDraftResource,
     getKoreanFieldworkContinuationActions
@@ -93,6 +94,46 @@ describe('Korean fieldwork document drafts', () => {
             featureType: 'kiln',
             featureInterpretationType: ['kiln']
         });
+    });
+
+
+    it('uses a typed field feature name instead of a timestamp draft identifier', () => {
+
+        const operationDoc = createDoc('operation-1', 'Operation');
+        const config = createConfig({
+            'Feature:Operation': ['isRecordedIn', 'liesWithin']
+        });
+
+        expect(createKoreanFieldworkDraftResource(operationDoc, 'Feature', config, {
+            featureType: 'pit',
+            identifier: '  3호 수혈  '
+        })).toMatchObject({
+            identifier: '3호 수혈',
+            featureType: 'pit'
+        });
+    });
+
+
+    it('creates next feature identifiers from existing field numbers', () => {
+
+        const documents = [
+            createDoc('feature-1', 'Feature', {}, {
+                identifier: '1호 수혈',
+                featureType: 'pit'
+            }),
+            createDoc('feature-2', 'Feature', {}, {
+                identifier: '수혈 2호',
+                featureType: 'pit'
+            }),
+            createDoc('feature-3', 'Feature', {}, {
+                identifier: '1호 주거지',
+                featureType: 'dwelling'
+            })
+        ];
+
+        expect(createNextFeatureIdentifier('pit', documents)).toBe('3호 수혈');
+        expect(createNextFeatureIdentifier('dwelling', documents)).toBe('2호 주거지');
+        expect(createNextFeatureIdentifier('unknown', documents)).toBe('1호 유구');
     });
 
 
