@@ -2532,6 +2532,9 @@ function validateRecordPanelOrder() {
   const desktopPriorityStripTemplateText = readTextFile(
     'desktop/src/app/components/resources/korean-fieldwork-priority-strip.html'
   );
+  const desktopPriorityStripStyleText = readTextFile(
+    'desktop/src/app/components/resources/korean-fieldwork-priority-strip.scss'
+  );
   const desktopNotebookDigestText = readTextFile(
     'desktop/src/app/util/korean-fieldwork-notebook-digest.ts'
   );
@@ -2663,6 +2666,13 @@ function validateRecordPanelOrder() {
   }
   if (!desktopNotebookDigestSpecText.includes('builds continuation seeds for notebook follow-ups')) {
     findings.push('desktop notebook digest test must cover continuation seed creation');
+  }
+  if (!desktopNotebookDigestText.includes('boundaryMemoPreview')
+      || !desktopPriorityStripTemplateText.includes('korean-fieldwork-notebook-journal-boundary-preview')
+      || !desktopPriorityStripStyleText.includes('korean-fieldwork-notebook-journal-boundary-preview')
+      || !desktopNotebookDigestSpecText.includes('boundaryMemoPreview')
+      || !desktopPriorityStripSpecText.includes('boundaryMemoPreview')) {
+    findings.push('desktop notebook panel must preview tablet daily-journal boundary handwriting, not only count it');
   }
   if (!tabletHierarchyBoardText.includes('이어진 기록')
       || !tabletHierarchyBoardText.includes('포함 위치')) {

@@ -585,6 +585,15 @@
                 <span class="korean-fieldwork-notebook-journal-detail">{{summary.equipmentLabel}}</span>
                 <span class="korean-fieldwork-notebook-journal-detail">{{summary.safetyLabel}}</span>
                 <span class="korean-fieldwork-notebook-journal-detail">{{summary.boundaryMemoLabel}}</span>
+                <svg *ngIf="summary.boundaryMemoPreview as boundaryPreview"
+                     class="korean-fieldwork-notebook-journal-boundary-preview"
+                     [attr.viewBox]="boundaryPreview.viewBox"
+                     role="img"
+                     aria-label="작업일지 경계 메모 미리보기">
+                    <path class="boundary-frame" d="M 8 8 H 112 V 64 H 8 Z"></path>
+                    <path class="boundary-grid" d="M 34 8 V 64 M 60 8 V 64 M 86 8 V 64 M 8 27 H 112 M 8 45 H 112"></path>
+                    <path class="boundary-stroke" [attr.d]="boundaryPreview.path"></path>
+                </svg>
             </button>
         </div>
         <div *ngIf="hasNotebookSelectedRecordEntries()" class="korean-fieldwork-notebook-strip-items selected">

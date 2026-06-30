@@ -1,4 +1,8 @@
 import { Document } from 'idai-field-core';
+import {
+    getPenMemoSketchPreview,
+    KoreanFieldworkPenMemoSketchPreview
+} from './korean-fieldwork-evidence-review';
 
 
 export interface KoreanFieldworkFieldNoteInput {
@@ -33,6 +37,7 @@ export interface KoreanFieldworkDailyJournalSummary {
     equipmentLabel: string;
     safetyLabel: string;
     boundaryMemoLabel: string;
+    boundaryMemoPreview?: KoreanFieldworkPenMemoSketchPreview;
     detail: string;
     hasPersonnel: boolean;
     hasSafetyComplete: boolean;
@@ -515,9 +520,9 @@ function createDailyJournalSummary(dailyLogDocument: Document): KoreanFieldworkD
     const equipmentSize = getStringField(dailyLogDocument, DAILY_JOURNAL_FIELD.equipmentSize);
     const safetyPhotoDone = getBooleanField(dailyLogDocument, DAILY_JOURNAL_FIELD.safetyEducationPhoto);
     const safetyStretchingDone = getBooleanField(dailyLogDocument, DAILY_JOURNAL_FIELD.safetyEducationStretching);
-    const boundaryMemoStats = getStoredHandwritingStats(
-        dailyLogDocument.resource[DAILY_JOURNAL_FIELD.boundaryMemoStrokes]
-    );
+    const boundaryMemoStrokes = dailyLogDocument.resource[DAILY_JOURNAL_FIELD.boundaryMemoStrokes];
+    const boundaryMemoStats = getStoredHandwritingStats(boundaryMemoStrokes);
+    const boundaryMemoPreview = getPenMemoSketchPreview(boundaryMemoStrokes);
     const hasPersonnel = [
         investigatorCount,
         laborerCount,
@@ -543,6 +548,7 @@ function createDailyJournalSummary(dailyLogDocument: Document): KoreanFieldworkD
         equipmentLabel,
         safetyLabel,
         boundaryMemoLabel,
+        boundaryMemoPreview,
         detail: [
             personnelLabel,
             equipmentLabel,

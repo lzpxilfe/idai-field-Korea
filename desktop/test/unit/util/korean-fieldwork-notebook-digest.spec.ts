@@ -118,6 +118,10 @@ describe('korean-fieldwork-notebook-digest', () => {
                 equipmentLabel: '장비 1대/0.6㎥',
                 safetyLabel: '안전교육 · 사진 · 체조 미확인',
                 boundaryMemoLabel: '경계 메모 1획/2점',
+                boundaryMemoPreview: expect.objectContaining({
+                    path: expect.stringContaining('M '),
+                    viewBox: '0 0 120 72'
+                }),
                 hasPersonnel: true,
                 hasSafetyComplete: false,
                 hasBoundaryMemo: true

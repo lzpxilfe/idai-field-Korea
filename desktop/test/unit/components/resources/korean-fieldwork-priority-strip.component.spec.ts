@@ -1074,6 +1074,10 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
             equipmentLabel: '장비 1대/10톤',
             safetyLabel: '안전교육 완료',
             boundaryMemoLabel: '경계 메모 1획/2점',
+            boundaryMemoPreview: expect.objectContaining({
+                path: expect.stringContaining('M '),
+                viewBox: '0 0 120 72'
+            }),
             hasSafetyComplete: true,
             hasBoundaryMemo: true
         });
