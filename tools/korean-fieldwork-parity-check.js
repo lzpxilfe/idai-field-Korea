@@ -457,7 +457,6 @@ const classifiedSupportSourceGroups = [
       'desktop/src/app/util/korean-fieldwork-closeout-actions.ts',
       'desktop/src/app/util/korean-fieldwork-document-drafts.ts',
       'desktop/src/app/util/korean-fieldwork-draft-defaults.ts',
-      'desktop/src/app/util/korean-fieldwork-draft-presets.ts',
       'desktop/src/app/util/korean-fieldwork-issue-resolution.ts',
       'desktop/src/app/util/korean-fieldwork-record-actions.ts',
       'desktop/src/app/util/korean-fieldwork-record-work-filters.ts',
