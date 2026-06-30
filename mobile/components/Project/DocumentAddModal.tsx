@@ -107,9 +107,9 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
     windowDimensions.width >= FEATURE_SKETCH_TABLET_WIDTH;
   const featureSketchCanvasHeight = useMemo(
     () => {
-      const reservedHeight = isFeatureWideLayout ? 10 : 76;
-      const minimumHeight = isFeatureWideLayout ? 760 : 600;
-      const maximumHeight = isFeatureWideLayout ? 1360 : 980;
+      const reservedHeight = isFeatureWideLayout ? 286 : 96;
+      const minimumHeight = isFeatureWideLayout ? 720 : 600;
+      const maximumHeight = isFeatureWideLayout ? 1180 : 980;
       const targetHeight = Math.max(
         minimumHeight,
         Math.round(windowDimensions.height - reservedHeight)
@@ -659,10 +659,13 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
     );
 
     return (
-      <View style={[
-        styles.featureCreationLayout,
-        isFeatureWideLayout && styles.featureCreationLayoutWide,
-      ]}>
+      <View
+        style={[
+          styles.featureCreationLayout,
+          isFeatureWideLayout && styles.featureCreationLayoutWide,
+        ]}
+        testID="featureCreationLayout"
+      >
         <View
           style={[
             styles.featureCreationMapPane,
@@ -679,7 +682,10 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
           ]}
           testID="featureCreationFormPane"
         >
-          <View style={styles.featureNamePanel}>
+          <View style={[
+            styles.featureNamePanel,
+            isFeatureWideLayout && styles.featureNamePanelWide,
+          ]}>
             <Input
               autoFocus
               isValid={true}
@@ -695,7 +701,10 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
               유구명만 먼저 적어도 됩니다. 성격과 세부 정보는 조사하면서 계속 채우고 고칠 수 있습니다.
             </Text>
           </View>
-          <View style={styles.parentPanel}>
+          <View style={[
+            styles.parentPanel,
+            isFeatureWideLayout && styles.featureCreationParentPanelWide,
+          ]}>
             <Text style={styles.parentLabel} numberOfLines={1}>
               포함 위치: {parentDoc.resource.identifier}
             </Text>
@@ -706,7 +715,10 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
               {KOREAN_FIELDWORK_HIERARCHY_HELP}
             </Text>
           </View>
-          <View style={styles.startUnknownFeature}>
+          <View style={[
+            styles.startUnknownFeature,
+            isFeatureWideLayout && styles.startUnknownFeatureWide,
+          ]}>
             <View style={styles.featureTypeHeader}>
               <TouchableOpacity
                 activeOpacity={0.86}
@@ -743,11 +755,17 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
             {expandedFeatureGuideType === 'startUnknown'
               && renderFeatureInvestigationGuide('unknown')}
           </View>
-          <View style={styles.featureTypeGrid}>
+          <View style={[
+            styles.featureTypeGrid,
+            isFeatureWideLayout && styles.featureTypeGridWide,
+          ]}>
             {KOREAN_FIELDWORK_FEATURE_TYPE_OPTIONS.map((option) => (
               <View
                 key={option.value}
-                style={styles.featureTypeOption}
+                style={[
+                  styles.featureTypeOption,
+                  isFeatureWideLayout && styles.featureTypeOptionWide,
+                ]}
               >
                 <View style={styles.featureTypeHeader}>
                   <TouchableOpacity
@@ -1291,7 +1309,7 @@ const styles = StyleSheet.create({
   featureCreationLayoutWide: {
     alignItems: 'stretch',
     flex: 1,
-    flexDirection: 'row',
+    flexDirection: 'column',
   },
   featureCreationMapPane: {
     flex: 1,
@@ -1299,17 +1317,25 @@ const styles = StyleSheet.create({
   },
   featureCreationMapPaneWide: {
     flex: 1,
-    marginRight: 6,
+    marginRight: 0,
+    minHeight: 720,
     minWidth: 0,
   },
   featureCreationFormPane: {
     minWidth: 0,
   },
   featureCreationFormPaneWide: {
-    flexBasis: 286,
+    backgroundColor: '#ffffff',
+    borderTopColor: '#d0d5dd',
+    borderTopWidth: 1,
+    flexDirection: 'row',
     flexGrow: 0,
     flexShrink: 0,
-    maxWidth: 286,
+    maxHeight: 278,
+    maxWidth: '100%',
+    paddingHorizontal: 10,
+    paddingTop: 10,
+    width: '100%',
   },
   parentPanel: {
     backgroundColor: '#f8fafc',
@@ -1345,6 +1371,20 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     paddingHorizontal: 10,
     paddingVertical: 8,
+  },
+  featureNamePanelWide: {
+    flexBasis: 258,
+    flexGrow: 0,
+    flexShrink: 0,
+    marginBottom: 0,
+    marginRight: 8,
+  },
+  featureCreationParentPanelWide: {
+    flexBasis: 238,
+    flexGrow: 0,
+    flexShrink: 0,
+    marginBottom: 0,
+    marginRight: 8,
   },
   featureNameHint: {
     color: '#526272',
@@ -1705,6 +1745,12 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'space-between',
   },
+  featureTypeGridWide: {
+    alignContent: 'flex-start',
+    flex: 1,
+    justifyContent: 'flex-start',
+    minWidth: 0,
+  },
   featureTypeOption: {
     alignItems: 'stretch',
     backgroundColor: 'white',
@@ -1717,6 +1763,11 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     width: '49%',
   },
+  featureTypeOptionWide: {
+    marginRight: 8,
+    minHeight: 68,
+    width: 178,
+  },
   startUnknownFeature: {
     alignItems: 'stretch',
     backgroundColor: '#ecfdf3',
@@ -1727,6 +1778,13 @@ const styles = StyleSheet.create({
     minHeight: 70,
     paddingHorizontal: 12,
     paddingVertical: 10,
+  },
+  startUnknownFeatureWide: {
+    flexBasis: 236,
+    flexGrow: 0,
+    flexShrink: 0,
+    marginBottom: 0,
+    marginRight: 8,
   },
   featureTypeHeader: {
     alignItems: 'center',

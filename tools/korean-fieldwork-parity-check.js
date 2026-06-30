@@ -1100,10 +1100,17 @@ function validateGuidedFeatureDraftDefaults() {
       || !tabletAddModalText.includes('featureSketchModeRail')
       || !tabletAddModalText.includes('featureSketchToolRail')
       || !tabletAddModalText.includes('height: 1280')
-      || !tabletAddModalText.includes('minimumHeight = isFeatureWideLayout ? 760 : 600')
+      || !tabletAddModalText.includes('reservedHeight = isFeatureWideLayout ? 286 : 96')
+      || !tabletAddModalText.includes('minimumHeight = isFeatureWideLayout ? 720 : 600')
       || !tabletAddModalText.includes('featureLocationPanelWide')
-      || !tabletAddModalText.includes('flexBasis: 286')
+      || !tabletAddModalText.includes('featureCreationLayoutWide')
+      || !tabletAddModalText.includes("flexDirection: 'column'")
+      || !tabletAddModalText.includes('featureCreationFormPaneWide')
+      || !tabletAddModalText.includes('featureNamePanelWide')
+      || !tabletAddModalText.includes('featureTypeGridWide')
+      || !tabletAddModalText.includes('minHeight: 720')
       || !tabletAddModalSpecText.includes('StyleSheet.flatten')
+      || !tabletAddModalSpecText.includes('map-first tablet layout')
       || tabletAddModalText.includes('지도처럼 위에서 보기')
       || tabletAddModalText.includes('평면 배치 지도')
       || !tabletAddModalSpecText.includes('featureSketchFlatMapSurface')) {
@@ -1117,13 +1124,23 @@ function validateGuidedFeatureDraftDefaults() {
       || !desktopRecordContextTemplateText.includes('satellite-field')
       || !desktopRecordContextTemplateText.includes('map-reference-card')
       || !desktopRecordContextTemplateText.includes('shape-reference-card')
+      || !desktopRecordContextTemplateText.includes('korean-fieldwork-record-context-geometry-status')
+      || !desktopRecordContextTemplateText.includes('setFeatureGeometryEditStatus(action.value)')
       || !desktopRecordContextStyleText.includes('.flat-map-surface')
       || !desktopRecordContextStyleText.includes('.satellite-road')
+      || !desktopRecordContextStyleText.includes('.korean-fieldwork-record-context-geometry-status-button')
       || !desktopRecordContextStyleText.includes('height: clamp(220px, 30vh, 360px);')
       || !desktopRecordContextStyleText.includes('minmax(360px, 1.75fr) minmax(230px, 0.85fr)')
       || desktopRecordContextStyleText.includes('height: 148px;')
       || !desktopRecordContextSpecText.includes('flat placement map')) {
     findings.push('desktop record context must preview tablet feature placement as a flat placement map surface');
+  }
+  if (!desktopRecordContextText.includes('adjustedToAerialLayer')
+      || !desktopRecordContextText.includes('adjustedToSurveyLine')
+      || !desktopRecordContextText.includes('finalAccepted')
+      || !desktopRecordContextText.includes('getFeatureGeometryStatusActions')
+      || !desktopRecordContextSpecText.includes('tablet feature geometry status values')) {
+    findings.push('desktop record context must read and update tablet feature geometry status values');
   }
   if (!desktopRecordContextText.includes('SURVEY_BOUNDARY_CATEGORY_NAME')
       || !desktopRecordContextText.includes('getSurveyBoundarySketchPoints')

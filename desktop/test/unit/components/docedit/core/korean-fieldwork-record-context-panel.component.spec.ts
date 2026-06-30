@@ -151,6 +151,46 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
     });
 
 
+    it('uses tablet feature geometry status values and lets desktop update them', () => {
+
+        const feature = createDocument('feature-1', 'Feature', 'F1', {}, {
+            featureGeometryEditStatus: 'needsAerialAlignment'
+        });
+        const component = createComponent({
+            find: jest.fn().mockResolvedValue({ documents: [feature] })
+        });
+        const handleChanged = jest.fn();
+        component.onChanged.subscribe(handleChanged);
+        component.document = feature as any;
+        component.fieldDefinitions = [
+            field('featureGeometryEditStatus')
+        ] as any;
+
+        expect(component.getStatusChips()).toContainEqual({
+            label: '보정 필요',
+            tone: 'warning'
+        });
+        expect(component.canShowFeatureGeometryStatusActions()).toBe(true);
+        expect(component.getFeatureGeometryStatusActions().map(action => action.value)).toEqual([
+            'roughSketch',
+            'needsAerialAlignment',
+            'adjustedToAerialLayer',
+            'adjustedToSurveyLine',
+            'finalAccepted'
+        ]);
+        expect(component.isFeatureGeometryStatusActive('needsAerialAlignment')).toBe(true);
+
+        component.setFeatureGeometryEditStatus('adjustedToAerialLayer');
+
+        expect(feature.resource.featureGeometryEditStatus).toBe('adjustedToAerialLayer');
+        expect(handleChanged).toHaveBeenCalledTimes(1);
+        expect(component.getStatusChips()).toContainEqual({
+            label: '드론 배경 맞춤',
+            tone: 'success'
+        });
+    });
+
+
     it('shows tablet feature location sketches as desktop reference previews', () => {
 
         const feature = createDocument('feature-1', 'Feature', 'F1', {}, {
@@ -294,6 +334,8 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
         expect(template).toContain('class="flat-map-grid"');
         expect(template).toContain('map-reference-card');
         expect(template).toContain('shape-reference-card');
+        expect(template).toContain('korean-fieldwork-record-context-geometry-status');
+        expect(template).toContain('setFeatureGeometryEditStatus(action.value)');
         expect(template).toContain('조사 경계 위 배치');
         expect(template).not.toContain('지도처럼 위에서 보기');
         expect(template).not.toContain('위성지도식 평면');
@@ -308,6 +350,7 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
         expect(styles).toContain('grid-template-columns: minmax(360px, 1.75fr) minmax(230px, 0.85fr);');
         expect(styles).toContain('height: clamp(220px, 30vh, 360px);');
         expect(styles).toContain('shape-reference-card .korean-fieldwork-record-context-feature-sketch-svg');
+        expect(styles).toContain('.korean-fieldwork-record-context-geometry-status-button');
         expect(styles).not.toContain('height: 148px;');
     });
 

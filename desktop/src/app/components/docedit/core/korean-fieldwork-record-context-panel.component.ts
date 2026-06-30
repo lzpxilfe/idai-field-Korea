@@ -137,6 +137,12 @@ interface FeatureLocationSketchPreview {
     summary: string;
 }
 
+interface FeatureGeometryStatusAction {
+    icon: string;
+    label: string;
+    value: string;
+}
+
 interface FeatureFreeDrawingPreview {
     emptyLabel?: string;
     path?: string;
@@ -260,6 +266,7 @@ const FEATURE_SKETCH_VIEWBOX = '0 0 120 80';
 const FEATURE_SKETCH_WIDTH = 120;
 const FEATURE_SKETCH_HEIGHT = 80;
 const FEATURE_SKETCH_PADDING = 8;
+const FEATURE_GEOMETRY_EDIT_STATUS_FIELD = 'featureGeometryEditStatus';
 const FEATURE_FREE_DRAWING_STROKES_FIELD = 'featureFreeDrawingStrokes';
 const FEATURE_FREE_DRAWING_UPDATED_AT_FIELD = 'featureFreeDrawingUpdatedAt';
 const DAILY_LOG_CATEGORY_NAME = 'DailyLog';
@@ -294,10 +301,19 @@ const VERIFICATION_STATE_LABELS: Readonly<Record<string, ContextChip>> = {
 
 const GEOMETRY_EDIT_STATUS_LABELS: Readonly<Record<string, ContextChip>> = {
     roughSketch: { label: '약도', tone: 'warning' },
-    needsAerialAlignment: { label: '항공 보정', tone: 'warning' },
-    alignedToAerialMap: { label: '항공 보정됨', tone: 'success' },
-    measured: { label: '실측', tone: 'success' }
+    needsAerialAlignment: { label: '보정 필요', tone: 'warning' },
+    adjustedToAerialLayer: { label: '드론 배경 맞춤', tone: 'success' },
+    adjustedToSurveyLine: { label: '측량선 맞춤', tone: 'success' },
+    finalAccepted: { label: '최종 확정', tone: 'success' }
 };
+
+const FEATURE_GEOMETRY_STATUS_ACTIONS: readonly FeatureGeometryStatusAction[] = [
+    { value: 'roughSketch', label: '약도', icon: 'mdi-map-marker-path' },
+    { value: 'needsAerialAlignment', label: '보정 필요', icon: 'mdi-map-marker-alert-outline' },
+    { value: 'adjustedToAerialLayer', label: '드론 맞춤', icon: 'mdi-image-filter-hdr' },
+    { value: 'adjustedToSurveyLine', label: '측량선 맞춤', icon: 'mdi-ruler-square' },
+    { value: 'finalAccepted', label: '최종 확정', icon: 'mdi-check-decagram-outline' }
+];
 
 const FEATURE_PERIOD_LABELS: Readonly<Record<string, string>> = {
     paleolithic: '구석기',
@@ -804,6 +820,35 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
 
     public hasFeatureLocationSketchPreview = () =>
         this.getFeatureLocationSketchPreview() !== undefined;
+
+
+    public canShowFeatureGeometryStatusActions = () =>
+        this.document?.resource?.category === FEATURE_CATEGORY_NAME
+        && !!this.getField(FEATURE_GEOMETRY_EDIT_STATUS_FIELD);
+
+
+    public getFeatureGeometryStatusActions = () => FEATURE_GEOMETRY_STATUS_ACTIONS;
+
+
+    public isFeatureGeometryStatusActive(value: string): boolean {
+
+        return ((this.document?.resource as any)?.[FEATURE_GEOMETRY_EDIT_STATUS_FIELD] ?? 'roughSketch') === value;
+    }
+
+
+    public setFeatureGeometryEditStatus(value: string) {
+
+        if (!this.canShowFeatureGeometryStatusActions()
+                || !FEATURE_GEOMETRY_STATUS_ACTIONS.some(action => action.value === value)) {
+            return;
+        }
+
+        const resource = this.document.resource as any;
+        if (resource[FEATURE_GEOMETRY_EDIT_STATUS_FIELD] === value) return;
+
+        resource[FEATURE_GEOMETRY_EDIT_STATUS_FIELD] = value;
+        this.onChanged.emit();
+    }
 
 
     public getFeatureLocationSketchPreview(): FeatureLocationSketchPreview|undefined {

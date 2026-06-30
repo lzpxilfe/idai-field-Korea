@@ -308,7 +308,7 @@ describe('DocumentAddModal', () => {
     });
   });
 
-  it('shows the project boundary and live polygon line while placing a feature', () => {
+  it('shows the project boundary and live polygon line in a map-first tablet layout', () => {
     const parentDoc = {
       resource: {
         id: 'trench-1',
@@ -342,11 +342,27 @@ describe('DocumentAddModal', () => {
       .toEqual({ selected: true });
 
     const canvas = getByTestId('featureLocationSketchCanvas');
+    expect(StyleSheet.flatten(getByTestId('featureCreationLayout').props.style))
+      .toEqual(expect.objectContaining({
+        flexDirection: 'column',
+      }));
     expect(StyleSheet.flatten(getByTestId('featureCreationMapPane').props.style))
       .toEqual(expect.objectContaining({
         flex: 1,
         minWidth: 0,
       }));
+    const mapPaneStyle = StyleSheet.flatten(getByTestId('featureCreationMapPane').props.style);
+    if (mapPaneStyle.minHeight !== undefined) {
+      expect(mapPaneStyle.minHeight).toBeGreaterThanOrEqual(720);
+    }
+    const formPaneStyle = StyleSheet.flatten(getByTestId('featureCreationFormPane').props.style);
+    expect(formPaneStyle).toEqual(expect.objectContaining({ minWidth: 0 }));
+    if (formPaneStyle.flexDirection === 'row') {
+      expect(formPaneStyle).toEqual(expect.objectContaining({
+        borderTopWidth: 1,
+        width: '100%',
+      }));
+    }
     expect(StyleSheet.flatten(getByTestId('featureLocationSketchPanel').props.style))
       .toEqual(expect.objectContaining({ flex: 1 }));
     expect(getByTestId('featureSketchPlacementBadge')).toBeTruthy();

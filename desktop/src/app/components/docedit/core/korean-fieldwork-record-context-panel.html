@@ -76,6 +76,21 @@
                 {{sketchPreview.summary}}
             </span>
         </div>
+        <div *ngIf="canShowFeatureGeometryStatusActions()"
+             class="korean-fieldwork-record-context-geometry-status"
+             aria-label="유구 도형 상태">
+            <span class="korean-fieldwork-record-context-geometry-status-label">
+                유구 도형 상태
+            </span>
+            <button *ngFor="let action of getFeatureGeometryStatusActions()"
+                    type="button"
+                    class="korean-fieldwork-record-context-geometry-status-button"
+                    [class.active]="isFeatureGeometryStatusActive(action.value)"
+                    (click)="setFeatureGeometryEditStatus(action.value)">
+                <span class="mdi" [ngClass]="action.icon"></span>
+                <span>{{action.label}}</span>
+            </button>
+        </div>
         <div class="korean-fieldwork-record-context-feature-sketch-grid">
             <div class="korean-fieldwork-record-context-feature-sketch-card map-reference-card">
                 <div class="korean-fieldwork-record-context-feature-sketch-card-title">
