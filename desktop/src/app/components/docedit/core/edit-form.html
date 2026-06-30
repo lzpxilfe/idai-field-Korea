@@ -37,12 +37,6 @@
                                               (onChanged)="onKoreanFieldworkPanelChanged()">
             </korean-fieldwork-readiness-panel>
 
-            <korean-fieldwork-draft-preset-panel *ngIf="activeGroup !== 'conflicts' && activeGroup !== 'images'"
-                                                 [document]="document"
-                                                 [fieldDefinitions]="fieldDefinitions"
-                                                 (onChanged)="onKoreanFieldworkPanelChanged()">
-            </korean-fieldwork-draft-preset-panel>
-
             <korean-fieldwork-feature-guidance-panel *ngIf="activeGroup !== 'conflicts' && activeGroup !== 'images'"
                                                      [document]="document"
                                                      [fieldDefinitions]="fieldDefinitions"
@@ -54,12 +48,6 @@
                                                  [fieldDefinitions]="fieldDefinitions"
                                                  (onChanged)="onKoreanFieldworkPanelChanged()">
             </korean-fieldwork-quick-record-panel>
-
-            <korean-fieldwork-narrative-assist-panel *ngIf="activeGroup !== 'conflicts' && activeGroup !== 'images'"
-                                                     [document]="document"
-                                                     [fieldDefinitions]="fieldDefinitions"
-                                                     (onChanged)="onKoreanFieldworkPanelChanged()">
-            </korean-fieldwork-narrative-assist-panel>
 
             <korean-fieldwork-orientation-panel *ngIf="activeGroup !== 'conflicts' && activeGroup !== 'images'"
                                                 [document]="document"

@@ -37,7 +37,7 @@ describe('KoreanFieldworkQuickRecordPanel', () => {
 
     expect(getByText('현장 최소 기록')).toBeTruthy();
     expect(getByText('조사 단계 확인')).toBeTruthy();
-    expect(getByText('추가 상태값 보기 (4)')).toBeTruthy();
+    expect(getByText('현장 보조판 보기 (4)')).toBeTruthy();
     expect(queryByText('유구 진행')).toBeNull();
 
     fireEvent.press(getByTestId('quickRecordToggleSecondaryFields'));

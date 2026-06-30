@@ -2345,6 +2345,10 @@ function validateRawFormFieldRules() {
   const tabletDraftContextText = readTextFile('mobile/components/Project/KoreanFieldworkDraftContextPanel.tsx');
   const tabletAddModalText = readTextFile('mobile/components/Project/DocumentAddModal.tsx');
   const tabletProjectScreenText = readTextFile('mobile/app/(tabs)/ProjectScreen/index.tsx');
+  const tabletSecondaryPanelText = [
+    tabletProjectScreenText,
+    readTextFile('mobile/components/Project/KoreanFieldworkQuickRecordPanel.tsx')
+  ].join('\n');
   const rawStorageSummary = '새 유구 기록은 위의 시대/시기·유구 성격·유구별 핵심 속성·야장 메모만 입력하면 충분합니다. 이 영역은 이전 양식에서 가져온 값이 있을 때만 확인합니다.';
   const auxiliaryRawStorageLabel = '가져온 기존 항목';
   const forbiddenAuxiliaryRawStorageTerms = [
@@ -2460,11 +2464,11 @@ function validateRawFormFieldRules() {
       || tabletDraftContextText.includes('묶음 위치') || tabletAddModalText.includes('묶음 위치')) {
     findings.push('tablet feature creation context still uses hierarchy/ambiguous scope wording');
   }
-  if (!tabletProjectScreenText.includes('현장 보조판 보기')) {
-    findings.push('tablet project screen must label secondary panels as 현장 보조판 보기');
+  if (!tabletSecondaryPanelText.includes('현장 보조판 보기')) {
+    findings.push('tablet fieldwork screens must label secondary panels as 현장 보조판 보기');
   }
-  if (tabletProjectScreenText.includes('자료 관리 보기') || tabletProjectScreenText.includes('자료 관리 접기')) {
-    findings.push('tablet project screen still labels secondary panels as 자료 관리');
+  if (tabletSecondaryPanelText.includes('자료 관리 보기') || tabletSecondaryPanelText.includes('자료 관리 접기')) {
+    findings.push('tablet fieldwork screens still label secondary panels as 자료 관리');
   }
 
   return findings;
@@ -2536,11 +2540,8 @@ function validateRecordPanelOrder() {
     readTextFile('mobile/app/(tabs)/ProjectScreen/DocumentAdd.tsx'),
     [
       '<KoreanFieldworkDraftContextPanel',
-      '<KoreanFieldworkDraftPresetPanel',
       '<KoreanFieldworkQuickRecordPanel',
-      '<KoreanFieldworkNarrativeAssistPanel',
-      '<KoreanFieldworkSoilColorPanel',
-      '<KoreanFieldworkDraftContinuationPanel'
+      '<KoreanFieldworkSoilColorPanel'
     ]
   );
 
@@ -2552,7 +2553,6 @@ function validateRecordPanelOrder() {
       '<KoreanFieldworkRecordContextPanel',
       '<KoreanFieldworkRecordActionPanel',
       '<KoreanFieldworkQuickRecordPanel',
-      '<KoreanFieldworkNarrativeAssistPanel',
       '<KoreanFieldworkSoilColorPanel'
     ]
   );
@@ -2564,10 +2564,8 @@ function validateRecordPanelOrder() {
     [
       '<korean-fieldwork-record-context-panel',
       '<korean-fieldwork-readiness-panel',
-      '<korean-fieldwork-draft-preset-panel',
       '<korean-fieldwork-feature-guidance-panel',
       '<korean-fieldwork-quick-record-panel',
-      '<korean-fieldwork-narrative-assist-panel',
       '<korean-fieldwork-orientation-panel',
       '<korean-fieldwork-soil-color-panel'
     ]

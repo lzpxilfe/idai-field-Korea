@@ -416,8 +416,8 @@ const KoreanFieldworkQuickRecordPanel: React.FC<KoreanFieldworkQuickRecordPanelP
             <MaterialIcons name="tune" size={16} color="#475467" />
             <Text style={styles.secondaryToggleText}>
               {showSecondaryFields
-                ? '추가 상태값 접기'
-                : `추가 상태값 보기 (${secondarySectionCount})`}
+                ? '현장 보조판 접기'
+                : `현장 보조판 보기 (${secondarySectionCount})`}
             </Text>
           </View>
           <MaterialIcons
