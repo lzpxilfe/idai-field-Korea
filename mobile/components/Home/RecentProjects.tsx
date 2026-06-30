@@ -1,103 +1,119 @@
 import React from 'react';
-import { StyleSheet, View, Text } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
+import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Button from '@/components/common/Button';
 import { colors } from '@/utils/colors';
 import { getProjectDisplayName } from '@/constants/sample-project';
 
 interface RecentProjectsProps {
-  selectedProject: string;
   setSelectedProject: (project: string) => void;
   recentProjects: string[];
   openProject: (project: string) => void;
   setIsDeleteModalOpen: (open: boolean) => void;
 }
 
+const MAX_VISIBLE_RECENT_PROJECTS = 5;
+
 const RecentProjects: React.FC<RecentProjectsProps> = ({
-  selectedProject,
   setSelectedProject,
   recentProjects,
   openProject,
   setIsDeleteModalOpen,
 }) => {
+  const visibleRecentProjects = recentProjects.slice(0, MAX_VISIBLE_RECENT_PROJECTS);
+
+  const confirmDeleteProject = (project: string) => {
+    setSelectedProject(project);
+    setIsDeleteModalOpen(true);
+  };
+
   return (
-    <View style={styles.projectPickerContainer} testID="recent-projects-card">
+    <View style={styles.recentProjectsCard} testID="recent-projects-card">
       <View style={styles.headerContainer}>
-        <Text style={styles.headerText}>기존 프로젝트 열기</Text>
+        <Text style={styles.headerText}>최근 프로젝트</Text>
       </View>
 
-      <View style={styles.pickerContainer}>
-        <Picker
-          selectedValue={selectedProject}
-          onValueChange={(value) => setSelectedProject(value.toString())}
-          style={styles.picker}
+      {visibleRecentProjects.map((project, index) => (
+        <View
+          key={project}
+          style={styles.projectRow}
+          testID={`recent-project-row-${index}`}
         >
-          {recentProjects.map((project) => (
-            <Picker.Item
-              label={getProjectDisplayName(project)}
-              value={project}
-              key={project}
+          <TouchableOpacity
+            activeOpacity={0.86}
+            accessibilityRole="button"
+            accessibilityLabel={`${getProjectDisplayName(project)} 프로젝트 열기`}
+            onPress={() => openProject(project)}
+            style={styles.projectOpenButton}
+            testID={index === 0 ? 'open-project-button' : `open-project-button-${index}`}
+          >
+            <Ionicons
+              name="folder-open-outline"
+              size={20}
+              color={colors.primary}
+              style={styles.projectIcon}
             />
-          ))}
-        </Picker>
-      </View>
+            <Text style={styles.projectName} numberOfLines={1}>
+              {getProjectDisplayName(project)}
+            </Text>
+          </TouchableOpacity>
 
-      <View style={styles.buttonContainer}>
-        <Button
-          style={styles.openButton}
-          icon={<Ionicons name="folder-open" size={16} />}
-          onPress={() => openProject(selectedProject)}
-          title="열기"
-          variant="primary"
-          testID="open-project-button"
-        />
-        <Button
-          style={styles.deleteButton}
-          testID="delete-project-button"
-          icon={<Ionicons name="trash" size={16} />}
-          onPress={() => setIsDeleteModalOpen(true)}
-          variant="danger"
-        />
-      </View>
+          <Button
+            style={styles.deleteButton}
+            testID={index === 0 ? 'delete-project-button' : `delete-project-button-${index}`}
+            icon={<Ionicons name="trash-outline" size={16} />}
+            onPress={() => confirmDeleteProject(project)}
+            variant="danger"
+          />
+        </View>
+      ))}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  projectPickerContainer: {
+  recentProjectsCard: {
     backgroundColor: colors.secondary,
-    padding: 16,
+    padding: 12,
     borderRadius: 8,
     width: '100%',
   },
   headerContainer: {
-    marginBottom: 12,
+    marginBottom: 8,
   },
   headerText: {
     fontWeight: '600',
     fontSize: 16,
   },
-  pickerContainer: {
-    borderRadius: 8,
-    marginBottom: 16,
-    overflow: 'hidden',
-  },
-  picker: {
-    height: 50,
-    width: '100%',
-  },
-  buttonContainer: {
+  projectRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     gap: 8,
+    minHeight: 48,
+    marginTop: 6,
   },
-  openButton: {
-    flex: 2,
+  projectOpenButton: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: colors.lightgray,
+    backgroundColor: 'white',
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  projectIcon: {
+    marginRight: 8,
+  },
+  projectName: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '500',
   },
   deleteButton: {
-    flex: 1,
+    width: 44,
+    minHeight: 44,
   },
 });
 

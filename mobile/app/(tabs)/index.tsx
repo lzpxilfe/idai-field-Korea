@@ -196,7 +196,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ deleteProject }) => {
               setIsDeleteModalOpen={setIsDeleteModalOpen}
               openProject={openProject}
               recentProjects={preferences.preferences.recentProjects}
-              selectedProject={selectedProject}
               setSelectedProject={setSelectedProject}
             />
           )}

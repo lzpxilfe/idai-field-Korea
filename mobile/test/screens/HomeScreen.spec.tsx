@@ -20,6 +20,12 @@ jest.mock('expo-router', () => ({
   },
 }));
 
+jest.mock('@/hooks/use-pouchdb-datastore', () => ({
+  __esModule: true,
+  default: jest.fn(),
+  destroyPouchDbDatastore: jest.fn(),
+}));
+
 describe('HomeScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -104,7 +110,7 @@ describe('HomeScreen', () => {
     expect(removeProject).toHaveBeenCalledWith('fieldwork-1');
   });
 
-  it('keeps the recent project picker compact on the home screen', () => {
+  it('keeps the recent project list compact on the home screen', () => {
     const preferences = createPreferencesContextValue({
       username: '현장 작업자',
       recentProjects: ['fieldwork-1'],
@@ -115,6 +121,24 @@ describe('HomeScreen', () => {
     expect(cardStyle.flex).toBeUndefined();
     expect(cardStyle.minHeight).toBeUndefined();
     expect(cardStyle.borderRadius).toBeLessThanOrEqual(8);
+  });
+
+  it('shows only the first five recent projects on the home screen', () => {
+    const preferences = createPreferencesContextValue({
+      username: '',
+      recentProjects: [
+        'fieldwork-1',
+        'fieldwork-2',
+        'fieldwork-3',
+        'fieldwork-4',
+        'fieldwork-5',
+        'fieldwork-6',
+      ],
+    });
+    const { getByTestId, queryByTestId } = renderHomeScreen(preferences);
+
+    expect(getByTestId('recent-project-row-4')).toBeTruthy();
+    expect(queryByTestId('recent-project-row-5')).toBeNull();
   });
 
   it('opens imported server projects immediately after saving sync settings', () => {
