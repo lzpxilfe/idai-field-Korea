@@ -89,21 +89,29 @@ const featureRows = [
     id: 'guided-feature-recording',
     title: 'Guided feature recording: period, type, attributes',
     tablet: [
+      'mobile/components/Project/KoreanFieldworkFeatureSketchReferencePanel.tsx',
+      'mobile/components/Project/KoreanFieldworkFreeDrawingPanel.tsx',
       'mobile/components/Project/KoreanFieldworkQuickRecordPanel.tsx',
       'mobile/components/Project/korean-fieldwork-quick-record.ts',
       'mobile/components/Project/korean-fieldwork-feature-attributes.ts'
     ],
     desktop: [
+      'desktop/src/app/components/docedit/core/korean-fieldwork-record-context-panel.component.ts',
+      'desktop/src/app/components/docedit/core/korean-fieldwork-record-context-panel.html',
+      'desktop/src/app/components/docedit/core/korean-fieldwork-record-context-panel.scss',
       'desktop/src/app/components/docedit/core/korean-fieldwork-quick-record-panel.component.ts',
       'desktop/src/app/components/docedit/core/korean-fieldwork-feature-guidance-panel.component.ts',
       'desktop/src/app/util/korean-fieldwork-feature-guidance.ts'
     ],
     tabletTests: [
+      'mobile/components/Project/KoreanFieldworkFeatureSketchReferencePanel.spec.tsx',
+      'mobile/components/Project/KoreanFieldworkFreeDrawingPanel.spec.tsx',
       'mobile/components/Project/KoreanFieldworkQuickRecordPanel.spec.tsx',
       'mobile/components/Project/korean-fieldwork-quick-record.spec.ts',
       'mobile/components/Project/korean-fieldwork-feature-attributes.spec.ts'
     ],
     desktopTests: [
+      'desktop/test/unit/components/docedit/core/korean-fieldwork-record-context-panel.component.spec.ts',
       'desktop/test/unit/components/docedit/core/korean-fieldwork-quick-record-panel.component.spec.ts',
       'desktop/test/unit/components/docedit/core/korean-fieldwork-feature-guidance-panel.component.spec.ts',
       'desktop/test/unit/util/korean-fieldwork-feature-guidance.spec.ts'

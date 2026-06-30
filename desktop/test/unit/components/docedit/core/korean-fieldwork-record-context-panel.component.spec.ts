@@ -228,6 +228,55 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
     });
 
 
+    it('shows tablet free drawing strokes as desktop feature sketch previews', () => {
+
+        const feature = createDocument('feature-1', 'Feature', 'F1', {}, {
+            featureFreeDrawingStrokes: JSON.stringify({
+                version: 1,
+                strokes: [
+                    { points: [{ x: 1000, y: 1000 }, { x: 5200, y: 5000 }] },
+                    { points: [{ x: 8000, y: 1800 }] }
+                ]
+            }),
+            featureFreeDrawingUpdatedAt: '2026-06-30T08:15:00.000Z'
+        });
+        const component = createComponent({
+            find: jest.fn().mockResolvedValue({ documents: [feature] })
+        });
+        component.document = feature as any;
+        component.fieldDefinitions = [
+            field('featureFreeDrawingStrokes')
+        ] as any;
+
+        expect(component.shouldShow()).toBe(true);
+        expect(component.hasFeatureFreeDrawingPreview()).toBe(true);
+
+        const preview = component.getFeatureFreeDrawingPreview()!;
+
+        expect(preview.summary).toBe('자유 스케치 2획/3점.');
+        expect(preview.updatedAt).toBe('2026-06-30');
+        expect(preview.viewBox).toBe('0 0 120 72');
+        expect(preview.path).toContain('M ');
+        expect(preview.path).toContain('L ');
+    });
+
+
+    it('keeps the tablet free drawing preview section in the desktop record context template', () => {
+
+        const template = fs.readFileSync(
+            path.resolve(
+                __dirname,
+                '../../../../../src/app/components/docedit/core/korean-fieldwork-record-context-panel.html'
+            ),
+            'utf8'
+        );
+
+        expect(template).toContain('getFeatureFreeDrawingPreview() as freeDrawingPreview');
+        expect(template).toContain('자유 스케치');
+        expect(template).toContain('태블릿 자유 스케치');
+    });
+
+
     it('shows direct tablet photos on desktop find records', async () => {
 
         const find = createDocument('find-1', 'Find', 'FIND1', {}, {

@@ -133,7 +133,16 @@ interface FeatureLocationSketchPreview {
     summary: string;
 }
 
+interface FeatureFreeDrawingPreview {
+    path: string;
+    summary: string;
+    updatedAt?: string;
+    viewBox: string;
+}
+
 const KOREAN_FIELDWORK_CONTEXT_FIELDS = [
+    'featureFreeDrawingStrokes',
+    'featureFreeDrawingUpdatedAt',
     'featureInvestigationChecklist',
     'fieldworkPhotoAnnotationStrokes',
     'featureRecordingStatus',
@@ -193,6 +202,8 @@ const FEATURE_SKETCH_VIEWBOX = '0 0 120 80';
 const FEATURE_SKETCH_WIDTH = 120;
 const FEATURE_SKETCH_HEIGHT = 80;
 const FEATURE_SKETCH_PADDING = 8;
+const FEATURE_FREE_DRAWING_STROKES_FIELD = 'featureFreeDrawingStrokes';
+const FEATURE_FREE_DRAWING_UPDATED_AT_FIELD = 'featureFreeDrawingUpdatedAt';
 
 const FEATURE_RECORDING_STATUS_LABELS: Readonly<Record<string, ContextChip>> = {
     candidate: { label: '조사 전', tone: 'warning' },
@@ -361,6 +372,28 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
             location: this.makeFeatureLocationSketchSvg(sketch, true),
             shape: this.makeFeatureLocationSketchSvg(sketch, false),
             summary: this.getFeatureLocationSketchSummary(sketch)
+        };
+    }
+
+
+    public hasFeatureFreeDrawingPreview = () =>
+        this.getFeatureFreeDrawingPreview() !== undefined;
+
+
+    public getFeatureFreeDrawingPreview(): FeatureFreeDrawingPreview|undefined {
+
+        if (this.document?.resource?.category !== FEATURE_CATEGORY_NAME) return undefined;
+
+        const preview = getPenMemoSketchPreview(
+            this.document.resource[FEATURE_FREE_DRAWING_STROKES_FIELD]
+        );
+        if (!preview) return undefined;
+
+        return {
+            path: preview.path,
+            summary: this.getFeatureFreeDrawingSummary(),
+            updatedAt: this.getFeatureFreeDrawingUpdatedAtLabel(),
+            viewBox: preview.viewBox
         };
     }
 
@@ -1200,6 +1233,34 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
         if (sketch.shape === 'rectangle') return `사각형 · 중심 ${this.formatSketchPoint(sketch.center)}`;
         if (sketch.shape === 'oval') return `타원 · 중심 ${this.formatSketchPoint(sketch.center)}`;
         return `점 · ${this.formatSketchPoint(sketch.center)}`;
+    }
+
+
+    private getFeatureFreeDrawingSummary(): string {
+
+        const summaryLabel = getPenMemoSketchSummaryLabel(
+            this.document.resource[FEATURE_FREE_DRAWING_STROKES_FIELD]
+        );
+
+        return summaryLabel
+            ? summaryLabel.replace(/^스케치 메모/, '자유 스케치')
+            : '자유 스케치 없음';
+    }
+
+
+    private getFeatureFreeDrawingUpdatedAtLabel(): string|undefined {
+
+        const value = this.document.resource[FEATURE_FREE_DRAWING_UPDATED_AT_FIELD];
+        if (typeof value !== 'string' || value.trim().length === 0) return undefined;
+
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return value.trim();
+
+        return [
+            date.getFullYear(),
+            `${date.getMonth() + 1}`.padStart(2, '0'),
+            `${date.getDate()}`.padStart(2, '0')
+        ].join('-');
     }
 
 

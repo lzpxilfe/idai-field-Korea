@@ -120,6 +120,27 @@
         </div>
     </div>
 
+    <div *ngIf="getFeatureFreeDrawingPreview() as freeDrawingPreview"
+         class="korean-fieldwork-record-context-free-drawing">
+        <div class="korean-fieldwork-record-context-free-drawing-title">
+            <span class="mdi mdi-gesture"></span>
+            <span>자유 스케치</span>
+            <span class="korean-fieldwork-record-context-free-drawing-summary">
+                {{freeDrawingPreview.summary}}
+            </span>
+            <span *ngIf="freeDrawingPreview.updatedAt"
+                  class="korean-fieldwork-record-context-free-drawing-updated">
+                {{freeDrawingPreview.updatedAt}}
+            </span>
+        </div>
+        <svg class="korean-fieldwork-record-context-free-drawing-svg"
+             [attr.viewBox]="freeDrawingPreview.viewBox"
+             role="img"
+             aria-label="태블릿 자유 스케치">
+            <path [attr.d]="freeDrawingPreview.path"></path>
+        </svg>
+    </div>
+
     <div *ngIf="hasEvidenceMetrics()" class="korean-fieldwork-record-context-evidence">
         <div class="korean-fieldwork-record-context-evidence-title">
             <span class="mdi mdi-file-document-check-outline"></span>
