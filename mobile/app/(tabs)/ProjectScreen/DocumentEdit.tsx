@@ -31,7 +31,9 @@ import SoilProfileCameraButton, {
 import KoreanFieldworkRecordActionPanel from '@/components/Project/KoreanFieldworkRecordActionPanel';
 import KoreanFieldworkRecordContextPanel from '@/components/Project/KoreanFieldworkRecordContextPanel';
 import KoreanFieldworkQuickRecordPanel from '@/components/Project/KoreanFieldworkQuickRecordPanel';
-import KoreanFieldworkSoilColorPanel from '@/components/Project/KoreanFieldworkSoilColorPanel';
+import KoreanFieldworkSoilColorPanel, {
+  getSoilProfileColorSampleUpdates,
+} from '@/components/Project/KoreanFieldworkSoilColorPanel';
 import {
   getKoreanFieldworkReturnParam,
   getKoreanFieldworkReturnTarget,
@@ -309,7 +311,7 @@ const renderPhotoResourceActions = (
           sampleButtonLabel="토색 찍기"
           strokesValue={resource[FIELDWORK_PHOTO_ANNOTATION_FIELDS.soilProfileStrokes]}
           onSamplePoint={(point) =>
-            sampleSoilProfileColor(imageUri, point, updateResourceFields)}
+            sampleSoilProfileColor(imageUri, point, resource, updateResourceFields)}
           onUpdateStrokes={(serializedStrokes) => updateResourceFields({
             [FIELDWORK_PHOTO_ANNOTATION_FIELDS.soilProfileStrokes]: serializedStrokes,
             [FIELDWORK_PHOTO_ANNOTATION_FIELDS.soilProfileUpdatedAt]: new Date().toISOString(),
@@ -330,6 +332,7 @@ const getStringValue = (value: unknown): string | undefined =>
 const sampleSoilProfileColor = async (
   imageUri: string | undefined,
   point: FieldworkPhotoSamplePoint,
+  resource: Resource,
   updateResourceFields: (updates: Record<string, unknown>) => void
 ) => {
   if (!imageUri) return;
@@ -338,9 +341,10 @@ const sampleSoilProfileColor = async (
     encoding: FileSystem.EncodingType.Base64,
   });
 
-  updateResourceFields({
-    ...createSoilColorAssistUpdatesFromPhotoBase64AtPoint(base64, point),
-  });
+  updateResourceFields(getSoilProfileColorSampleUpdates(
+    resource,
+    createSoilColorAssistUpdatesFromPhotoBase64AtPoint(base64, point)
+  ));
 };
 
 const getMissingDependencies = (

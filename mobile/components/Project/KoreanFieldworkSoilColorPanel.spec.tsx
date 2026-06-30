@@ -4,13 +4,15 @@ import {
   Resource,
 } from 'idai-field-core';
 import React from 'react';
-import KoreanFieldworkSoilColorPanel from './KoreanFieldworkSoilColorPanel';
+import KoreanFieldworkSoilColorPanel, {
+  getSoilProfileColorSampleUpdates,
+} from './KoreanFieldworkSoilColorPanel';
 import { KOREAN_FIELDWORK_CATEGORIES } from './korean-fieldwork-categories';
 
 const C = KOREAN_FIELDWORK_CATEGORIES;
 
 describe('KoreanFieldworkSoilColorPanel', () => {
-  it('builds manual Munsell values from hue, value, and chroma controls', () => {
+  it('builds manual Munsell values from separated hue number, hue family, value, and chroma controls', () => {
     const handleUpdateResourceField = jest.fn();
     const handleUpdateResourceFields = jest.fn();
     const { getByTestId, getByText, queryByText } = render(
@@ -37,8 +39,12 @@ describe('KoreanFieldworkSoilColorPanel', () => {
     expect(getByText('토색 기록')).toBeTruthy();
     expect(getByText('먼셀 조합')).toBeTruthy();
     expect(queryByText('촬영 조건')).toBeNull();
+    expect(queryByText('직접 입력')).toBeNull();
+    expect(getByText('숫자')).toBeTruthy();
+    expect(getByText('알파벳')).toBeTruthy();
 
-    fireEvent.press(getByTestId('soilColorOption_7.5YR'));
+    fireEvent.press(getByTestId('soilColorHueNumberOption_7.5'));
+    fireEvent.press(getByTestId('soilColorHueFamilyOption_YR'));
     fireEvent.press(getByTestId('soilColorValueOption_5'));
     fireEvent.press(getByTestId('soilColorChromaOption_4'));
     fireEvent.press(getByTestId('soilColorOption_moist'));
@@ -60,8 +66,8 @@ describe('KoreanFieldworkSoilColorPanel', () => {
     );
   });
 
-  it('adds the next empty numbered swatch row as one editable input per soil layer', () => {
-    const handleUpdateResourceField = jest.fn();
+  it('adds the next empty numbered swatch row without free-typing a layer color', () => {
+    const handleUpdateResourceFields = jest.fn();
     const { getByTestId, getByText, queryByTestId, queryByText } = render(
       <KoreanFieldworkSoilColorPanel
         category={createCategoryForm([
@@ -76,35 +82,63 @@ describe('KoreanFieldworkSoilColorPanel', () => {
           soilProfileColorNote: '',
           soilProfileCaptureNote: '',
         })}
-        onUpdateResourceField={handleUpdateResourceField}
-        onUpdateResourceFields={jest.fn()}
+        onUpdateResourceField={jest.fn()}
+        onUpdateResourceFields={handleUpdateResourceFields}
       />
     );
 
     expect(getByText('층별 토색')).toBeTruthy();
-    expect(getByTestId('soilColorLayerInput_1').props.value).toBe('');
+    expect(getByTestId('soilColorLayerValue_1').props.children)
+      .toBe('먼셀값 없음');
+    expect(queryByTestId('soilColorLayerInput_1')).toBeNull();
     expect(queryByTestId('soilColorInput_profileColorSwatches')).toBeNull();
     expect(queryByText('사진 메모')).toBeNull();
     expect(queryByText('촬영 조건')).toBeNull();
 
-    fireEvent.changeText(getByTestId('soilColorLayerInput_1'), '10YR 4/3 갈색');
+    fireEvent.press(getByTestId('soilColorHueNumberOption_10'));
+    fireEvent.press(getByTestId('soilColorHueFamilyOption_YR'));
+    fireEvent.press(getByTestId('soilColorValueOption_4'));
+    fireEvent.press(getByTestId('soilColorChromaOption_3'));
     fireEvent.press(getByTestId('soilColorAddNumberedSwatch'));
 
-    expect(handleUpdateResourceField).toHaveBeenNthCalledWith(
-      1,
-      'soilProfileColorSwatches',
-      '1: 10YR 4/3 갈색'
-    );
-    expect(handleUpdateResourceField).toHaveBeenNthCalledWith(
-      2,
-      'soilProfileColorSwatches',
-      '1: \n2: '
-    );
+    expect(handleUpdateResourceFields).toHaveBeenNthCalledWith(4, {
+      soilProfileColorSwatches: '1: 10YR 4/3',
+      soilProfileActiveLayerNumber: 1,
+    });
+    expect(handleUpdateResourceFields).toHaveBeenLastCalledWith({
+      soilProfileColorSwatches: '1: \n2: ',
+      soilProfileActiveLayerNumber: 2,
+    });
   });
 
-  it('writes expanded and neutral Munsell builder output to the selected soil layer row', () => {
-    const handleUpdateResourceField = jest.fn();
+  it('edits a soil layer number through a numeric modal', () => {
+    const handleUpdateResourceFields = jest.fn();
     const { getByTestId } = render(
+      <KoreanFieldworkSoilColorPanel
+        category={createCategoryForm([
+          'soilProfileColorSwatches',
+        ])}
+        resource={createResource(C.SOIL_PROFILE_PHOTO, {
+          soilProfileColorSwatches: '1: 10YR 4/3\n2: 2.5Y 5/3',
+        })}
+        onUpdateResourceField={jest.fn()}
+        onUpdateResourceFields={handleUpdateResourceFields}
+      />
+    );
+
+    fireEvent.press(getByTestId('soilColorLayerNumberEdit_2'));
+    fireEvent.changeText(getByTestId('soilColorLayerNumberInput'), '4');
+    fireEvent.press(getByTestId('soilColorLayerNumberApply'));
+
+    expect(handleUpdateResourceFields).toHaveBeenLastCalledWith({
+      soilProfileColorSwatches: '1: 10YR 4/3\n4: 2.5Y 5/3',
+      soilProfileActiveLayerNumber: 4,
+    });
+  });
+
+  it('stores the selected soil layer as the next photo sample target', () => {
+    const handleUpdateResourceField = jest.fn();
+    const { getByTestId, queryByTestId } = render(
       <KoreanFieldworkSoilColorPanel
         category={createCategoryForm([
           'soilProfileColorSwatches',
@@ -117,22 +151,54 @@ describe('KoreanFieldworkSoilColorPanel', () => {
       />
     );
 
+    expect(queryByTestId('soilColorLayerInput_1')).toBeNull();
     fireEvent.press(getByTestId('soilColorLayerSelect_2'));
-    fireEvent.press(getByTestId('soilColorOption_2.5GY'));
+
+    expect(handleUpdateResourceField).toHaveBeenCalledWith(
+      'soilProfileActiveLayerNumber',
+      2
+    );
+  });
+
+  it('writes expanded, neutral, and gley Munsell builder output to the selected soil layer row', () => {
+    const handleUpdateResourceFields = jest.fn();
+    const { getByTestId } = render(
+      <KoreanFieldworkSoilColorPanel
+        category={createCategoryForm([
+          'soilProfileColorSwatches',
+        ])}
+        resource={createResource(C.SOIL_PROFILE_PHOTO, {
+          soilProfileColorSwatches: '1: 10YR 4/3\n2: ',
+        })}
+        onUpdateResourceField={jest.fn()}
+        onUpdateResourceFields={handleUpdateResourceFields}
+      />
+    );
+
+    fireEvent.press(getByTestId('soilColorLayerSelect_2'));
+    fireEvent.press(getByTestId('soilColorHueNumberOption_2.5'));
+    fireEvent.press(getByTestId('soilColorHueFamilyOption_GY'));
     fireEvent.press(getByTestId('soilColorValueOption_2.5'));
     fireEvent.press(getByTestId('soilColorChromaOption_10'));
 
-    expect(handleUpdateResourceField).toHaveBeenLastCalledWith(
-      'soilProfileColorSwatches',
-      '1: 10YR 4/3\n2: 2.5GY 2.5/10'
-    );
+    expect(handleUpdateResourceFields).toHaveBeenLastCalledWith({
+      soilProfileColorSwatches: '1: 10YR 4/3\n2: 2.5GY 2.5/10',
+      soilProfileActiveLayerNumber: 2,
+    });
 
-    fireEvent.press(getByTestId('soilColorOption_N'));
+    fireEvent.press(getByTestId('soilColorHueFamilyOption_N'));
 
-    expect(handleUpdateResourceField).toHaveBeenLastCalledWith(
-      'soilProfileColorSwatches',
-      '1: 10YR 4/3\n2: N 2.5/0'
-    );
+    expect(handleUpdateResourceFields).toHaveBeenLastCalledWith({
+      soilProfileColorSwatches: '1: 10YR 4/3\n2: N 2.5/0',
+      soilProfileActiveLayerNumber: 2,
+    });
+
+    fireEvent.press(getByTestId('soilColorHueFamilyOption_GLEY 1'));
+
+    expect(handleUpdateResourceFields).toHaveBeenLastCalledWith({
+      soilProfileColorSwatches: '1: 10YR 4/3\n2: GLEY 1 2.5/N',
+      soilProfileActiveLayerNumber: 2,
+    });
   });
 
   it('lets users accept photo-derived Munsell candidates into the selected layer', () => {
@@ -164,7 +230,28 @@ describe('KoreanFieldworkSoilColorPanel', () => {
 
     expect(handleUpdateResourceFields).toHaveBeenCalledWith({
       soilProfileColorSwatches: '1: \n2: 10YR 4/3',
+      soilProfileActiveLayerNumber: 2,
       soilColorAssistStatus: 'reviewed',
+    });
+  });
+
+  it('writes the first photo-sampled Munsell candidate into the active layer row', () => {
+    expect(getSoilProfileColorSampleUpdates(
+      createResource(C.SOIL_PROFILE_PHOTO, {
+        soilProfileActiveLayerNumber: 2,
+        soilProfileColorSwatches: '1: 10YR 4/3\n2: ',
+      }),
+      {
+        soilColorAssistCandidates:
+          '사진 선택 지점 80%/50% 평균 RGB 139/128/88\n1: 2.5Y 5/3 (높음, 차이 0.0)',
+        soilColorAssistStatus: 'candidatesAvailable',
+      }
+    )).toEqual({
+      soilColorAssistCandidates:
+        '사진 선택 지점 80%/50% 평균 RGB 139/128/88\n1: 2.5Y 5/3 (높음, 차이 0.0)',
+      soilColorAssistStatus: 'reviewed',
+      soilProfileActiveLayerNumber: 2,
+      soilProfileColorSwatches: '1: 10YR 4/3\n2: 2.5Y 5/3',
     });
   });
 

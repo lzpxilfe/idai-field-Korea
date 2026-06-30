@@ -5,6 +5,7 @@ import {
 } from 'idai-field-core';
 import React, { useMemo, useState } from 'react';
 import {
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -37,6 +38,7 @@ interface SoilColorLayerRow {
 const C = KOREAN_FIELDWORK_CATEGORIES;
 
 const SOIL_COLOR_FIELDS = {
+  activeLayerNumber: 'soilProfileActiveLayerNumber',
   assistCandidates: 'soilColorAssistCandidates',
   assistStatus: 'soilColorAssistStatus',
   manualMunsell: 'soilColorMunsellManual',
@@ -46,50 +48,24 @@ const SOIL_COLOR_FIELDS = {
   soilColorNote: 'soilColorNote',
 } as const;
 
-const MUNSELL_HUE_OPTIONS: readonly SoilColorOption[] =
-  [
-    'N',
-    '10R',
-    '2.5YR',
-    '5YR',
-    '7.5YR',
-    '10YR',
-    '2.5Y',
-    '5Y',
-    '7.5Y',
-    '10Y',
-    '2.5GY',
-    '5GY',
-    '7.5GY',
-    '10GY',
-    '2.5G',
-    '5G',
-    '7.5G',
-    '10G',
-    '2.5BG',
-    '5BG',
-    '7.5BG',
-    '10BG',
-    '2.5B',
-    '5B',
-    '7.5B',
-    '10B',
-    '2.5PB',
-    '5PB',
-    '7.5PB',
-    '10PB',
-    '2.5P',
-    '5P',
-    '7.5P',
-    '10P',
-    '2.5RP',
-    '5RP',
-    '7.5RP',
-    '10RP',
-    '2.5R',
-    '5R',
-    '7.5R',
-  ].map((value) => ({ value, label: value }));
+const MUNSELL_HUE_NUMBER_OPTIONS: readonly SoilColorOption[] =
+  ['2.5', '5', '7.5', '10'].map((value) => ({ value, label: value }));
+
+const MUNSELL_HUE_FAMILY_OPTIONS: readonly SoilColorOption[] = [
+  'R',
+  'YR',
+  'Y',
+  'GY',
+  'G',
+  'BG',
+  'B',
+  'PB',
+  'P',
+  'RP',
+  'GLEY 1',
+  'GLEY 2',
+  'N',
+].map((value) => ({ value, label: value }));
 
 const MUNSELL_VALUE_OPTIONS: readonly SoilColorOption[] =
   ['1', '2', '2.5', '3', '4', '5', '6', '7', '8', '9'].map((value) => ({
@@ -141,14 +117,24 @@ const KoreanFieldworkSoilColorPanel: React.FC<KoreanFieldworkSoilColorPanelProps
     () => getSoilColorRows(getTextValue(resource, SOIL_COLOR_FIELDS.profileColorSwatches)),
     [resource]
   );
-  const [selectedRowNumber, setSelectedRowNumber] = useState(1);
-  const [builderHue, setBuilderHue] = useState('10YR');
+  const [selectedRowNumber, setSelectedRowNumber] = useState(
+    getActiveLayerNumber(resource) ?? 1
+  );
+  const [editingRowNumber, setEditingRowNumber] = useState<number>();
+  const [rowNumberInput, setRowNumberInput] = useState('');
+  const [builderHueNumber, setBuilderHueNumber] = useState('10');
+  const [builderHueFamily, setBuilderHueFamily] = useState('YR');
   const [builderValue, setBuilderValue] = useState('4');
   const [builderChroma, setBuilderChroma] = useState('3');
   const activeRowNumber = soilColorRows.some((row) => row.number === selectedRowNumber)
     ? selectedRowNumber
     : soilColorRows[0]?.number ?? 1;
-  const builderMunsell = formatMunsell(builderHue, builderValue, builderChroma);
+  const builderMunsell = formatMunsell(
+    builderHueNumber,
+    builderHueFamily,
+    builderValue,
+    builderChroma
+  );
 
   if (!canRecordLayerMunsell && !canRecordPhotoSwatches) return null;
 
@@ -163,6 +149,42 @@ const KoreanFieldworkSoilColorPanel: React.FC<KoreanFieldworkSoilColorPanelProps
     );
   };
 
+  const selectLayerRow = (rowNumber: number) => {
+    setSelectedRowNumber(rowNumber);
+    onUpdateResourceField(SOIL_COLOR_FIELDS.activeLayerNumber, rowNumber);
+  };
+
+  const openLayerNumberEditor = (rowNumber: number) => {
+    selectLayerRow(rowNumber);
+    setRowNumberInput(String(rowNumber));
+    setEditingRowNumber(rowNumber);
+  };
+
+  const closeLayerNumberEditor = () => {
+    setEditingRowNumber(undefined);
+    setRowNumberInput('');
+  };
+
+  const applyLayerNumberEdit = () => {
+    if (!editingRowNumber) return;
+
+    const nextRowNumber = Number.parseInt(rowNumberInput.trim(), 10);
+    if (!Number.isFinite(nextRowNumber) || nextRowNumber < 1) return;
+
+    const nextValue = renameSoilColorRowNumber(
+      getTextValue(resource, SOIL_COLOR_FIELDS.profileColorSwatches),
+      editingRowNumber,
+      nextRowNumber
+    );
+
+    updateFields({
+      [SOIL_COLOR_FIELDS.profileColorSwatches]: nextValue,
+      [SOIL_COLOR_FIELDS.activeLayerNumber]: nextRowNumber,
+    });
+    setSelectedRowNumber(nextRowNumber);
+    closeLayerNumberEditor();
+  };
+
   const applyMunsellValue = (value: string) => {
     if (canRecordLayerMunsell) {
       updateFields(getLayerMunsellUpdates(fieldNames, value));
@@ -170,30 +192,37 @@ const KoreanFieldworkSoilColorPanel: React.FC<KoreanFieldworkSoilColorPanelProps
     }
 
     if (canRecordPhotoSwatches) {
-      onUpdateResourceField(
-        SOIL_COLOR_FIELDS.profileColorSwatches,
-        updateSoilColorRowValue(
+      updateFields({
+        [SOIL_COLOR_FIELDS.profileColorSwatches]: updateSoilColorRowValue(
           getTextValue(resource, SOIL_COLOR_FIELDS.profileColorSwatches),
           activeRowNumber,
           value
-        )
-      );
+        ),
+        [SOIL_COLOR_FIELDS.activeLayerNumber]: activeRowNumber,
+      });
     }
   };
 
   const updateBuilder = (
-    part: 'hue' | 'value' | 'chroma',
+    part: 'hueNumber' | 'hueFamily' | 'value' | 'chroma',
     nextValue: string
   ) => {
-    const nextHue = part === 'hue' ? nextValue : builderHue;
+    const nextHueNumber = part === 'hueNumber' ? nextValue : builderHueNumber;
+    const nextHueFamily = part === 'hueFamily' ? nextValue : builderHueFamily;
     const nextMunsellValue = part === 'value' ? nextValue : builderValue;
     const nextChroma = part === 'chroma' ? nextValue : builderChroma;
 
-    if (part === 'hue') setBuilderHue(nextValue);
+    if (part === 'hueNumber') setBuilderHueNumber(nextValue);
+    if (part === 'hueFamily') setBuilderHueFamily(nextValue);
     if (part === 'value') setBuilderValue(nextValue);
     if (part === 'chroma') setBuilderChroma(nextValue);
 
-    applyMunsellValue(formatMunsell(nextHue, nextMunsellValue, nextChroma));
+    applyMunsellValue(formatMunsell(
+      nextHueNumber,
+      nextHueFamily,
+      nextMunsellValue,
+      nextChroma
+    ));
   };
 
   const applyAssistCandidate = (value: string) => {
@@ -209,6 +238,7 @@ const KoreanFieldworkSoilColorPanel: React.FC<KoreanFieldworkSoilColorPanelProps
           activeRowNumber,
           value
         ),
+        [SOIL_COLOR_FIELDS.activeLayerNumber]: activeRowNumber,
         ...(fieldNames.has(SOIL_COLOR_FIELDS.assistStatus)
           ? { [SOIL_COLOR_FIELDS.assistStatus]: 'reviewed' }
           : {}),
@@ -226,15 +256,24 @@ const KoreanFieldworkSoilColorPanel: React.FC<KoreanFieldworkSoilColorPanelProps
       {canRecordPhotoSwatches && (
         <QuickSection title="층별 토색">
           {soilColorRows.map((row) => (
-            <View key={row.number} style={styles.layerRow}>
+            <TouchableOpacity
+              activeOpacity={0.86}
+              key={row.number}
+              onPress={() => selectLayerRow(row.number)}
+              style={[
+                styles.layerRow,
+                row.number === activeRowNumber && styles.layerRowActive,
+              ]}
+              testID={`soilColorLayerSelect_${row.number}`}
+            >
               <TouchableOpacity
                 activeOpacity={0.84}
-                onPress={() => setSelectedRowNumber(row.number)}
+                onPress={() => openLayerNumberEditor(row.number)}
                 style={[
                   styles.layerNumber,
                   row.number === activeRowNumber && styles.layerNumberActive,
                 ]}
-                testID={`soilColorLayerSelect_${row.number}`}
+                testID={`soilColorLayerNumberEdit_${row.number}`}
               >
                 <Text
                   style={[
@@ -245,25 +284,24 @@ const KoreanFieldworkSoilColorPanel: React.FC<KoreanFieldworkSoilColorPanelProps
                   {row.number}
                 </Text>
               </TouchableOpacity>
-              <TextInput
-                autoCapitalize="characters"
-                autoCorrect={false}
-                onChangeText={(value) => onUpdateResourceField(
-                  SOIL_COLOR_FIELDS.profileColorSwatches,
-                  updateSoilColorRowValue(
-                    getTextValue(resource, SOIL_COLOR_FIELDS.profileColorSwatches),
-                    row.number,
-                    value
-                  )
-                )}
-                onFocus={() => setSelectedRowNumber(row.number)}
-                placeholder="예: 10YR 4/3 갈색, GLEY 1 4/N"
-                placeholderTextColor="#98a2b3"
-                style={styles.layerInput}
-                testID={`soilColorLayerInput_${row.number}`}
-                value={row.value}
+              <View style={styles.layerValueBox}>
+                <Text
+                  numberOfLines={1}
+                  style={[
+                    styles.layerValueText,
+                    !row.value && styles.layerValuePlaceholder,
+                  ]}
+                  testID={`soilColorLayerValue_${row.number}`}
+                >
+                  {row.value || '먼셀값 없음'}
+                </Text>
+              </View>
+              <MaterialIcons
+                name="colorize"
+                size={16}
+                color={row.number === activeRowNumber ? '#175cd3' : '#98a2b3'}
               />
-            </View>
+            </TouchableOpacity>
           ))}
           <TouchableOpacity
             activeOpacity={0.84}
@@ -272,8 +310,12 @@ const KoreanFieldworkSoilColorPanel: React.FC<KoreanFieldworkSoilColorPanelProps
                 getTextValue(resource, SOIL_COLOR_FIELDS.profileColorSwatches)
               );
               const nextRows = getSoilColorRows(nextValue);
-              setSelectedRowNumber(nextRows[nextRows.length - 1]?.number ?? 1);
-              onUpdateResourceField(SOIL_COLOR_FIELDS.profileColorSwatches, nextValue);
+              const nextRowNumber = nextRows[nextRows.length - 1]?.number ?? 1;
+              setSelectedRowNumber(nextRowNumber);
+              updateFields({
+                [SOIL_COLOR_FIELDS.profileColorSwatches]: nextValue,
+                [SOIL_COLOR_FIELDS.activeLayerNumber]: nextRowNumber,
+              });
             }}
             style={styles.addNumberButton}
             testID="soilColorAddNumberedSwatch"
@@ -295,6 +337,15 @@ const KoreanFieldworkSoilColorPanel: React.FC<KoreanFieldworkSoilColorPanelProps
       )}
 
       <QuickSection title="먼셀 조합">
+        {canRecordPhotoSwatches && (
+          <LayerNumberModal
+            isVisible={editingRowNumber !== undefined}
+            value={rowNumberInput}
+            onApply={applyLayerNumberEdit}
+            onChangeValue={setRowNumberInput}
+            onClose={closeLayerNumberEditor}
+          />
+        )}
         <View style={styles.builderPreviewRow}>
           <Text style={styles.builderPreviewLabel}>
             {canRecordPhotoSwatches ? `${activeRowNumber}층에 입력` : '현재 먼셀값'}
@@ -309,10 +360,18 @@ const KoreanFieldworkSoilColorPanel: React.FC<KoreanFieldworkSoilColorPanelProps
           </TouchableOpacity>
         </View>
         <LabeledPresetRow
-          label="색상"
-          options={MUNSELL_HUE_OPTIONS}
-          activeValue={builderHue}
-          onPress={(value) => updateBuilder('hue', value)}
+          label="숫자"
+          options={MUNSELL_HUE_NUMBER_OPTIONS}
+          activeValue={builderHueNumber}
+          onPress={(value) => updateBuilder('hueNumber', value)}
+          testIDPrefix="soilColorHueNumberOption"
+        />
+        <LabeledPresetRow
+          label="알파벳"
+          options={MUNSELL_HUE_FAMILY_OPTIONS}
+          activeValue={builderHueFamily}
+          onPress={(value) => updateBuilder('hueFamily', value)}
+          testIDPrefix="soilColorHueFamilyOption"
         />
         <LabeledPresetRow
           label="명도"
@@ -328,20 +387,6 @@ const KoreanFieldworkSoilColorPanel: React.FC<KoreanFieldworkSoilColorPanelProps
           onPress={(value) => updateBuilder('chroma', value)}
           testIDPrefix="soilColorChromaOption"
         />
-        {canRecordLayerMunsell && (
-          <TextInput
-            autoCapitalize="characters"
-            autoCorrect={false}
-            onChangeText={(value) => updateFields(
-              getLayerMunsellUpdates(fieldNames, value)
-            )}
-            placeholder="직접 입력 예: 10YR 4/3, GLEY 1 4/N"
-            placeholderTextColor="#98a2b3"
-            style={styles.textInput}
-            testID="soilColorInput_manualMunsell"
-            value={getTextValue(resource, SOIL_COLOR_FIELDS.manualMunsell)}
-          />
-        )}
       </QuickSection>
 
       {hasAssistCandidates && canRecordLayerMunsell && (
@@ -463,6 +508,60 @@ const AssistCandidateTextInput: React.FC<{
   />
 );
 
+const LayerNumberModal: React.FC<{
+  isVisible: boolean;
+  onApply: () => void;
+  onChangeValue: (value: string) => void;
+  onClose: () => void;
+  value: string;
+}> = ({
+  isVisible,
+  onApply,
+  onChangeValue,
+  onClose,
+  value,
+}) => (
+  <Modal
+    animationType="fade"
+    onRequestClose={onClose}
+    transparent
+    visible={isVisible}
+  >
+    <View style={styles.modalBackdrop}>
+      <View style={styles.numberModalCard}>
+        <Text style={styles.numberModalTitle}>층 번호</Text>
+        <TextInput
+          autoFocus
+          keyboardType="number-pad"
+          onChangeText={onChangeValue}
+          selectTextOnFocus
+          style={styles.numberModalInput}
+          testID="soilColorLayerNumberInput"
+          value={value}
+        />
+        <View style={styles.numberModalActions}>
+          <TouchableOpacity
+            activeOpacity={0.84}
+            onPress={onClose}
+            style={styles.numberModalSecondaryButton}
+            testID="soilColorLayerNumberCancel"
+          >
+            <Text style={styles.numberModalSecondaryText}>취소</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            activeOpacity={0.84}
+            onPress={onApply}
+            style={styles.numberModalPrimaryButton}
+            testID="soilColorLayerNumberApply"
+          >
+            <Text style={styles.numberModalPrimaryText}>적용</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  </Modal>
+);
+
 const QuickSection: React.FC<{
   title: string;
   children: React.ReactNode;
@@ -565,8 +664,17 @@ const getAssistCandidateUpdates = (
   return updates;
 };
 
-const formatMunsell = (hue: string, value: string, chroma: string): string =>
-  hue === 'N' ? `N ${value}/0` : `${hue} ${value}/${chroma}`;
+const formatMunsell = (
+  hueNumber: string,
+  hueFamily: string,
+  value: string,
+  chroma: string
+): string => {
+  if (hueFamily === 'N') return `N ${value}/0`;
+  if (hueFamily.startsWith('GLEY')) return `${hueFamily} ${value}/N`;
+
+  return `${hueNumber}${hueFamily} ${value}/${chroma}`;
+};
 
 const getSoilColorRows = (currentValue: string): SoilColorLayerRow[] => {
   const lines = currentValue
@@ -595,6 +703,25 @@ const appendEmptySoilColorRow = (currentValue: string): string => {
   return serializeSoilColorRows(rows.concat({ number: nextNumber, value: '' }));
 };
 
+const renameSoilColorRowNumber = (
+  currentValue: string,
+  currentRowNumber: number,
+  nextRowNumber: number
+): string => {
+  const rows = getSoilColorRows(currentValue);
+  if (rows.some((row) =>
+    row.number === nextRowNumber && row.number !== currentRowNumber
+  )) {
+    return currentValue;
+  }
+
+  return serializeSoilColorRows(rows.map((row) =>
+    row.number === currentRowNumber
+      ? { ...row, number: nextRowNumber }
+      : row
+  ));
+};
+
 const updateSoilColorRowValue = (
   currentValue: string,
   rowNumber: number,
@@ -617,6 +744,53 @@ const serializeSoilColorRows = (rows: SoilColorLayerRow[]): string =>
     .map((row) => `${row.number}: ${row.value}`)
     .join('\n');
 
+const getActiveLayerNumber = (resource: NewResource): number | undefined => {
+  const rawValue = resource[SOIL_COLOR_FIELDS.activeLayerNumber];
+  const numericValue = typeof rawValue === 'number'
+    ? rawValue
+    : typeof rawValue === 'string'
+      ? Number.parseInt(rawValue, 10)
+      : undefined;
+
+  return numericValue && Number.isFinite(numericValue) && numericValue > 0
+    ? numericValue
+    : undefined;
+};
+
+export const getSoilProfileColorSampleUpdates = (
+  resource: NewResource,
+  assistUpdates: {
+    soilColorAssistCandidates?: unknown;
+    soilColorAssistStatus?: unknown;
+  }
+): Record<string, unknown> => {
+  const sampledMunsell = extractMunsellCandidateOptions(
+    getTextFromUnknown(assistUpdates.soilColorAssistCandidates)
+  )[0];
+  if (!sampledMunsell) return { ...assistUpdates };
+
+  const activeRowNumber = getActiveLayerNumber(resource)
+    ?? getSoilColorRows(getTextValue(
+      resource,
+      SOIL_COLOR_FIELDS.profileColorSwatches
+    ))[0]?.number
+    ?? 1;
+
+  return {
+    ...assistUpdates,
+    [SOIL_COLOR_FIELDS.profileColorSwatches]: updateSoilColorRowValue(
+      getTextValue(resource, SOIL_COLOR_FIELDS.profileColorSwatches),
+      activeRowNumber,
+      sampledMunsell
+    ),
+    [SOIL_COLOR_FIELDS.activeLayerNumber]: activeRowNumber,
+    [SOIL_COLOR_FIELDS.assistStatus]:
+      assistUpdates.soilColorAssistStatus === 'lowConfidence'
+        ? 'lowConfidence'
+        : 'reviewed',
+  };
+};
+
 const getTextValue = (
   resource: NewResource,
   fieldName: string
@@ -633,6 +807,9 @@ const getTextValue = (
 
   return value;
 };
+
+const getTextFromUnknown = (value: unknown): string =>
+  typeof value === 'string' ? value : '';
 
 const styles = StyleSheet.create({
   container: {
@@ -665,8 +842,18 @@ const styles = StyleSheet.create({
   },
   layerRow: {
     alignItems: 'center',
+    backgroundColor: 'white',
+    borderColor: '#d0d5dd',
+    borderRadius: 6,
+    borderWidth: 1,
     flexDirection: 'row',
     marginBottom: 7,
+    minHeight: 42,
+    paddingHorizontal: 6,
+  },
+  layerRowActive: {
+    backgroundColor: '#eff8ff',
+    borderColor: '#84caff',
   },
   layerNumber: {
     alignItems: 'center',
@@ -703,6 +890,21 @@ const styles = StyleSheet.create({
     minHeight: 38,
     paddingHorizontal: 10,
     paddingVertical: 8,
+  },
+  layerValueBox: {
+    flex: 1,
+    justifyContent: 'center',
+    minHeight: 38,
+    paddingHorizontal: 6,
+  },
+  layerValueText: {
+    color: '#101828',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  layerValuePlaceholder: {
+    color: '#98a2b3',
+    fontWeight: '800',
   },
   addNumberButton: {
     alignItems: 'center',
@@ -745,6 +947,69 @@ const styles = StyleSheet.create({
     color: '#475467',
     fontSize: 12,
     fontWeight: '700',
+  },
+  modalBackdrop: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(16, 24, 40, 0.42)',
+    flex: 1,
+    justifyContent: 'center',
+    padding: 24,
+  },
+  numberModalCard: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 14,
+    width: '100%',
+  },
+  numberModalTitle: {
+    color: '#101828',
+    fontSize: 14,
+    fontWeight: '900',
+    marginBottom: 8,
+  },
+  numberModalInput: {
+    backgroundColor: 'white',
+    borderColor: '#84caff',
+    borderRadius: 6,
+    borderWidth: 1,
+    color: '#101828',
+    fontSize: 18,
+    fontWeight: '900',
+    minHeight: 44,
+    paddingHorizontal: 10,
+  },
+  numberModalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 12,
+  },
+  numberModalSecondaryButton: {
+    alignItems: 'center',
+    borderColor: '#d0d5dd',
+    borderRadius: 6,
+    borderWidth: 1,
+    justifyContent: 'center',
+    marginRight: 8,
+    minHeight: 38,
+    paddingHorizontal: 12,
+  },
+  numberModalSecondaryText: {
+    color: '#344054',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  numberModalPrimaryButton: {
+    alignItems: 'center',
+    backgroundColor: '#175cd3',
+    borderRadius: 6,
+    justifyContent: 'center',
+    minHeight: 38,
+    paddingHorizontal: 12,
+  },
+  numberModalPrimaryText: {
+    color: 'white',
+    fontSize: 13,
+    fontWeight: '900',
   },
   builderPreviewRow: {
     alignItems: 'center',
