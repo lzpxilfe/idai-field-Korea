@@ -29,6 +29,32 @@ describe('korean fieldwork add options', () => {
     expect(options.other).toEqual([]);
   });
 
+  it('keeps trench creation as a special-case option for excavation operations', () => {
+    const options = getKoreanFieldworkAddOptions(
+      C.OPERATION,
+      [
+        C.TRENCH,
+        C.FEATURE,
+        C.SURVEY_BOUNDARY,
+        C.PEN_MEMO,
+      ],
+      'excavation'
+    );
+
+    expect(options.primary.map((option) => option.categoryName)).toEqual([
+      C.FEATURE,
+      C.SURVEY_BOUNDARY,
+      C.PEN_MEMO,
+    ]);
+    expect(options.special).toEqual([
+      expect.objectContaining({
+        categoryName: C.TRENCH,
+        description: expect.stringContaining('예외적으로 트렌치'),
+      }),
+    ]);
+    expect(options.other).toEqual([]);
+  });
+
   it('uses FeatureSegment as the tablet pit/feature segment record under features', () => {
     const options = getKoreanFieldworkAddOptions(C.FEATURE, [
       C.FEATURE_SEGMENT,

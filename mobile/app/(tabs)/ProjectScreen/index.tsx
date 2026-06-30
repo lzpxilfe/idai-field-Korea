@@ -803,6 +803,7 @@ const DocumentsList: React.FC = () => {
     <View style={styles.screen}>
       {addModalParent && (
         <DocumentAddModal
+          investigationModeId={investigationModeId}
           onClose={closeAddChildModal}
           parentDoc={addModalParent}
           onAddCategory={navigateAddCategory}

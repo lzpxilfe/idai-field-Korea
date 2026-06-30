@@ -132,7 +132,8 @@ export const getKoreanFieldworkRecordActionSummary = (
     evidenceCount,
     issues.length,
     checklistDone,
-    checklistTotal
+    checklistTotal,
+    investigationModeId
   );
   const tone = getTone(issues, evidenceCount, completionPercent);
 
@@ -154,7 +155,8 @@ export const getKoreanFieldworkRecordActionSummary = (
       evidenceChips,
       issues,
       documentsById,
-      allowedAddCategories
+      allowedAddCategories,
+      investigationModeId
     ),
   };
 };
@@ -165,7 +167,8 @@ const getRecordActions = (
   evidenceChips: ReturnType<typeof getKoreanFieldworkEvidenceChips>,
   issues: KoreanFieldworkReadinessIssue[],
   documentsById: Map<string, Document>,
-  allowedAddCategories: Set<string>
+  allowedAddCategories: Set<string>,
+  investigationModeId?: KoreanFieldworkInvestigationModeId
 ): KoreanFieldworkRecordActionItem[] => {
   const actions: KoreanFieldworkRecordActionItem[] = [];
   const issueAction = getIssueAction(document, issues, documentsById);
@@ -174,7 +177,8 @@ const getRecordActions = (
   const structureAction = getStructureAction(
     document,
     directChildren,
-    allowedAddCategories
+    allowedAddCategories,
+    investigationModeId
   );
   if (structureAction) actions.push(structureAction);
 
@@ -217,9 +221,13 @@ const getIssueAction = (
 const getStructureAction = (
   document: Document,
   directChildren: Document[],
-  allowedAddCategories: Set<string>
+  allowedAddCategories: Set<string>,
+  investigationModeId?: KoreanFieldworkInvestigationModeId
 ): KoreanFieldworkRecordActionItem | undefined => {
-  const nextCategoryName = NEXT_CHILD_CATEGORY[document.resource.category];
+  const nextCategoryName = getNextChildCategory(
+    document.resource.category,
+    investigationModeId
+  );
   if (!nextCategoryName || !allowedAddCategories.has(nextCategoryName)) return undefined;
 
   const hasExpectedChild = directChildren.some((child) =>
@@ -293,14 +301,18 @@ const getCompletionPercent = (
   evidenceCount: number,
   issueCount: number,
   checklistDone: number,
-  checklistTotal: number
+  checklistTotal: number,
+  investigationModeId?: KoreanFieldworkInvestigationModeId
 ): number => {
   const resource = document.resource as unknown as Record<string, unknown>;
   const checks: boolean[] = [
     issueCount === 0,
     hasTextValue(resource.recordCreationTiming),
   ];
-  const nextChildCategory = NEXT_CHILD_CATEGORY[document.resource.category];
+  const nextChildCategory = getNextChildCategory(
+    document.resource.category,
+    investigationModeId
+  );
 
   if (nextChildCategory) {
     checks.push(directChildren.some((child) =>
@@ -321,6 +333,20 @@ const getCompletionPercent = (
   }
 
   return Math.round((checks.filter(Boolean).length / checks.length) * 100);
+};
+
+const getNextChildCategory = (
+  parentCategoryName: string,
+  investigationModeId?: KoreanFieldworkInvestigationModeId
+): string | undefined => {
+  if (
+    parentCategoryName === C.OPERATION
+    && investigationModeId === 'excavation'
+  ) {
+    return C.FEATURE;
+  }
+
+  return NEXT_CHILD_CATEGORY[parentCategoryName];
 };
 
 const getTone = (

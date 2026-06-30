@@ -5,6 +5,7 @@ import {
   KOREAN_FIELDWORK_CATEGORY_ORDER,
   KOREAN_FIELDWORK_HIDDEN_ADD_CATEGORIES,
 } from './korean-fieldwork-categories';
+import { KoreanFieldworkInvestigationModeId } from './korean-fieldwork-investigation-mode';
 
 export interface KoreanFieldworkAddOption {
   categoryName: string;
@@ -14,6 +15,7 @@ export interface KoreanFieldworkAddOption {
 
 export interface KoreanFieldworkAddOptionGroups {
   primary: KoreanFieldworkAddOption[];
+  special: KoreanFieldworkAddOption[];
   other: KoreanFieldworkAddOption[];
 }
 
@@ -118,19 +120,30 @@ export const KOREAN_FIELDWORK_HIERARCHY_HELP =
 
 export const getKoreanFieldworkAddOptions = (
   parentCategoryName: string,
-  allowedCategoryNames: readonly string[]
+  allowedCategoryNames: readonly string[],
+  investigationModeId?: KoreanFieldworkInvestigationModeId
 ): KoreanFieldworkAddOptionGroups => {
   const allowedSet = new Set(allowedCategoryNames.filter(isVisibleAddCategory));
+  const specialNames = getSpecialOptionNames(
+    parentCategoryName,
+    allowedSet,
+    investigationModeId
+  );
+  const specialSet = new Set(specialNames);
   const primaryNames = (PRIMARY_OPTIONS_BY_PARENT[parentCategoryName] ?? [])
-    .filter((categoryName) => allowedSet.has(categoryName));
+    .filter((categoryName) =>
+      allowedSet.has(categoryName) && !specialSet.has(categoryName)
+    );
   const primarySet = new Set(primaryNames);
   const otherNames = [...allowedSet]
     .filter((categoryName) => !primarySet.has(categoryName))
+    .filter((categoryName) => !specialSet.has(categoryName))
     .filter((categoryName) => !PRIMARY_ONLY_CATEGORIES.has(categoryName))
     .sort(compareKoreanFieldworkCategoryNames);
 
   return {
     primary: primaryNames.map(toOption),
+    special: specialNames.map(toSpecialOption),
     other: otherNames.map(toOption),
   };
 };
@@ -143,6 +156,35 @@ const toOption = (categoryName: string): KoreanFieldworkAddOption => ({
   label: getKoreanFieldworkCategoryLabel(categoryName),
   description: getKoreanFieldworkCategoryDescription(categoryName),
 });
+
+const toSpecialOption = (categoryName: string): KoreanFieldworkAddOption => {
+  if (categoryName === C.TRENCH) {
+    return {
+      categoryName,
+      label: getKoreanFieldworkCategoryLabel(categoryName),
+      description:
+        '발굴조사에서는 보통 유구를 바로 추가합니다. 조사지역을 예외적으로 트렌치로 나눌 때만 사용하세요.',
+    };
+  }
+
+  return toOption(categoryName);
+};
+
+const getSpecialOptionNames = (
+  parentCategoryName: string,
+  allowedCategoryNames: Set<string>,
+  investigationModeId?: KoreanFieldworkInvestigationModeId
+): string[] => {
+  if (
+    parentCategoryName === C.OPERATION
+    && investigationModeId === 'excavation'
+    && allowedCategoryNames.has(C.TRENCH)
+  ) {
+    return [C.TRENCH];
+  }
+
+  return [];
+};
 
 const compareKoreanFieldworkCategoryNames = (
   categoryNameA: string,

@@ -207,6 +207,7 @@ const DocumentsMap: React.FC<DocumentsMapProps> = ({
     <View style={{ flex: 1 }}>
       {isAddModalOpen && (
         <DocumentAddModal
+          investigationModeId={investigationModeId}
           onClose={closeAddModal}
           parentDoc={highlightedDoc}
           onAddCategory={navigateAddCategory}

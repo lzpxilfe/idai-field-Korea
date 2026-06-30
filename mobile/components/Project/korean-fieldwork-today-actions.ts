@@ -347,8 +347,7 @@ const appendExcavationPriorityTasks = (
   if (!targets.primaryOperation) return;
 
   const documentsById = toDocumentIndex(documents);
-  const featureParent = getFirstDocumentByCategory(documents, C.TRENCH)
-    ?? targets.primaryOperation;
+  const featureParent = targets.primaryOperation;
   const feature = getFirstDocumentByCategory(documents, C.FEATURE);
 
   if (!feature) {
@@ -449,15 +448,30 @@ export const getFeatureDraftParent = (
   documents: Document[],
   primaryOperation: Document | undefined = getPrimaryOperation(documents),
   investigationModeId?: KoreanFieldworkInvestigationModeId
-): Document | undefined => documents.find((document) =>
-  document.resource.category === C.TRENCH
-) ?? (
-  investigationModeId === 'trialTrench'
-    ? undefined
-    : documents.find((document) =>
-      document.resource.category === C.FEATURE_GROUP
-    ) ?? primaryOperation
-);
+): Document | undefined => {
+  const scopedTrench = documents[0]?.resource.category === C.TRENCH
+    ? documents[0]
+    : undefined;
+  const trench = documents.find((document) =>
+    document.resource.category === C.TRENCH
+  );
+
+  if (!investigationModeId || investigationModeId === 'trialTrench') {
+    return trench ?? (
+      investigationModeId === 'trialTrench'
+        ? undefined
+        : documents.find((document) =>
+          document.resource.category === C.FEATURE_GROUP
+        ) ?? primaryOperation
+    );
+  }
+
+  if (investigationModeId === 'excavation' && scopedTrench) return scopedTrench;
+
+  return documents.find((document) =>
+    document.resource.category === C.FEATURE_GROUP
+  ) ?? primaryOperation;
+};
 
 const getFirstIssueDocument = (
   summary: KoreanFieldworkTodaySummary,

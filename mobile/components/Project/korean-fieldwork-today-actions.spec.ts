@@ -224,6 +224,43 @@ describe('Korean fieldwork today actions', () => {
     });
   });
 
+  it('does not use existing special-case trenches as the default excavation feature parent', () => {
+    const operation = createDoc('operation-1', C.OPERATION);
+    const trench = createDoc('trench-1', C.TRENCH, {
+      relations: { isRecordedIn: ['operation-1'] },
+    });
+    const summary = createSummary();
+    const targets = getKoreanFieldworkTodayActionTargets(
+      summary as any,
+      [operation, trench] as any,
+      'excavation'
+    );
+    const tasks = getKoreanFieldworkPriorityTasks(
+      summary as any,
+      [operation, trench] as any,
+      5,
+      'excavation'
+    );
+
+    expect(targets.featureDraftParent).toBe(operation);
+    expect(getKoreanFieldworkQuickActionStates(
+      summary as any,
+      targets,
+      undefined,
+      'excavation'
+    ).featureCandidate.action).toEqual({
+      type: 'createDocument',
+      parentDocumentId: 'operation-1',
+      categoryName: C.FEATURE,
+    });
+    expect(tasks.find((task) => task.id === 'create-detected-feature')?.action)
+      .toEqual({
+        type: 'createDocument',
+        parentDocumentId: 'operation-1',
+        categoryName: C.FEATURE,
+      });
+  });
+
   it('guides 발굴조사 feature records through photos, sectioning, and drawings', () => {
     const operation = createDoc('operation-1', C.OPERATION);
     const feature = createDoc('feature-1', C.FEATURE, {

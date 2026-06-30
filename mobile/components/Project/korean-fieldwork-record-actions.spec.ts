@@ -31,6 +31,28 @@ describe('Korean fieldwork record actions', () => {
     ]);
   });
 
+  it('recommends feature records instead of trenches for excavation operations', () => {
+    const operation = createDoc('operation-1', C.OPERATION, '조사구역 1', {}, {
+      fieldRecordQuality: [],
+      recordCreationTiming: '',
+    });
+
+    const summary = getKoreanFieldworkRecordActionSummary(
+      operation,
+      [operation],
+      [C.TRENCH, C.FEATURE, C.PHOTO],
+      'excavation'
+    );
+
+    expect(summary.actions.map((action) => action.id).slice(0, 2)).toEqual([
+      'create-Feature',
+      'create-photos',
+    ]);
+    expect(summary.actions.map((action) => action.id)).not.toContain(
+      'create-Trench'
+    );
+  });
+
   it('prioritizes readiness issues before creating more records', () => {
     const feature = createDoc('feature-1', C.FEATURE, '수혈 1', {}, {
       featureRecordingStatus: 'confirmed',

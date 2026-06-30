@@ -36,6 +36,7 @@ import {
   getKoreanFieldworkFeatureInvestigationSteps,
   KOREAN_FIELDWORK_FEATURE_TYPE_OPTIONS,
 } from './korean-fieldwork-feature-types';
+import { KoreanFieldworkInvestigationModeId } from './korean-fieldwork-investigation-mode';
 
 const ICON_SIZE = 34;
 const FEATURE_SKETCH_CANVAS_DEFAULT_SIZE = {
@@ -58,6 +59,7 @@ type FeatureSketchPoint = {
 };
 
 interface AddModalProps {
+  investigationModeId?: KoreanFieldworkInvestigationModeId;
   onAddCategory: (
     categoryName: string,
     parentDoc: Document | undefined,
@@ -68,6 +70,7 @@ interface AddModalProps {
 }
 
 const DocumentAddModal: React.FC<AddModalProps> = ({
+  investigationModeId,
   onAddCategory,
   onClose,
   parentDoc,
@@ -111,15 +114,17 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
   const optionGroups = useMemo(
     () => getKoreanFieldworkAddOptions(
       parentDoc?.resource.category ?? '',
-      allowedCategories.map((category) => category.name)
+      allowedCategories.map((category) => category.name),
+      investigationModeId
     ),
-    [allowedCategories, parentDoc]
+    [allowedCategories, investigationModeId, parentDoc]
   );
 
   if (!parentDoc) return null;
   const parentCategory = config.getCategory(parentDoc.resource.category);
   if (!parentCategory) return null;
   const hasPrimaryOptions = optionGroups.primary.length > 0;
+  const hasSpecialOptions = optionGroups.special.length > 0;
   const hasOtherOptions = optionGroups.other.length > 0;
   const parentCategoryLabel = labels?.get(parentCategory)
     ?? getKoreanFieldworkCategoryLabel(parentCategory.name);
@@ -621,6 +626,13 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
                   </View>
                 )}
 
+                {hasSpecialOptions && (
+                  <View style={styles.optionSection}>
+                    <Text style={styles.sectionTitle}>특별한 경우</Text>
+                    {optionGroups.special.map(renderOption)}
+                  </View>
+                )}
+
                 {hasOtherOptions && (
                   <View style={styles.optionSection}>
                     <Text style={styles.sectionTitle}>그 밖의 기록</Text>
@@ -628,7 +640,7 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
                   </View>
                 )}
 
-                {!hasPrimaryOptions && !hasOtherOptions && (
+                {!hasPrimaryOptions && !hasSpecialOptions && !hasOtherOptions && (
                   <View style={styles.emptyState}>
                     <Ionicons name="information-circle-outline" size={24} color="#667085" />
                     <Text style={styles.emptyTitle}>

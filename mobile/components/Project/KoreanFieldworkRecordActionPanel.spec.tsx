@@ -32,6 +32,29 @@ describe('KoreanFieldworkRecordActionPanel', () => {
     );
   });
 
+  it('creates a feature rather than a trench from excavation operation records', () => {
+    const operation = createDoc('operation-1', C.OPERATION, '조사구역 1');
+    const handleAddDocumentOfCategory = jest.fn();
+
+    const { getByTestId } = render(
+      <KoreanFieldworkRecordActionPanel
+        document={operation}
+        documents={[operation]}
+        allowedAddCategoryNames={[C.TRENCH, C.FEATURE, C.PHOTO]}
+        investigationModeId="excavation"
+        onAddDocumentOfCategory={handleAddDocumentOfCategory}
+        onOpenDocument={jest.fn()}
+      />
+    );
+
+    fireEvent.press(getByTestId('recordAction_create-Feature'));
+
+    expect(handleAddDocumentOfCategory).toHaveBeenCalledWith(
+      operation,
+      C.FEATURE
+    );
+  });
+
   it('opens existing evidence from the action rail', () => {
     const feature = createDoc('feature-1', C.FEATURE, '수혈 1');
     const photo = createDoc('photo-1', C.PHOTO, '수혈 1 사진', {
