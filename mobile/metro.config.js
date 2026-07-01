@@ -8,10 +8,11 @@ const defaultConfig = getDefaultConfig(__dirname);
 const resolveFromMobileNodeModules = (moduleName) =>
     path.resolve(__dirname, 'node_modules', moduleName);
 const corePackageDir = path.resolve(__dirname, '../core');
+const corePackageEntryFile = path.resolve(corePackageDir, 'index.ts');
 const emptyCoreTestModule = path.resolve(__dirname, 'shims/empty-core-test-module.js');
 const corePackageEntryFiles = [
     path.resolve(corePackageDir, 'dist/index.js'),
-    path.resolve(corePackageDir, 'index.ts'),
+    corePackageEntryFile,
     path.resolve(corePackageDir, 'index.js')
 ].map((filePath) => path.normalize(filePath).toLowerCase());
 
@@ -36,13 +37,11 @@ const isCoreTestExport = (context, moduleName) =>
 const customConfig = {
     resolver: {
         blockList: exclusionList([
-            /android[\\\/]\.cxx(?:[\\\/].*)?$/,
-            /android[\\\/]build(?:[\\\/].*)?$/,
-            /android[\\\/]build\.disabled-for-metro(?:[\\\/].*)?$/,
+            /android[\\\/]\.cxx(?:\.[^\\\/]+)?(?:[\\\/].*)?$/,
+            /android[\\\/]build(?:\.[^\\\/]+)?(?:[\\\/].*)?$/,
             /android[\\\/]app[\\\/]build(?:[\\\/].*)?$/,
-            /node_modules[\\\/].*[\\\/]android[\\\/]\.cxx(?:[\\\/].*)?$/,
-            /node_modules[\\\/].*[\\\/]android[\\\/]build(?:[\\\/].*)?$/,
-            /node_modules[\\\/].*[\\\/]android[\\\/]build\.disabled-for-metro(?:[\\\/].*)?$/
+            /node_modules[\\\/].*[\\\/]android[\\\/]\.cxx(?:\.[^\\\/]+)?(?:[\\\/].*)?$/,
+            /node_modules[\\\/].*[\\\/]android[\\\/]build(?:\.[^\\\/]+)?(?:[\\\/].*)?$/
         ]),
         resolveRequest: (context, moduleName, platform) => {
             if (isCoreTestExport(context, moduleName)) {
@@ -56,7 +55,7 @@ const customConfig = {
             if (moduleName === 'idai-field-core') {
                 return context.resolveRequest(
                     context,
-                    corePackageDir,
+                    corePackageEntryFile,
                     platform
                 );
             }

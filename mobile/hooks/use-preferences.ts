@@ -264,11 +264,11 @@ const normalizePreferences = (preferences: unknown): Preferences => {
     }),
     {} as Record<string, ProjectSettings>
   );
-  const currentProject = typeof safePreferences.currentProject === 'string'
+  const storedCurrentProject = typeof safePreferences.currentProject === 'string'
     ? safePreferences.currentProject
     : '';
-  const currentProjectSettings = currentProject
-    ? projects[currentProject]
+  const storedCurrentProjectSettings = storedCurrentProject
+    ? projects[storedCurrentProject]
     : undefined;
   const recentProjects = Array.isArray(safePreferences.recentProjects)
     ? safePreferences.recentProjects.filter(
@@ -282,15 +282,15 @@ const normalizePreferences = (preferences: unknown): Preferences => {
     username: typeof safePreferences.username === 'string'
       ? safePreferences.username
       : '',
-    currentProject,
+    currentProject: '',
     projects,
     recentProjects,
     mapProviderSettings: normalizeMapProviderSettings(
       safePreferences.mapProviderSettings
     ),
-    languages: currentProjectSettings?.languages
+    languages: storedCurrentProjectSettings?.languages
       ?? languages
-      ?? getDefaultProjectLanguages(currentProject),
+      ?? getDefaultProjectLanguages(''),
   };
 };
 
@@ -333,6 +333,7 @@ const stripSecurePreferences = (
   } = {}
 ): Preferences => ({
   ...preferences,
+  currentProject: '',
   projects: Object.entries(preferences.projects).reduce(
     (result, [project, projectSettings]) => ({
       ...result,

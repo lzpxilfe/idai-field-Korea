@@ -1,5 +1,6 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { router, Tabs } from 'expo-router';
+import { Pressable } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PreferencesContext } from '@/contexts/preferences-context';
 import usePreferences from '@/hooks/use-preferences';
@@ -51,7 +52,21 @@ export default function TabLayout() {
                 options={{
                   title: '기록',
                   tabBarIcon: ({ color }) => (
-                    <FontAwesome size={28} name="edit" color={color} />
+                    <FontAwesome
+                      size={28}
+                      name="edit"
+                      color={canOpenRecordTab ? color : '#9aa3a7'}
+                    />
+                  ),
+                  tabBarButton: (props) => (
+                    <Pressable
+                      {...props}
+                      accessibilityState={{
+                        ...(props.accessibilityState ?? {}),
+                        disabled: !canOpenRecordTab,
+                      }}
+                      disabled={!canOpenRecordTab}
+                    />
                   ),
                 }}
                 listeners={{

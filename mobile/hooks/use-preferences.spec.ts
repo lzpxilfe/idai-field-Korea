@@ -379,6 +379,26 @@ describe('usePreferences', () => {
         expect(result.current.preferences.recentProjects).toEqual(['test1']);
     });
 
+    it('should not persist the active project across app launches', async () => {
+
+        const { result } = await renderUsePreferences();
+
+        await act(async () => {
+            result.current.setCurrentProject('test1');
+        });
+
+        expect(result.current.preferences.currentProject).toBe('test1');
+
+        const storedPreferences = getLatestStoredPreferences();
+        expect(storedPreferences.currentProject).toBe('');
+
+        const { result: result2 } = renderHook(() => usePreferences());
+
+        await waitFor(() => expect(result2.current.preferences.projects.test1).toBeDefined());
+        expect(result2.current.preferences.currentProject).toBe('');
+        expect(result2.current.preferences.recentProjects).toEqual(['test1']);
+    });
+
     it('should remove the reserved sample project from saved recent projects', async () => {
 
         await AsyncStorage.setItem('preferences', JSON.stringify({
@@ -435,7 +455,8 @@ describe('usePreferences', () => {
 
         const { result } = await renderUsePreferences();
 
-        await waitFor(() => expect(result.current.preferences.currentProject).toBe('project1'));
+        await waitFor(() => expect(result.current.preferences.projects.project1).toBeDefined());
+        expect(result.current.preferences.currentProject).toBe('');
         expect(result.current.preferences.username).toBe('');
         expect(result.current.preferences.languages).toEqual(['en']);
         expect(result.current.preferences.recentProjects).toEqual(['project1']);

@@ -22,8 +22,15 @@ import {
 
 export default function Layout() {
   const { preferences } = useContext(PreferencesContext);
+  const canOpenProject = canOpenKoreanFieldworkProject(preferences);
 
-  if (!canOpenKoreanFieldworkProject(preferences)) {
+  useEffect(() => {
+    if (!canOpenProject) {
+      router.replace('/');
+    }
+  }, [canOpenProject]);
+
+  if (!canOpenProject) {
     return <ProjectRequiredState />;
   }
 
