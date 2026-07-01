@@ -1259,10 +1259,11 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
             styles.featureCreationFormScrollerContent,
             !isFeatureWideLayout && styles.featureCreationFormScrollerContentNarrow,
           ]}
-          horizontal={isFeatureWideLayout}
+          horizontal={false}
           keyboardShouldPersistTaps="handled"
           scrollEnabled={isFeatureWideLayout}
-          showsHorizontalScrollIndicator={isFeatureWideLayout}
+          showsHorizontalScrollIndicator={false}
+          showsVerticalScrollIndicator={isFeatureWideLayout}
           style={[
             styles.featureCreationFormPane,
             isFeatureWideLayout && styles.featureCreationFormPaneWide,
@@ -2659,11 +2660,11 @@ const styles = StyleSheet.create({
   },
   featureCreationFormScrollerContent: {
     alignItems: 'stretch',
-    flexDirection: 'row',
-    paddingRight: 2,
+    flexDirection: 'column',
+    paddingBottom: 10,
+    paddingHorizontal: 2,
   },
   featureCreationFormScrollerContentNarrow: {
-    flexDirection: 'column',
     width: '100%',
   },
   parentPanel: {
@@ -2702,18 +2703,16 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   featureNamePanelWide: {
-    flexBasis: 258,
-    flexGrow: 0,
-    flexShrink: 0,
-    marginBottom: 0,
-    marginRight: 8,
+    alignSelf: 'stretch',
+    marginBottom: 8,
+    marginRight: 0,
+    width: '100%',
   },
   featureCreationParentPanelWide: {
-    flexBasis: 238,
-    flexGrow: 0,
-    flexShrink: 0,
-    marginBottom: 0,
-    marginRight: 8,
+    alignSelf: 'stretch',
+    marginBottom: 8,
+    marginRight: 0,
+    width: '100%',
   },
   featureNameHint: {
     color: '#526272',
@@ -3186,9 +3185,9 @@ const styles = StyleSheet.create({
   },
   featureTypeGridWide: {
     alignContent: 'flex-start',
-    flex: 1,
-    justifyContent: 'flex-start',
+    justifyContent: 'space-between',
     minWidth: 0,
+    width: '100%',
   },
   featureTypeOption: {
     alignItems: 'stretch',
@@ -3203,9 +3202,8 @@ const styles = StyleSheet.create({
     width: '49%',
   },
   featureTypeOptionWide: {
-    marginRight: 8,
     minHeight: 68,
-    width: 178,
+    width: '49%',
   },
   startUnknownFeature: {
     alignItems: 'stretch',
@@ -3219,11 +3217,10 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   startUnknownFeatureWide: {
-    flexBasis: 236,
-    flexGrow: 0,
-    flexShrink: 0,
-    marginBottom: 0,
-    marginRight: 8,
+    alignSelf: 'stretch',
+    marginBottom: 8,
+    marginRight: 0,
+    width: '100%',
   },
   featureTypeHeader: {
     alignItems: 'center',

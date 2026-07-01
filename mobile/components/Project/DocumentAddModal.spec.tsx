@@ -384,15 +384,19 @@ describe('DocumentAddModal', () => {
         flex: 1,
         minHeight: 0,
         minWidth: 0,
-      }));
+    }));
     const formPaneStyle = StyleSheet.flatten(getByTestId('featureCreationFormPane').props.style);
     expect(formPaneStyle).toEqual(expect.objectContaining({ minWidth: 0 }));
-    expect(getByTestId('featureCreationFormPane').props.horizontal).toBe(true);
+    expect(getByTestId('featureCreationFormPane').props.horizontal).toBe(false);
     expect(getByTestId('featureCreationFormPane').props.scrollEnabled).toBe(true);
+    expect(getByTestId('featureCreationFormPane').props.showsHorizontalScrollIndicator)
+      .toBe(false);
+    expect(getByTestId('featureCreationFormPane').props.showsVerticalScrollIndicator)
+      .toBe(true);
     expect(StyleSheet.flatten(
       getByTestId('featureCreationFormPane').props.contentContainerStyle
     )).toEqual(expect.objectContaining({
-      flexDirection: 'row',
+      flexDirection: 'column',
     }));
     expect(StyleSheet.flatten(getByTestId('featureLocationSketchPanel').props.style))
       .toEqual(expect.objectContaining({ flex: 1 }));
