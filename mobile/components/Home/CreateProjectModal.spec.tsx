@@ -13,7 +13,16 @@ import {
   createKoreanFieldworkBoundarySummaryStorageKey,
   createKoreanFieldworkProjectBoundaryDraftStorageKey,
 } from '../Project/korean-fieldwork-investigation-mode';
+import {
+  projectWgs84BoundaryToSurveyBoundaryGeometry,
+} from '../Project/Map/korean-fieldwork-drafts';
+import {
+  importBoundaryFileFromPath,
+} from '@/components/Project/Map/boundary-file-import';
 import CreateProjectModal from './CreateProjectModal';
+
+const mockImportBoundaryFileFromPath =
+  importBoundaryFileFromPath as jest.MockedFunction<typeof importBoundaryFileFromPath>;
 
 jest.mock('@/components/Project/Map/KakaoSatellitePicker', () => {
   const React = require('react');
@@ -46,6 +55,29 @@ jest.mock('@/components/Project/Map/KakaoSatellitePicker', () => {
     ) : null,
   };
 });
+
+jest.mock('@/components/Project/Map/BoundaryFileImportModal', () => {
+  const React = require('react');
+  const { Text, TouchableOpacity, View } = require('react-native');
+
+  return {
+    __esModule: true,
+    default: ({ visible, onImport }: any) => visible ? (
+      <View>
+        <TouchableOpacity
+          onPress={() => onImport('/storage/emulated/0/Download/idai-field-boundaries/bandabi-boundary.dxf')}
+          testID="mock-boundary-file-import-submit"
+        >
+          <Text>SHP/DXF 가져오기</Text>
+        </TouchableOpacity>
+      </View>
+    ) : null,
+  };
+});
+
+jest.mock('@/components/Project/Map/boundary-file-import', () => ({
+  importBoundaryFileFromPath: jest.fn(),
+}));
 
 jest.mock('expo-location', () => ({
   Accuracy: {
@@ -106,19 +138,19 @@ describe('CreateProjectModal', () => {
 
     expect(queryByText('프로젝트 이름을 입력해야 합니다.')).toBeNull();
     expect(queryByText('조사 방식을 선택해야 합니다.')).toBeNull();
-    expect(queryByText('지도에서 유적 경계를 그려야 합니다.')).toBeNull();
+    expect(queryByText('유적 경계를 직접 그리거나 파일에서 가져와야 합니다.')).toBeNull();
     expect(queryByText(
-      '프로젝트 이름을 적고, 조사 방식을 고른 뒤 지도에서 경계를 그리면 만들 수 있습니다.'
+      '프로젝트 이름을 적고, 조사 방식을 고른 뒤 경계를 직접 그리거나 파일에서 가져오면 만들 수 있습니다.'
     )).toBeTruthy();
     expect(queryByText('프로젝트 기본 조사 방식을 정합니다.')).toBeTruthy();
     expect(queryByText('조사 경계 기준을 문장으로 남깁니다.')).toBeTruthy();
-    expect(queryByText('프로젝트 생성 후 지도에서 경계를 그리거나 가져옵니다.')).toBeTruthy();
+    expect(queryByText('지도에서 경계를 직접 그리거나 SHP/DXF/GeoJSON을 가져옵니다.')).toBeTruthy();
     expect(queryByText(/지도에서 도형을 그리거나 지원되는 파일 가져오기로 확정합니다\./))
       .toBeTruthy();
 
     fireEvent.changeText(getByTestId('project-input'), 'fieldwork-1');
 
-    expect(queryByText('조사 방식을 고르고 지도에서 경계를 그리면 만들 수 있습니다.'))
+    expect(queryByText('조사 방식을 고르고 경계를 직접 그리거나 SHP/DXF/GeoJSON에서 가져오면 만들 수 있습니다.'))
       .toBeTruthy();
 
     fireEvent.press(getByTestId('create-project-submit'));
@@ -127,7 +159,7 @@ describe('CreateProjectModal', () => {
 
     fireEvent.press(getByTestId('project-investigation-mode_excavation'));
 
-    expect(queryByText('지도에서 유적 경계를 그리면 만들 수 있습니다.'))
+    expect(queryByText('유적 경계를 직접 그리거나 파일에서 가져오면 만들 수 있습니다.'))
       .toBeTruthy();
 
     fireEvent.press(getByTestId('create-project-submit'));
@@ -136,7 +168,7 @@ describe('CreateProjectModal', () => {
 
     fireEvent.press(getByTestId('project-boundary-draw-button'));
 
-    expect(queryByText('지도에서 유적 경계를 그려야 합니다.')).toBeTruthy();
+    expect(queryByText('유적 경계를 직접 그리거나 파일에서 가져와야 합니다.')).toBeTruthy();
     await waitFor(() => {
       expect(getByTestId('mock-boundary-picker-save')).toBeTruthy();
     });
@@ -147,7 +179,7 @@ describe('CreateProjectModal', () => {
       '경계점 3개를 찍었습니다. 생성하면 조사 경계 기록으로 저장됩니다.'
     )).toBeTruthy();
     expect(queryByText(
-      '준비 완료. 생성 뒤 지도에서 이 경계를 그리거나 가져와 확정하세요.'
+      '준비 완료. 이 경계를 기준으로 프로젝트를 만들 수 있습니다.'
     )).toBeTruthy();
   }, 10000);
 
@@ -250,11 +282,71 @@ describe('CreateProjectModal', () => {
       '1구역 북쪽 능선부터 남쪽 농로까지'
     );
 
-    expect(getByText('준비 완료. 생성 뒤 지도에서 이 경계를 그리거나 가져와 확정하세요.'))
+    expect(getByText('준비 완료. 이 경계를 기준으로 프로젝트를 만들 수 있습니다.'))
       .toBeTruthy();
     expect(getByText(
-      '선택 사항입니다. 비워두면 지도에서 그린 경계점 수가 메모로 저장됩니다.'
+      '선택 사항입니다. 비워두면 그리거나 가져온 경계 정보가 메모로 저장됩니다.'
     )).toBeTruthy();
+  });
+
+  it('imports a SHP/DXF/GeoJSON boundary before creating a project', async () => {
+    const importedGeometry = projectWgs84BoundaryToSurveyBoundaryGeometry([
+      { latitude: 37.1, longitude: 127.1 },
+      { latitude: 37.1, longitude: 127.2 },
+      { latitude: 37.2, longitude: 127.2 },
+    ])!;
+    mockImportBoundaryFileFromPath.mockResolvedValueOnce({
+      boundarySource: 'dxfImport',
+      coordinateCount: importedGeometry.coordinates.length,
+      coordinateSystem: 'EPSG:4326',
+      fileName: 'bandabi-boundary.dxf',
+      geometry: importedGeometry,
+      referenceBasemapProvider: 'importedVectorLayer',
+    });
+    const handleProjectCreated = jest.fn();
+    const { getByTestId } = render(
+      <SafeAreaInsetsContext.Provider value={safeAreaInsets}>
+        <CreateProjectModal
+          onProjectCreated={handleProjectCreated}
+          onClose={jest.fn()}
+        />
+      </SafeAreaInsetsContext.Provider>
+    );
+
+    fireEvent.changeText(getByTestId('project-input'), 'bandabi');
+    fireEvent.press(getByTestId('project-investigation-mode_excavation'));
+    fireEvent.press(getByTestId('project-boundary-import-button'));
+    fireEvent.press(getByTestId('mock-boundary-file-import-submit'));
+
+    await waitFor(() => {
+      expect(mockImportBoundaryFileFromPath).toHaveBeenCalledWith(
+        '/storage/emulated/0/Download/idai-field-boundaries/bandabi-boundary.dxf'
+      );
+    });
+
+    fireEvent.press(getByTestId('create-project-submit'));
+
+    await waitFor(() => {
+      expect(handleProjectCreated).toHaveBeenCalledWith(
+        'bandabi',
+        KOREAN_FIELDWORK_PROJECT_LANGUAGES
+      );
+    });
+    await expect(AsyncStorage.getItem(
+      createKoreanFieldworkBoundarySummaryStorageKey('bandabi')
+    )).resolves.toBe(
+      'bandabi-boundary.dxf에서 가져온 조사 경계 (4점, EPSG:4326)'
+    );
+
+    const storedBoundaryDraft = JSON.parse(
+      await AsyncStorage.getItem(
+        createKoreanFieldworkProjectBoundaryDraftStorageKey('bandabi')
+      ) ?? '{}'
+    );
+    expect(storedBoundaryDraft.coordinates).toHaveLength(3);
+    expect(storedBoundaryDraft.coordinates[0].latitude).toBeCloseTo(37.1, 5);
+    expect(storedBoundaryDraft.coordinates[0].longitude).toBeCloseTo(127.1, 5);
+    expect(storedBoundaryDraft.mapTypeId).toBeUndefined();
   });
 
   it('prevents creating a project with an existing normalized name', async () => {

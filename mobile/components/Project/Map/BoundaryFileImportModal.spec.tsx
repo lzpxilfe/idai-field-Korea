@@ -125,4 +125,48 @@ describe('BoundaryFileImportModal', () => {
       .toContain('.shp');
     expect(onImport).not.toHaveBeenCalled();
   });
+
+  it('clears the typed path and error when the modal is closed', async () => {
+    const onImport = jest.fn().mockRejectedValue(
+      new Error("Location 'file:///sdcard/Download/boundary.dxf' isn't readable.")
+    );
+    const { getByTestId, queryByTestId, rerender } = render(
+      <BoundaryFileImportModal
+        onClose={jest.fn()}
+        onImport={onImport}
+        visible
+      />
+    );
+
+    fireEvent.changeText(
+      getByTestId('boundaryFileImportPathInput'),
+      '/sdcard/Download/boundary.dxf'
+    );
+    act(() => {
+      fireEvent.press(getByTestId('boundaryFileImportSubmitButton'));
+    });
+
+    await waitFor(() => {
+      expect(getByTestId('boundaryFileImportError').props.children)
+        .toContain('파일 선택');
+    });
+
+    rerender(
+      <BoundaryFileImportModal
+        onClose={jest.fn()}
+        onImport={onImport}
+        visible={false}
+      />
+    );
+    rerender(
+      <BoundaryFileImportModal
+        onClose={jest.fn()}
+        onImport={onImport}
+        visible
+      />
+    );
+
+    expect(getByTestId('boundaryFileImportPathInput').props.value).toBe('');
+    expect(queryByTestId('boundaryFileImportError')).toBeNull();
+  });
 });

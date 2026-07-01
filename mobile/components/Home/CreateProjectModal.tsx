@@ -21,10 +21,18 @@ import Button from '@/components/common/Button';
 import Heading from '@/components/common/Heading';
 import Input from '@/components/common/Input';
 import TitleBar from '@/components/common/TitleBar';
+import BoundaryFileImportModal from '@/components/Project/Map/BoundaryFileImportModal';
 import KakaoSatellitePicker from '@/components/Project/Map/KakaoSatellitePicker';
 import type {
   KakaoSatellitePickedBoundary,
 } from '@/components/Project/Map/KakaoSatellitePicker';
+import type {
+  ImportedBoundaryFile,
+} from '@/components/Project/Map/boundary-file-import';
+import {
+  projectMapCoordinateToWgs84,
+  projectMapLocationToWgs84,
+} from '@/components/Project/Map/korean-fieldwork-drafts';
 import {
   KOREAN_FIELDWORK_INVESTIGATION_MODES,
   saveKoreanFieldworkBoundarySummary,
@@ -50,7 +58,7 @@ interface CreateProjectModalProps {
 const KOREAN_FIELDWORK_START_STEPS = [
   '프로젝트 기본 조사 방식을 정합니다.',
   '조사 경계 기준을 문장으로 남깁니다.',
-  '프로젝트 생성 후 지도에서 경계를 그리거나 가져옵니다.',
+  '지도에서 경계를 직접 그리거나 SHP/DXF/GeoJSON을 가져옵니다.',
 ];
 
 const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
@@ -69,6 +77,8 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
   const [pickedBoundary, setPickedBoundary] =
     useState<KakaoSatellitePickedBoundary>();
   const [isBoundaryPickerOpen, setIsBoundaryPickerOpen] =
+    useState<boolean>(false);
+  const [isBoundaryFileImportOpen, setIsBoundaryFileImportOpen] =
     useState<boolean>(false);
   const [isPreparingBoundaryPicker, setIsPreparingBoundaryPicker] =
     useState<boolean>(false);
@@ -129,6 +139,7 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
     setBoundarySummaryTouched(false);
     setPickedBoundary(undefined);
     setIsBoundaryPickerOpen(false);
+    setIsBoundaryFileImportOpen(false);
   };
 
   const openBoundaryPicker = async () => {
@@ -151,6 +162,25 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
     setIsBoundaryPickerOpen(false);
   };
 
+  const onImportBoundaryFile = async (filePath: string) => {
+    const {
+      importBoundaryFileFromPath,
+    } = require('@/components/Project/Map/boundary-file-import') as typeof import(
+      '@/components/Project/Map/boundary-file-import'
+    );
+    const importedBoundary = await importBoundaryFileFromPath(filePath);
+    const boundaryDraft = createPickedBoundaryFromImportedFile(importedBoundary);
+
+    setPickedBoundary(boundaryDraft);
+    setBoundarySummaryTouched(true);
+    setBoundarySummary((currentValue) =>
+      currentValue.trim().length > 0
+        ? currentValue
+        : getImportedBoundarySummary(importedBoundary)
+    );
+    setIsBoundaryFileImportOpen(false);
+  };
+
   return (
     <Modal
       onRequestClose={onCancel}
@@ -165,6 +195,11 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
         onClose={() => setIsBoundaryPickerOpen(false)}
         onPickBoundary={onPickBoundary}
         visible={isBoundaryPickerOpen}
+      />
+      <BoundaryFileImportModal
+        onClose={() => setIsBoundaryFileImportOpen(false)}
+        onImport={onImportBoundaryFile}
+        visible={isBoundaryFileImportOpen}
       />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -286,21 +321,36 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
                     )}
                   </Text>
                 </View>
-                <Button
-                  icon={<Ionicons name="map-outline" size={16} />}
-                  isDisabled={isPreparingBoundaryPicker}
-                  onPress={() => { void openBoundaryPicker(); }}
-                  testID="project-boundary-draw-button"
-                  title={getBoundaryDrawButtonTitle(
-                    pickedBoundary,
-                    isPreparingBoundaryPicker
-                  )}
-                  variant={pickedBoundary ? 'secondary' : 'success'}
-                />
+                <View style={styles.boundaryActionButtons}>
+                  <Button
+                    icon={<Ionicons name="map-outline" size={16} />}
+                    isDisabled={isPreparingBoundaryPicker}
+                    onPress={() => { void openBoundaryPicker(); }}
+                    testID="project-boundary-draw-button"
+                    title={getBoundaryDrawButtonTitle(
+                      pickedBoundary,
+                      isPreparingBoundaryPicker
+                    )}
+                    variant={pickedBoundary ? 'secondary' : 'success'}
+                  />
+                  <Button
+                    icon={<Ionicons name="folder-open-outline" size={16} />}
+                    isDisabled={isPreparingBoundaryPicker}
+                    onPress={() => {
+                      setBoundarySummaryTouched(true);
+                      setIsBoundaryFileImportOpen(true);
+                    }}
+                    testID="project-boundary-import-button"
+                    title="SHP/DXF 가져오기"
+                    variant={pickedBoundary ? 'secondary' : 'success'}
+                  />
+                </View>
               </View>
 
               {showBoundaryGeometryError && (
-                <Text style={styles.invalidText}>지도에서 유적 경계를 그려야 합니다.</Text>
+                <Text style={styles.invalidText}>
+                  유적 경계를 직접 그리거나 파일에서 가져와야 합니다.
+                </Text>
               )}
 
               <Input
@@ -314,7 +364,7 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
                 autoCapitalize="none"
                 autoCorrect={false}
                 placeholder="예: 1구역 북쪽 능선부터 남쪽 농로까지"
-                helpText="선택 사항입니다. 비워두면 지도에서 그린 경계점 수가 메모로 저장됩니다."
+                helpText="선택 사항입니다. 비워두면 그리거나 가져온 경계 정보가 메모로 저장됩니다."
                 isValid
                 style={styles.boundaryInput}
               />
@@ -354,6 +404,10 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
 };
 
 const styles = StyleSheet.create({
+  boundaryActionButtons: {
+    alignItems: 'stretch',
+    gap: 8,
+  },
   prepareBoundaryOverlay: {
     alignItems: 'center',
     backgroundColor: 'rgba(15, 23, 42, 0.42)',
@@ -552,11 +606,11 @@ const getCreateProjectSetupStatusText = (
   if (!projectNameValidation.isAvailable) {
     return projectNameValidation.isPresent
       ? getProjectNameInvalidText(projectNameValidation)
-      : '프로젝트 이름을 적고, 조사 방식을 고른 뒤 지도에서 경계를 그리면 만들 수 있습니다.';
+      : '프로젝트 이름을 적고, 조사 방식을 고른 뒤 경계를 직접 그리거나 파일에서 가져오면 만들 수 있습니다.';
   }
 
   if (!investigationModeId && !hasBoundaryGeometry) {
-    return '조사 방식을 고르고 지도에서 경계를 그리면 만들 수 있습니다.';
+    return '조사 방식을 고르고 경계를 직접 그리거나 SHP/DXF/GeoJSON에서 가져오면 만들 수 있습니다.';
   }
 
   if (!investigationModeId) {
@@ -564,10 +618,10 @@ const getCreateProjectSetupStatusText = (
   }
 
   if (!hasBoundaryGeometry) {
-    return '지도에서 유적 경계를 그리면 만들 수 있습니다.';
+    return '유적 경계를 직접 그리거나 파일에서 가져오면 만들 수 있습니다.';
   }
 
-  return '준비 완료. 생성 뒤 지도에서 이 경계를 그리거나 가져와 확정하세요.';
+  return '준비 완료. 이 경계를 기준으로 프로젝트를 만들 수 있습니다.';
 };
 
 const getPickedBoundaryStatusText = (
@@ -594,6 +648,64 @@ const getBoundaryDrawButtonTitle = (
 const getDrawnBoundarySummary = (
   boundary?: KakaoSatellitePickedBoundary
 ): string => `지도에서 그린 조사 경계 (${boundary?.coordinates.length ?? 0}점)`;
+
+const getImportedBoundarySummary = (
+  importedBoundary: ImportedBoundaryFile
+): string =>
+  `${importedBoundary.fileName}에서 가져온 조사 경계 `
+  + `(${importedBoundary.coordinateCount}점, ${importedBoundary.coordinateSystem})`;
+
+const createPickedBoundaryFromImportedFile = (
+  importedBoundary: ImportedBoundaryFile
+): KakaoSatellitePickedBoundary => {
+  const coordinates = getOpenMapCoordinates(importedBoundary.geometry.coordinates)
+    .map(projectMapCoordinateToWgs84)
+    .filter(isPickedBoundaryLocation);
+
+  if (coordinates.length < 3) {
+    throw new Error('가져온 파일에서 유효한 경계 좌표 3개 이상을 찾지 못했습니다.');
+  }
+
+  const center = importedBoundary.center
+    ? projectMapLocationToWgs84(importedBoundary.center)
+    : getPickedBoundaryCenter(coordinates);
+
+  return {
+    coordinates,
+    ...(center ? { center } : {}),
+  };
+};
+
+const getOpenMapCoordinates = (coordinates: number[][]): number[][] => {
+  if (coordinates.length < 2) return coordinates;
+
+  const [firstCoordinate] = coordinates;
+  const lastCoordinate = coordinates[coordinates.length - 1];
+  if (!firstCoordinate || !lastCoordinate) return coordinates;
+
+  return firstCoordinate[0] === lastCoordinate[0]
+    && firstCoordinate[1] === lastCoordinate[1]
+    ? coordinates.slice(0, -1)
+    : coordinates;
+};
+
+const getPickedBoundaryCenter = (
+  coordinates: KakaoSatellitePickedBoundary['coordinates']
+): KakaoSatellitePickedBoundary['center'] => {
+  if (coordinates.length === 0) return undefined;
+
+  return {
+    latitude: coordinates.reduce((sum, coordinate) =>
+      sum + coordinate.latitude, 0) / coordinates.length,
+    longitude: coordinates.reduce((sum, coordinate) =>
+      sum + coordinate.longitude, 0) / coordinates.length,
+  };
+};
+
+const isPickedBoundaryLocation = (
+  location: KakaoSatellitePickedBoundary['coordinates'][number] | undefined
+): location is KakaoSatellitePickedBoundary['coordinates'][number] =>
+  location !== undefined;
 
 const getCurrentBoundaryPickerLocation = async (
 ): Promise<KakaoSatellitePickedBoundary['center']> => {

@@ -322,6 +322,41 @@ export const projectWgs84ToMapLocation = (
   return projected;
 };
 
+export const projectMapLocationToWgs84 = (
+  location: MapLocation
+): Wgs84MapLocation | undefined => {
+  if (!Number.isFinite(location.x) || !Number.isFinite(location.y)) {
+    return undefined;
+  }
+
+  const projected = proj4('EPSG:3857', 'EPSG:4326', location);
+  if (!Number.isFinite(projected.x) || !Number.isFinite(projected.y)) {
+    return undefined;
+  }
+
+  return {
+    latitude: projected.y,
+    longitude: projected.x,
+  };
+};
+
+export const projectMapCoordinateToWgs84 = (
+  coordinate: number[]
+): Wgs84MapLocation | undefined => {
+  if (
+    coordinate.length < 2
+    || !Number.isFinite(coordinate[0])
+    || !Number.isFinite(coordinate[1])
+  ) {
+    return undefined;
+  }
+
+  return projectMapLocationToWgs84({
+    x: coordinate[0],
+    y: coordinate[1],
+  });
+};
+
 export const projectWgs84BoundaryToSurveyBoundaryGeometry = (
   coordinates: Wgs84MapLocation[]
 ): SurveyBoundaryGeometry | undefined => {

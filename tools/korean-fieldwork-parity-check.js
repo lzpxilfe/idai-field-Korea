@@ -1502,7 +1502,12 @@ function validateProjectStartSequence() {
   const desktopCreateSpecText = readTextFile(
     'desktop/test/unit/components/project/create-project-modal.component.spec.ts'
   );
-  const startSteps = [
+  const mobileStartSteps = [
+    '프로젝트 기본 조사 방식을 정합니다.',
+    '조사 경계 기준을 문장으로 남깁니다.',
+    '지도에서 경계를 직접 그리거나 SHP/DXF/GeoJSON을 가져옵니다.'
+  ];
+  const desktopStartSteps = [
     '프로젝트 기본 조사 방식을 정합니다.',
     '조사 경계 기준을 문장으로 남깁니다.',
     '프로젝트 생성 후 지도에서 경계를 그리거나 가져옵니다.'
@@ -1510,17 +1515,19 @@ function validateProjectStartSequence() {
   const boundaryHelp =
     '지도에서 도형을 그리거나 지원되는 파일 가져오기로 확정합니다.';
   const readyStatus =
-    '준비 완료. 생성 뒤 지도에서 이 경계를 그리거나 가져와 확정하세요.';
+    '준비 완료. 이 경계를 기준으로 프로젝트를 만들 수 있습니다.';
   const desktopReadyStatus =
     '프로젝트 생성 후 지도에서 조사 경계를 그리거나 가져와 확정하세요.';
 
-  for (const step of startSteps) {
+  for (const step of mobileStartSteps) {
     if (!mobileCreateText.includes(step)) {
       findings.push(`tablet create-project start step missing: ${step}`);
     }
     if (!mobileCreateSpecText.includes(step)) {
       findings.push(`tablet create-project test does not cover start step: ${step}`);
     }
+  }
+  for (const step of desktopStartSteps) {
     if (!desktopCreateText.includes(step)) {
       findings.push(`desktop create-project start step missing: ${step}`);
     }
