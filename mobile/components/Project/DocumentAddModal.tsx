@@ -1,6 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { CategoryForm, Document, Tree } from 'idai-field-core';
-import React, { useCallback, useContext, useMemo, useRef, useState } from 'react';
+import * as Location from 'expo-location';
+import React, {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import type { DimensionValue } from 'react-native';
 import {
   GestureResponderEvent,
@@ -22,11 +30,6 @@ import Heading from '@/components/common/Heading';
 import Input from '@/components/common/Input';
 import TitleBar from '@/components/common/TitleBar';
 import LabelsContext from '@/contexts/labels/labels-context';
-import KakaoSatellitePicker from '@/components/Project/Map/KakaoSatellitePicker';
-import type {
-  KakaoSatellitePickedBoundary,
-  KakaoSatellitePickedLocation,
-} from '@/components/Project/Map/KakaoSatellitePicker';
 import {
   getKoreanFieldworkAddOptions,
   KoreanFieldworkAddOption,
@@ -44,6 +47,7 @@ import {
   KOREAN_FIELDWORK_FEATURE_TYPE_OPTIONS,
 } from './korean-fieldwork-feature-types';
 import type {
+  KoreanFieldworkBoundaryLocation,
   KoreanFieldworkInvestigationModeId,
   KoreanFieldworkProjectBoundaryDraft,
 } from './korean-fieldwork-investigation-mode';
@@ -57,14 +61,24 @@ const FEATURE_SKETCH_TABLET_WIDTH = 600;
 const FEATURE_SKETCH_SCALE_STEP = 10;
 const FEATURE_SKETCH_ROTATION_STEP = 15;
 const FEATURE_SKETCH_GRID_PERCENTS = [25, 50, 75];
+const FEATURE_SKETCH_BOUNDARY_PADDING = 14;
+const FEATURE_SKETCH_SHAPE_BASE_WIDTH = 18;
+const FEATURE_SKETCH_SHAPE_BASE_HEIGHT = 12;
+const FEATURE_SKETCH_OVAL_SEGMENTS = 16;
 const FEATURE_LOCATION_SKETCH_SHAPES = [
   { id: 'point', label: '점', icon: 'location-outline' },
   { id: 'polygon', label: '점 연결', icon: 'git-merge-outline' },
   { id: 'rectangle', label: '사각형', icon: 'square-outline' },
   { id: 'oval', label: '타원', icon: 'ellipse-outline' },
 ] as const;
+const FEATURE_SKETCH_BACKGROUND_OPTIONS = [
+  { id: 'white', label: '흰 배경', icon: 'scan-outline' },
+  { id: 'satellite', label: '위성', icon: 'map-outline' },
+] as const;
 type FeatureLocationSketchShape =
   typeof FEATURE_LOCATION_SKETCH_SHAPES[number]['id'];
+type FeatureSketchBackground =
+  typeof FEATURE_SKETCH_BACKGROUND_OPTIONS[number]['id'];
 type FeatureSketchPoint = {
   x: number;
   y: number;
@@ -83,6 +97,11 @@ type FeatureShapeGestureState = {
   rotation: number;
   scale: number;
 };
+type FeatureLiveLocation = KoreanFieldworkBoundaryLocation & {
+  accuracy?: number;
+};
+type FeatureLiveLocationStatus =
+  'idle' | 'checking' | 'tracking' | 'denied' | 'unavailable';
 
 interface AddModalProps {
   boundaryDraft?: KoreanFieldworkProjectBoundaryDraft;
@@ -90,7 +109,6 @@ interface AddModalProps {
   initialCategoryName?: string;
   initialDraftParams?: Record<string, string>;
   investigationModeId?: KoreanFieldworkInvestigationModeId;
-  mapJavaScriptKey?: string;
   onAddCategory: (
     categoryName: string,
     parentDoc: Document | undefined,
@@ -106,7 +124,6 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
   initialCategoryName,
   initialDraftParams = {},
   investigationModeId,
-  mapJavaScriptKey = '',
   onAddCategory,
   onClose,
   parentDoc,
@@ -152,10 +169,12 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
   const [featureSketchWasEdited, setFeatureSketchWasEdited] = useState(false);
   const [featureSketchCanvasSize, setFeatureSketchCanvasSize] =
     useState(FEATURE_SKETCH_CANVAS_DEFAULT_SIZE);
-  const [featureMapBoundary, setFeatureMapBoundary] =
-    useState<KakaoSatellitePickedBoundary>();
-  const [isFeatureBoundaryPickerOpen, setIsFeatureBoundaryPickerOpen] =
-    useState(false);
+  const [featureSketchBackground, setFeatureSketchBackground] =
+    useState<FeatureSketchBackground>('white');
+  const [featureLiveLocation, setFeatureLiveLocation] =
+    useState<FeatureLiveLocation>();
+  const [featureLiveLocationStatus, setFeatureLiveLocationStatus] =
+    useState<FeatureLiveLocationStatus>('idle');
   const lastPreviewFeatureSketchPointRef = useRef<FeatureSketchPoint>();
   const featureShapeGestureRef = useRef<FeatureShapeGestureState>();
 
@@ -180,6 +199,10 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
     () => getFeatureSketchBoundaryPoints(boundaryDraft),
     [boundaryDraft]
   );
+  const featureLiveLocationPoint = useMemo(
+    () => getFeatureSketchPointFromLocation(featureLiveLocation, boundaryDraft),
+    [boundaryDraft, featureLiveLocation]
+  );
 
   const optionGroups = useMemo(
     () => getKoreanFieldworkAddOptions(
@@ -189,6 +212,71 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
     ),
     [allowedCategories, investigationModeId, parentDoc]
   );
+
+  useEffect(() => {
+    if (!isChoosingFeatureType) return;
+
+    let isMounted = true;
+    let locationSubscription: Location.LocationSubscription | undefined;
+
+    const updateLiveLocation = (coords: Location.LocationObjectCoords) => {
+      const nextLocation = getFeatureLiveLocationFromCoords(coords);
+      if (!nextLocation) {
+        setFeatureLiveLocationStatus('unavailable');
+        return;
+      }
+
+      setFeatureLiveLocation(nextLocation);
+      setFeatureLiveLocationStatus('tracking');
+    };
+
+    const startLocationWatch = async () => {
+      setFeatureLiveLocationStatus('checking');
+
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (!isMounted) return;
+
+        if (status !== 'granted') {
+          setFeatureLiveLocationStatus('denied');
+          return;
+        }
+
+        const currentLocation = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+        if (!isMounted) return;
+
+        updateLiveLocation(currentLocation.coords);
+
+        const subscription = await Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.Balanced,
+            distanceInterval: 2,
+            timeInterval: 3000,
+          },
+          (nextLocation) => {
+            if (isMounted) updateLiveLocation(nextLocation.coords);
+          }
+        );
+        if (!isMounted) {
+          subscription.remove();
+          return;
+        }
+        locationSubscription = subscription;
+      } catch (error) {
+        console.warn('Unable to watch feature sketch location', error);
+        if (isMounted) setFeatureLiveLocationStatus('unavailable');
+      }
+    };
+
+    void startLocationWatch();
+
+    return () => {
+      isMounted = false;
+      locationSubscription?.remove();
+    };
+  }, [isChoosingFeatureType]);
 
   if (!parentDoc) return null;
   const parentCategory = config.getCategory(parentDoc.resource.category);
@@ -240,7 +328,7 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
     setFeatureSketchScale(100);
     setFeatureSketchRotation(0);
     setFeatureSketchWasEdited(false);
-    setFeatureMapBoundary(undefined);
+    setFeatureSketchBackground('white');
     featureShapeGestureRef.current = undefined;
   };
 
@@ -266,27 +354,10 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
     setFeatureLocationShape(shape);
     setActiveFeatureSketchPoint(undefined);
     setFeatureSketchWasEdited(true);
-    setFeatureMapBoundary(undefined);
     featureShapeGestureRef.current = undefined;
     if (shape !== 'polygon' && featureSketchPoints.length > 1) {
       setFeatureSketchPoints([featureSketchCenter]);
     }
-  };
-
-  const openFeatureBoundaryPicker = () => {
-    setIsFeatureBoundaryPickerOpen(true);
-  };
-
-  const pickFeatureBoundary = (boundary: KakaoSatellitePickedBoundary) => {
-    setFeatureMapBoundary(boundary);
-    setFeatureLocationShape('polygon');
-    setFeatureSketchWasEdited(true);
-    setActiveFeatureSketchPoint(undefined);
-    setFeatureSketchCenter(getFeatureSketchCenterFromBoundary(boundary));
-    setFeatureSketchPoints(
-      getFeatureSketchPointsFromBoundary(boundary, boundaryDraft)
-    );
-    setIsFeatureBoundaryPickerOpen(false);
   };
 
   const handleFeatureSketchLayout = (event: LayoutChangeEvent) => {
@@ -322,7 +393,6 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
         initialGesture.rotation + shapeGesture.angle - initialGesture.angle
       );
 
-      setFeatureMapBoundary(undefined);
       setFeatureSketchWasEdited(true);
       setActiveFeatureSketchPoint(undefined);
       setFeatureSketchCenter(shapeGesture.center);
@@ -342,7 +412,6 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
     }
 
     lastPreviewFeatureSketchPointRef.current = point;
-    setFeatureMapBoundary(undefined);
     setFeatureSketchWasEdited(true);
     setActiveFeatureSketchPoint(point);
 
@@ -363,7 +432,6 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
       featureSketchCanvasSize
     );
     lastPreviewFeatureSketchPointRef.current = undefined;
-    setFeatureMapBoundary(undefined);
     setFeatureSketchWasEdited(true);
     setActiveFeatureSketchPoint(undefined);
 
@@ -537,18 +605,46 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
   const renderFeatureSketchMapSurface = () => (
     <View
       pointerEvents="none"
-      style={styles.featureSketchMapSurface}
+      style={[
+        styles.featureSketchMapSurface,
+        featureSketchBackground === 'white'
+          ? styles.featureSketchWhiteMapSurface
+          : styles.featureSketchSatelliteMapSurface,
+      ]}
       testID="featureSketchFlatMapSurface"
     >
-      <View style={[styles.featureSketchSatelliteField, styles.featureSketchSatelliteFieldA]} />
-      <View style={[styles.featureSketchSatelliteField, styles.featureSketchSatelliteFieldB]} />
-      <View style={[styles.featureSketchSatelliteField, styles.featureSketchSatelliteFieldC]} />
-      <View style={[styles.featureSketchSatelliteRoad, styles.featureSketchSatelliteRoadA]} />
-      <View style={[styles.featureSketchSatelliteRoad, styles.featureSketchSatelliteRoadB]} />
-      <View style={[styles.featureSketchSatelliteTreeLine, styles.featureSketchSatelliteTreeLineA]} />
-      <View style={[styles.featureSketchSatelliteWater, styles.featureSketchSatelliteWaterA]} />
+      {featureSketchBackground === 'satellite' && (
+        <>
+          <View style={[styles.featureSketchSatelliteField, styles.featureSketchSatelliteFieldA]} />
+          <View style={[styles.featureSketchSatelliteField, styles.featureSketchSatelliteFieldB]} />
+          <View style={[styles.featureSketchSatelliteField, styles.featureSketchSatelliteFieldC]} />
+          <View style={[styles.featureSketchSatelliteRoad, styles.featureSketchSatelliteRoadA]} />
+          <View style={[styles.featureSketchSatelliteRoad, styles.featureSketchSatelliteRoadB]} />
+          <View style={[styles.featureSketchSatelliteTreeLine, styles.featureSketchSatelliteTreeLineA]} />
+          <View style={[styles.featureSketchSatelliteWater, styles.featureSketchSatelliteWaterA]} />
+        </>
+      )}
     </View>
   );
+
+  const renderFeatureSketchCurrentLocation = () => {
+    if (!featureLiveLocationPoint) return null;
+
+    return (
+      <View
+        pointerEvents="none"
+        style={[
+          styles.featureSketchLiveLocation,
+          getFeatureSketchPointStyle(featureLiveLocationPoint),
+        ]}
+        testID="featureSketchLiveLocation"
+      >
+        <View style={styles.featureSketchLiveLocationPulse} />
+        <View style={styles.featureSketchLiveLocationDot} />
+        <Text style={styles.featureSketchLiveLocationText}>내 위치</Text>
+      </View>
+    );
+  };
 
   const renderFeatureSketchToolbar = () => (
     <View
@@ -636,6 +732,7 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
           style={styles.featureSketchTouchLayer}
           testID="featureLocationSketchTouchLayer"
         />
+        {renderFeatureSketchCurrentLocation()}
         <View pointerEvents="box-none" style={styles.featureLocationHeader}>
           <View style={styles.featureLocationHeaderCopy}>
             <Text style={styles.featureLocationTitle}>유구 위치 지도</Text>
@@ -664,24 +761,52 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
         </View>
         <View
           pointerEvents="box-none"
-          style={styles.featureSketchMapActionPanel}
-          testID="featureSketchMapActionPanel"
+          style={styles.featureSketchContextPanel}
+          testID="featureSketchContextPanel"
         >
-          <TouchableOpacity
-            activeOpacity={0.86}
-            onPress={openFeatureBoundaryPicker}
-            style={styles.featureSketchMapActionButton}
-            testID="featureSketchOpenMapBoundary"
+          <View
+            style={styles.featureSketchBackgroundRow}
+            testID="featureSketchBackgroundSelector"
           >
-            <Ionicons name="map-outline" size={16} color="white" />
-            <Text style={styles.featureSketchMapActionText}>
-              지도에서 유구 경계 그리기
-            </Text>
-          </TouchableOpacity>
-          <Text style={styles.featureSketchMapActionHint}>
-            {featureMapBoundary
-              ? `지도 경계점 ${featureMapBoundary.coordinates.length}개를 가져왔습니다.`
-              : '유적 경계 지도를 보면서 유구 외곽을 먼저 잡을 수 있습니다.'}
+            {FEATURE_SKETCH_BACKGROUND_OPTIONS.map((option) => {
+              const isSelected = option.id === featureSketchBackground;
+
+              return (
+                <TouchableOpacity
+                  activeOpacity={0.84}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isSelected }}
+                  key={option.id}
+                  onPress={() => setFeatureSketchBackground(option.id)}
+                  style={[
+                    styles.featureSketchBackgroundButton,
+                    isSelected && styles.featureSketchBackgroundButtonSelected,
+                  ]}
+                  testID={`featureSketchBackground_${option.id}`}
+                >
+                  <Ionicons
+                    name={option.icon as keyof typeof Ionicons.glyphMap}
+                    size={14}
+                    color={isSelected ? '#175cd3' : '#526272'}
+                  />
+                  <Text style={[
+                    styles.featureSketchBackgroundText,
+                    isSelected && styles.featureSketchBackgroundTextSelected,
+                  ]}>
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          <Text
+            style={styles.featureSketchLocationStatus}
+            testID="featureSketchLiveLocationStatus"
+          >
+            {getFeatureLiveLocationStatusText(
+              featureLiveLocationStatus,
+              featureLiveLocation
+            )}
           </Text>
         </View>
         <View
@@ -753,9 +878,10 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
           featureType,
           identifier: resolvedFeatureIdentifier,
           ...getFeatureLocationSketchDraftParams({
+            background: featureSketchBackground,
+            boundaryDraft,
             center: featureSketchCenter,
             isEdited: featureSketchWasEdited,
-            mapBoundary: featureMapBoundary,
             points: featureSketchPoints,
             rotation: featureSketchRotation,
             scale: featureSketchScale,
@@ -796,7 +922,15 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
         >
           {renderFeatureLocationSketchPanel()}
         </View>
-        <View
+        <ScrollView
+          contentContainerStyle={[
+            styles.featureCreationFormScrollerContent,
+            !isFeatureWideLayout && styles.featureCreationFormScrollerContentNarrow,
+          ]}
+          horizontal={isFeatureWideLayout}
+          keyboardShouldPersistTaps="handled"
+          scrollEnabled={isFeatureWideLayout}
+          showsHorizontalScrollIndicator={isFeatureWideLayout}
           style={[
             styles.featureCreationFormPane,
             isFeatureWideLayout && styles.featureCreationFormPaneWide,
@@ -926,7 +1060,7 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
               </View>
             ))}
           </View>
-        </View>
+        </ScrollView>
       </View>
     );
   };
@@ -938,14 +1072,6 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
       transparent
       visible={true}
     >
-      <KakaoSatellitePicker
-        drawingMode="featureBoundary"
-        initialLocation={getFeatureBoundaryPickerInitialLocation(boundaryDraft)}
-        javaScriptKey={mapJavaScriptKey}
-        onClose={() => setIsFeatureBoundaryPickerOpen(false)}
-        onPickBoundary={pickFeatureBoundary}
-        visible={isFeatureBoundaryPickerOpen}
-      />
       <Pressable
         onPress={onClose}
         style={styles.container}
@@ -1064,63 +1190,67 @@ const compareKoreanFieldworkCategories = (
 };
 
 const getFeatureLocationSketchDraftParams = ({
+  background,
+  boundaryDraft,
   center,
   isEdited,
-  mapBoundary,
   points,
   rotation,
   scale,
   shape,
 }: {
+  background: FeatureSketchBackground;
+  boundaryDraft?: KoreanFieldworkProjectBoundaryDraft;
   center: FeatureSketchPoint;
   isEdited: boolean;
-  mapBoundary?: KakaoSatellitePickedBoundary;
   points: FeatureSketchPoint[];
   rotation: number;
   scale: number;
   shape: FeatureLocationSketchShape;
 }): Record<string, string> => {
-  if (mapBoundary && mapBoundary.coordinates.length >= 3) {
-    const payload = {
-      version: 2,
-      source: 'mapBoundary',
-      shape: 'polygon',
-      center: mapBoundary.center,
-      coordinates: mapBoundary.coordinates,
-      mapTypeId: mapBoundary.mapTypeId,
-    };
-    const note = `지도에서 유구 경계점 ${mapBoundary.coordinates.length}개를 찍었습니다.`;
-
-    return {
-      featureGeometry: JSON.stringify(toGeoJsonPolygon(mapBoundary.coordinates)),
-      featureGeometryRevisionNote: note,
-      featureLocationSketch: JSON.stringify(payload),
-      geometryConfidence: 'rough',
-      geometrySource: 'drawnOnBoundaryMap',
-      shortDescription: note,
-    };
-  }
-
   if (!isEdited) return {};
 
   const sketchPoints = shape === 'polygon'
     ? points
     : (points.length > 0 ? points : [center]);
+  const roundedSketchPoints = sketchPoints.map(roundSketchPoint);
   const payload = {
-    version: 1,
+    version: 2,
+    source: 'boundarySketch',
+    background,
     shape,
     center: roundSketchPoint(center),
-    points: sketchPoints.map(roundSketchPoint),
+    points: roundedSketchPoints,
     rotation,
     scale,
+    projectBoundaryPointCount: boundaryDraft?.coordinates.length ?? 0,
   };
   const note = getFeatureLocationSketchNote(payload);
+  const geometryPoints = getFeatureSketchGeometryPoints({
+    center,
+    points: sketchPoints,
+    rotation,
+    scale,
+    shape,
+  });
+  const geometryLocations =
+    boundaryDraft && geometryPoints.length >= 3
+      ? denormalizeSketchPointsToBoundaryLocations(geometryPoints, boundaryDraft)
+      : [];
 
-  return {
+  const draftParams: Record<string, string> = {
     featureGeometryRevisionNote: note,
     featureLocationSketch: JSON.stringify(payload),
     shortDescription: note,
   };
+
+  if (geometryLocations.length >= 3) {
+    draftParams.featureGeometry = JSON.stringify(toGeoJsonPolygon(geometryLocations));
+    draftParams.geometryConfidence = 'rough';
+    draftParams.geometrySource = 'drawnOnBoundarySketch';
+  }
+
+  return draftParams;
 };
 
 const getFeatureLocationSketchNote = ({
@@ -1160,6 +1290,82 @@ const getFeatureLocationSketchShapeLabel = (
     default:
       return '점';
   }
+};
+
+const getFeatureSketchGeometryPoints = ({
+  center,
+  points,
+  rotation,
+  scale,
+  shape,
+}: {
+  center: FeatureSketchPoint;
+  points: FeatureSketchPoint[];
+  rotation: number;
+  scale: number;
+  shape: FeatureLocationSketchShape;
+}): FeatureSketchPoint[] => {
+  if (shape === 'polygon') return points.length >= 3 ? points : [];
+  if (shape === 'rectangle') {
+    return getRotatedRectangleSketchPoints(center, scale, rotation);
+  }
+  if (shape === 'oval') {
+    return getOvalSketchPoints(center, scale, rotation);
+  }
+
+  return [];
+};
+
+const getRotatedRectangleSketchPoints = (
+  center: FeatureSketchPoint,
+  scale: number,
+  rotation: number
+): FeatureSketchPoint[] => {
+  const halfWidth = (FEATURE_SKETCH_SHAPE_BASE_WIDTH * scale) / 200;
+  const halfHeight = (FEATURE_SKETCH_SHAPE_BASE_HEIGHT * scale) / 200;
+
+  return [
+    rotateSketchPoint(center, -halfWidth, -halfHeight, rotation),
+    rotateSketchPoint(center, halfWidth, -halfHeight, rotation),
+    rotateSketchPoint(center, halfWidth, halfHeight, rotation),
+    rotateSketchPoint(center, -halfWidth, halfHeight, rotation),
+  ];
+};
+
+const getOvalSketchPoints = (
+  center: FeatureSketchPoint,
+  scale: number,
+  rotation: number
+): FeatureSketchPoint[] => {
+  const radiusX = (FEATURE_SKETCH_SHAPE_BASE_WIDTH * scale) / 200;
+  const radiusY = (FEATURE_SKETCH_SHAPE_BASE_HEIGHT * scale) / 200;
+
+  return Array.from({ length: FEATURE_SKETCH_OVAL_SEGMENTS }, (_, index) => {
+    const angle = (Math.PI * 2 * index) / FEATURE_SKETCH_OVAL_SEGMENTS;
+
+    return rotateSketchPoint(
+      center,
+      Math.cos(angle) * radiusX,
+      Math.sin(angle) * radiusY,
+      rotation
+    );
+  });
+};
+
+const rotateSketchPoint = (
+  center: FeatureSketchPoint,
+  deltaX: number,
+  deltaY: number,
+  rotation: number
+): FeatureSketchPoint => {
+  const radians = (rotation * Math.PI) / 180;
+  const cos = Math.cos(radians);
+  const sin = Math.sin(radians);
+
+  return {
+    x: clamp(center.x + (deltaX * cos) - (deltaY * sin), 0, 100),
+    y: clamp(center.y + (deltaX * sin) + (deltaY * cos), 0, 100),
+  };
 };
 
 const createNextFeatureIdentifier = (
@@ -1329,6 +1535,43 @@ const getSketchPointFromPixel = (
   };
 };
 
+const getFeatureLiveLocationFromCoords = (
+  coords: Location.LocationObjectCoords
+): FeatureLiveLocation | undefined => {
+  if (
+    !Number.isFinite(coords.latitude)
+    || !Number.isFinite(coords.longitude)
+  ) {
+    return undefined;
+  }
+
+  return {
+    latitude: coords.latitude,
+    longitude: coords.longitude,
+    ...(typeof coords.accuracy === 'number'
+      ? { accuracy: coords.accuracy }
+      : {}),
+  };
+};
+
+const getFeatureLiveLocationStatusText = (
+  status: FeatureLiveLocationStatus,
+  location?: FeatureLiveLocation
+): string => {
+  if (status === 'tracking' && location) {
+    const accuracy = typeof location.accuracy === 'number'
+      ? ` · ±${Math.round(location.accuracy)}m`
+      : '';
+
+    return `내 위치 ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}${accuracy}`;
+  }
+  if (status === 'denied') return '현재 위치 권한이 없어 위치 표시는 생략합니다.';
+  if (status === 'unavailable') return '현재 위치를 확인하지 못했습니다.';
+  if (status === 'checking') return '현재 위치 확인 중';
+
+  return '유적 경계 안에서 유구 위치를 바로 잡습니다.';
+};
+
 const normalizeRotation = (rotation: number): number => {
   if (rotation > 180) return normalizeRotation(rotation - 360);
   if (rotation < -180) return normalizeRotation(rotation + 360);
@@ -1360,7 +1603,7 @@ const getFeatureSketchBoundaryPoints = (
   const maxLatitude = Math.max(...latitudes);
   const longitudeRange = Math.max(maxLongitude - minLongitude, 0.000001);
   const latitudeRange = Math.max(maxLatitude - minLatitude, 0.000001);
-  const padding = 14;
+  const padding = FEATURE_SKETCH_BOUNDARY_PADDING;
   const drawableSize = 100 - (padding * 2);
 
   return boundaryDraft.coordinates.map((point) => ({
@@ -1371,85 +1614,97 @@ const getFeatureSketchBoundaryPoints = (
   }));
 };
 
-const getFeatureBoundaryPickerInitialLocation = (
+const getFeatureSketchPointFromLocation = (
+  location: FeatureLiveLocation | undefined,
   boundaryDraft?: KoreanFieldworkProjectBoundaryDraft
-): KakaoSatellitePickedLocation | undefined => {
-  if (boundaryDraft?.center) return boundaryDraft.center;
-  if (!boundaryDraft || boundaryDraft.coordinates.length === 0) return undefined;
+): FeatureSketchPoint | undefined => {
+  if (!location || !boundaryDraft || boundaryDraft.coordinates.length < 3) {
+    return undefined;
+  }
 
-  const latitude = boundaryDraft.coordinates.reduce(
-    (sum, point) => sum + point.latitude,
-    0
-  ) / boundaryDraft.coordinates.length;
-  const longitude = boundaryDraft.coordinates.reduce(
-    (sum, point) => sum + point.longitude,
-    0
-  ) / boundaryDraft.coordinates.length;
-
-  return Number.isFinite(latitude) && Number.isFinite(longitude)
-    ? { latitude, longitude }
-    : undefined;
+  return normalizeBoundaryLocationsToSketchPoints(
+    [location],
+    boundaryDraft.coordinates
+  )[0];
 };
 
-const getFeatureSketchPointsFromBoundary = (
-  featureBoundary: KakaoSatellitePickedBoundary,
-  projectBoundary?: KoreanFieldworkProjectBoundaryDraft
-): FeatureSketchPoint[] => {
-  const referenceCoordinates =
-    projectBoundary && projectBoundary.coordinates.length >= 3
-      ? projectBoundary.coordinates
-      : featureBoundary.coordinates;
-
-  return normalizeLocationsToSketchPoints(
-    featureBoundary.coordinates,
-    referenceCoordinates
-  );
-};
-
-const getFeatureSketchCenterFromBoundary = (
-  featureBoundary: KakaoSatellitePickedBoundary
-): FeatureSketchPoint => {
-  const points = normalizeLocationsToSketchPoints(
-    featureBoundary.center ? [featureBoundary.center] : featureBoundary.coordinates,
-    featureBoundary.coordinates
-  );
-
-  return points[0] ?? { x: 50, y: 50 };
-};
-
-const normalizeLocationsToSketchPoints = (
-  locations: readonly KakaoSatellitePickedLocation[],
-  referenceLocations: readonly KakaoSatellitePickedLocation[]
+const normalizeBoundaryLocationsToSketchPoints = (
+  locations: readonly KoreanFieldworkBoundaryLocation[],
+  referenceLocations: readonly KoreanFieldworkBoundaryLocation[]
 ): FeatureSketchPoint[] => {
   if (locations.length === 0 || referenceLocations.length === 0) return [];
 
-  const longitudes = referenceLocations.map((point) => point.longitude);
-  const latitudes = referenceLocations.map((point) => point.latitude);
-  const minLongitude = Math.min(...longitudes);
-  const maxLongitude = Math.max(...longitudes);
-  const minLatitude = Math.min(...latitudes);
-  const maxLatitude = Math.max(...latitudes);
-  const longitudeRange = Math.max(maxLongitude - minLongitude, 0.000001);
-  const latitudeRange = Math.max(maxLatitude - minLatitude, 0.000001);
-  const padding = 14;
-  const drawableSize = 100 - (padding * 2);
+  const bounds = getBoundaryLocationBounds(referenceLocations);
+  const drawableSize = 100 - (FEATURE_SKETCH_BOUNDARY_PADDING * 2);
 
   return locations.map((point) => ({
     x: Math.round(clamp(
-      padding + (((point.longitude - minLongitude) / longitudeRange) * drawableSize),
+      FEATURE_SKETCH_BOUNDARY_PADDING
+        + (((point.longitude - bounds.minLongitude) / bounds.longitudeRange)
+          * drawableSize),
       0,
       100
     )),
     y: Math.round(clamp(
-      padding + (((maxLatitude - point.latitude) / latitudeRange) * drawableSize),
+      FEATURE_SKETCH_BOUNDARY_PADDING
+        + (((bounds.maxLatitude - point.latitude) / bounds.latitudeRange)
+          * drawableSize),
       0,
       100
     )),
   }));
 };
 
+const denormalizeSketchPointsToBoundaryLocations = (
+  points: readonly FeatureSketchPoint[],
+  boundaryDraft: KoreanFieldworkProjectBoundaryDraft
+): KoreanFieldworkBoundaryLocation[] => {
+  if (boundaryDraft.coordinates.length < 3) return [];
+
+  const bounds = getBoundaryLocationBounds(boundaryDraft.coordinates);
+  const drawableSize = 100 - (FEATURE_SKETCH_BOUNDARY_PADDING * 2);
+
+  return points.map((point) => {
+    const normalizedX = clamp(
+      (point.x - FEATURE_SKETCH_BOUNDARY_PADDING) / drawableSize,
+      0,
+      1
+    );
+    const normalizedY = clamp(
+      (point.y - FEATURE_SKETCH_BOUNDARY_PADDING) / drawableSize,
+      0,
+      1
+    );
+
+    return {
+      latitude: bounds.maxLatitude - (normalizedY * bounds.latitudeRange),
+      longitude: bounds.minLongitude + (normalizedX * bounds.longitudeRange),
+    };
+  });
+};
+
+const getBoundaryLocationBounds = (
+  locations: readonly KoreanFieldworkBoundaryLocation[]
+) => {
+  const longitudes = locations.map((point) => point.longitude);
+  const latitudes = locations.map((point) => point.latitude);
+  const minLongitude = Math.min(...longitudes);
+  const maxLongitude = Math.max(...longitudes);
+  const minLatitude = Math.min(...latitudes);
+  const maxLatitude = Math.max(...latitudes);
+
+  return {
+    latitudeRange: Math.max(maxLatitude - minLatitude, 0.000001),
+    longitudeRange: Math.max(maxLongitude - minLongitude, 0.000001),
+    maxLatitude,
+    maxLongitude,
+    minLatitude,
+    minLongitude,
+  };
+};
+
 const toGeoJsonPolygon = (
-  coordinates: readonly KakaoSatellitePickedLocation[]
+  coordinates: readonly KoreanFieldworkBoundaryLocation[]
 ): Record<string, unknown> => {
   const ring = coordinates.map((point) => [
     point.longitude,
@@ -1645,7 +1900,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderTopColor: '#d0d5dd',
     borderTopWidth: 1,
-    flexDirection: 'row',
     flexGrow: 0,
     flexShrink: 0,
     maxHeight: 352,
@@ -1654,6 +1908,15 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     paddingHorizontal: 10,
     paddingTop: 10,
+    width: '100%',
+  },
+  featureCreationFormScrollerContent: {
+    alignItems: 'stretch',
+    flexDirection: 'row',
+    paddingRight: 2,
+  },
+  featureCreationFormScrollerContentNarrow: {
+    flexDirection: 'column',
     width: '100%',
   },
   parentPanel: {
@@ -1815,6 +2078,11 @@ const styles = StyleSheet.create({
   },
   featureSketchMapSurface: {
     ...StyleSheet.absoluteFillObject,
+  },
+  featureSketchWhiteMapSurface: {
+    backgroundColor: '#ffffff',
+  },
+  featureSketchSatelliteMapSurface: {
     backgroundColor: '#f8faf7',
   },
   featureSketchTouchLayer: {
@@ -1921,7 +2189,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     marginLeft: 4,
   },
-  featureSketchMapActionPanel: {
+  featureSketchContextPanel: {
     alignItems: 'flex-start',
     left: 12,
     maxWidth: 360,
@@ -1929,17 +2197,37 @@ const styles = StyleSheet.create({
     top: 78,
     zIndex: 5,
   },
-  featureSketchMapActionButton: {
-    alignItems: 'center',
-    backgroundColor: '#175cd3',
-    borderColor: '#1849a9',
+  featureSketchBackgroundRow: {
+    backgroundColor: 'rgba(255, 255, 255, 0.94)',
+    borderColor: '#d0d5dd',
     borderRadius: 6,
     borderWidth: 1,
     flexDirection: 'row',
-    minHeight: 38,
-    paddingHorizontal: 10,
+    padding: 3,
   },
-  featureSketchMapActionHint: {
+  featureSketchBackgroundButton: {
+    alignItems: 'center',
+    borderColor: 'transparent',
+    borderRadius: 5,
+    borderWidth: 1,
+    flexDirection: 'row',
+    minHeight: 30,
+    paddingHorizontal: 8,
+  },
+  featureSketchBackgroundButtonSelected: {
+    backgroundColor: '#eff8ff',
+    borderColor: '#84caff',
+  },
+  featureSketchBackgroundText: {
+    color: '#526272',
+    fontSize: 11,
+    fontWeight: '900',
+    marginLeft: 4,
+  },
+  featureSketchBackgroundTextSelected: {
+    color: '#175cd3',
+  },
+  featureSketchLocationStatus: {
     backgroundColor: 'rgba(255, 255, 255, 0.94)',
     borderColor: '#b2ddff',
     borderRadius: 4,
@@ -1952,11 +2240,40 @@ const styles = StyleSheet.create({
     paddingHorizontal: 7,
     paddingVertical: 4,
   },
-  featureSketchMapActionText: {
+  featureSketchLiveLocation: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: -7,
+    marginTop: -7,
+    position: 'absolute',
+    zIndex: 4,
+  },
+  featureSketchLiveLocationPulse: {
+    backgroundColor: 'rgba(23, 92, 211, 0.16)',
+    borderColor: 'rgba(23, 92, 211, 0.34)',
+    borderRadius: 18,
+    borderWidth: 1,
+    height: 36,
+    position: 'absolute',
+    width: 36,
+  },
+  featureSketchLiveLocationDot: {
+    backgroundColor: '#175cd3',
+    borderColor: 'white',
+    borderRadius: 7,
+    borderWidth: 2,
+    height: 14,
+    width: 14,
+  },
+  featureSketchLiveLocationText: {
+    backgroundColor: 'rgba(23, 92, 211, 0.94)',
+    borderRadius: 4,
     color: 'white',
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: '900',
-    marginLeft: 5,
+    marginTop: 5,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
   },
   featureSketchBoundaryFallback: {
     alignItems: 'center',

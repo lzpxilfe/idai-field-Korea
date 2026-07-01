@@ -2,6 +2,7 @@ import {
   act,
   fireEvent,
   render,
+  waitFor,
 } from '@testing-library/react-native';
 import {
   CategoryForm,
@@ -313,12 +314,15 @@ describe('DocumentAddModal', () => {
       featureGeometryRevisionNote:
         '위치 스케치: 타원, 중심 75%, 50%, 크기 110%, 회전 15°',
       featureLocationSketch: JSON.stringify({
-        version: 1,
+        version: 2,
+        source: 'boundarySketch',
+        background: 'white',
         shape: 'oval',
         center: { x: 75, y: 50 },
         points: [{ x: 75, y: 50 }],
         rotation: 15,
         scale: 110,
+        projectBoundaryPointCount: 0,
       }),
       featureType: 'pit',
       identifier: '1호 수혈',
@@ -327,7 +331,7 @@ describe('DocumentAddModal', () => {
     });
   });
 
-  it('shows the project boundary and live polygon line in a map-first tablet layout', () => {
+  it('shows the project boundary and live polygon line in a map-first tablet layout', async () => {
     const parentDoc = {
       resource: {
         id: 'trench-1',
@@ -359,6 +363,13 @@ describe('DocumentAddModal', () => {
     expect(getByTestId('featureSketchFlatMapSurface')).toBeTruthy();
     expect(getByTestId('featureSketchMode_polygon').props.accessibilityState)
       .toEqual({ selected: true });
+    expect(getByTestId('featureSketchBackground_white').props.accessibilityState)
+      .toEqual({ selected: true });
+
+    fireEvent.press(getByTestId('featureSketchBackground_satellite'));
+
+    expect(getByTestId('featureSketchBackground_satellite').props.accessibilityState)
+      .toEqual({ selected: true });
 
     const canvas = getByTestId('featureLocationSketchCanvas');
     const touchLayer = getByTestId('featureLocationSketchTouchLayer');
@@ -374,14 +385,13 @@ describe('DocumentAddModal', () => {
       }));
     const formPaneStyle = StyleSheet.flatten(getByTestId('featureCreationFormPane').props.style);
     expect(formPaneStyle).toEqual(expect.objectContaining({ minWidth: 0 }));
-    if (formPaneStyle.flexDirection === 'row') {
-      expect(formPaneStyle).toEqual(expect.objectContaining({
-        borderTopWidth: 1,
-        maxHeight: 352,
-        minHeight: 252,
-        width: '100%',
-      }));
-    }
+    expect(getByTestId('featureCreationFormPane').props.horizontal).toBe(true);
+    expect(getByTestId('featureCreationFormPane').props.scrollEnabled).toBe(true);
+    expect(StyleSheet.flatten(
+      getByTestId('featureCreationFormPane').props.contentContainerStyle
+    )).toEqual(expect.objectContaining({
+      flexDirection: 'row',
+    }));
     expect(StyleSheet.flatten(getByTestId('featureLocationSketchPanel').props.style))
       .toEqual(expect.objectContaining({ flex: 1 }));
     expect(getByTestId('featureSketchPlacementBadge')).toBeTruthy();
@@ -444,9 +454,13 @@ describe('DocumentAddModal', () => {
         }),
       ])
     );
+
+    await waitFor(() => {
+      expect(getByTestId('featureSketchLiveLocation')).toBeTruthy();
+    });
   });
 
-  it('starts feature creation from the boundary map and stores the drawn feature geometry', () => {
+  it('stores a drawn feature boundary from the project-boundary sketch', () => {
     const onAddCategory = jest.fn();
     const parentDoc = {
       resource: {
@@ -457,7 +471,7 @@ describe('DocumentAddModal', () => {
       },
     } as any;
 
-    const { getByTestId, getByText } = render(
+    const { getByTestId } = render(
       <LabelsContext.Provider value={{ labels: new Labels(() => ['ko']) }}>
         <ConfigurationContext.Provider value={createConfig([
           createCategory(C.TRENCH),
@@ -467,7 +481,6 @@ describe('DocumentAddModal', () => {
           <DocumentAddModal
             boundaryDraft={createBoundaryDraft()}
             initialCategoryName={C.FEATURE}
-            mapJavaScriptKey="js-key"
             onAddCategory={onAddCategory}
             onClose={jest.fn()}
             parentDoc={parentDoc}
@@ -476,31 +489,19 @@ describe('DocumentAddModal', () => {
       </LabelsContext.Provider>
     );
 
-    fireEvent.press(getByTestId('featureSketchOpenMapBoundary'));
-
-    expect(getByText('유구 경계 지도에서 그리기')).toBeTruthy();
-
-    act(() => {
-      fireEvent(getByTestId('kakao-satellite-picker-webview'), 'message', {
-        nativeEvent: {
-          data: JSON.stringify({
-            type: 'boundary',
-            payload: {
-              mapTypeId: 'HYBRID',
-              center: { latitude: 37.05, longitude: 127.15 },
-              coordinates: [
-                { latitude: 37.06, longitude: 127.14 },
-                { latitude: 37.06, longitude: 127.16 },
-                { latitude: 37.04, longitude: 127.16 },
-                { latitude: 37.04, longitude: 127.14 },
-              ],
-            },
-          }),
-        },
-      });
+    const canvas = getByTestId('featureLocationSketchCanvas');
+    const touchLayer = getByTestId('featureLocationSketchTouchLayer');
+    fireEvent(canvas, 'layout', {
+      nativeEvent: { layout: { height: 100, width: 200 } },
     });
-
-    expect(getByText('지도 경계점 4개를 가져왔습니다.')).toBeTruthy();
+    [
+      { locationX: 40, locationY: 25 },
+      { locationX: 120, locationY: 50 },
+      { locationX: 150, locationY: 60 },
+    ].forEach((point) => {
+      fireEvent(touchLayer, 'responderGrant', { nativeEvent: point });
+      fireEvent(touchLayer, 'responderRelease', { nativeEvent: point });
+    });
 
     fireEvent.changeText(getByTestId('featureIdentifierInput'), '1호 유구');
     fireEvent.press(getByTestId('featureType_pit'));
@@ -509,20 +510,11 @@ describe('DocumentAddModal', () => {
       C.FEATURE,
       parentDoc,
       expect.objectContaining({
-        featureGeometry: JSON.stringify({
-          type: 'Polygon',
-          coordinates: [[
-            [127.14, 37.06],
-            [127.16, 37.06],
-            [127.16, 37.04],
-            [127.14, 37.04],
-            [127.14, 37.06],
-          ]],
-        }),
-        featureGeometryRevisionNote: '지도에서 유구 경계점 4개를 찍었습니다.',
+        featureGeometry: expect.stringContaining('"Polygon"'),
+        featureGeometryRevisionNote: '위치 스케치: 점 연결 3점, 마지막 75%, 60%',
         featureType: 'pit',
         geometryConfidence: 'rough',
-        geometrySource: 'drawnOnBoundaryMap',
+        geometrySource: 'drawnOnBoundarySketch',
         identifier: '1호 유구',
       })
     );

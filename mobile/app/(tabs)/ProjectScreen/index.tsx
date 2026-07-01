@@ -4,6 +4,7 @@ import {
   getKoreanFieldworkTodaySummary,
 } from 'idai-field-core';
 import { router, useGlobalSearchParams } from 'expo-router';
+import proj4 from 'proj4';
 import React, {
   useCallback,
   useContext,
@@ -255,6 +256,7 @@ const DocumentsList: React.FC = () => {
     }>();
   const scrollViewRef = useRef<ScrollView>(null);
   const fieldNoteContinuationRequestId = useRef(0);
+  const handledResetToOverviewKeyRef = useRef<string>();
   const [isCreatingFieldNote, setIsCreatingFieldNote] = useState(false);
   const [projectBoundaryDraft, setProjectBoundaryDraft] =
     useState<KoreanFieldworkProjectBoundaryDraft>();
@@ -291,6 +293,11 @@ const DocumentsList: React.FC = () => {
   const todaySummary = useMemo(
     () => getKoreanFieldworkTodaySummary(documents),
     [documents]
+  );
+  const effectiveProjectBoundaryDraft = useMemo(
+    () => projectBoundaryDraft
+      ?? getProjectBoundaryDraftFromSurveyBoundaries(todaySummary.surveyBoundaries),
+    [projectBoundaryDraft, todaySummary.surveyBoundaries]
   );
   const userVisibleTodaySummary = useMemo(
     () => getKoreanFieldworkUserVisibleTodaySummary(
@@ -888,21 +895,28 @@ const DocumentsList: React.FC = () => {
   }, [clearHierarchy]);
 
   useEffect(() => {
-    if (resetToOverviewKey) returnToInvestigationOverview();
+    if (!resetToOverviewKey) {
+      handledResetToOverviewKeyRef.current = undefined;
+      return;
+    }
+
+    if (handledResetToOverviewKeyRef.current === resetToOverviewKey) {
+      return;
+    }
+
+    handledResetToOverviewKeyRef.current = resetToOverviewKey;
+    returnToInvestigationOverview();
   }, [resetToOverviewKey, returnToInvestigationOverview]);
 
   return (
     <View style={styles.screen}>
       {addModalParent && (
         <DocumentAddModal
-          boundaryDraft={projectBoundaryDraft}
+          boundaryDraft={effectiveProjectBoundaryDraft}
           existingDocuments={userVisibleDocuments}
           initialCategoryName={addModalInitialCategoryName}
           initialDraftParams={addModalInitialDraftParams}
           investigationModeId={investigationModeId}
-          mapJavaScriptKey={
-            preferencesContext.preferences.mapProviderSettings.kakaoMapJavaScriptKey
-          }
           onClose={closeAddChildModal}
           parentDoc={addModalParent}
           onAddCategory={navigateAddCategory}
@@ -996,7 +1010,7 @@ const DocumentsList: React.FC = () => {
         {activeWorkspaceTab === 'journal' && (
         <>
           <KoreanFieldworkDailyJournalCalendar
-            boundaryDraft={projectBoundaryDraft}
+            boundaryDraft={effectiveProjectBoundaryDraft}
             boundarySummary={boundarySummary}
             canEdit={canEditDailyJournal}
             dailyLog={journalDailyLog}
@@ -1202,6 +1216,95 @@ const DocumentsList: React.FC = () => {
 const getStringRouteParam = (
   param: string | string[] | undefined
 ): string | undefined => Array.isArray(param) ? param[0] : param;
+
+const getProjectBoundaryDraftFromSurveyBoundaries = (
+  surveyBoundaries: readonly Document[]
+): KoreanFieldworkProjectBoundaryDraft | undefined => {
+  for (const surveyBoundary of surveyBoundaries) {
+    const coordinates = getWgs84CoordinatesFromSurveyBoundary(surveyBoundary);
+    if (coordinates.length >= 3) {
+      return {
+        center: getBoundaryDraftCenter(coordinates),
+        coordinates,
+      };
+    }
+  }
+
+  return undefined;
+};
+
+const getWgs84CoordinatesFromSurveyBoundary = (
+  surveyBoundary: Document
+): KoreanFieldworkProjectBoundaryDraft['coordinates'] => {
+  const geometry = (surveyBoundary.resource as Record<string, unknown>).geometry;
+  if (!isLineStringGeometry(geometry)) return [];
+
+  return getOpenLineStringCoordinates(geometry.coordinates)
+    .map(projectMapCoordinateToWgs84)
+    .filter((location): location is KoreanFieldworkProjectBoundaryDraft['coordinates'][number] =>
+      location !== undefined
+    );
+};
+
+const isLineStringGeometry = (
+  geometry: unknown
+): geometry is { coordinates: number[][]; type: 'LineString' } => {
+  if (typeof geometry !== 'object' || geometry === null) return false;
+
+  const candidate = geometry as Record<string, unknown>;
+
+  return candidate.type === 'LineString'
+    && Array.isArray(candidate.coordinates)
+    && candidate.coordinates.every((coordinate) =>
+      Array.isArray(coordinate)
+      && coordinate.length >= 2
+      && typeof coordinate[0] === 'number'
+      && Number.isFinite(coordinate[0])
+      && typeof coordinate[1] === 'number'
+      && Number.isFinite(coordinate[1])
+    );
+};
+
+const getOpenLineStringCoordinates = (coordinates: number[][]): number[][] => {
+  const [firstCoordinate] = coordinates;
+  const lastCoordinate = coordinates[coordinates.length - 1];
+  if (!firstCoordinate || !lastCoordinate) return coordinates;
+
+  return firstCoordinate[0] === lastCoordinate[0]
+    && firstCoordinate[1] === lastCoordinate[1]
+    ? coordinates.slice(0, -1)
+    : coordinates;
+};
+
+const projectMapCoordinateToWgs84 = (
+  coordinate: number[]
+): KoreanFieldworkProjectBoundaryDraft['coordinates'][number] | undefined => {
+  const projected = proj4('EPSG:3857', 'EPSG:4326', {
+    x: coordinate[0],
+    y: coordinate[1],
+  });
+  if (!Number.isFinite(projected.x) || !Number.isFinite(projected.y)) {
+    return undefined;
+  }
+
+  return {
+    latitude: projected.y,
+    longitude: projected.x,
+  };
+};
+
+const getBoundaryDraftCenter = (
+  coordinates: KoreanFieldworkProjectBoundaryDraft['coordinates']
+): KoreanFieldworkProjectBoundaryDraft['center'] => {
+  if (coordinates.length === 0) return undefined;
+
+  return {
+    latitude: coordinates.reduce((sum, coordinate) =>
+      sum + coordinate.latitude, 0) / coordinates.length,
+    longitude: coordinates.reduce((sum, coordinate) =>
+      sum + coordinate.longitude, 0) / coordinates.length,
+  };
+};
 
 const FieldworkFlowPanel: React.FC<{
   boundaryDetail: string;
