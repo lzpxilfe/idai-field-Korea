@@ -63,6 +63,87 @@ describe('korean-fieldwork-today-actions', () => {
     });
 
 
+    it('skips legacy related-feature groups when choosing a desktop feature draft parent', () => {
+
+        const operation = createDocument('operation-1', 'Operation', '조사구역 1');
+        const featureGroup = createDocument('feature-group-1', 'FeatureGroup', '관련 유구 A', {
+            liesWithin: ['operation-1']
+        });
+        const tasks = makeKoreanFieldworkPriorityTasks(
+            [
+                operation,
+                featureGroup,
+                createDocument('daily-1', 'DailyLog', '오늘 일지'),
+                createDocument('boundary-1', 'SurveyBoundary', 'A구역')
+            ] as any,
+            createDocument('project', 'Project') as any,
+            createConfig() as any
+        );
+
+        expect(tasks.find(task => task.id === 'create-detected-feature')?.detail)
+            .toBe('조사구역 1 안에 새 유구 기록을 시작하세요.');
+        expect(tasks.find(task => task.id === 'create-detected-feature')?.action).toEqual({
+            type: 'createDocument',
+            parentDocumentId: 'operation-1',
+            categoryName: 'Feature'
+        });
+    });
+
+
+    it('does not create new desktop features under a selected legacy related-feature group', () => {
+
+        const operation = createDocument('operation-1', 'Operation', '조사구역 1');
+        const featureGroup = createDocument('feature-group-1', 'FeatureGroup', '관련 유구 A', {
+            liesWithin: ['operation-1']
+        });
+        const tasks = makeKoreanFieldworkPriorityTasks(
+            [
+                operation,
+                featureGroup,
+                createDocument('daily-1', 'DailyLog', '오늘 일지'),
+                createDocument('boundary-1', 'SurveyBoundary', 'A구역')
+            ] as any,
+            createDocument('project', 'Project') as any,
+            createConfig() as any,
+            5,
+            featureGroup as any
+        );
+
+        expect(tasks.find(task => task.id === 'create-detected-feature')?.action).toEqual({
+            type: 'createDocument',
+            parentDocumentId: 'operation-1',
+            categoryName: 'Feature'
+        });
+    });
+
+
+    it('keeps excavation feature drafts on the operation even when old trenches exist', () => {
+
+        const operation = createDocument('operation-1', 'Operation', '조사구역 1');
+        const trench = createDocument('trench-1', 'Trench', 'Trench 1', {
+            isRecordedIn: ['operation-1']
+        });
+        const tasks = makeKoreanFieldworkPriorityTasks(
+            [
+                operation,
+                trench,
+                createDocument('daily-1', 'DailyLog', '오늘 일지'),
+                createDocument('boundary-1', 'SurveyBoundary', 'A구역')
+            ] as any,
+            createDocument('project', 'Project', 'project', {}, {
+                projectInvestigationMode: 'excavation'
+            }) as any,
+            createConfig() as any
+        );
+
+        expect(tasks.find(task => task.id === 'create-detected-feature')?.action).toEqual({
+            type: 'createDocument',
+            parentDocumentId: 'operation-1',
+            categoryName: 'Feature'
+        });
+    });
+
+
     it('keeps trial trench mode centered on trench setup before feature entry', () => {
 
         const operation = createDocument('operation-1', 'Operation', '조사구역 1');

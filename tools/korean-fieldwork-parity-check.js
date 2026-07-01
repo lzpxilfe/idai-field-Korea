@@ -1955,6 +1955,7 @@ function validateProjectInvestigationModeWording() {
     'desktop/src/app/util/korean-fieldwork-document-drafts.ts'
   );
   const desktopTodayActionsText = readTextFile('desktop/src/app/util/korean-fieldwork-today-actions.ts');
+  const desktopTodayActionsSpecText = readTextFile('desktop/test/unit/util/korean-fieldwork-today-actions.spec.ts');
   const desktopOperationWrapText = readTextFile('desktop/src/app/util/korean-fieldwork-operation-wrap.ts');
   const desktopHierarchyText = readTextFile('desktop/src/app/util/korean-fieldwork-hierarchy.ts');
   const desktopUnitMatrixText = readTextFile('desktop/src/app/util/korean-fieldwork-unit-matrix.ts');
@@ -2216,6 +2217,19 @@ function validateProjectInvestigationModeWording() {
       || !desktopOperationWrapText.includes('createOperationRelationUpdate')
       || !desktopOperationWrapText.includes('getOperationWrapConfirmationMessage')) {
     findings.push('desktop today actions must share tablet operation-wrap logic for legacy root records');
+  }
+  if (desktopTodayActionsText.includes("scopeParent?.resource?.category === C.FEATURE_GROUP")
+      || desktopTodayActionsText.includes('getFirstDocumentByCategory(scopedDocuments, C.FEATURE_GROUP)')
+      || desktopTodayActionsText.includes('getFirstDocumentByCategory(documents, C.FEATURE_GROUP)')) {
+    findings.push('desktop today actions must not create new feature drafts under legacy related-feature groups');
+  }
+  if (desktopTodayActionsText.includes('const featureParent = getScopedDocumentByCategory(documents, C.TRENCH')
+      || !desktopTodayActionsSpecText.includes('keeps excavation feature drafts on the operation even when old trenches exist')) {
+    findings.push('desktop excavation today actions must keep new feature drafts on the operation by default');
+  }
+  if (!desktopTodayActionsSpecText.includes('skips legacy related-feature groups when choosing a desktop feature draft parent')
+      || !desktopTodayActionsSpecText.includes('does not create new desktop features under a selected legacy related-feature group')) {
+    findings.push('desktop today actions tests must cover skipping legacy related-feature groups for feature drafts');
   }
   if (!desktopPriorityStripTemplateText.includes('기록 진행표')) {
     findings.push('desktop priority strip template must label the unit matrix as 기록 진행표');

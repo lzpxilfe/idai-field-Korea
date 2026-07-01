@@ -299,9 +299,7 @@ function appendExcavationTasks(tasks: KoreanFieldworkPriorityTask[],
     if (!targets.primaryOperation) return;
 
     const documentsById = toDocumentIndex(documents);
-    const featureParent = getScopedDocumentByCategory(documents, C.TRENCH, scopeParent)
-        ?? getFirstDocumentByCategory(documents, C.TRENCH)
-        ?? targets.primaryOperation;
+    const featureParent = targets.primaryOperation;
     const feature = getScopedDocumentByCategory(documents, C.FEATURE, scopeParent)
         ?? getFirstDocumentByCategory(documents, C.FEATURE);
 
@@ -404,20 +402,29 @@ function getFeatureDraftParent(documents: Document[],
                                scopeParent: Document|undefined,
                                scopedDocuments: Document[]): Document|undefined {
 
-    if (scopeParent?.resource?.category === C.TRENCH
-            || scopeParent?.resource?.category === C.FEATURE_GROUP) {
-        return getCurrentDocumentState(documents, scopeParent);
-    }
+    const selectedTrench = scopeParent?.resource?.category === C.TRENCH
+        ? getCurrentDocumentState(documents, scopeParent)
+        : undefined;
+    if (investigationMode === 'excavation' && selectedTrench) return selectedTrench;
 
     const scopedTrench = getFirstDocumentByCategory(scopedDocuments, C.TRENCH);
-    if (scopedTrench) return scopedTrench;
+    if (shouldUseTrenchWorkflow(investigationMode)) {
+        if (selectedTrench) return selectedTrench;
+        if (scopedTrench) return scopedTrench;
 
-    if (investigationMode === 'trialTrench') return undefined;
+        if (investigationMode === 'trialTrench') return undefined;
 
-    return getFirstDocumentByCategory(scopedDocuments, C.FEATURE_GROUP)
-        ?? getFirstDocumentByCategory(documents, C.TRENCH)
-        ?? getFirstDocumentByCategory(documents, C.FEATURE_GROUP)
-        ?? primaryOperation;
+        return getFirstDocumentByCategory(documents, C.TRENCH)
+            ?? primaryOperation;
+    }
+
+    return primaryOperation;
+}
+
+
+function shouldUseTrenchWorkflow(investigationMode: string|undefined): boolean {
+
+    return investigationMode === undefined || investigationMode === 'trialTrench';
 }
 
 
