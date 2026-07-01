@@ -63,6 +63,8 @@ const FEATURE_SKETCH_GRID_PERCENTS = [25, 50, 75];
 const FEATURE_SKETCH_BOUNDARY_PADDING = 14;
 const FEATURE_SKETCH_SHAPE_BASE_WIDTH = 18;
 const FEATURE_SKETCH_SHAPE_BASE_HEIGHT = 12;
+const FEATURE_SKETCH_SHAPE_MIN_SCALE = 8;
+const FEATURE_SKETCH_SHAPE_MAX_SCALE = 240;
 const FEATURE_SKETCH_OVAL_SEGMENTS = 16;
 const FEATURE_SKETCH_MAX_POLYGON_POINTS = 64;
 const FEATURE_SKETCH_CLOSE_POINT_DISTANCE = 4.5;
@@ -74,6 +76,9 @@ const FEATURE_SKETCH_VIEWPORT_DEFAULT = {
   offsetY: 0,
   scale: 1,
 };
+const FEATURE_SKETCH_PREVIEW_POINT_MOVE_THRESHOLD = 0.45;
+const FEATURE_SKETCH_VIEWPORT_OFFSET_THRESHOLD = 0.5;
+const FEATURE_SKETCH_VIEWPORT_SCALE_THRESHOLD = 0.01;
 const FEATURE_LOCATION_SKETCH_SHAPES = [
   { id: 'point', label: '점', icon: 'location-outline' },
   { id: 'polygon', label: '점 연결', icon: 'git-merge-outline' },
@@ -420,7 +425,13 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
   const handleFeatureSketchLayout = (event: LayoutChangeEvent) => {
     const { height, width } = event.nativeEvent.layout;
     if (height > 0 && width > 0) {
-      setFeatureSketchCanvasSize({ height, width });
+      setFeatureSketchCanvasSize((currentSize) => {
+        if (currentSize.height === height && currentSize.width === width) {
+          return currentSize;
+        }
+
+        return { height, width };
+      });
     }
   };
 
@@ -450,19 +461,33 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
       const nextScale = clamp(
         initialGesture.scale
           * (shapeGesture.distance / Math.max(1, initialGesture.distance)),
-        35,
-        240
+        FEATURE_SKETCH_SHAPE_MIN_SCALE,
+        FEATURE_SKETCH_SHAPE_MAX_SCALE
       );
       const nextRotation = normalizeRotation(
         initialGesture.rotation + shapeGesture.angle - initialGesture.angle
       );
+      const roundedScale = Math.round(nextScale);
+      const roundedRotation = Math.round(nextRotation);
+
+      if (
+        areFeatureSketchPointsNear(
+          shapeGesture.center,
+          featureSketchCenter,
+          FEATURE_SKETCH_PREVIEW_POINT_MOVE_THRESHOLD
+        )
+        && roundedScale === featureSketchScale
+        && roundedRotation === featureSketchRotation
+      ) {
+        return;
+      }
 
       setFeatureSketchWasEdited(true);
       setActiveFeatureSketchPoint(undefined);
       setFeatureSketchCenter(shapeGesture.center);
       setFeatureSketchPoints([shapeGesture.center]);
-      setFeatureSketchScale(Math.round(nextScale));
-      setFeatureSketchRotation(Math.round(nextRotation));
+      setFeatureSketchScale(roundedScale);
+      setFeatureSketchRotation(roundedRotation);
       return;
     }
 
@@ -479,7 +504,10 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
       featureSketchCanvasSize,
       featureSketchViewport
     );
-    if (areSketchPointsEqual(point, lastPreviewFeatureSketchPointRef.current)) {
+    if (!shouldUpdateFeatureSketchPreviewPoint(
+      point,
+      lastPreviewFeatureSketchPointRef.current
+    )) {
       return;
     }
 
@@ -565,7 +593,7 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
         FEATURE_SKETCH_VIEWPORT_MAX_SCALE
       );
 
-      setFeatureSketchViewport(clampFeatureSketchViewport(
+      const nextViewport = clampFeatureSketchViewport(
         getFeatureSketchViewportFromGesture({
           canvasSize: featureSketchCanvasSize,
           currentCenter: gesture.center,
@@ -578,7 +606,12 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
           nextScale,
         }),
         featureSketchCanvasSize
-      ));
+      );
+      if (areFeatureSketchViewportsSimilar(nextViewport, featureSketchViewport)) {
+        return;
+      }
+
+      setFeatureSketchViewport(nextViewport);
       return;
     }
 
@@ -592,16 +625,25 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
     };
     featureViewportPanRef.current = panGesture;
 
-    setFeatureSketchViewport(clampFeatureSketchViewport({
+    const nextViewport = clampFeatureSketchViewport({
       offsetX: panGesture.offsetX + point.x - panGesture.start.x,
       offsetY: panGesture.offsetY + point.y - panGesture.start.y,
       scale: featureSketchViewport.scale,
-    }, featureSketchCanvasSize));
+    }, featureSketchCanvasSize);
+    if (areFeatureSketchViewportsSimilar(nextViewport, featureSketchViewport)) {
+      return;
+    }
+
+    setFeatureSketchViewport(nextViewport);
   };
 
   const adjustFeatureSketchScale = (delta: number) => {
     setFeatureSketchWasEdited(true);
-    setFeatureSketchScale((scale) => clamp(scale + delta, 60, 160));
+    setFeatureSketchScale((scale) => clamp(
+      scale + delta,
+      FEATURE_SKETCH_SHAPE_MIN_SCALE,
+      FEATURE_SKETCH_SHAPE_MAX_SCALE
+    ));
   };
 
   const adjustFeatureSketchRotation = (delta: number) => {
@@ -718,12 +760,15 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
     )
       ? featureSketchPoints[0]
       : activeFeatureSketchPoint;
-    const points = featureLocationShape === 'polygon'
+    const visiblePoints = featureLocationShape === 'polygon'
       ? getVisibleFeatureSketchPoints(
         featureSketchPoints,
         featureSketchPolygonClosed ? undefined : previewPoint
       )
       : (featureSketchPoints.length > 0 ? featureSketchPoints : [featureSketchCenter]);
+    const linePoints = featureLocationShape === 'polygon'
+      ? featureSketchPoints
+      : visiblePoints;
 
     return (
       <>
@@ -732,7 +777,7 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
           closePath: featureSketchPolygonClosed,
           color: '#f97316',
           keyPrefix: 'feature',
-          points,
+          points: linePoints,
           testID: 'featureSketchLine',
           viewport: featureSketchViewport,
           width: 3,
@@ -759,7 +804,7 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
               <Ionicons name="add" size={10} color="#c2410c" />
             </View>
           ))}
-        {points.map((point, index) => (
+        {visiblePoints.map((point, index) => (
           <View
             key={`${point.x}-${point.y}-${index}`}
             pointerEvents="none"
@@ -1405,6 +1450,8 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
             contentContainerStyle={
               isChoosingFeatureType ? styles.featureCreationContent : undefined
             }
+            keyboardShouldPersistTaps="handled"
+            scrollEnabled={!isChoosingFeatureType || !isFeatureWideLayout}
           >
             {isChoosingFeatureType ? renderFeatureTypePicker() : (
               <>
@@ -2075,6 +2122,40 @@ const areSketchPointsEqual = (
   first?: FeatureSketchPoint,
   second?: FeatureSketchPoint
 ): boolean => first?.x === second?.x && first?.y === second?.y;
+
+const areFeatureSketchPointsNear = (
+  first?: FeatureSketchPoint,
+  second?: FeatureSketchPoint,
+  threshold = 0
+): boolean => {
+  if (threshold <= 0) return areSketchPointsEqual(first, second);
+
+  return (
+    !!first
+    && !!second
+    && getFeatureSketchPointDistance(first, second) <= threshold
+  );
+};
+
+const shouldUpdateFeatureSketchPreviewPoint = (
+  nextPoint: FeatureSketchPoint,
+  previousPoint?: FeatureSketchPoint
+): boolean => (
+  !areFeatureSketchPointsNear(
+    nextPoint,
+    previousPoint,
+    FEATURE_SKETCH_PREVIEW_POINT_MOVE_THRESHOLD
+  )
+);
+
+const areFeatureSketchViewportsSimilar = (
+  first: FeatureSketchViewport,
+  second: FeatureSketchViewport
+): boolean => (
+  Math.abs(first.offsetX - second.offsetX) < FEATURE_SKETCH_VIEWPORT_OFFSET_THRESHOLD
+  && Math.abs(first.offsetY - second.offsetY) < FEATURE_SKETCH_VIEWPORT_OFFSET_THRESHOLD
+  && Math.abs(first.scale - second.scale) < FEATURE_SKETCH_VIEWPORT_SCALE_THRESHOLD
+);
 
 const getVisibleFeatureSketchPoints = (
   points: FeatureSketchPoint[],

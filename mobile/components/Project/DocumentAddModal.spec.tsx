@@ -331,7 +331,7 @@ describe('DocumentAddModal', () => {
     });
   });
 
-  it('shows the project boundary and live polygon line in a map-first tablet layout', async () => {
+  it('shows the project boundary and keeps committed polygon lines in a map-first tablet layout', async () => {
     const parentDoc = {
       resource: {
         id: 'trench-1',
@@ -341,7 +341,7 @@ describe('DocumentAddModal', () => {
       },
     } as any;
 
-    const { getByTestId } = render(
+    const { getByTestId, queryByTestId } = render(
       <LabelsContext.Provider value={{ labels: new Labels(() => ['ko']) }}>
         <ConfigurationContext.Provider value={createConfig([
           createCategory(C.TRENCH),
@@ -459,7 +459,7 @@ describe('DocumentAddModal', () => {
       nativeEvent: { locationX: 150, locationY: 60 },
     });
 
-    expect(getByTestId('featureSketchLine')).toBeTruthy();
+    expect(queryByTestId('featureSketchLine')).toBeNull();
     expect(getByTestId('featureSketchPoint_1').props.style).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -468,6 +468,11 @@ describe('DocumentAddModal', () => {
         }),
       ])
     );
+    fireEvent(touchLayer, 'responderRelease', {
+      nativeEvent: { locationX: 150, locationY: 60 },
+    });
+
+    expect(getByTestId('featureSketchLine')).toBeTruthy();
 
     await waitFor(() => {
       expect(getByTestId('featureSketchLiveLocation')).toBeTruthy();
@@ -673,6 +678,53 @@ describe('DocumentAddModal', () => {
         featureGeometryRevisionNote:
           '위치 스케치: 사각형, 중심 50%, 50%, 크기 240%, 회전 -5°',
         geometrySource: 'drawnOnBoundarySketch',
+      })
+    );
+  });
+
+  it('allows rectangle and oval sketches to become very small', () => {
+    const onAddCategory = jest.fn();
+    const parentDoc = {
+      resource: {
+        id: 'operation-1',
+        identifier: 'Operation 1',
+        category: C.TRENCH,
+        relations: {},
+      },
+    } as any;
+
+    const { getByTestId } = render(
+      <LabelsContext.Provider value={{ labels: new Labels(() => ['ko']) }}>
+        <ConfigurationContext.Provider value={createConfig([
+          createCategory(C.TRENCH),
+          createCategory(C.FEATURE),
+        ])}
+        >
+          <DocumentAddModal
+            boundaryDraft={createBoundaryDraft()}
+            initialCategoryName={C.FEATURE}
+            onAddCategory={onAddCategory}
+            onClose={jest.fn()}
+            parentDoc={parentDoc}
+          />
+        </ConfigurationContext.Provider>
+      </LabelsContext.Provider>
+    );
+
+    fireEvent.press(getByTestId('featureSketchMode_rectangle'));
+    Array.from({ length: 10 }).forEach(() => {
+      fireEvent.press(getByTestId('featureSketchScaleDown'));
+    });
+    fireEvent.changeText(getByTestId('featureIdentifierInput'), '1호 유구');
+    fireEvent.press(getByTestId('featureType_pit'));
+
+    expect(onAddCategory).toHaveBeenCalledWith(
+      C.FEATURE,
+      parentDoc,
+      expect.objectContaining({
+        featureGeometryRevisionNote:
+          '위치 스케치: 사각형, 중심 50%, 50%, 크기 8%, 회전 0°',
+        featureLocationSketch: expect.stringContaining('"scale":8'),
       })
     );
   });

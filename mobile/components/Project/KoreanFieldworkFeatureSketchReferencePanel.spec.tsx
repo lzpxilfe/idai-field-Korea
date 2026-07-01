@@ -1,6 +1,7 @@
 import { render } from '@testing-library/react-native';
 import { Document } from 'idai-field-core';
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import KoreanFieldworkFeatureSketchReferencePanel
   from './KoreanFieldworkFeatureSketchReferencePanel';
 import { KOREAN_FIELDWORK_CATEGORIES } from './korean-fieldwork-categories';
@@ -64,6 +65,32 @@ describe('KoreanFieldworkFeatureSketchReferencePanel', () => {
     );
 
     expect(queryByTestId('featureSketchReferencePanel')).toBeNull();
+  });
+
+  it('keeps very small rectangle and oval sketches small in the reference preview', () => {
+    const feature = createDoc('feature-1', C.FEATURE, {
+      featureLocationSketch: JSON.stringify({
+        version: 2,
+        shape: 'rectangle',
+        center: { x: 50, y: 50 },
+        points: [{ x: 50, y: 50 }],
+        rotation: 0,
+        scale: 8,
+      }),
+    });
+
+    const { getByTestId } = render(
+      <KoreanFieldworkFeatureSketchReferencePanel
+        document={feature}
+        documents={[feature]}
+      />
+    );
+
+    expect(StyleSheet.flatten(getByTestId('featureShapeSketchShape').props.style))
+      .toEqual(expect.objectContaining({
+        height: 5,
+        width: 6,
+      }));
   });
 });
 

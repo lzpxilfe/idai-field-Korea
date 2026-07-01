@@ -51,6 +51,10 @@ const VALID_SHAPES = new Set<FeatureLocationSketchShape>([
   'rectangle',
   'oval',
 ]);
+const FEATURE_SKETCH_SHAPE_MIN_SCALE = 8;
+const FEATURE_SKETCH_SHAPE_MAX_SCALE = 240;
+const FEATURE_SKETCH_REFERENCE_SHAPE_MIN_WIDTH = 6;
+const FEATURE_SKETCH_REFERENCE_SHAPE_MIN_HEIGHT = 5;
 const TEXT = {
   panelTitle: '\uc720\uad6c \uc704\uce58\uc640 \ud615\ud0dc',
   boundaryTitle: '\uc804\uccb4 \uacbd\uacc4 \uc548 \uc704\uce58',
@@ -276,7 +280,11 @@ const normalizeFeatureLocationSketch = (
     center,
     points,
     rotation: normalizeNumber(rawValue.rotation, 0),
-    scale: clamp(normalizeNumber(rawValue.scale, 100), 40, 220),
+    scale: clamp(
+      normalizeNumber(rawValue.scale, 100),
+      FEATURE_SKETCH_SHAPE_MIN_SCALE,
+      FEATURE_SKETCH_SHAPE_MAX_SCALE
+    ),
     shape,
   };
 };
@@ -429,8 +437,16 @@ const getFeatureShapeFrame = (
 ) => {
   const center = denormalizePoint(sketch.center, canvasSize);
   const shapeScale = (sketch.scale / 100) * scaleMultiplier;
-  const width = clamp(canvasSize.width * 0.22 * shapeScale, 24, 120);
-  const height = clamp(canvasSize.height * 0.26 * shapeScale, 22, 96);
+  const width = clamp(
+    canvasSize.width * 0.22 * shapeScale,
+    FEATURE_SKETCH_REFERENCE_SHAPE_MIN_WIDTH,
+    120
+  );
+  const height = clamp(
+    canvasSize.height * 0.26 * shapeScale,
+    FEATURE_SKETCH_REFERENCE_SHAPE_MIN_HEIGHT,
+    96
+  );
 
   return {
     height,
