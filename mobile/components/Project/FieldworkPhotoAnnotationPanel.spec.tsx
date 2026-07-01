@@ -103,4 +103,5 @@ describe('FieldworkPhotoAnnotationPanel', () => {
       expect(handleSamplePoint).toHaveBeenCalledWith({ x: 5000, y: 5000 })
     );
   });
+
 });

@@ -115,6 +115,36 @@ describe('KoreanFieldworkSoilColorPanel', () => {
     });
   });
 
+  it('keeps a separate Korean layer color note beside the Munsell value', () => {
+    const handleUpdateResourceFields = jest.fn();
+    const { getByTestId } = render(
+      <KoreanFieldworkSoilColorPanel
+        category={createCategoryForm([
+          'soilProfileColorSwatches',
+        ])}
+        resource={createResource(C.SOIL_PROFILE_PHOTO, {
+          soilProfileColorSwatches: '1: 10YR 4/3 회갈색 사질토',
+        })}
+        onUpdateResourceField={jest.fn()}
+        onUpdateResourceFields={handleUpdateResourceFields}
+      />
+    );
+
+    expect(getByTestId('soilColorLayerInput_1').props.value).toBe('10YR 4/3');
+    expect(getByTestId('soilColorLayerNoteInput_1').props.value)
+      .toBe('회갈색 사질토');
+
+    fireEvent.changeText(
+      getByTestId('soilColorLayerNoteInput_1'),
+      '회갈색 사질점토, 목탄립 포함'
+    );
+
+    expect(handleUpdateResourceFields).toHaveBeenCalledWith({
+      soilProfileColorSwatches: '1: 10YR 4/3 회갈색 사질점토, 목탄립 포함',
+      soilProfileActiveLayerNumber: 1,
+    });
+  });
+
   it('edits a soil layer number through a numeric modal', () => {
     const handleUpdateResourceFields = jest.fn();
     const { getByTestId } = render(
@@ -256,6 +286,26 @@ describe('KoreanFieldworkSoilColorPanel', () => {
       soilColorAssistStatus: 'reviewed',
       soilProfileActiveLayerNumber: 2,
       soilProfileColorSwatches: '1: 10YR 4/3\n2: 2.5Y 5/3',
+    });
+  });
+
+  it('preserves Korean layer notes when photo sampling writes a Munsell candidate', () => {
+    expect(getSoilProfileColorSampleUpdates(
+      createResource(C.SOIL_PROFILE_PHOTO, {
+        soilProfileActiveLayerNumber: 2,
+        soilProfileColorSwatches: '1: 10YR 4/3\n2: 회갈색 사질토',
+      }),
+      {
+        soilColorAssistCandidates:
+          '사진 선택 지점 80%/50% 평균 RGB 139/128/88\n1: 2.5Y 5/3 (높음, 차이 0.0)',
+        soilColorAssistStatus: 'candidatesAvailable',
+      }
+    )).toEqual({
+      soilColorAssistCandidates:
+        '사진 선택 지점 80%/50% 평균 RGB 139/128/88\n1: 2.5Y 5/3 (높음, 차이 0.0)',
+      soilColorAssistStatus: 'reviewed',
+      soilProfileActiveLayerNumber: 2,
+      soilProfileColorSwatches: '1: 10YR 4/3\n2: 2.5Y 5/3 회갈색 사질토',
     });
   });
 

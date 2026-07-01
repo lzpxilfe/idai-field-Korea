@@ -31,6 +31,8 @@ interface SoilColorOption {
 }
 
 interface SoilColorLayerRow {
+  munsell: string;
+  note: string;
   number: number;
   value: string;
 }
@@ -72,6 +74,8 @@ const MUNSELL_HUE_OPTIONS: {
 
 const MUNSELL_HUE_NUMBER_OPTIONS = MUNSELL_HUE_OPTIONS.numbers;
 const MUNSELL_HUE_FAMILY_OPTIONS = MUNSELL_HUE_OPTIONS.families;
+const MUNSELL_VALUE_PATTERN =
+  /^(GLEY\s*[12]\s*\d(?:\.\d)?\/N|(?:10|7\.5|5|2\.5)(?:R|YR|Y|GY|G|BG|B|PB|P|RP)\s+\d(?:\.\d)?\/\d+(?:\.\d)?|N\s*\d(?:\.\d)?\/0)\s*(.*)$/i;
 
 const MUNSELL_VALUE_OPTIONS: readonly SoilColorOption[] =
   ['1', '2', '2.5', '3', '4', '5', '6', '7', '8', '9'].map((value) => ({
@@ -199,7 +203,7 @@ const KoreanFieldworkSoilColorPanel: React.FC<KoreanFieldworkSoilColorPanelProps
 
     if (canRecordPhotoSwatches) {
       updateFields({
-        [SOIL_COLOR_FIELDS.profileColorSwatches]: updateSoilColorRowValue(
+        [SOIL_COLOR_FIELDS.profileColorSwatches]: updateSoilColorRowMunsellValue(
           getTextValue(resource, SOIL_COLOR_FIELDS.profileColorSwatches),
           activeRowNumber,
           value
@@ -212,7 +216,19 @@ const KoreanFieldworkSoilColorPanel: React.FC<KoreanFieldworkSoilColorPanelProps
   const updateLayerMunsellValue = (rowNumber: number, value: string) => {
     setSelectedRowNumber(rowNumber);
     updateFields({
-      [SOIL_COLOR_FIELDS.profileColorSwatches]: updateSoilColorRowValue(
+      [SOIL_COLOR_FIELDS.profileColorSwatches]: updateSoilColorRowMunsellValue(
+        getTextValue(resource, SOIL_COLOR_FIELDS.profileColorSwatches),
+        rowNumber,
+        value
+      ),
+      [SOIL_COLOR_FIELDS.activeLayerNumber]: rowNumber,
+    });
+  };
+
+  const updateLayerNoteValue = (rowNumber: number, value: string) => {
+    setSelectedRowNumber(rowNumber);
+    updateFields({
+      [SOIL_COLOR_FIELDS.profileColorSwatches]: updateSoilColorRowNoteValue(
         getTextValue(resource, SOIL_COLOR_FIELDS.profileColorSwatches),
         rowNumber,
         value
@@ -251,7 +267,7 @@ const KoreanFieldworkSoilColorPanel: React.FC<KoreanFieldworkSoilColorPanelProps
 
     if (canRecordPhotoSwatches) {
       updateFields({
-        [SOIL_COLOR_FIELDS.profileColorSwatches]: updateSoilColorRowValue(
+        [SOIL_COLOR_FIELDS.profileColorSwatches]: updateSoilColorRowMunsellValue(
           getTextValue(resource, SOIL_COLOR_FIELDS.profileColorSwatches),
           activeRowNumber,
           value
@@ -302,22 +318,34 @@ const KoreanFieldworkSoilColorPanel: React.FC<KoreanFieldworkSoilColorPanelProps
                   {row.number}
                 </Text>
               </TouchableOpacity>
-              <TextInput
+              <View style={styles.layerInputGroup}>
+                <View style={styles.layerInputLine}>
+                  <MaterialIcons name="colorize" size={15} color="#7a4b12" />
+                  <TextInput
                 autoCapitalize="characters"
                 autoCorrect={false}
                 onChangeText={(value) => updateLayerMunsellValue(row.number, value)}
                 onFocus={() => selectLayerRow(row.number)}
-                placeholder="먼셀값"
+                placeholder="먼셀/스포이드 결과"
                 placeholderTextColor="#98a2b3"
                 style={styles.layerInput}
                 testID={`soilColorLayerInput_${row.number}`}
-                value={row.value}
+                    value={row.munsell}
               />
-              <MaterialIcons
-                name="colorize"
-                size={16}
-                color={row.number === activeRowNumber ? '#175cd3' : '#98a2b3'}
-              />
+                </View>
+                <TextInput
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  multiline
+                  onChangeText={(value) => updateLayerNoteValue(row.number, value)}
+                  onFocus={() => selectLayerRow(row.number)}
+                  placeholder="한글 토색·성상 메모"
+                  placeholderTextColor="#98a2b3"
+                  style={[styles.layerInput, styles.layerNoteInput]}
+                  testID={`soilColorLayerNoteInput_${row.number}`}
+                  value={row.note}
+                />
+              </View>
             </TouchableOpacity>
           ))}
           <TouchableOpacity
@@ -346,7 +374,7 @@ const KoreanFieldworkSoilColorPanel: React.FC<KoreanFieldworkSoilColorPanelProps
               assistCandidateOptions={assistCandidateOptions}
               assistCandidateText={assistCandidateText}
               activeValue={soilColorRows.find((row) =>
-                row.number === activeRowNumber)?.value}
+                row.number === activeRowNumber)?.munsell}
               onPressCandidate={applyAssistCandidate}
             />
           )}
@@ -699,25 +727,66 @@ const getSoilColorRows = (currentValue: string): SoilColorLayerRow[] => {
     .map((line) => line.trimEnd())
     .filter((line) => line.trim().length > 0);
 
-  if (lines.length === 0) return [{ number: 1, value: '' }];
+  if (lines.length === 0) return [createSoilColorLayerRow(1, '')];
 
   return lines.map((line, index) => {
     const match = line.match(/^\s*(\d+)\s*:?\s*(.*)$/);
 
-    if (!match) return { number: index + 1, value: line.trim() };
+    if (!match) return createSoilColorLayerRow(index + 1, line.trim());
 
-    return {
-      number: Number.parseInt(match[1], 10),
-      value: match[2] ?? '',
-    };
+    return createSoilColorLayerRow(
+      Number.parseInt(match[1], 10),
+      match[2] ?? ''
+    );
   });
 };
+
+const createSoilColorLayerRow = (
+  number: number,
+  value: string
+): SoilColorLayerRow => {
+  const { munsell, note } = splitSoilColorRowValue(value);
+
+  return {
+    munsell,
+    note,
+    number,
+    value: formatSoilColorRowValue(munsell, note),
+  };
+};
+
+const splitSoilColorRowValue = (value: string): {
+  munsell: string;
+  note: string;
+} => {
+  const normalizedValue = value.trim();
+  const match = normalizedValue.match(MUNSELL_VALUE_PATTERN);
+  if (!match) {
+    return {
+      munsell: '',
+      note: normalizedValue,
+    };
+  }
+
+  return {
+    munsell: normalizeMunsellText(match[1]),
+    note: (match[2] ?? '').trim(),
+  };
+};
+
+const normalizeMunsellText = (value: string): string =>
+  value.toUpperCase().replace(/\s+/g, ' ').trim();
+
+const formatSoilColorRowValue = (
+  munsell: string,
+  note: string
+): string => [munsell.trim(), note.trim()].filter(Boolean).join(' ');
 
 const appendEmptySoilColorRow = (currentValue: string): string => {
   const rows = getSoilColorRows(currentValue);
   const nextNumber = Math.max(0, ...rows.map((row) => row.number)) + 1;
 
-  return serializeSoilColorRows(rows.concat({ number: nextNumber, value: '' }));
+  return serializeSoilColorRows(rows.concat(createSoilColorLayerRow(nextNumber, '')));
 };
 
 const renameSoilColorRowNumber = (
@@ -739,17 +808,43 @@ const renameSoilColorRowNumber = (
   ));
 };
 
-const updateSoilColorRowValue = (
+const updateSoilColorRowMunsellValue = (
   currentValue: string,
   rowNumber: number,
-  nextValue: string
+  nextMunsell: string
 ): string => {
   const rows = getSoilColorRows(currentValue);
   const rowIndex = rows.findIndex((row) => row.number === rowNumber);
   const nextRows = rowIndex < 0
-    ? rows.concat({ number: rowNumber, value: nextValue })
+    ? rows.concat(createSoilColorLayerRow(rowNumber, nextMunsell))
     : rows.map((row, index) =>
-      index === rowIndex ? { ...row, value: nextValue } : row
+      index === rowIndex
+        ? createSoilColorLayerRow(
+          row.number,
+          formatSoilColorRowValue(nextMunsell, row.note)
+        )
+        : row
+    );
+
+  return serializeSoilColorRows(nextRows);
+};
+
+const updateSoilColorRowNoteValue = (
+  currentValue: string,
+  rowNumber: number,
+  nextNote: string
+): string => {
+  const rows = getSoilColorRows(currentValue);
+  const rowIndex = rows.findIndex((row) => row.number === rowNumber);
+  const nextRows = rowIndex < 0
+    ? rows.concat(createSoilColorLayerRow(rowNumber, nextNote))
+    : rows.map((row, index) =>
+      index === rowIndex
+        ? createSoilColorLayerRow(
+          row.number,
+          formatSoilColorRowValue(row.munsell, nextNote)
+        )
+        : row
     );
 
   return serializeSoilColorRows(nextRows);
@@ -758,7 +853,7 @@ const updateSoilColorRowValue = (
 const serializeSoilColorRows = (rows: SoilColorLayerRow[]): string =>
   rows
     .sort((left, right) => left.number - right.number)
-    .map((row) => `${row.number}: ${row.value}`)
+    .map((row) => `${row.number}: ${formatSoilColorRowValue(row.munsell, row.note)}`)
     .join('\n');
 
 const getActiveLayerNumber = (resource: NewResource): number | undefined => {
@@ -795,7 +890,7 @@ export const getSoilProfileColorSampleUpdates = (
 
   return {
     ...assistUpdates,
-    [SOIL_COLOR_FIELDS.profileColorSwatches]: updateSoilColorRowValue(
+    [SOIL_COLOR_FIELDS.profileColorSwatches]: updateSoilColorRowMunsellValue(
       getTextValue(resource, SOIL_COLOR_FIELDS.profileColorSwatches),
       activeRowNumber,
       sampledMunsell
@@ -858,15 +953,16 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   layerRow: {
-    alignItems: 'center',
+    alignItems: 'flex-start',
     backgroundColor: 'white',
     borderColor: '#d0d5dd',
     borderRadius: 6,
     borderWidth: 1,
     flexDirection: 'row',
     marginBottom: 7,
-    minHeight: 42,
+    minHeight: 86,
     paddingHorizontal: 6,
+    paddingVertical: 6,
   },
   layerRowActive: {
     backgroundColor: '#eff8ff',
@@ -881,6 +977,7 @@ const styles = StyleSheet.create({
     height: 38,
     justifyContent: 'center',
     marginRight: 8,
+    marginTop: 2,
     width: 42,
   },
   layerNumberActive: {
@@ -895,6 +992,14 @@ const styles = StyleSheet.create({
   layerNumberTextActive: {
     color: '#175cd3',
   },
+  layerInputGroup: {
+    flex: 1,
+    minWidth: 0,
+  },
+  layerInputLine: {
+    alignItems: 'center',
+    flexDirection: 'row',
+  },
   layerInput: {
     backgroundColor: 'white',
     borderColor: '#d0d5dd',
@@ -907,6 +1012,12 @@ const styles = StyleSheet.create({
     minHeight: 38,
     paddingHorizontal: 10,
     paddingVertical: 8,
+  },
+  layerNoteInput: {
+    fontWeight: '700',
+    marginTop: 5,
+    minHeight: 40,
+    textAlignVertical: 'top',
   },
   layerValueBox: {
     flex: 1,
