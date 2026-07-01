@@ -1,4 +1,5 @@
 import {
+  act,
   fireEvent,
   render,
 } from '@testing-library/react-native';
@@ -17,6 +18,23 @@ import DocumentAddModal from './DocumentAddModal';
 import { KOREAN_FIELDWORK_CATEGORIES } from './korean-fieldwork-categories';
 
 const C = KOREAN_FIELDWORK_CATEGORIES;
+
+jest.mock('expo-location', () => ({
+  Accuracy: {
+    Balanced: 3,
+  },
+  getCurrentPositionAsync: jest.fn(() => Promise.resolve({
+    coords: {
+      accuracy: 8,
+      latitude: 37.05,
+      longitude: 127.15,
+    },
+  })),
+  requestForegroundPermissionsAsync: jest.fn(() => Promise.resolve({
+    status: 'granted',
+  })),
+  watchPositionAsync: jest.fn(() => Promise.resolve({ remove: jest.fn() })),
+}));
 
 describe('DocumentAddModal', () => {
   it('starts with the feature name field when Feature is the initial category', () => {
@@ -425,6 +443,88 @@ describe('DocumentAddModal', () => {
           top: '60%',
         }),
       ])
+    );
+  });
+
+  it('starts feature creation from the boundary map and stores the drawn feature geometry', () => {
+    const onAddCategory = jest.fn();
+    const parentDoc = {
+      resource: {
+        id: 'operation-1',
+        identifier: 'Operation 1',
+        category: C.TRENCH,
+        relations: {},
+      },
+    } as any;
+
+    const { getByTestId, getByText } = render(
+      <LabelsContext.Provider value={{ labels: new Labels(() => ['ko']) }}>
+        <ConfigurationContext.Provider value={createConfig([
+          createCategory(C.TRENCH),
+          createCategory(C.FEATURE),
+        ])}
+        >
+          <DocumentAddModal
+            boundaryDraft={createBoundaryDraft()}
+            initialCategoryName={C.FEATURE}
+            mapJavaScriptKey="js-key"
+            onAddCategory={onAddCategory}
+            onClose={jest.fn()}
+            parentDoc={parentDoc}
+          />
+        </ConfigurationContext.Provider>
+      </LabelsContext.Provider>
+    );
+
+    fireEvent.press(getByTestId('featureSketchOpenMapBoundary'));
+
+    expect(getByText('유구 경계 지도에서 그리기')).toBeTruthy();
+
+    act(() => {
+      fireEvent(getByTestId('kakao-satellite-picker-webview'), 'message', {
+        nativeEvent: {
+          data: JSON.stringify({
+            type: 'boundary',
+            payload: {
+              mapTypeId: 'HYBRID',
+              center: { latitude: 37.05, longitude: 127.15 },
+              coordinates: [
+                { latitude: 37.06, longitude: 127.14 },
+                { latitude: 37.06, longitude: 127.16 },
+                { latitude: 37.04, longitude: 127.16 },
+                { latitude: 37.04, longitude: 127.14 },
+              ],
+            },
+          }),
+        },
+      });
+    });
+
+    expect(getByText('지도 경계점 4개를 가져왔습니다.')).toBeTruthy();
+
+    fireEvent.changeText(getByTestId('featureIdentifierInput'), '1호 유구');
+    fireEvent.press(getByTestId('featureType_pit'));
+
+    expect(onAddCategory).toHaveBeenCalledWith(
+      C.FEATURE,
+      parentDoc,
+      expect.objectContaining({
+        featureGeometry: JSON.stringify({
+          type: 'Polygon',
+          coordinates: [[
+            [127.14, 37.06],
+            [127.16, 37.06],
+            [127.16, 37.04],
+            [127.14, 37.04],
+            [127.14, 37.06],
+          ]],
+        }),
+        featureGeometryRevisionNote: '지도에서 유구 경계점 4개를 찍었습니다.',
+        featureType: 'pit',
+        geometryConfidence: 'rough',
+        geometrySource: 'drawnOnBoundaryMap',
+        identifier: '1호 유구',
+      })
     );
   });
 

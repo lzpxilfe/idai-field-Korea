@@ -1,4 +1,5 @@
 interface KakaoSatellitePickerHtmlOptions {
+  drawingMode?: BoundaryDrawingMode;
   javaScriptKey: string;
   latitude: number;
   longitude: number;
@@ -7,20 +8,73 @@ interface KakaoSatellitePickerHtmlOptions {
 }
 
 interface OpenBoundaryPickerHtmlOptions {
+  drawingMode?: BoundaryDrawingMode;
   latitude: number;
   longitude: number;
   mapTypeId?: KakaoMapTypeId;
 }
 
 export type KakaoMapTypeId = 'ROADMAP' | 'SKYVIEW' | 'HYBRID';
+export type BoundaryDrawingMode = 'surveyBoundary' | 'featureBoundary';
+
+interface BoundaryPickerHtmlCopy {
+  bannerText: string;
+  drawingTitle: string;
+  initialInstruction: string;
+  minimumInstruction: string;
+  midpointAriaLabel: string;
+  pointTitlePrefix: string;
+  readyInstruction: string;
+  saveButtonLabel: string;
+}
+
+const BOUNDARY_PICKER_HTML_COPY: Record<BoundaryDrawingMode, BoundaryPickerHtmlCopy> = {
+  surveyBoundary: {
+    bannerText:
+      '지도에서 조사 경계 꼭짓점을 차례로 누르세요. 3개 이상 찍으면 경계를 저장할 수 있습니다.',
+    drawingTitle: '조사 경계 그리기',
+    initialInstruction:
+      '지도를 눌러 첫 꼭짓점을 추가하세요. 찍은 점은 끌어서 옮길 수 있습니다.',
+    minimumInstruction:
+      '경계점 {count}개. 점을 더 찍어야 합니다. 최소 3개가 필요합니다.',
+    midpointAriaLabel: '새 경계점 추가',
+    pointTitlePrefix: '경계점 ',
+    readyInstruction:
+      '경계점 {count}개. 점을 끌어 옮기면 경계 범위도 같이 움직입니다.',
+    saveButtonLabel: '경계 저장',
+  },
+  featureBoundary: {
+    bannerText:
+      '유적 경계 안에서 유구의 외곽점을 차례로 누르세요. 3개 이상 찍으면 유구 경계를 저장할 수 있습니다.',
+    drawingTitle: '유구 경계 그리기',
+    initialInstruction:
+      '유구가 놓인 위치를 보면서 첫 외곽점을 추가하세요. 찍은 점은 끌어서 옮길 수 있습니다.',
+    minimumInstruction:
+      '유구 경계점 {count}개. 점을 더 찍어야 합니다. 최소 3개가 필요합니다.',
+    midpointAriaLabel: '새 유구 경계점 추가',
+    pointTitlePrefix: '유구 경계점 ',
+    readyInstruction:
+      '유구 경계점 {count}개. 점을 끌어 옮기면 유구 범위도 같이 움직입니다.',
+    saveButtonLabel: '유구 경계 저장',
+  },
+};
+
+const getBoundaryPickerHtmlCopy = (
+  drawingMode: BoundaryDrawingMode = 'surveyBoundary'
+): BoundaryPickerHtmlCopy =>
+  BOUNDARY_PICKER_HTML_COPY[drawingMode] ?? BOUNDARY_PICKER_HTML_COPY.surveyBoundary;
+
+const toSafeJsonString = (value: string): string => JSON.stringify(value);
 
 export const buildKakaoSatellitePickerHtml = ({
+  drawingMode = 'surveyBoundary',
   javaScriptKey,
   latitude,
   longitude,
   mapTypeId = 'HYBRID',
   webViewBaseUrl,
 }: KakaoSatellitePickerHtmlOptions): string => {
+  const copy = getBoundaryPickerHtmlCopy(drawingMode);
   const safeKey = encodeURIComponent(javaScriptKey.trim());
   const safeLatitude = Number.isFinite(latitude) ? latitude : 37.5665;
   const safeLongitude = Number.isFinite(longitude) ? longitude : 126.9780;
@@ -28,6 +82,14 @@ export const buildKakaoSatellitePickerHtml = ({
   const safeWebViewBaseUrl = JSON.stringify(webViewBaseUrl ?? '');
   const kakaoSdkUrl = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${safeKey}&autoload=false`;
   const safeKakaoSdkUrl = JSON.stringify(kakaoSdkUrl);
+  const safeBannerText = toSafeJsonString(copy.bannerText);
+  const safeDrawingTitle = toSafeJsonString(copy.drawingTitle);
+  const safeInitialInstruction = toSafeJsonString(copy.initialInstruction);
+  const safeMinimumInstruction = toSafeJsonString(copy.minimumInstruction);
+  const safeMidpointAriaLabel = toSafeJsonString(copy.midpointAriaLabel);
+  const safePointTitlePrefix = toSafeJsonString(copy.pointTitlePrefix);
+  const safeReadyInstruction = toSafeJsonString(copy.readyInstruction);
+  const safeSaveButtonLabel = toSafeJsonString(copy.saveButtonLabel);
 
   return `<!doctype html>
 <html>
@@ -173,12 +235,12 @@ export const buildKakaoSatellitePickerHtml = ({
     <button id="mapTypeSkyview" class="map-type" data-map-type="SKYVIEW" type="button">위성</button>
     <button id="mapTypeHybrid" class="map-type" data-map-type="HYBRID" type="button">하이브리드</button>
   </div>
-  <div class="banner">지도에서 조사 경계 꼭짓점을 차례대로 누르세요. 3개 이상 찍으면 경계를 저장할 수 있습니다.</div>
+  <div id="banner" class="banner"></div>
   <div class="toolbar">
-    <div id="status" class="status"><strong>조사 경계 그리기</strong>지도를 눌러 첫 꼭짓점을 추가하세요. 찍은 점은 끌어서 옮길 수 있습니다.</div>
+    <div id="status" class="status"></div>
     <button id="undo" class="secondary" type="button" disabled>되돌리기</button>
     <button id="reset" class="secondary" type="button" disabled>초기화</button>
-    <button id="save" class="primary" type="button" disabled>경계 저장</button>
+    <button id="save" class="primary" type="button" disabled></button>
   </div>
   <script>
     function post(type, payload) {
@@ -251,6 +313,15 @@ export const buildKakaoSatellitePickerHtml = ({
         var currentLocationOverlay = null;
         var currentAccuracyCircle = null;
         var hasCenteredOnCurrentLocation = false;
+        var bannerText = ${safeBannerText};
+        var drawingTitle = ${safeDrawingTitle};
+        var initialInstruction = ${safeInitialInstruction};
+        var minimumInstruction = ${safeMinimumInstruction};
+        var midpointAriaLabel = ${safeMidpointAriaLabel};
+        var pointTitlePrefix = ${safePointTitlePrefix};
+        var readyInstruction = ${safeReadyInstruction};
+        var saveButtonLabel = ${safeSaveButtonLabel};
+        var bannerEl = document.getElementById('banner');
         var statusEl = document.getElementById('status');
         var undoEl = document.getElementById('undo');
         var resetEl = document.getElementById('reset');
@@ -283,6 +354,8 @@ export const buildKakaoSatellitePickerHtml = ({
         undoEl.addEventListener('click', undoPoint);
         resetEl.addEventListener('click', resetPoints);
         saveEl.addEventListener('click', saveBoundary);
+        bannerEl.textContent = bannerText;
+        saveEl.textContent = saveButtonLabel;
         mapTypeButtons.forEach(function(button) {
           button.addEventListener('click', function() {
             setMapType(button.getAttribute('data-map-type'));
@@ -387,9 +460,11 @@ export const buildKakaoSatellitePickerHtml = ({
           undoEl.disabled = points.length === 0;
           resetEl.disabled = points.length === 0;
           saveEl.disabled = points.length < 3;
-          statusEl.innerHTML = points.length < 3
-            ? '<strong>조사 경계 그리기</strong>경계점 ' + points.length + '개. 점은 끌어서 옮길 수 있습니다. 최소 3개가 필요합니다.'
-            : '<strong>조사 경계 그리기</strong>경계점 ' + points.length + '개. 점을 끌어 옮기면 경계 범위도 같이 움직입니다.';
+          statusEl.innerHTML = toStatusHtml(
+            points.length < 3
+              ? formatCountText(minimumInstruction, points.length)
+              : formatCountText(readyInstruction, points.length)
+          );
         }
 
         function startDragPreview(index, marker) {
@@ -437,7 +512,7 @@ export const buildKakaoSatellitePickerHtml = ({
               draggable: true,
               map: map,
               position: point,
-              title: '경계점 ' + (index + 1)
+              title: pointTitlePrefix + (index + 1)
             });
             marker.setDraggable(true);
             kakao.maps.event.addListener(marker, 'dragstart', function() {
@@ -466,7 +541,7 @@ export const buildKakaoSatellitePickerHtml = ({
           var handle = document.createElement('button');
           handle.className = 'midpoint-handle';
           handle.type = 'button';
-          handle.setAttribute('aria-label', '새 경계점 추가');
+          handle.setAttribute('aria-label', midpointAriaLabel);
           handle.textContent = '+';
           handle.addEventListener('click', function(event) {
             event.preventDefault();
@@ -518,7 +593,25 @@ export const buildKakaoSatellitePickerHtml = ({
           };
         }
 
+        function formatCountText(template, count) {
+          return template.replace('{count}', String(count));
+        }
+
+        function toStatusHtml(text) {
+          return '<strong>' + escapeHtml(drawingTitle) + '</strong>' + escapeHtml(text);
+        }
+
+        function escapeHtml(value) {
+          return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+        }
+
         redraw();
+        statusEl.innerHTML = toStatusHtml(initialInstruction);
         setMapType(currentMapType);
         post('ready');
       } catch (error) {
@@ -539,13 +632,22 @@ const getSafeMapTypeId = (mapTypeId: KakaoMapTypeId): KakaoMapTypeId => {
 };
 
 export const buildOpenBoundaryPickerHtml = ({
+  drawingMode = 'surveyBoundary',
   latitude,
   longitude,
   mapTypeId = 'HYBRID',
 }: OpenBoundaryPickerHtmlOptions): string => {
+  const copy = getBoundaryPickerHtmlCopy(drawingMode);
   const safeLatitude = Number.isFinite(latitude) ? latitude : 37.5665;
   const safeLongitude = Number.isFinite(longitude) ? longitude : 126.9780;
   const safeMapTypeId = getSafeMapTypeId(mapTypeId);
+  const safeDrawingTitle = toSafeJsonString(copy.drawingTitle);
+  const safeInitialInstruction = toSafeJsonString(copy.initialInstruction);
+  const safeMinimumInstruction = toSafeJsonString(copy.minimumInstruction);
+  const safeMidpointAriaLabel = toSafeJsonString(copy.midpointAriaLabel);
+  const safePointTitlePrefix = toSafeJsonString(copy.pointTitlePrefix);
+  const safeReadyInstruction = toSafeJsonString(copy.readyInstruction);
+  const safeSaveButtonLabel = toSafeJsonString(copy.saveButtonLabel);
 
   return `<!doctype html>
 <html>
@@ -669,10 +771,10 @@ export const buildOpenBoundaryPickerHtml = ({
 <body>
   <div id="map"></div>
   <div class="toolbar">
-    <div id="status" class="status"><strong>조사 경계 그리기</strong>공개 배경지도를 눌러 첫 꼭짓점을 추가하세요. 찍은 점은 끌어서 옮길 수 있습니다.</div>
+    <div id="status" class="status"></div>
     <button id="undo" class="secondary" type="button" disabled>되돌리기</button>
     <button id="reset" class="secondary" type="button" disabled>초기화</button>
-    <button id="save" class="primary" type="button" disabled>경계 저장</button>
+    <button id="save" class="primary" type="button" disabled></button>
   </div>
   <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
@@ -717,6 +819,13 @@ export const buildOpenBoundaryPickerHtml = ({
       var currentLocationMarker = null;
       var currentAccuracyCircle = null;
       var hasCenteredOnCurrentLocation = false;
+      var drawingTitle = ${safeDrawingTitle};
+      var initialInstruction = ${safeInitialInstruction};
+      var minimumInstruction = ${safeMinimumInstruction};
+      var midpointAriaLabel = ${safeMidpointAriaLabel};
+      var pointTitlePrefix = ${safePointTitlePrefix};
+      var readyInstruction = ${safeReadyInstruction};
+      var saveButtonLabel = ${safeSaveButtonLabel};
       var roadmapLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors',
         maxNativeZoom: 19,
@@ -801,6 +910,7 @@ export const buildOpenBoundaryPickerHtml = ({
         redraw();
       });
       saveEl.addEventListener('click', saveBoundary);
+      saveEl.textContent = saveButtonLabel;
 
       function addPoint(latLng) {
         points.push(latLng);
@@ -849,7 +959,7 @@ export const buildOpenBoundaryPickerHtml = ({
           L.marker([point.lat, point.lng], {
             draggable: true,
             icon: createPointIcon(index + 1),
-            title: '경계점 ' + (index + 1)
+            title: pointTitlePrefix + (index + 1)
           }).on('drag', function(event) {
             points[index] = event.target.getLatLng();
             midpointMarkersLayer.clearLayers();
@@ -869,9 +979,11 @@ export const buildOpenBoundaryPickerHtml = ({
         undoEl.disabled = points.length === 0;
         resetEl.disabled = points.length === 0;
         saveEl.disabled = points.length < 3;
-        statusEl.innerHTML = points.length < 3
-          ? '<strong>조사 경계 그리기</strong>경계점 ' + points.length + '개. 점은 끌어서 옮길 수 있습니다. 최소 3개가 필요합니다.'
-          : '<strong>조사 경계 그리기</strong>경계점 ' + points.length + '개. 점을 끌어 옮기면 경계 범위도 같이 움직입니다.';
+        statusEl.innerHTML = toStatusHtml(
+          points.length < 3
+            ? formatCountText(minimumInstruction, points.length)
+            : formatCountText(readyInstruction, points.length)
+        );
       }
 
       function addSegmentInsertHandles() {
@@ -888,7 +1000,7 @@ export const buildOpenBoundaryPickerHtml = ({
         L.marker([position.lat, position.lng], {
           icon: createMidpointIcon(),
           keyboard: false,
-          title: '새 경계점 추가'
+          title: midpointAriaLabel
         }).on('click', function(event) {
           if (event.originalEvent) L.DomEvent.stop(event.originalEvent);
           points.splice(insertIndex, 0, position);
@@ -958,8 +1070,26 @@ export const buildOpenBoundaryPickerHtml = ({
         };
       }
 
+      function formatCountText(template, count) {
+        return template.replace('{count}', String(count));
+      }
+
+      function toStatusHtml(text) {
+        return '<strong>' + escapeHtml(drawingTitle) + '</strong>' + escapeHtml(text);
+      }
+
+      function escapeHtml(value) {
+        return String(value)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
       setMapType(currentMapType);
       redraw();
+      statusEl.innerHTML = toStatusHtml(initialInstruction);
       setTimeout(function() {
         map.invalidateSize();
         post('ready');

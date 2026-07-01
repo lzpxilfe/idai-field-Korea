@@ -22,6 +22,11 @@ import Heading from '@/components/common/Heading';
 import Input from '@/components/common/Input';
 import TitleBar from '@/components/common/TitleBar';
 import LabelsContext from '@/contexts/labels/labels-context';
+import KakaoSatellitePicker from '@/components/Project/Map/KakaoSatellitePicker';
+import type {
+  KakaoSatellitePickedBoundary,
+  KakaoSatellitePickedLocation,
+} from '@/components/Project/Map/KakaoSatellitePicker';
 import {
   getKoreanFieldworkAddOptions,
   KoreanFieldworkAddOption,
@@ -68,6 +73,16 @@ type FeatureSketchPixelPoint = {
   x: number;
   y: number;
 };
+type FeatureSketchTouchPoint = {
+  x: number;
+  y: number;
+};
+type FeatureShapeGestureState = {
+  angle: number;
+  distance: number;
+  rotation: number;
+  scale: number;
+};
 
 interface AddModalProps {
   boundaryDraft?: KoreanFieldworkProjectBoundaryDraft;
@@ -75,6 +90,7 @@ interface AddModalProps {
   initialCategoryName?: string;
   initialDraftParams?: Record<string, string>;
   investigationModeId?: KoreanFieldworkInvestigationModeId;
+  mapJavaScriptKey?: string;
   onAddCategory: (
     categoryName: string,
     parentDoc: Document | undefined,
@@ -90,6 +106,7 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
   initialCategoryName,
   initialDraftParams = {},
   investigationModeId,
+  mapJavaScriptKey = '',
   onAddCategory,
   onClose,
   parentDoc,
@@ -135,7 +152,12 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
   const [featureSketchWasEdited, setFeatureSketchWasEdited] = useState(false);
   const [featureSketchCanvasSize, setFeatureSketchCanvasSize] =
     useState(FEATURE_SKETCH_CANVAS_DEFAULT_SIZE);
+  const [featureMapBoundary, setFeatureMapBoundary] =
+    useState<KakaoSatellitePickedBoundary>();
+  const [isFeatureBoundaryPickerOpen, setIsFeatureBoundaryPickerOpen] =
+    useState(false);
   const lastPreviewFeatureSketchPointRef = useRef<FeatureSketchPoint>();
+  const featureShapeGestureRef = useRef<FeatureShapeGestureState>();
 
   const isAllowedCategory = useCallback(
     (category: CategoryForm) =>
@@ -218,6 +240,8 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
     setFeatureSketchScale(100);
     setFeatureSketchRotation(0);
     setFeatureSketchWasEdited(false);
+    setFeatureMapBoundary(undefined);
+    featureShapeGestureRef.current = undefined;
   };
 
   const openFeatureCreation = () => {
@@ -242,9 +266,27 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
     setFeatureLocationShape(shape);
     setActiveFeatureSketchPoint(undefined);
     setFeatureSketchWasEdited(true);
+    setFeatureMapBoundary(undefined);
+    featureShapeGestureRef.current = undefined;
     if (shape !== 'polygon' && featureSketchPoints.length > 1) {
       setFeatureSketchPoints([featureSketchCenter]);
     }
+  };
+
+  const openFeatureBoundaryPicker = () => {
+    setIsFeatureBoundaryPickerOpen(true);
+  };
+
+  const pickFeatureBoundary = (boundary: KakaoSatellitePickedBoundary) => {
+    setFeatureMapBoundary(boundary);
+    setFeatureLocationShape('polygon');
+    setFeatureSketchWasEdited(true);
+    setActiveFeatureSketchPoint(undefined);
+    setFeatureSketchCenter(getFeatureSketchCenterFromBoundary(boundary));
+    setFeatureSketchPoints(
+      getFeatureSketchPointsFromBoundary(boundary, boundaryDraft)
+    );
+    setIsFeatureBoundaryPickerOpen(false);
   };
 
   const handleFeatureSketchLayout = (event: LayoutChangeEvent) => {
@@ -255,6 +297,42 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
   };
 
   const previewFeatureSketchPoint = (event: GestureResponderEvent) => {
+    const shapeGesture = getFeatureShapeGesture(
+      event,
+      featureSketchCanvasSize
+    );
+    if (
+      isFeatureShapeTransformVisible(featureLocationShape)
+      && shapeGesture
+    ) {
+      const initialGesture = featureShapeGestureRef.current ?? {
+        angle: shapeGesture.angle,
+        distance: Math.max(1, shapeGesture.distance),
+        rotation: featureSketchRotation,
+        scale: featureSketchScale,
+      };
+      featureShapeGestureRef.current = initialGesture;
+      const nextScale = clamp(
+        initialGesture.scale
+          * (shapeGesture.distance / Math.max(1, initialGesture.distance)),
+        35,
+        240
+      );
+      const nextRotation = normalizeRotation(
+        initialGesture.rotation + shapeGesture.angle - initialGesture.angle
+      );
+
+      setFeatureMapBoundary(undefined);
+      setFeatureSketchWasEdited(true);
+      setActiveFeatureSketchPoint(undefined);
+      setFeatureSketchCenter(shapeGesture.center);
+      setFeatureSketchPoints([shapeGesture.center]);
+      setFeatureSketchScale(Math.round(nextScale));
+      setFeatureSketchRotation(Math.round(nextRotation));
+      return;
+    }
+
+    featureShapeGestureRef.current = undefined;
     const point = getSketchPointFromPress(
       event,
       featureSketchCanvasSize
@@ -264,6 +342,7 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
     }
 
     lastPreviewFeatureSketchPointRef.current = point;
+    setFeatureMapBoundary(undefined);
     setFeatureSketchWasEdited(true);
     setActiveFeatureSketchPoint(point);
 
@@ -274,11 +353,17 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
   };
 
   const commitFeatureSketchPoint = (event: GestureResponderEvent) => {
+    if (featureShapeGestureRef.current) {
+      featureShapeGestureRef.current = undefined;
+      return;
+    }
+
     const point = getSketchPointFromPress(
       event,
       featureSketchCanvasSize
     );
     lastPreviewFeatureSketchPointRef.current = undefined;
+    setFeatureMapBoundary(undefined);
     setFeatureSketchWasEdited(true);
     setActiveFeatureSketchPoint(undefined);
 
@@ -294,6 +379,7 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
 
   const cancelFeatureSketchPoint = () => {
     lastPreviewFeatureSketchPointRef.current = undefined;
+    featureShapeGestureRef.current = undefined;
     setActiveFeatureSketchPoint(undefined);
   };
 
@@ -578,6 +664,28 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
         </View>
         <View
           pointerEvents="box-none"
+          style={styles.featureSketchMapActionPanel}
+          testID="featureSketchMapActionPanel"
+        >
+          <TouchableOpacity
+            activeOpacity={0.86}
+            onPress={openFeatureBoundaryPicker}
+            style={styles.featureSketchMapActionButton}
+            testID="featureSketchOpenMapBoundary"
+          >
+            <Ionicons name="map-outline" size={16} color="white" />
+            <Text style={styles.featureSketchMapActionText}>
+              지도에서 유구 경계 그리기
+            </Text>
+          </TouchableOpacity>
+          <Text style={styles.featureSketchMapActionHint}>
+            {featureMapBoundary
+              ? `지도 경계점 ${featureMapBoundary.coordinates.length}개를 가져왔습니다.`
+              : '유적 경계 지도를 보면서 유구 외곽을 먼저 잡을 수 있습니다.'}
+          </Text>
+        </View>
+        <View
+          pointerEvents="box-none"
           style={styles.featureSketchModeRow}
           testID="featureSketchModeRail"
         >
@@ -647,6 +755,7 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
           ...getFeatureLocationSketchDraftParams({
             center: featureSketchCenter,
             isEdited: featureSketchWasEdited,
+            mapBoundary: featureMapBoundary,
             points: featureSketchPoints,
             rotation: featureSketchRotation,
             scale: featureSketchScale,
@@ -829,6 +938,14 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
       transparent
       visible={true}
     >
+      <KakaoSatellitePicker
+        drawingMode="featureBoundary"
+        initialLocation={getFeatureBoundaryPickerInitialLocation(boundaryDraft)}
+        javaScriptKey={mapJavaScriptKey}
+        onClose={() => setIsFeatureBoundaryPickerOpen(false)}
+        onPickBoundary={pickFeatureBoundary}
+        visible={isFeatureBoundaryPickerOpen}
+      />
       <Pressable
         onPress={onClose}
         style={styles.container}
@@ -949,6 +1066,7 @@ const compareKoreanFieldworkCategories = (
 const getFeatureLocationSketchDraftParams = ({
   center,
   isEdited,
+  mapBoundary,
   points,
   rotation,
   scale,
@@ -956,11 +1074,33 @@ const getFeatureLocationSketchDraftParams = ({
 }: {
   center: FeatureSketchPoint;
   isEdited: boolean;
+  mapBoundary?: KakaoSatellitePickedBoundary;
   points: FeatureSketchPoint[];
   rotation: number;
   scale: number;
   shape: FeatureLocationSketchShape;
 }): Record<string, string> => {
+  if (mapBoundary && mapBoundary.coordinates.length >= 3) {
+    const payload = {
+      version: 2,
+      source: 'mapBoundary',
+      shape: 'polygon',
+      center: mapBoundary.center,
+      coordinates: mapBoundary.coordinates,
+      mapTypeId: mapBoundary.mapTypeId,
+    };
+    const note = `지도에서 유구 경계점 ${mapBoundary.coordinates.length}개를 찍었습니다.`;
+
+    return {
+      featureGeometry: JSON.stringify(toGeoJsonPolygon(mapBoundary.coordinates)),
+      featureGeometryRevisionNote: note,
+      featureLocationSketch: JSON.stringify(payload),
+      geometryConfidence: 'rough',
+      geometrySource: 'drawnOnBoundaryMap',
+      shortDescription: note,
+    };
+  }
+
   if (!isEdited) return {};
 
   const sketchPoints = shape === 'polygon'
@@ -1132,6 +1272,69 @@ const getSketchPointFromPress = (
   };
 };
 
+const getFeatureShapeGesture = (
+  event: GestureResponderEvent,
+  canvasSize: { height: number; width: number }
+): {
+  angle: number;
+  center: FeatureSketchPoint;
+  distance: number;
+} | undefined => {
+  const touches = getFeatureSketchTouches(event);
+  if (touches.length < 2) return undefined;
+
+  const [first, second] = touches;
+  const centerPixel = {
+    x: (first.x + second.x) / 2,
+    y: (first.y + second.y) / 2,
+  };
+  const distance = Math.sqrt(
+    ((second.x - first.x) ** 2) + ((second.y - first.y) ** 2)
+  );
+  const angle = Math.atan2(second.y - first.y, second.x - first.x)
+    * (180 / Math.PI);
+
+  return {
+    angle,
+    center: getSketchPointFromPixel(centerPixel, canvasSize),
+    distance,
+  };
+};
+
+const getFeatureSketchTouches = (
+  event: GestureResponderEvent
+): FeatureSketchTouchPoint[] => {
+  const touches = (event.nativeEvent as unknown as {
+    touches?: Array<{ locationX?: number; locationY?: number }>;
+  }).touches ?? [];
+
+  return touches
+    .map((touch) => ({
+      x: Number(touch.locationX),
+      y: Number(touch.locationY),
+    }))
+    .filter((touch) => Number.isFinite(touch.x) && Number.isFinite(touch.y));
+};
+
+const getSketchPointFromPixel = (
+  point: FeatureSketchTouchPoint,
+  canvasSize: { height: number; width: number }
+): FeatureSketchPoint => {
+  const width = Math.max(1, canvasSize.width);
+  const height = Math.max(1, canvasSize.height);
+
+  return {
+    x: Math.round(clamp((point.x / width) * 100, 0, 100)),
+    y: Math.round(clamp((point.y / height) * 100, 0, 100)),
+  };
+};
+
+const normalizeRotation = (rotation: number): number => {
+  if (rotation > 180) return normalizeRotation(rotation - 360);
+  if (rotation < -180) return normalizeRotation(rotation + 360);
+  return rotation;
+};
+
 const areSketchPointsEqual = (
   first?: FeatureSketchPoint,
   second?: FeatureSketchPoint
@@ -1166,6 +1369,103 @@ const getFeatureSketchBoundaryPoints = (
     y: padding + (((maxLatitude - point.latitude) / latitudeRange)
       * drawableSize),
   }));
+};
+
+const getFeatureBoundaryPickerInitialLocation = (
+  boundaryDraft?: KoreanFieldworkProjectBoundaryDraft
+): KakaoSatellitePickedLocation | undefined => {
+  if (boundaryDraft?.center) return boundaryDraft.center;
+  if (!boundaryDraft || boundaryDraft.coordinates.length === 0) return undefined;
+
+  const latitude = boundaryDraft.coordinates.reduce(
+    (sum, point) => sum + point.latitude,
+    0
+  ) / boundaryDraft.coordinates.length;
+  const longitude = boundaryDraft.coordinates.reduce(
+    (sum, point) => sum + point.longitude,
+    0
+  ) / boundaryDraft.coordinates.length;
+
+  return Number.isFinite(latitude) && Number.isFinite(longitude)
+    ? { latitude, longitude }
+    : undefined;
+};
+
+const getFeatureSketchPointsFromBoundary = (
+  featureBoundary: KakaoSatellitePickedBoundary,
+  projectBoundary?: KoreanFieldworkProjectBoundaryDraft
+): FeatureSketchPoint[] => {
+  const referenceCoordinates =
+    projectBoundary && projectBoundary.coordinates.length >= 3
+      ? projectBoundary.coordinates
+      : featureBoundary.coordinates;
+
+  return normalizeLocationsToSketchPoints(
+    featureBoundary.coordinates,
+    referenceCoordinates
+  );
+};
+
+const getFeatureSketchCenterFromBoundary = (
+  featureBoundary: KakaoSatellitePickedBoundary
+): FeatureSketchPoint => {
+  const points = normalizeLocationsToSketchPoints(
+    featureBoundary.center ? [featureBoundary.center] : featureBoundary.coordinates,
+    featureBoundary.coordinates
+  );
+
+  return points[0] ?? { x: 50, y: 50 };
+};
+
+const normalizeLocationsToSketchPoints = (
+  locations: readonly KakaoSatellitePickedLocation[],
+  referenceLocations: readonly KakaoSatellitePickedLocation[]
+): FeatureSketchPoint[] => {
+  if (locations.length === 0 || referenceLocations.length === 0) return [];
+
+  const longitudes = referenceLocations.map((point) => point.longitude);
+  const latitudes = referenceLocations.map((point) => point.latitude);
+  const minLongitude = Math.min(...longitudes);
+  const maxLongitude = Math.max(...longitudes);
+  const minLatitude = Math.min(...latitudes);
+  const maxLatitude = Math.max(...latitudes);
+  const longitudeRange = Math.max(maxLongitude - minLongitude, 0.000001);
+  const latitudeRange = Math.max(maxLatitude - minLatitude, 0.000001);
+  const padding = 14;
+  const drawableSize = 100 - (padding * 2);
+
+  return locations.map((point) => ({
+    x: Math.round(clamp(
+      padding + (((point.longitude - minLongitude) / longitudeRange) * drawableSize),
+      0,
+      100
+    )),
+    y: Math.round(clamp(
+      padding + (((maxLatitude - point.latitude) / latitudeRange) * drawableSize),
+      0,
+      100
+    )),
+  }));
+};
+
+const toGeoJsonPolygon = (
+  coordinates: readonly KakaoSatellitePickedLocation[]
+): Record<string, unknown> => {
+  const ring = coordinates.map((point) => [
+    point.longitude,
+    point.latitude,
+  ]);
+  const first = ring[0];
+  const last = ring[ring.length - 1];
+  const closedRing = first && last
+    && (first[0] !== last[0] || first[1] !== last[1])
+      ? [...ring, first]
+      : ring;
+
+  return {
+    type: 'Polygon',
+    coordinates: [closedRing],
+  };
 };
 
 const denormalizeFeatureSketchPoint = (
@@ -1620,6 +1920,43 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '900',
     marginLeft: 4,
+  },
+  featureSketchMapActionPanel: {
+    alignItems: 'flex-start',
+    left: 12,
+    maxWidth: 360,
+    position: 'absolute',
+    top: 78,
+    zIndex: 5,
+  },
+  featureSketchMapActionButton: {
+    alignItems: 'center',
+    backgroundColor: '#175cd3',
+    borderColor: '#1849a9',
+    borderRadius: 6,
+    borderWidth: 1,
+    flexDirection: 'row',
+    minHeight: 38,
+    paddingHorizontal: 10,
+  },
+  featureSketchMapActionHint: {
+    backgroundColor: 'rgba(255, 255, 255, 0.94)',
+    borderColor: '#b2ddff',
+    borderRadius: 4,
+    borderWidth: 1,
+    color: '#175cd3',
+    fontSize: 11,
+    fontWeight: '800',
+    lineHeight: 15,
+    marginTop: 5,
+    paddingHorizontal: 7,
+    paddingVertical: 4,
+  },
+  featureSketchMapActionText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '900',
+    marginLeft: 5,
   },
   featureSketchBoundaryFallback: {
     alignItems: 'center',

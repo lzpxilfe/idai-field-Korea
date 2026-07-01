@@ -54,6 +54,27 @@ describe('buildKakaoSatellitePickerHtml', () => {
     expect(html).toContain('new kakao.maps.LatLng(37.5665, 126.978)');
   });
 
+  it('can switch the drawing copy from survey boundary to feature boundary', () => {
+    const kakaoHtml = buildKakaoSatellitePickerHtml({
+      drawingMode: 'featureBoundary',
+      javaScriptKey: 'js-key',
+      latitude: 36.12,
+      longitude: 127.45,
+    });
+    const openHtml = buildOpenBoundaryPickerHtml({
+      drawingMode: 'featureBoundary',
+      latitude: 36.12,
+      longitude: 127.45,
+    });
+
+    expect(kakaoHtml).toContain('유구 경계 그리기');
+    expect(kakaoHtml).toContain('유구 경계 저장');
+    expect(kakaoHtml).toContain('유구 경계점 {count}개');
+    expect(kakaoHtml).toContain('새 유구 경계점 추가');
+    expect(openHtml).toContain('유구 경계 그리기');
+    expect(openHtml).toContain('유구 경계 저장');
+  });
+
   it('supports editing boundaries by moving points and inserting midpoint handles', () => {
     const kakaoHtml = buildKakaoSatellitePickerHtml({
       javaScriptKey: 'js-key',

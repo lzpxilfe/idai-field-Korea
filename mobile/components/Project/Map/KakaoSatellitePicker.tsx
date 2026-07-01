@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
 import {
+  BoundaryDrawingMode,
   buildOpenBoundaryPickerHtml,
   buildKakaoSatellitePickerHtml,
   KakaoMapTypeId,
@@ -28,11 +29,23 @@ export interface KakaoSatellitePickedBoundary {
 }
 
 interface KakaoSatellitePickerProps {
+  drawingMode?: BoundaryDrawingMode;
   initialLocation?: KakaoSatellitePickedLocation;
   javaScriptKey: string;
   onClose: () => void;
   onPickBoundary: (boundary: KakaoSatellitePickedBoundary) => void;
   visible: boolean;
+}
+
+interface BoundaryPickerCopy {
+  fallbackMessage: string;
+  initialMessage: string;
+  loadingKakaoText: string;
+  loadingOpenText: string;
+  loadingTitle: string;
+  loadFailureTitle: string;
+  pickedMessage: string;
+  title: string;
 }
 
 const DEFAULT_LOCATION = {
@@ -58,13 +71,47 @@ const KAKAO_MAP_TYPE_OPTIONS: Array<{ id: KakaoMapTypeId; label: string }> = [
 type BoundaryMapEngine = 'kakao' | 'open';
 type LiveLocationStatus = 'checking' | 'tracking' | 'denied' | 'unavailable';
 
+const BOUNDARY_PICKER_COPY: Record<BoundaryDrawingMode, BoundaryPickerCopy> = {
+  surveyBoundary: {
+    fallbackMessage:
+      '카카오 지도가 WebView 출처 제한에 막혀 공개 배경지도로 전환했습니다. 경계 그리기와 저장은 그대로 가능합니다.',
+    initialMessage:
+      '지도는 배경입니다. 꼭짓점을 찍고, 점을 끌어 옮기거나 선 중간 +로 점을 추가하세요.',
+    loadingKakaoText:
+      '카카오 배경지도 위에 조사 지역 꼭짓점을 찍을 수 있게 준비하고 있습니다.',
+    loadingOpenText:
+      '공개 배경지도 위에 조사 지역 꼭짓점을 찍을 수 있게 준비하고 있습니다.',
+    loadingTitle: '조사 경계 지도를 준비 중입니다',
+    loadFailureTitle: '조사 경계 지도를 열지 못했습니다',
+    pickedMessage: '선택한 꼭짓점으로 조사 경계를 저장합니다.',
+    title: '조사 경계 지도에서 그리기',
+  },
+  featureBoundary: {
+    fallbackMessage:
+      '카카오 지도가 WebView 출처 제한에 막혀 공개 배경지도로 전환했습니다. 유구 경계 그리기와 저장은 그대로 가능합니다.',
+    initialMessage:
+      '유적 경계 안에서 유구의 외곽점을 찍고, 점을 끌어 옮기거나 선 중간 +로 점을 추가하세요.',
+    loadingKakaoText:
+      '카카오 배경지도 위에 유구 외곽점을 찍을 수 있게 준비하고 있습니다.',
+    loadingOpenText:
+      '공개 배경지도 위에 유구 외곽점을 찍을 수 있게 준비하고 있습니다.',
+    loadingTitle: '유구 경계 지도를 준비 중입니다',
+    loadFailureTitle: '유구 경계 지도를 열지 못했습니다',
+    pickedMessage: '선택한 꼭짓점으로 유구 경계를 저장합니다.',
+    title: '유구 경계 지도에서 그리기',
+  },
+};
+
 const KakaoSatellitePicker: React.FC<KakaoSatellitePickerProps> = ({
+  drawingMode = 'surveyBoundary',
   initialLocation,
   javaScriptKey,
   onClose,
   onPickBoundary,
   visible,
 }) => {
+  const copy = BOUNDARY_PICKER_COPY[drawingMode]
+    ?? BOUNDARY_PICKER_COPY.surveyBoundary;
   const webViewRef = useRef<any>(null);
   const latitude = initialLocation?.latitude ?? DEFAULT_LOCATION.latitude;
   const longitude = initialLocation?.longitude ?? DEFAULT_LOCATION.longitude;
@@ -88,6 +135,7 @@ const KakaoSatellitePicker: React.FC<KakaoSatellitePickerProps> = ({
   const mapHtml = useMemo(
     () => mapEngine === 'kakao'
       ? buildKakaoSatellitePickerHtml({
+          drawingMode,
           javaScriptKey,
           latitude,
           longitude,
@@ -95,11 +143,20 @@ const KakaoSatellitePicker: React.FC<KakaoSatellitePickerProps> = ({
           webViewBaseUrl,
         })
       : buildOpenBoundaryPickerHtml({
+          drawingMode,
           latitude,
           longitude,
           mapTypeId: initialMapTypeId,
         }),
-    [initialMapTypeId, javaScriptKey, latitude, longitude, mapEngine, webViewBaseUrl]
+    [
+      drawingMode,
+      initialMapTypeId,
+      javaScriptKey,
+      latitude,
+      longitude,
+      mapEngine,
+      webViewBaseUrl,
+    ]
   );
 
   useEffect(() => {
@@ -113,9 +170,9 @@ const KakaoSatellitePicker: React.FC<KakaoSatellitePickerProps> = ({
       setLiveLocation(initialLocation);
       setLiveLocationStatus('checking');
       setReloadNonce((value) => value + 1);
-      setMessage('지도는 배경입니다. 꼭짓점을 찍고, 점을 끌어 옮기거나 선 중간 +로 점을 추가하세요.');
+      setMessage(copy.initialMessage);
     }
-  }, [javaScriptKey, visible]);
+  }, [copy.initialMessage, javaScriptKey, visible]);
 
   useEffect(() => {
     if (!visible) return;
@@ -212,9 +269,7 @@ const KakaoSatellitePicker: React.FC<KakaoSatellitePickerProps> = ({
     setIsMapReady(false);
     setMapLoadError(undefined);
     setReloadNonce((value) => value + 1);
-    setMessage(
-      '카카오 지도가 WebView 출처 제한에 막혀 공개 배경지도로 전환했습니다. 경계 그리기와 저장은 그대로 가능합니다.'
-    );
+    setMessage(copy.fallbackMessage);
   };
 
   const handleMapLoadProblem = (diagnostic?: Record<string, unknown>) => {
@@ -257,7 +312,7 @@ const KakaoSatellitePicker: React.FC<KakaoSatellitePickerProps> = ({
       if (data.type === 'boundary') {
         const coordinates = getPickedCoordinates(data.payload?.coordinates);
         if (coordinates.length >= 3) {
-          setMessage('선택한 꼭짓점으로 조사 경계를 저장합니다.');
+          setMessage(copy.pickedMessage);
           onPickLocation({
             coordinates,
             center: getPickedLocation(data.payload?.center),
@@ -294,7 +349,7 @@ const KakaoSatellitePicker: React.FC<KakaoSatellitePickerProps> = ({
       <View style={styles.container}>
         <View style={styles.header}>
           <View style={styles.headerText}>
-            <Text style={styles.title}>조사 경계 지도에서 그리기</Text>
+            <Text style={styles.title}>{copy.title}</Text>
             <Text style={styles.message}>{message}</Text>
             <View style={styles.liveLocationBox}>
               <Text
@@ -372,7 +427,7 @@ const KakaoSatellitePicker: React.FC<KakaoSatellitePickerProps> = ({
             <View style={styles.loadingPanel}>
               {mapLoadError ? (
                 <>
-                  <Text style={styles.loadingTitle}>조사 경계 지도를 열지 못했습니다</Text>
+                  <Text style={styles.loadingTitle}>{copy.loadFailureTitle}</Text>
                   <Text style={styles.loadingText}>{mapLoadError}</Text>
                   <View style={styles.loadingActions}>
                     <TouchableOpacity
@@ -395,11 +450,11 @@ const KakaoSatellitePicker: React.FC<KakaoSatellitePickerProps> = ({
               ) : (
                 <>
                   <ActivityIndicator color="#24495d" size="large" />
-                  <Text style={styles.loadingTitle}>조사 경계 지도를 준비 중입니다</Text>
+                  <Text style={styles.loadingTitle}>{copy.loadingTitle}</Text>
                   <Text style={styles.loadingText}>
                     {mapEngine === 'open'
-                      ? '공개 배경지도 위에 조사 지역 꼭짓점을 찍을 수 있게 준비하고 있습니다.'
-                      : '카카오 배경지도 위에 조사 지역 꼭짓점을 찍을 수 있게 준비하고 있습니다.'}
+                      ? copy.loadingOpenText
+                      : copy.loadingKakaoText}
                   </Text>
                 </>
               )}

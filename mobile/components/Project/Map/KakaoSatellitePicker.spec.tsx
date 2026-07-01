@@ -157,6 +157,24 @@ describe('KakaoSatellitePicker', () => {
     }));
   });
 
+  it('uses feature boundary copy when drawing a feature location', () => {
+    const { getByText } = render(
+      <KakaoSatellitePicker
+        drawingMode="featureBoundary"
+        initialLocation={{ latitude: 36.45, longitude: 127.12 }}
+        javaScriptKey="js-key"
+        onClose={jest.fn()}
+        onPickBoundary={jest.fn()}
+        visible
+      />
+    );
+
+    expect(getByText('유구 경계 지도에서 그리기')).toBeTruthy();
+    expect(getByText(
+      '유적 경계 안에서 유구의 외곽점을 찍고, 점을 끌어 옮기거나 선 중간 +로 점을 추가하세요.'
+    )).toBeTruthy();
+  });
+
   it('keeps the native map type selector in sync with the WebView map type', () => {
     const { getByTestId } = render(
       <KakaoSatellitePicker

@@ -900,6 +900,9 @@ const DocumentsList: React.FC = () => {
           initialCategoryName={addModalInitialCategoryName}
           initialDraftParams={addModalInitialDraftParams}
           investigationModeId={investigationModeId}
+          mapJavaScriptKey={
+            preferencesContext.preferences.mapProviderSettings.kakaoMapJavaScriptKey
+          }
           onClose={closeAddChildModal}
           parentDoc={addModalParent}
           onAddCategory={navigateAddCategory}
