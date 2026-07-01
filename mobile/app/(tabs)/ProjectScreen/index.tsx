@@ -108,6 +108,8 @@ import { colors } from '@/utils/colors';
 type FilterId = 'all'|'operation'|'feature'|'find'|'media'|'review';
 type FieldworkWorkspaceTabId = 'records'|'journal';
 
+const RECORD_ROW_DOUBLE_TAP_DURATION_MS = 350;
+
 interface RecordFilter {
   id: FilterId;
   label: string;
@@ -1598,6 +1600,7 @@ const RecordRow: React.FC<{
   onDelete,
 }) => {
   const config = useContext(ConfigurationContext);
+  const lastPressTimeRef = useRef<number>();
   const category = config.getCategory(document.resource.category);
   const title = getKoreanFieldworkDisplayIdentifier(document.resource.identifier)
     || document.resource.id;
@@ -1622,6 +1625,20 @@ const RecordRow: React.FC<{
     [allowedAddCategoryNames, document, documents, investigationModeId]
   );
   const visibleActions = actionSummary.actions.slice(0, 2);
+  const handleOpenOrEdit = () => {
+    const nowMs = Date.now();
+    if (
+      lastPressTimeRef.current !== undefined
+      && nowMs - lastPressTimeRef.current <= RECORD_ROW_DOUBLE_TAP_DURATION_MS
+    ) {
+      lastPressTimeRef.current = undefined;
+      onEdit();
+      return;
+    }
+
+    lastPressTimeRef.current = nowMs;
+    onOpen();
+  };
 
   return (
     <SwipeableActionRow
@@ -1648,7 +1665,7 @@ const RecordRow: React.FC<{
       <TouchableOpacity
         activeOpacity={0.88}
         style={[styles.recordRow, selected && styles.recordRowSelected]}
-        onPress={onOpen}
+        onPress={handleOpenOrEdit}
         testID={`recordRow_${document.resource.id}`}
       >
       <View style={styles.recordIcon}>
@@ -1676,7 +1693,7 @@ const RecordRow: React.FC<{
             ))}
           </View>
         )}
-        {evidenceChips.length > 0 && (
+        {selected && evidenceChips.length > 0 && (
           <View style={styles.evidenceChipRow}>
             {evidenceChips.map((chip) => {
               const [firstEvidenceDocument] = chip.documents;
@@ -1705,12 +1722,12 @@ const RecordRow: React.FC<{
             })}
           </View>
         )}
-        {description && (
+        {selected && description && (
           <Text style={styles.recordDescription} numberOfLines={2}>
             {description}
           </Text>
         )}
-        {actionSummary.isTracked && (
+        {selected && actionSummary.isTracked && (
           <RecordWorkSummary
             summary={actionSummary}
             actions={visibleActions}
@@ -1731,7 +1748,10 @@ const RecordRow: React.FC<{
         <TouchableOpacity
           accessibilityLabel={`${title} 이어 만들 기록 추가`}
           style={styles.iconButton}
-          onPress={onAddChild}
+          onPress={(event) => {
+            event.stopPropagation();
+            onAddChild();
+          }}
           hitSlop={8}
         >
           <MaterialIcons name="add" size={20} color="#475467" />
@@ -1739,7 +1759,10 @@ const RecordRow: React.FC<{
         <TouchableOpacity
           accessibilityLabel={`${title} 편집`}
           style={styles.iconButton}
-          onPress={onEdit}
+          onPress={(event) => {
+            event.stopPropagation();
+            onEdit();
+          }}
           hitSlop={8}
         >
           <MaterialIcons name="edit" size={20} color="#475467" />
