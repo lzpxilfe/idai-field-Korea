@@ -69,32 +69,35 @@ describe('KoreanFieldworkFeatureSketchReferencePanel', () => {
     expect(queryByTestId('featureSketchReferencePanel')).toBeNull();
   });
 
-  it('keeps very small rectangle and oval sketches small in the reference preview', () => {
-    const feature = createDoc('feature-1', C.FEATURE, {
-      featureLocationSketch: JSON.stringify({
-        version: 2,
-        shape: 'rectangle',
-        center: { x: 50, y: 50 },
-        points: [{ x: 50, y: 50 }],
-        rotation: 0,
-        scale: 8,
-      }),
-    });
+  it.each(['rectangle', 'oval'])(
+    'fits very small %s sketches into the shape preview',
+    (shape) => {
+      const feature = createDoc('feature-1', C.FEATURE, {
+        featureLocationSketch: JSON.stringify({
+          version: 2,
+          shape,
+          center: { x: 50, y: 50 },
+          points: [{ x: 50, y: 50 }],
+          rotation: 0,
+          scale: 8,
+        }),
+      });
 
-    const { getByTestId } = render(
-      <KoreanFieldworkFeatureSketchReferencePanel
-        document={feature}
-        documents={[feature]}
-      />
-    );
+      const { getByTestId } = render(
+        <KoreanFieldworkFeatureSketchReferencePanel
+          document={feature}
+          documents={[feature]}
+        />
+      );
 
-    const shapeStyle = StyleSheet.flatten(
-      getByTestId('featureShapeSketchShape').props.style
-    );
+      const shapeStyle = StyleSheet.flatten(
+        getByTestId('featureShapeSketchShape').props.style
+      );
 
-    expect(shapeStyle.height).toBeLessThan(8);
-    expect(shapeStyle.width).toBeLessThan(10);
-  });
+      expect(shapeStyle.height).toBeGreaterThan(100);
+      expect(shapeStyle.width).toBeGreaterThan(150);
+    }
+  );
 
   it('fits polygon sketches into the shape preview instead of keeping boundary placement', () => {
     const feature = createDoc('feature-1', C.FEATURE, {

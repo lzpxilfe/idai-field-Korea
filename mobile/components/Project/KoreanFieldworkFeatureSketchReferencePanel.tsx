@@ -48,6 +48,8 @@ const BOUNDARY_PADDING = 12;
 const SHAPE_PREVIEW_TOP_PADDING = 24;
 const SHAPE_PREVIEW_SIDE_PADDING = 8;
 const SHAPE_PREVIEW_BOTTOM_PADDING = 10;
+const FEATURE_SKETCH_SHAPE_BASE_WIDTH = 18;
+const FEATURE_SKETCH_SHAPE_BASE_HEIGHT = 12;
 const VALID_SHAPES = new Set<FeatureLocationSketchShape>([
   'point',
   'polygon',
@@ -446,6 +448,10 @@ const getFeatureShapeFrame = (
   canvasSize: CanvasSize,
   compact: boolean
 ) => {
+  if (!compact) {
+    return getFittedFeatureShapeFrame(sketch, canvasSize);
+  }
+
   const center = compact
     ? denormalizePoint(sketch.center, canvasSize)
     : {
@@ -478,6 +484,48 @@ const getFeatureShapeFrame = (
     left: center.x - (width / 2),
     top: center.y - (height / 2),
     transform: [{ rotateZ: `${sketch.rotation}deg` }],
+    width,
+  };
+};
+
+const getFittedFeatureShapeFrame = (
+  sketch: FeatureLocationSketch,
+  canvasSize: CanvasSize
+) => {
+  const availableWidth = Math.max(
+    FEATURE_SKETCH_REFERENCE_SHAPE_MIN_WIDTH,
+    canvasSize.width - (SHAPE_PREVIEW_SIDE_PADDING * 2)
+  );
+  const availableHeight = Math.max(
+    FEATURE_SKETCH_REFERENCE_SHAPE_MIN_HEIGHT,
+    canvasSize.height - SHAPE_PREVIEW_TOP_PADDING - SHAPE_PREVIEW_BOTTOM_PADDING
+  );
+  const rotation = normalizeRotation(sketch.rotation);
+  const radians = (rotation * Math.PI) / 180;
+  const cos = Math.abs(Math.cos(radians));
+  const sin = Math.abs(Math.sin(radians));
+  const rotatedBaseWidth =
+    (FEATURE_SKETCH_SHAPE_BASE_WIDTH * cos)
+    + (FEATURE_SKETCH_SHAPE_BASE_HEIGHT * sin);
+  const rotatedBaseHeight =
+    (FEATURE_SKETCH_SHAPE_BASE_WIDTH * sin)
+    + (FEATURE_SKETCH_SHAPE_BASE_HEIGHT * cos);
+  const scale = Math.min(
+    availableWidth / Math.max(rotatedBaseWidth, 0.000001),
+    availableHeight / Math.max(rotatedBaseHeight, 0.000001)
+  );
+  const width = FEATURE_SKETCH_SHAPE_BASE_WIDTH * scale;
+  const height = FEATURE_SKETCH_SHAPE_BASE_HEIGHT * scale;
+  const center = {
+    x: canvasSize.width / 2,
+    y: SHAPE_PREVIEW_TOP_PADDING + (availableHeight / 2),
+  };
+
+  return {
+    height,
+    left: center.x - (width / 2),
+    top: center.y - (height / 2),
+    transform: [{ rotateZ: `${rotation}deg` }],
     width,
   };
 };
@@ -539,6 +587,11 @@ const normalizePercent = (value: unknown): number | undefined =>
 
 const normalizeNumber = (value: unknown, fallback: number): number =>
   typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+
+const normalizeRotation = (value: number): number => {
+  const normalized = value % 360;
+  return normalized < 0 ? normalized + 360 : normalized;
+};
 
 const parseJsonObject = (value: string): unknown => {
   try {
