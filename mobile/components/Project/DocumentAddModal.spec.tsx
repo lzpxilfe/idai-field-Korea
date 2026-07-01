@@ -275,14 +275,15 @@ describe('DocumentAddModal', () => {
     expect(queryByText(/3D|조감/)).toBeNull();
 
     const canvas = getByTestId('featureLocationSketchCanvas');
+    const touchLayer = getByTestId('featureLocationSketchTouchLayer');
     fireEvent(canvas, 'layout', {
       nativeEvent: { layout: { height: 100, width: 200 } },
     });
     fireEvent.press(getByTestId('featureSketchMode_oval'));
-    fireEvent(canvas, 'responderGrant', {
+    fireEvent(touchLayer, 'responderGrant', {
       nativeEvent: { locationX: 150, locationY: 50 },
     });
-    fireEvent(canvas, 'responderRelease', {
+    fireEvent(touchLayer, 'responderRelease', {
       nativeEvent: { locationX: 150, locationY: 50 },
     });
     fireEvent.press(getByTestId('featureSketchRotateRight'));
@@ -342,6 +343,7 @@ describe('DocumentAddModal', () => {
       .toEqual({ selected: true });
 
     const canvas = getByTestId('featureLocationSketchCanvas');
+    const touchLayer = getByTestId('featureLocationSketchTouchLayer');
     expect(StyleSheet.flatten(getByTestId('featureCreationLayout').props.style))
       .toEqual(expect.objectContaining({
         flexDirection: 'column',
@@ -386,20 +388,32 @@ describe('DocumentAddModal', () => {
     const dynamicCanvasStyle = canvasStyles[canvasStyles.length - 1];
     expect(dynamicCanvasStyle.height).toBeGreaterThanOrEqual(440);
     expect(dynamicCanvasStyle.height).toBeLessThanOrEqual(860);
+    expect(canvas.props.onStartShouldSetResponder).toBeUndefined();
+    expect(touchLayer.props.onStartShouldSetResponder()).toBe(true);
+    expect(StyleSheet.flatten(touchLayer.props.style)).toEqual(
+      expect.objectContaining({
+        bottom: 0,
+        left: 0,
+        position: 'absolute',
+        right: 0,
+        top: 0,
+        zIndex: 1,
+      })
+    );
     fireEvent(canvas, 'layout', {
       nativeEvent: { layout: { height: 100, width: 200 } },
     });
     fireEvent.press(getByTestId('featureSketchMode_polygon'));
-    fireEvent(canvas, 'responderGrant', {
+    fireEvent(touchLayer, 'responderGrant', {
       nativeEvent: { locationX: 40, locationY: 25 },
     });
-    fireEvent(canvas, 'responderRelease', {
+    fireEvent(touchLayer, 'responderRelease', {
       nativeEvent: { locationX: 40, locationY: 25 },
     });
-    fireEvent(canvas, 'responderGrant', {
+    fireEvent(touchLayer, 'responderGrant', {
       nativeEvent: { locationX: 120, locationY: 50 },
     });
-    fireEvent(canvas, 'responderMove', {
+    fireEvent(touchLayer, 'responderMove', {
       nativeEvent: { locationX: 150, locationY: 60 },
     });
 

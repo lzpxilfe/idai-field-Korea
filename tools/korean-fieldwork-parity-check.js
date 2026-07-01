@@ -1099,6 +1099,8 @@ function validateGuidedFeatureDraftDefaults() {
       || !tabletAddModalText.includes('조사 경계 위 배치')
       || !tabletAddModalText.includes('featureSketchModeRail')
       || !tabletAddModalText.includes('featureSketchToolRail')
+      || !tabletAddModalText.includes('featureLocationSketchTouchLayer')
+      || !tabletAddModalText.includes('areSketchPointsEqual')
       || !tabletAddModalText.includes('height: 1280')
       || !tabletAddModalText.includes('reservedHeight = isFeatureWideLayout ? 352 : 180')
       || !tabletAddModalText.includes('minimumHeight = isFeatureWideLayout ? 440 : 460')
@@ -1113,6 +1115,8 @@ function validateGuidedFeatureDraftDefaults() {
       || !tabletAddModalText.includes('maxHeight: 352')
       || !tabletAddModalSpecText.includes('StyleSheet.flatten')
       || !tabletAddModalSpecText.includes('map-first tablet layout')
+      || !tabletAddModalSpecText.includes('canvas.props.onStartShouldSetResponder')
+      || !tabletAddModalSpecText.includes('featureLocationSketchTouchLayer')
       || tabletAddModalText.includes('지도처럼 위에서 보기')
       || tabletAddModalText.includes('평면 배치 지도')
       || !tabletAddModalSpecText.includes('featureSketchFlatMapSurface')) {

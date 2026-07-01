@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { CategoryForm, Document, Tree } from 'idai-field-core';
-import React, { useCallback, useContext, useMemo, useState } from 'react';
+import React, { useCallback, useContext, useMemo, useRef, useState } from 'react';
 import type { DimensionValue } from 'react-native';
 import {
   GestureResponderEvent,
@@ -135,6 +135,7 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
   const [featureSketchWasEdited, setFeatureSketchWasEdited] = useState(false);
   const [featureSketchCanvasSize, setFeatureSketchCanvasSize] =
     useState(FEATURE_SKETCH_CANVAS_DEFAULT_SIZE);
+  const lastPreviewFeatureSketchPointRef = useRef<FeatureSketchPoint>();
 
   const isAllowedCategory = useCallback(
     (category: CategoryForm) =>
@@ -258,6 +259,11 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
       event,
       featureSketchCanvasSize
     );
+    if (areSketchPointsEqual(point, lastPreviewFeatureSketchPointRef.current)) {
+      return;
+    }
+
+    lastPreviewFeatureSketchPointRef.current = point;
     setFeatureSketchWasEdited(true);
     setActiveFeatureSketchPoint(point);
 
@@ -272,6 +278,7 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
       event,
       featureSketchCanvasSize
     );
+    lastPreviewFeatureSketchPointRef.current = undefined;
     setFeatureSketchWasEdited(true);
     setActiveFeatureSketchPoint(undefined);
 
@@ -286,6 +293,7 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
   };
 
   const cancelFeatureSketchPoint = () => {
+    lastPreviewFeatureSketchPointRef.current = undefined;
     setActiveFeatureSketchPoint(undefined);
   };
 
@@ -524,12 +532,6 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
     >
       <View
         onLayout={handleFeatureSketchLayout}
-        onMoveShouldSetResponder={() => true}
-        onResponderGrant={previewFeatureSketchPoint}
-        onResponderMove={previewFeatureSketchPoint}
-        onResponderRelease={commitFeatureSketchPoint}
-        onResponderTerminate={cancelFeatureSketchPoint}
-        onStartShouldSetResponder={() => true}
         style={[
           styles.featureSketchCanvas,
           { height: featureSketchCanvasHeight },
@@ -538,6 +540,16 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
       >
         {renderFeatureSketchMapSurface()}
         {renderFeatureSketchGrid()}
+        <View
+          onMoveShouldSetResponder={() => true}
+          onResponderGrant={previewFeatureSketchPoint}
+          onResponderMove={previewFeatureSketchPoint}
+          onResponderRelease={commitFeatureSketchPoint}
+          onResponderTerminate={cancelFeatureSketchPoint}
+          onStartShouldSetResponder={() => true}
+          style={styles.featureSketchTouchLayer}
+          testID="featureLocationSketchTouchLayer"
+        />
         <View pointerEvents="box-none" style={styles.featureLocationHeader}>
           <View style={styles.featureLocationHeaderCopy}>
             <Text style={styles.featureLocationTitle}>유구 위치 지도</Text>
@@ -1115,10 +1127,15 @@ const getSketchPointFromPress = (
     : (height / 2);
 
   return {
-    x: clamp((locationX / width) * 100, 0, 100),
-    y: clamp((locationY / height) * 100, 0, 100),
+    x: Math.round(clamp((locationX / width) * 100, 0, 100)),
+    y: Math.round(clamp((locationY / height) * 100, 0, 100)),
   };
 };
+
+const areSketchPointsEqual = (
+  first?: FeatureSketchPoint,
+  second?: FeatureSketchPoint
+): boolean => first?.x === second?.x && first?.y === second?.y;
 
 const getVisibleFeatureSketchPoints = (
   points: FeatureSketchPoint[],
@@ -1499,6 +1516,10 @@ const styles = StyleSheet.create({
   featureSketchMapSurface: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: '#f8faf7',
+  },
+  featureSketchTouchLayer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1,
   },
   featureSketchSatelliteField: {
     borderColor: 'rgba(52, 64, 84, 0.11)',
