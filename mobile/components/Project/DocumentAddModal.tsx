@@ -107,9 +107,9 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
     windowDimensions.width >= FEATURE_SKETCH_TABLET_WIDTH;
   const featureSketchCanvasHeight = useMemo(
     () => {
-      const reservedHeight = isFeatureWideLayout ? 286 : 96;
-      const minimumHeight = isFeatureWideLayout ? 720 : 600;
-      const maximumHeight = isFeatureWideLayout ? 1180 : 980;
+      const reservedHeight = isFeatureWideLayout ? 352 : 180;
+      const minimumHeight = isFeatureWideLayout ? 440 : 460;
+      const maximumHeight = isFeatureWideLayout ? 860 : 760;
       const targetHeight = Math.max(
         minimumHeight,
         Math.round(windowDimensions.height - reservedHeight)
@@ -1318,7 +1318,7 @@ const styles = StyleSheet.create({
   featureCreationMapPaneWide: {
     flex: 1,
     marginRight: 0,
-    minHeight: 720,
+    minHeight: 0,
     minWidth: 0,
   },
   featureCreationFormPane: {
@@ -1331,8 +1331,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexGrow: 0,
     flexShrink: 0,
-    maxHeight: 278,
+    maxHeight: 352,
+    minHeight: 252,
     maxWidth: '100%',
+    paddingBottom: 10,
     paddingHorizontal: 10,
     paddingTop: 10,
     width: '100%',
@@ -1403,7 +1405,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   featureLocationPanelWide: {
-    minHeight: 760,
+    minHeight: 440,
   },
   featureLocationHeader: {
     alignItems: 'flex-start',

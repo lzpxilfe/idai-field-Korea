@@ -349,17 +349,16 @@ describe('DocumentAddModal', () => {
     expect(StyleSheet.flatten(getByTestId('featureCreationMapPane').props.style))
       .toEqual(expect.objectContaining({
         flex: 1,
+        minHeight: 0,
         minWidth: 0,
       }));
-    const mapPaneStyle = StyleSheet.flatten(getByTestId('featureCreationMapPane').props.style);
-    if (mapPaneStyle.minHeight !== undefined) {
-      expect(mapPaneStyle.minHeight).toBeGreaterThanOrEqual(720);
-    }
     const formPaneStyle = StyleSheet.flatten(getByTestId('featureCreationFormPane').props.style);
     expect(formPaneStyle).toEqual(expect.objectContaining({ minWidth: 0 }));
     if (formPaneStyle.flexDirection === 'row') {
       expect(formPaneStyle).toEqual(expect.objectContaining({
         borderTopWidth: 1,
+        maxHeight: 352,
+        minHeight: 252,
         width: '100%',
       }));
     }
@@ -385,7 +384,8 @@ describe('DocumentAddModal', () => {
     );
     const canvasStyles = canvas.props.style as Array<{ height?: number }>;
     const dynamicCanvasStyle = canvasStyles[canvasStyles.length - 1];
-    expect(dynamicCanvasStyle.height).toBeGreaterThanOrEqual(600);
+    expect(dynamicCanvasStyle.height).toBeGreaterThanOrEqual(440);
+    expect(dynamicCanvasStyle.height).toBeLessThanOrEqual(860);
     fireEvent(canvas, 'layout', {
       nativeEvent: { layout: { height: 100, width: 200 } },
     });
