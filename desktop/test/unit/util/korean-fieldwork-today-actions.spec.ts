@@ -161,7 +161,7 @@ describe('korean-fieldwork-today-actions', () => {
             'create-trench'
         ]);
         expect(tasks[2]).toMatchObject({
-            title: '표본·시굴 트렌치 설정',
+            title: '시굴·표본 트렌치 설정',
             action: {
                 type: 'createDocument',
                 parentDocumentId: 'operation-1',

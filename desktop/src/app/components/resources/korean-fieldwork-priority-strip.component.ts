@@ -532,7 +532,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
             default:
                 return {
                     title: '표시할 기록 작업이 없습니다',
-                    detail: '조사 구역·트렌치·유구를 추가하거나 다른 작업 필터를 확인하세요.'
+                    detail: '조사 구역이나 유구, 트렌치를 추가하거나 다른 작업 필터를 확인하세요.'
                 };
         }
     };

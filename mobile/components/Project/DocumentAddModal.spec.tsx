@@ -109,7 +109,7 @@ describe('DocumentAddModal', () => {
 
     expect(getByText('포함 위치: T1')).toBeTruthy();
     expect(getByText(
-      '여기서는 층위 선후를 정하지 않습니다. 새 기록이 어느 조사 경계·트렌치·유구에 포함되는지만 정합니다.'
+      '여기서는 층위 선후를 정하지 않습니다. 새 기록이 어느 조사 경계, 유구, 트렌치에 포함되는지만 정합니다.'
     )).toBeTruthy();
 
     fireEvent.press(getByTestId(`addCategory_${C.FEATURE}`));
@@ -117,7 +117,7 @@ describe('DocumentAddModal', () => {
     expect(getByText('유구 추가')).toBeTruthy();
     expect(getByText('포함 위치: T1')).toBeTruthy();
     expect(getByText(
-      '여기서는 층위 선후를 정하지 않습니다. 새 기록이 어느 조사 경계·트렌치·유구에 포함되는지만 정합니다.'
+      '여기서는 층위 선후를 정하지 않습니다. 새 기록이 어느 조사 경계, 유구, 트렌치에 포함되는지만 정합니다.'
     )).toBeTruthy();
     expect(getByText('유구로 바로 만들기')).toBeTruthy();
     expect(getByText(

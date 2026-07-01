@@ -34,8 +34,8 @@ describe('makeKoreanFieldworkScopeSummary', () => {
         expect(summary).toMatchObject({
             tone: 'info',
             title: '조사 경계 필요',
-            detail: '표본·시굴조사 · 지도에서 GPS 임시 경계, SHP/DXF/GeoJSON, 위성지도 중 하나로 조사 경계를 먼저 만드세요.',
-            modeLabel: '표본·시굴조사',
+            detail: '시굴·표본조사 · 지도에서 GPS 임시 경계, SHP/DXF/GeoJSON, 위성지도 중 하나로 조사 경계를 먼저 만드세요.',
+            modeLabel: '시굴·표본조사',
             boundaryLabel: '경계 없음',
             legacyRootRecordCount: 0,
             actionLabel: '지도',
@@ -81,8 +81,8 @@ describe('makeKoreanFieldworkScopeSummary', () => {
         expect(summary).toMatchObject({
             tone: 'warning',
             title: '조사 구역 필요',
-            detail: '표본·시굴조사 · GPS 임시 경계, SHP/DXF/GeoJSON, 위성지도 기준으로 확정한 경계가 없습니다.',
-            modeLabel: '표본·시굴조사',
+            detail: '시굴·표본조사 · GPS 임시 경계, SHP/DXF/GeoJSON, 위성지도 기준으로 확정한 경계가 없습니다.',
+            modeLabel: '시굴·표본조사',
             boundaryLabel: '경계 없음',
             actionLabel: '지도',
             action: { type: 'openMap' },
@@ -108,8 +108,8 @@ describe('makeKoreanFieldworkScopeSummary', () => {
         expect(summary).toMatchObject({
             tone: 'warning',
             title: '조사 구역 확정 필요',
-            detail: '표본·시굴조사 · A구역 북쪽 능선 기준만 있음. GPS 임시 경계, SHP/DXF/GeoJSON, 위성지도 중 하나로 확정하세요.',
-            modeLabel: '표본·시굴조사',
+            detail: '시굴·표본조사 · A구역 북쪽 능선 기준만 있음. GPS 임시 경계, SHP/DXF/GeoJSON, 위성지도 중 하나로 확정하세요.',
+            modeLabel: '시굴·표본조사',
             boundaryLabel: 'A구역 북쪽 능선',
             actionLabel: '지도',
             action: { type: 'openMap' },

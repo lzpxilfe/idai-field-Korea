@@ -218,7 +218,7 @@ function appendTrialTrenchTasks(tasks: KoreanFieldworkPriorityTask[],
         pushCreateTask(tasks, targets.primaryOperation, C.TRENCH, projectConfiguration, {
             id: 'create-trench',
             icon: 'mdi-grid',
-            title: '표본·시굴 트렌치 설정',
+            title: '시굴·표본 트렌치 설정',
             detail: '판 순서대로 트렌치를 만들고 위치·방향·범위를 먼저 남기세요.',
             tone: 'info',
             actionLabel: '트렌치 만들기'

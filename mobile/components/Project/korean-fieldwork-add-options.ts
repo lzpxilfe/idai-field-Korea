@@ -109,7 +109,7 @@ const PRIMARY_ONLY_CATEGORIES = new Set<string>([
 ]);
 
 export const KOREAN_FIELDWORK_HIERARCHY_HELP =
-  '여기서는 층위 선후를 정하지 않습니다. 새 기록이 어느 조사 경계·트렌치·유구에 포함되는지만 정합니다.';
+  '여기서는 층위 선후를 정하지 않습니다. 새 기록이 어느 조사 경계, 유구, 트렌치에 포함되는지만 정합니다.';
 
 export const getKoreanFieldworkAddOptions = (
   parentCategoryName: string,
@@ -186,6 +186,14 @@ const isAllowedForInvestigationMode = (
   investigationModeId?: KoreanFieldworkInvestigationModeId
 ): boolean => {
   if (parentCategoryName === C.FEATURE_GROUP) return false;
+
+  if (
+    parentCategoryName === C.OPERATION
+    && categoryName === C.FEATURE
+    && shouldUseKoreanFieldworkTrenchWorkflow(investigationModeId)
+  ) {
+    return false;
+  }
 
   return !(
     parentCategoryName === C.OPERATION

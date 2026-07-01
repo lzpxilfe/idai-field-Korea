@@ -65,7 +65,7 @@ describe('Korean fieldwork today actions', () => {
     ).featureDraftParent).toBe(operation);
   });
 
-  it('keeps 표본·시굴 quick creation on trench setup before 유구 entry', () => {
+  it('keeps 시굴·표본 quick creation on trench setup before 유구 entry', () => {
     const operation = createDoc('operation-1', C.OPERATION);
     const summary = createSummary();
     const targets = getKoreanFieldworkTodayActionTargets(
@@ -93,7 +93,7 @@ describe('Korean fieldwork today actions', () => {
     });
   });
 
-  it('switches 표본·시굴 quick creation to 유구 확인 after a trench exists', () => {
+  it('switches 시굴·표본 quick creation to 유구 확인 after a trench exists', () => {
     const operation = createDoc('operation-1', C.OPERATION);
     const trench = createDoc('trench-1', C.TRENCH, {
       relations: { isRecordedIn: ['operation-1'] },
@@ -148,7 +148,7 @@ describe('Korean fieldwork today actions', () => {
     });
   });
 
-  it('keeps 표본·시굴조사 centered on trench records before feature entry', () => {
+  it('keeps 시굴·표본조사 centered on trench records before feature entry', () => {
     const operation = createDoc('operation-1', C.OPERATION);
     const tasks = getKoreanFieldworkPriorityTasks(
       createSummary() as any,
@@ -164,7 +164,7 @@ describe('Korean fieldwork today actions', () => {
     ]);
     expect(tasks.map((task) => task.id)).not.toContain('create-detected-feature');
     expect(tasks[2]).toMatchObject({
-      title: '표본·시굴 트렌치 설정',
+      title: '시굴·표본 트렌치 설정',
       action: {
         type: 'createDocument',
         parentDocumentId: 'operation-1',
@@ -173,7 +173,7 @@ describe('Korean fieldwork today actions', () => {
     });
   });
 
-  it('uses trench children for 표본·시굴 토층사진 and 유구 확인 tasks', () => {
+  it('uses trench children for 시굴·표본 토층사진 and 유구 확인 tasks', () => {
     const operation = createDoc('operation-1', C.OPERATION);
     const trench = createDoc('trench-1', C.TRENCH, {
       relations: { isRecordedIn: ['operation-1'] },

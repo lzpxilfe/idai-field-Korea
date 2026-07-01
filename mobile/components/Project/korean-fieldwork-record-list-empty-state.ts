@@ -1,3 +1,8 @@
+import {
+  KoreanFieldworkInvestigationModeId,
+  shouldUseKoreanFieldworkTrenchWorkflow,
+} from './korean-fieldwork-investigation-mode';
+
 export interface KoreanFieldworkRecordListEmptyState {
   icon: string;
   text: string;
@@ -7,6 +12,7 @@ export interface KoreanFieldworkRecordListEmptyState {
 interface KoreanFieldworkRecordListEmptyStateInput {
   activeCategoryFilterId: string;
   activeWorkFilterId: string;
+  investigationModeId?: KoreanFieldworkInvestigationModeId;
   query: string;
   totalDocumentCount: number;
 }
@@ -14,14 +20,17 @@ interface KoreanFieldworkRecordListEmptyStateInput {
 export const getKoreanFieldworkRecordListEmptyState = ({
   activeCategoryFilterId,
   activeWorkFilterId,
+  investigationModeId,
   query,
   totalDocumentCount,
 }: KoreanFieldworkRecordListEmptyStateInput): KoreanFieldworkRecordListEmptyState => {
+  const primaryRecordLabel = getPrimaryFieldRecordLabel(investigationModeId);
+
   if (totalDocumentCount === 0) {
     return {
       icon: 'add-location-alt',
       title: '아직 기록이 없습니다',
-      text: '지도에서 조사 경계를 먼저 만들고, 트렌치·유구·유물 기록을 이어가세요.',
+      text: `지도에서 조사 경계를 먼저 만들고, ${primaryRecordLabel} 기록을 이어가세요.`,
     };
   }
 
@@ -44,6 +53,13 @@ export const getKoreanFieldworkRecordListEmptyState = ({
   return {
     icon: 'assignment-late',
     title: '표시할 기록이 없습니다',
-    text: '지도에서 조사 경계·트렌치·유구를 추가하거나, 다른 범위를 열어보세요.',
+    text: `지도에서 조사 경계와 ${primaryRecordLabel}를 추가하거나, 다른 범위를 열어보세요.`,
   };
 };
+
+const getPrimaryFieldRecordLabel = (
+  investigationModeId?: KoreanFieldworkInvestigationModeId
+): string =>
+  shouldUseKoreanFieldworkTrenchWorkflow(investigationModeId)
+    ? '트렌치'
+    : '유구';

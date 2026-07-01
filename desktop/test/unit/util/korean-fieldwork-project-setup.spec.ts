@@ -42,7 +42,7 @@ describe('korean-fieldwork-project-setup', () => {
 
     it('provides readable investigation mode labels', () => {
 
-        expect(getKoreanFieldworkInvestigationModeLabel('trialTrench')).toBe('표본·시굴조사');
+        expect(getKoreanFieldworkInvestigationModeLabel('trialTrench')).toBe('시굴·표본조사');
         expect(getKoreanFieldworkInvestigationModeLabel('unknownMode')).toBe('unknownMode');
     });
     it('loads tablet-synced setup defaults from the project document', () => {

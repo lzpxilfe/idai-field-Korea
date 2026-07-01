@@ -61,7 +61,7 @@ const VERIFICATION_STATE_LABELS: Readonly<Record<string, KoreanFieldworkStatusCh
 };
 
 const PROJECT_INVESTIGATION_MODE_LABELS: Readonly<Record<string, string>> = {
-  trialTrench: '표본·시굴조사',
+  trialTrench: '시굴·표본조사',
   excavation: '발굴조사',
   surfaceSurvey: '지표조사',
   watchingBrief: '참관·입회조사',

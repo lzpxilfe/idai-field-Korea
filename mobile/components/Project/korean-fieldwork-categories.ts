@@ -55,7 +55,7 @@ export const KOREAN_FIELDWORK_CATEGORY_DESCRIPTIONS: Readonly<Record<string, str
   [KOREAN_FIELDWORK_CATEGORIES.FIND]: '개별 유물의 출토 맥락, 수습 상태, 해석 근거를 기록합니다.',
   [KOREAN_FIELDWORK_CATEGORIES.FIND_COLLECTION]: '동일 맥락의 유물 일괄 수습 또는 묶음 기록입니다.',
   [KOREAN_FIELDWORK_CATEGORIES.LAYER]: '사진에 표시한 토층 번호별 토색과 필요한 메모를 남깁니다.',
-  [KOREAN_FIELDWORK_CATEGORIES.OPERATION]: '조사 경계 안에서 트렌치·유구·유물 기록을 이어 붙이는 구역 기록입니다.',
+  [KOREAN_FIELDWORK_CATEGORIES.OPERATION]: '조사 경계 안에서 유구나 트렌치, 유물 기록을 이어 붙이는 구역 기록입니다.',
   [KOREAN_FIELDWORK_CATEGORIES.PEN_MEMO]: '태블릿에서 바로 적는 손글씨 메모와 전사 상태를 남깁니다.',
   [KOREAN_FIELDWORK_CATEGORIES.PHOTO]: '현장 사진, 유물 사진, 보고서용 사진 근거를 추가합니다.',
   [KOREAN_FIELDWORK_CATEGORIES.SAMPLE]: '토양, 목탄, 유기물, 자연과학 분석용 시료를 기록합니다.',
@@ -63,7 +63,7 @@ export const KOREAN_FIELDWORK_CATEGORY_DESCRIPTIONS: Readonly<Record<string, str
   [KOREAN_FIELDWORK_CATEGORIES.SOURCE_EVIDENCE_INDEX]: '보고서·문헌·원자료의 근거자료를 나중에 추적할 수 있게 색인합니다.',
   [KOREAN_FIELDWORK_CATEGORIES.SURVEY]: '지표조사, 시굴 전 단계, 조사 방법과 관찰 조건을 기록합니다.',
   [KOREAN_FIELDWORK_CATEGORIES.SURVEY_BOUNDARY]: '조사 범위, 구역선, 배경지도 출처와 정확도를 기록합니다.',
-  [KOREAN_FIELDWORK_CATEGORIES.TRENCH]: '시굴·발굴 트렌치의 위치와 범위를 잡습니다.',
+  [KOREAN_FIELDWORK_CATEGORIES.TRENCH]: '시굴·표본 트렌치의 위치와 범위를 잡습니다.',
 };
 
 export const KOREAN_FIELDWORK_HIDDEN_ADD_CATEGORIES: readonly string[] = [

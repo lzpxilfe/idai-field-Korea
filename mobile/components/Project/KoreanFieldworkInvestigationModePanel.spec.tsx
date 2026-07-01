@@ -55,7 +55,7 @@ describe('KoreanFieldworkInvestigationModePanel', () => {
       />
     );
 
-    expect(getAllByText('표본·시굴조사').length).toBeGreaterThan(0);
+    expect(getAllByText('시굴·표본조사').length).toBeGreaterThan(0);
     expect(queryByTestId('investigationMode_excavation')).toBeNull();
     expect(getByText('기본 확인 항목')).toBeTruthy();
     expect(getByText('6개 항목 · 필요할 때만 펼쳐 확인')).toBeTruthy();

@@ -265,7 +265,7 @@ const appendTrialTrenchPriorityTasks = (
   if (!trench) {
     tasks.push(createTrenchTask(
       targets.primaryOperation,
-      '표본·시굴 트렌치 설정',
+      '시굴·표본 트렌치 설정',
       '판 순서대로 트렌치를 만들고 위치·방향·범위를 먼저 남기세요.'
     ));
     return;

@@ -73,7 +73,7 @@ export function makeKoreanFieldworkWorkflowSteps(
     const surveyBoundaryDocuments = getKoreanFieldworkSurveyBoundaryDocuments(documents);
     const boundaryCount = surveyBoundaryDocuments.length;
     const hasBoundary = boundaryCount > 0;
-    const operationReadiness = getOperationReadiness(operationCount, trenchCount, featureCount);
+    const operationReadiness = getOperationReadiness(operationCount, trenchCount, featureCount, investigationMode);
     const targetReadiness = getTargetReadiness(categoryCounts, documents, investigationMode);
     const hasFieldRecord = stats.dailyLogCount > 0;
     const hasCloseoutIssue = stats.openIssueCount > 0;
@@ -205,15 +205,17 @@ function getFeatureCount(categoryCounts: { [categoryName: string]: number }): nu
 
 function getOperationReadiness(operationCount: number,
                                trenchCount: number,
-                               featureCount: number): Omit<WorkflowStepDraft, 'id'> {
+                               featureCount: number,
+                               investigationMode: string|undefined): Omit<WorkflowStepDraft, 'id'> {
 
     const rootRecordCount = trenchCount + featureCount;
+    const primaryRecordLabel = getPrimaryFieldRecordLabel(investigationMode);
 
     if (operationCount === 0 && rootRecordCount > 0) {
         return {
             label: '조사 구역 정리',
             doneDetail: `조사 구역 없이 떠 있는 기록 ${rootRecordCount}건`,
-            nextDetail: '기존 트렌치·유구 기록을 새 조사 구역 안으로 묶어 주세요.',
+            nextDetail: `기존 ${primaryRecordLabel} 기록을 새 조사 구역 안으로 묶어 주세요.`,
             done: false,
             attention: true
         };
@@ -222,7 +224,7 @@ function getOperationReadiness(operationCount: number,
     return {
         label: '조사 구역 기록',
         doneDetail: `조사 구역 기록 ${operationCount}건`,
-        nextDetail: '지도에서 조사 경계를 만들면 그 구역 안에 트렌치·유구 기록을 이어서 넣을 수 있습니다.',
+        nextDetail: `지도에서 조사 경계를 만들면 그 구역 안에 ${primaryRecordLabel} 기록을 이어서 넣을 수 있습니다.`,
         done: operationCount > 0
     };
 }
@@ -245,7 +247,7 @@ function getTargetReadiness(categoryCounts: { [categoryName: string]: number },
 
     if (investigationMode === 'trialTrench') {
         return {
-            label: '트렌치·유구',
+            label: '트렌치',
             doneDetail: `트렌치 ${trenchCount} · 유구 ${featureCount}`,
             nextDetail: '시굴은 먼저 트렌치를 잡고, 확인된 유구 후보를 그 안에 기록하세요.',
             done: trenchCount > 0 || featureCount > 0,
@@ -273,6 +275,13 @@ function getTargetReadiness(categoryCounts: { [categoryName: string]: number },
         action: targetAction,
         actionLabel: targetActionLabel
     };
+}
+
+function getPrimaryFieldRecordLabel(investigationMode: string|undefined): string {
+
+    if (investigationMode === 'trialTrench') return '트렌치';
+    if (investigationMode === 'excavation') return '유구';
+    return '유구나 트렌치';
 }
 
 function getInvestigationModeDetail(investigationMode: string|undefined): string {

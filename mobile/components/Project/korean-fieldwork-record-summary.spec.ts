@@ -150,7 +150,7 @@ describe('Korean fieldwork record summary', () => {
     });
 
     expect(getKoreanFieldworkRecordStatusChips(operation)).toEqual([
-      { label: '조사 표본·시굴조사', tone: 'info' },
+      { label: '조사 시굴·표본조사', tone: 'info' },
       { label: '경계 1구역 북쪽 능선부터 남쪽 농로…', tone: 'success' },
     ]);
   });

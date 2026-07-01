@@ -84,6 +84,7 @@ import {
   saveKoreanFieldworkInvestigationModeId,
   KoreanFieldworkInvestigationModeId,
   KoreanFieldworkProjectBoundaryDraft,
+  shouldUseKoreanFieldworkTrenchWorkflow,
 } from '@/components/Project/korean-fieldwork-investigation-mode';
 import {
   syncKoreanFieldworkProjectSetupDefaultsToProjectDocument,
@@ -119,7 +120,9 @@ interface RecordGroup {
   categories: string[];
 }
 
-const RECORD_FILTERS: RecordFilter[] = [
+const getRecordFilters = (
+  investigationModeId?: KoreanFieldworkInvestigationModeId
+): RecordFilter[] => [
   { id: 'all', label: '전체', categories: [] },
   {
     id: 'operation',
@@ -132,13 +135,8 @@ const RECORD_FILTERS: RecordFilter[] = [
   },
   {
     id: 'feature',
-    label: '트렌치·유구',
-    categories: [
-      KOREAN_FIELDWORK_CATEGORIES.TRENCH,
-      KOREAN_FIELDWORK_CATEGORIES.FEATURE,
-      KOREAN_FIELDWORK_CATEGORIES.FEATURE_SEGMENT,
-      KOREAN_FIELDWORK_CATEGORIES.LAYER,
-    ],
+    label: getPrimaryFieldRecordLabel(investigationModeId),
+    categories: getPrimaryFieldRecordCategories(investigationModeId),
   },
   {
     id: 'find',
@@ -170,10 +168,14 @@ const RECORD_FILTERS: RecordFilter[] = [
   },
 ];
 
-const RECORD_GROUPS: RecordGroup[] = [
+const getRecordGroups = (
+  investigationModeId?: KoreanFieldworkInvestigationModeId
+): RecordGroup[] => [
   {
     title: '조사 경계와 구역 기록',
-    subtitle: '조사 전체 범위, 구역 기록, 트렌치·유구 기준',
+    subtitle: `조사 전체 범위, 구역 기록, ${getPrimaryFieldRecordLabel(
+      investigationModeId
+    )} 기준`,
     categories: [
       KOREAN_FIELDWORK_CATEGORIES.OPERATION,
       KOREAN_FIELDWORK_CATEGORIES.SURVEY,
@@ -181,14 +183,9 @@ const RECORD_GROUPS: RecordGroup[] = [
     ],
   },
   {
-    title: '유구와 토층',
-    subtitle: '트렌치, 유구, 피트, 토층 기록',
-    categories: [
-      KOREAN_FIELDWORK_CATEGORIES.TRENCH,
-      KOREAN_FIELDWORK_CATEGORIES.FEATURE,
-      KOREAN_FIELDWORK_CATEGORIES.FEATURE_SEGMENT,
-      KOREAN_FIELDWORK_CATEGORIES.LAYER,
-    ],
+    title: getPrimaryFieldRecordLabel(investigationModeId),
+    subtitle: getPrimaryFieldRecordSubtitle(investigationModeId),
+    categories: getPrimaryFieldRecordCategories(investigationModeId),
   },
   {
     title: '유물과 시료',
@@ -219,6 +216,39 @@ const RECORD_GROUPS: RecordGroup[] = [
     ],
   },
 ];
+
+const getPrimaryFieldRecordLabel = (
+  investigationModeId?: KoreanFieldworkInvestigationModeId
+): string =>
+  shouldUseKoreanFieldworkTrenchWorkflow(investigationModeId)
+    ? '트렌치'
+    : '유구';
+
+const getPrimaryFieldRecordSubtitle = (
+  investigationModeId?: KoreanFieldworkInvestigationModeId
+): string =>
+  shouldUseKoreanFieldworkTrenchWorkflow(investigationModeId)
+    ? '트렌치, 유구 확인 결과, 피트, 토층사진 기록'
+    : '유구, 피트, 토층사진 기록';
+
+const getRecordSearchPlaceholder = (
+  investigationModeId?: KoreanFieldworkInvestigationModeId
+): string =>
+  `식별자, 설명, ${getPrimaryFieldRecordLabel(investigationModeId)}·유물·시료 검색`;
+
+const getPrimaryFieldRecordCategories = (
+  investigationModeId?: KoreanFieldworkInvestigationModeId
+): string[] => {
+  const categories = [
+    KOREAN_FIELDWORK_CATEGORIES.FEATURE,
+    KOREAN_FIELDWORK_CATEGORIES.FEATURE_SEGMENT,
+    KOREAN_FIELDWORK_CATEGORIES.LAYER,
+  ];
+
+  return shouldUseKoreanFieldworkTrenchWorkflow(investigationModeId)
+    ? [KOREAN_FIELDWORK_CATEGORIES.TRENCH, ...categories]
+    : categories;
+};
 
 const DocumentsList: React.FC = () => {
   const { showToast } = useToast();
@@ -274,6 +304,18 @@ const DocumentsList: React.FC = () => {
     useKoreanFieldworkProjectSetupDefaults(projectId, repository);
   const investigationModeId =
     selectedInvestigationModeId ?? loadedInvestigationModeId;
+  const recordFilters = useMemo(
+    () => getRecordFilters(investigationModeId),
+    [investigationModeId]
+  );
+  const recordGroups = useMemo(
+    () => getRecordGroups(investigationModeId),
+    [investigationModeId]
+  );
+  const recordSearchPlaceholder = useMemo(
+    () => getRecordSearchPlaceholder(investigationModeId),
+    [investigationModeId]
+  );
 
   const documentsById = useMemo(
     () => new Map(documents.map((document) => [document.resource.id, document])),
@@ -328,9 +370,9 @@ const DocumentsList: React.FC = () => {
     [actionDocuments, currentScopeParent, todaySummary]
   );
   const normalizedQuery = query.trim().toLowerCase();
-  const activeFilterDefinition = RECORD_FILTERS.find((filter) =>
+  const activeFilterDefinition = recordFilters.find((filter) =>
     filter.id === activeFilter
-  ) ?? RECORD_FILTERS[0];
+  ) ?? recordFilters[0];
 
   const getCategoryLabel = useCallback((categoryName: string) => {
     if (categoryName in KOREAN_FIELDWORK_CATEGORY_LABELS) {
@@ -369,20 +411,24 @@ const DocumentsList: React.FC = () => {
     () => getKoreanFieldworkRecordListEmptyState({
       activeCategoryFilterId: activeFilter,
       activeWorkFilterId: 'all',
+      investigationModeId,
       query,
       totalDocumentCount: recordBoardDocuments.length,
     }),
-    [activeFilter, query, recordBoardDocuments.length]
+    [activeFilter, investigationModeId, query, recordBoardDocuments.length]
   );
 
-  const groupedDocuments = useMemo(() => RECORD_GROUPS
+  const groupedDocuments = useMemo(() => recordGroups
     .map((group) => ({
       ...group,
       documents: filteredDocuments.filter((document) =>
         group.categories.includes(document.resource.category)
       ),
     }))
-    .filter((group) => group.documents.length > 0), [filteredDocuments]);
+    .filter((group) => group.documents.length > 0), [
+    filteredDocuments,
+    recordGroups,
+  ]);
 
   const groupedDocumentIds = useMemo(() => new Set(groupedDocuments
     .flatMap((group) => group.documents.map((document) => document.resource.id))
@@ -1101,7 +1147,7 @@ const DocumentsList: React.FC = () => {
             <TextInput
               value={query}
               onChangeText={setQuery}
-              placeholder="식별자, 설명, 트렌치·유구·시료 검색"
+              placeholder={recordSearchPlaceholder}
               placeholderTextColor="#6f7782"
               style={styles.searchInput}
             />
@@ -1116,7 +1162,7 @@ const DocumentsList: React.FC = () => {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.filterRow}
           >
-            {RECORD_FILTERS.map((filter) => (
+            {recordFilters.map((filter) => (
               <TouchableOpacity
                 key={filter.id}
                 activeOpacity={0.86}

@@ -122,7 +122,7 @@ describe('ProjectInformationModalComponent', () => {
         component.koreanWorkflowSteps = [
             {
                 id: 'targets',
-                label: '트렌치·유구',
+                label: '트렌치',
                 detail: '시굴은 먼저 트렌치를 잡고, 확인된 유구 후보를 그 안에 기록하세요.',
                 status: 'current',
                 action: { type: 'openMap' },
@@ -133,7 +133,7 @@ describe('ProjectInformationModalComponent', () => {
         expect(component.hasKoreanWorkflowSteps()).toBe(true);
         expect(component.getKoreanWorkflowStepStatusLabel('current')).toBe('다음');
         expect(component.getKoreanWorkflowStepStatusLabel('attention')).toBe('확인');
-        expect(component.getKoreanWorkflowSteps()[0].label).toBe('트렌치·유구');
+        expect(component.getKoreanWorkflowSteps()[0].label).toBe('트렌치');
         expect(component.canRunKoreanWorkflowStep(component.getKoreanWorkflowSteps()[0])).toBe(true);
     });
 

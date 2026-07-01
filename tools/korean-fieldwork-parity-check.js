@@ -2218,7 +2218,7 @@ function validateProjectInvestigationModeWording() {
     findings.push('desktop record context panel must use the shared project setup investigation-mode labels');
   }
   if (!desktopRecordContextPanelSpecText.includes('keeps tablet project setup visible on desktop operation records')
-      || !desktopRecordContextPanelSpecText.includes('조사 표본·시굴조사')
+      || !desktopRecordContextPanelSpecText.includes('조사 시굴·표본조사')
       || !desktopRecordContextPanelSpecText.includes('경계 1구역 북쪽 능선부터 남쪽 농로…')) {
     findings.push('desktop record context panel test must cover tablet project setup chips on Operation records with tablet wording');
   }

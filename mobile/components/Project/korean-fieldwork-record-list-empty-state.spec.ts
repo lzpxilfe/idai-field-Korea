@@ -12,7 +12,21 @@ describe('korean-fieldwork-record-list-empty-state', () => {
     })).toEqual({
       icon: 'add-location-alt',
       title: '아직 기록이 없습니다',
-      text: '지도에서 조사 경계를 먼저 만들고, 트렌치·유구·유물 기록을 이어가세요.',
+      text: '지도에서 조사 경계를 먼저 만들고, 트렌치 기록을 이어가세요.',
+    });
+  });
+
+  it('points empty excavation projects to feature records', () => {
+    expect(getKoreanFieldworkRecordListEmptyState({
+      activeCategoryFilterId: 'all',
+      activeWorkFilterId: 'all',
+      investigationModeId: 'excavation',
+      query: '',
+      totalDocumentCount: 0,
+    })).toEqual({
+      icon: 'add-location-alt',
+      title: '아직 기록이 없습니다',
+      text: '지도에서 조사 경계를 먼저 만들고, 유구 기록을 이어가세요.',
     });
   });
 

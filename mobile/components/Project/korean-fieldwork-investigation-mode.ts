@@ -40,8 +40,8 @@ export interface KoreanFieldworkProjectBoundaryDraft {
 export const KOREAN_FIELDWORK_INVESTIGATION_MODES: readonly KoreanFieldworkInvestigationMode[] = [
   {
     id: 'trialTrench',
-    label: '표본·시굴조사',
-    detail: '트렌치 단위로 토층과 유구 확인 과정을 기록',
+    label: '시굴·표본조사',
+    detail: '트렌치 단위로 조사 과정과 확인 결과를 기록',
     primaryAction: '트렌치부터 잡기',
     requirements: [
       '트렌치 번호와 위치',

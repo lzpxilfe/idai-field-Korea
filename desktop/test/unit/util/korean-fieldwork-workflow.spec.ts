@@ -28,7 +28,7 @@ describe('korean-fieldwork-workflow', () => {
         ]);
         expect(steps[1].detail).toBe('시굴·발굴·지표·입회 중 이 프로젝트의 조사 방식을 정하세요.');
         expect(steps[2].detail).toBe('지도에서 조사 경계를 만들거나 SHP/DXF/GeoJSON·위성지도 기준으로 구역을 기록하세요.');
-        expect(steps[3].detail).toBe('지도에서 조사 경계를 만들면 그 구역 안에 트렌치·유구 기록을 이어서 넣을 수 있습니다.');
+        expect(steps[3].detail).toBe('지도에서 조사 경계를 만들면 그 구역 안에 유구나 트렌치 기록을 이어서 넣을 수 있습니다.');
         expect(steps[0].action).toEqual({ type: 'openProjectInfo' });
         expect(steps[1].action).toEqual({ type: 'openProjectInfo' });
         expect(steps[2].action).toEqual({ type: 'openMap' });
@@ -72,12 +72,12 @@ describe('korean-fieldwork-workflow', () => {
         expect(steps[2].detail).toBe('A구역 북쪽 능선 · 카카오 위성지도 기준');
         expect(steps[3]).toEqual(expect.objectContaining({
             label: '조사 구역 기록',
-            detail: '지도에서 조사 경계를 만들면 그 구역 안에 트렌치·유구 기록을 이어서 넣을 수 있습니다.',
+            detail: '지도에서 조사 경계를 만들면 그 구역 안에 트렌치 기록을 이어서 넣을 수 있습니다.',
             action: { type: 'openMap' },
             actionLabel: '지도'
         }));
         expect(steps[4]).toEqual(expect.objectContaining({
-            label: '트렌치·유구',
+            label: '트렌치',
             detail: '시굴은 먼저 트렌치를 잡고, 확인된 유구 후보를 그 안에 기록하세요.',
             action: { type: 'openMap' },
             actionLabel: '지도'
@@ -112,7 +112,7 @@ describe('korean-fieldwork-workflow', () => {
             ['recording', 'todo']
         ]);
         expect(steps[4]).toEqual(expect.objectContaining({
-            label: '트렌치·유구',
+            label: '트렌치',
             detail: '시굴은 먼저 트렌치를 잡고, 확인된 유구 후보를 그 안에 기록하세요.',
             action: { type: 'openDocument', documentId: 'operation-1' },
             actionLabel: '열기'
@@ -153,7 +153,7 @@ describe('korean-fieldwork-workflow', () => {
         }));
         expect(steps[3]).toEqual(expect.objectContaining({
             label: '조사 구역 기록',
-            detail: '지도에서 조사 경계를 만들면 그 구역 안에 트렌치·유구 기록을 이어서 넣을 수 있습니다.',
+            detail: '지도에서 조사 경계를 만들면 그 구역 안에 트렌치 기록을 이어서 넣을 수 있습니다.',
             action: { type: 'openMap' },
             actionLabel: '지도'
         }));

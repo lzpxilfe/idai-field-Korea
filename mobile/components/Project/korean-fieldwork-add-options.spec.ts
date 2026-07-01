@@ -19,7 +19,6 @@ describe('korean fieldwork add options', () => {
 
     expect(options.primary.map((option) => option.categoryName)).toEqual([
       C.TRENCH,
-      C.FEATURE,
       C.SURVEY_BOUNDARY,
       C.PEN_MEMO,
     ]);
@@ -50,7 +49,7 @@ describe('korean fieldwork add options', () => {
     expect(options.other).toEqual([]);
   });
 
-  it('keeps trench creation in trial trench operation add options', () => {
+  it('keeps only trench creation in trial trench operation add options', () => {
     const options = getKoreanFieldworkAddOptions(
       C.OPERATION,
       [
@@ -64,7 +63,6 @@ describe('korean fieldwork add options', () => {
 
     expect(options.primary.map((option) => option.categoryName)).toEqual([
       C.TRENCH,
-      C.FEATURE,
       C.SURVEY_BOUNDARY,
       C.PEN_MEMO,
     ]);

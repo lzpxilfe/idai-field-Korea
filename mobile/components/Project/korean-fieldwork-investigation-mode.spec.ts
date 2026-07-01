@@ -27,7 +27,7 @@ describe('Korean fieldwork investigation mode', () => {
 
   it('keeps trench-based 조사 requirements separate from excavation flow', () => {
     expect(getKoreanFieldworkInvestigationMode('trialTrench')).toMatchObject({
-      label: '표본·시굴조사',
+      label: '시굴·표본조사',
       primaryAction: '트렌치부터 잡기',
       requirements: expect.arrayContaining([
         '토층 정리 여부',
