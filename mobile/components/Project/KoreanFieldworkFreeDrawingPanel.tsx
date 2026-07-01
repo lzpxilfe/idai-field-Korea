@@ -30,6 +30,11 @@ interface CanvasSize {
   width: number;
 }
 
+interface PixelPoint {
+  x: number;
+  y: number;
+}
+
 interface Props {
   onUpdateStrokes: (serializedStrokes: string) => void;
   strokesValue?: unknown;
@@ -41,7 +46,12 @@ const DEFAULT_CANVAS_SIZE = {
   width: 320,
 };
 const MAX_COORDINATE = 10000;
-const MIN_POINT_DISTANCE = 80;
+const BRUSH_STROKE_WIDTH = 4;
+const MIN_POINT_DISTANCE = 45;
+const RELEASE_POINT_MIN_DISTANCE = 1;
+const SMOOTHING_SEGMENT_LENGTH = 7;
+const MIN_SMOOTHING_STEPS = 3;
+const MAX_SMOOTHING_STEPS = 12;
 const TEXT = {
   title: '\uc790\uc720 \uc2a4\ucf00\uce58',
   countPrefix: '\ud68d',
@@ -78,20 +88,16 @@ const KoreanFieldworkFreeDrawingPanel: React.FC<Props> = ({
   };
   const moveStroke = (event: GestureResponderEvent) => {
     const point = getNormalizedPoint(event, canvasSize);
-    const currentStroke = activeStrokeRef.current;
-    if (!point || !currentStroke) return;
+    if (!point) return;
 
-    const previousPoint = currentStroke.points[currentStroke.points.length - 1];
-    if (previousPoint && getPointDistance(previousPoint, point) < MIN_POINT_DISTANCE) {
-      return;
+    appendActiveStrokePoint(point);
+  };
+  const finishStroke = (event?: GestureResponderEvent) => {
+    const releasePoint = event ? getNormalizedPoint(event, canvasSize) : undefined;
+    if (releasePoint) {
+      appendActiveStrokePoint(releasePoint, RELEASE_POINT_MIN_DISTANCE);
     }
 
-    activeStrokeRef.current = {
-      points: currentStroke.points.concat(point),
-    };
-    setActiveStroke(activeStrokeRef.current);
-  };
-  const finishStroke = () => {
     const stroke = activeStrokeRef.current;
     activeStrokeRef.current = undefined;
     setActiveStroke(undefined);
@@ -105,6 +111,26 @@ const KoreanFieldworkFreeDrawingPanel: React.FC<Props> = ({
   };
   const clearStrokes = () => {
     onUpdateStrokes(serializeKoreanFieldworkHandwriting([]));
+  };
+  const appendActiveStrokePoint = (
+    point: KoreanFieldworkHandwritingPoint,
+    minimumDistance = MIN_POINT_DISTANCE
+  ) => {
+    const currentStroke = activeStrokeRef.current;
+    if (!currentStroke) return;
+
+    const previousPoint = currentStroke.points[currentStroke.points.length - 1];
+    if (
+      previousPoint
+      && getPointDistance(previousPoint, point) < minimumDistance
+    ) {
+      return;
+    }
+
+    activeStrokeRef.current = {
+      points: currentStroke.points.concat(point),
+    };
+    setActiveStroke(activeStrokeRef.current);
   };
 
   return (
@@ -145,8 +171,6 @@ const KoreanFieldworkFreeDrawingPanel: React.FC<Props> = ({
         style={styles.canvas}
         testID="fieldworkFreeDrawingCanvas"
       >
-        <View pointerEvents="none" style={styles.gridVertical} />
-        <View pointerEvents="none" style={styles.gridHorizontal} />
         {visibleStrokes.flatMap((stroke, strokeIndex) =>
           toStrokeSegments(stroke, strokeIndex, canvasSize)
         )}
@@ -251,7 +275,7 @@ const normalizeCoordinate = (value: number): number =>
 const denormalizePoint = (
   point: KoreanFieldworkHandwritingPoint,
   canvasSize: CanvasSize
-) => ({
+): PixelPoint => ({
   x: (point.x / MAX_COORDINATE) * canvasSize.width,
   y: (point.y / MAX_COORDINATE) * canvasSize.height,
 });
@@ -268,7 +292,7 @@ const toStrokeSegments = (
   strokeIndex: number,
   canvasSize: CanvasSize
 ) => {
-  const strokeWidth = 3;
+  const strokeWidth = BRUSH_STROKE_WIDTH;
 
   if (stroke.points.length === 1) {
     const point = denormalizePoint(stroke.points[0], canvasSize);
@@ -286,14 +310,17 @@ const toStrokeSegments = (
             width: strokeWidth + 4,
           },
         ]}
+        testID="fieldworkFreeDrawingStrokeDot"
       />
     );
   }
 
-  return stroke.points.slice(1).map((point, pointIndex) => {
-    const previousPoint = stroke.points[pointIndex];
-    const start = denormalizePoint(previousPoint, canvasSize);
-    const end = denormalizePoint(point, canvasSize);
+  const smoothedPoints = getSmoothedPixelStrokePoints(stroke, canvasSize);
+
+  return smoothedPoints.slice(1).map((point, pointIndex) => {
+    const previousPoint = smoothedPoints[pointIndex];
+    const start = previousPoint;
+    const end = point;
     const distance = Math.sqrt(((end.x - start.x) ** 2) + ((end.y - start.y) ** 2));
     const angle = Math.atan2(end.y - start.y, end.x - start.x);
 
@@ -311,10 +338,103 @@ const toStrokeSegments = (
             width: distance,
           },
         ]}
+        testID="fieldworkFreeDrawingStrokeSegment"
       />
     );
   });
 };
+
+const getSmoothedPixelStrokePoints = (
+  stroke: KoreanFieldworkHandwritingStroke,
+  canvasSize: CanvasSize
+): PixelPoint[] => {
+  const points = stroke.points.map((point) => denormalizePoint(point, canvasSize));
+  if (points.length < 3) return points;
+
+  const smoothedPoints: PixelPoint[] = [];
+
+  points.slice(0, -1).forEach((point, index) => {
+    const nextPoint = points[index + 1];
+    const previousPoint = points[Math.max(index - 1, 0)];
+    const followingPoint = points[Math.min(index + 2, points.length - 1)];
+    const steps = clamp(
+      Math.ceil(getPixelPointDistance(point, nextPoint) / SMOOTHING_SEGMENT_LENGTH),
+      MIN_SMOOTHING_STEPS,
+      MAX_SMOOTHING_STEPS
+    );
+
+    for (let step = 0; step < steps; step += 1) {
+      const smoothedPoint = getCatmullRomPoint(
+        previousPoint,
+        point,
+        nextPoint,
+        followingPoint,
+        step / steps,
+        canvasSize
+      );
+      appendPixelPointIfDistinct(smoothedPoints, smoothedPoint);
+    }
+  });
+
+  appendPixelPointIfDistinct(smoothedPoints, points[points.length - 1]);
+
+  return smoothedPoints;
+};
+
+const getCatmullRomPoint = (
+  point0: PixelPoint,
+  point1: PixelPoint,
+  point2: PixelPoint,
+  point3: PixelPoint,
+  t: number,
+  canvasSize: CanvasSize
+): PixelPoint => {
+  const t2 = t * t;
+  const t3 = t2 * t;
+
+  return clampPixelPoint({
+    x: 0.5 * (
+      (2 * point1.x)
+      + ((-point0.x + point2.x) * t)
+      + (((2 * point0.x) - (5 * point1.x) + (4 * point2.x) - point3.x) * t2)
+      + ((-point0.x + (3 * point1.x) - (3 * point2.x) + point3.x) * t3)
+    ),
+    y: 0.5 * (
+      (2 * point1.y)
+      + ((-point0.y + point2.y) * t)
+      + (((2 * point0.y) - (5 * point1.y) + (4 * point2.y) - point3.y) * t2)
+      + ((-point0.y + (3 * point1.y) - (3 * point2.y) + point3.y) * t3)
+    ),
+  }, canvasSize);
+};
+
+const appendPixelPointIfDistinct = (
+  points: PixelPoint[],
+  point: PixelPoint
+) => {
+  const previousPoint = points[points.length - 1];
+  if (!previousPoint || getPixelPointDistance(previousPoint, point) >= 0.2) {
+    points.push(point);
+  }
+};
+
+const getPixelPointDistance = (
+  pointA: PixelPoint,
+  pointB: PixelPoint
+): number => Math.sqrt(
+  ((pointB.x - pointA.x) ** 2) + ((pointB.y - pointA.y) ** 2)
+);
+
+const clampPixelPoint = (
+  point: PixelPoint,
+  canvasSize: CanvasSize
+): PixelPoint => ({
+  x: clamp(point.x, 0, canvasSize.width),
+  y: clamp(point.y, 0, canvasSize.height),
+});
+
+const clamp = (value: number, min: number, max: number): number =>
+  Math.min(max, Math.max(min, value));
 
 const styles = StyleSheet.create({
   container: {
@@ -372,25 +492,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fafc',
   },
   canvas: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#fffefa',
     height: DEFAULT_CANVAS_SIZE.height,
     position: 'relative',
-  },
-  gridVertical: {
-    backgroundColor: '#eef2f6',
-    bottom: 0,
-    left: '50%',
-    position: 'absolute',
-    top: 0,
-    width: 1,
-  },
-  gridHorizontal: {
-    backgroundColor: '#eef2f6',
-    height: 1,
-    left: 0,
-    position: 'absolute',
-    right: 0,
-    top: '50%',
   },
   strokeDot: {
     backgroundColor: '#111827',
@@ -399,7 +503,7 @@ const styles = StyleSheet.create({
   },
   strokeSegment: {
     backgroundColor: '#111827',
-    borderRadius: 2,
+    borderRadius: BRUSH_STROKE_WIDTH / 2,
     position: 'absolute',
   },
 });

@@ -102,4 +102,27 @@ describe('KoreanFieldworkFreeDrawingPanel', () => {
 
     expect(handleUpdateStrokes).toHaveBeenCalledWith('{"version":1,"strokes":[]}');
   });
+
+  it('renders stored strokes with smoothed brush segments', () => {
+    const { getAllByTestId } = render(
+      <KoreanFieldworkFreeDrawingPanel
+        onUpdateStrokes={jest.fn()}
+        strokesValue={JSON.stringify({
+          version: 1,
+          strokes: [
+            {
+              points: [
+                { x: 1000, y: 1000 },
+                { x: 5000, y: 2000 },
+                { x: 9000, y: 9000 },
+              ],
+            },
+          ],
+        })}
+      />
+    );
+
+    expect(getAllByTestId('fieldworkFreeDrawingStrokeSegment').length)
+      .toBeGreaterThan(2);
+  });
 });
