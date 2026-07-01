@@ -34,6 +34,10 @@ import {
   getKoreanFieldworkUserVisibleTodaySummary,
 } from './korean-fieldwork-system-records';
 import { KOREAN_FIELDWORK_CATEGORIES } from './korean-fieldwork-categories';
+import {
+  KOREAN_FIELDWORK_MAP_VIEW_PARAM,
+  KOREAN_FIELDWORK_MAP_VIEWS,
+} from './korean-fieldwork-navigation';
 interface DocumentsMapProps {
   repository: DocumentRepository;
   syncStatus: SyncStatus;
@@ -85,11 +89,16 @@ const DocumentsMap: React.FC<DocumentsMapProps> = ({
     ),
     [todaySummary, userVisibleDocuments]
   );
+  const mapView = getStringParam(params?.[KOREAN_FIELDWORK_MAP_VIEW_PARAM]);
+  const isSiteOverviewMap =
+    mapView === KOREAN_FIELDWORK_MAP_VIEWS.SITE_OVERVIEW;
   const selectedDocumentIds = useMemo(
-    () => documents.map((doc) => doc.resource.id),
-    [documents]
+    () => isSiteOverviewMap ? [] : documents.map((doc) => doc.resource.id),
+    [documents, isSiteOverviewMap]
   );
-  const highlightedDocId = getStringParam(params?.highlightedDocId);
+  const highlightedDocId = isSiteOverviewMap
+    ? undefined
+    : getStringParam(params?.highlightedDocId);
 
   const onQrCodeScanned = useCallback(
     (data: string) => {
@@ -305,6 +314,7 @@ const DocumentsMap: React.FC<DocumentsMapProps> = ({
           documents={documents}
           selectedDocumentIds={selectedDocumentIds}
           highlightedDocId={highlightedDocId}
+          focusMode={isSiteOverviewMap ? 'siteOverview' : 'selectedDocuments'}
           addDocument={handleAddDocument}
           addDocumentOfCategory={handleAddDocumentOfCategory}
           editDocument={handleEditDocument}

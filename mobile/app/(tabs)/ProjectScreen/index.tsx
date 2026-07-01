@@ -75,6 +75,7 @@ import {
   getKoreanFieldworkRecordListEmptyState,
 } from '@/components/Project/korean-fieldwork-record-list-empty-state';
 import {
+  getKoreanFieldworkSiteOverviewMapRoute,
   getKoreanFieldworkReturnParam,
   KOREAN_FIELDWORK_FIELD_BOARD_RESET_PARAM,
   KOREAN_FIELDWORK_RETURN_TARGETS,
@@ -497,7 +498,7 @@ const DocumentsList: React.FC = () => {
       isActive = false;
     };
   }, [projectId]);
-  const openMap = () => router.navigate('/ProjectScreen/DocumentsMap');
+  const openMap = () => router.navigate(getKoreanFieldworkSiteOverviewMapRoute());
   const editDocumentById = (docId: string, categoryName: string) => {
     router.navigate({
       pathname: '/ProjectScreen/DocumentEdit',

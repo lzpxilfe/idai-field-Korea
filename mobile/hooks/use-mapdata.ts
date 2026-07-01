@@ -45,10 +45,17 @@ type mapDataReturn = [
   UpdatedDocument | undefined
 ];
 
+type MapFocusMode = 'selectedDocuments' | 'siteOverview';
+
+interface UseMapDataOptions {
+  focusMode?: MapFocusMode;
+}
+
 const useMapData = (
   repository: DocumentRepository,
   selectedDocumentIds: string[],
-  screen?: LayoutRectangle
+  screen?: LayoutRectangle,
+  options: UseMapDataOptions = {}
 ): mapDataReturn => {
   const [geoDocuments, setGeoDocuments] = useState<Document[]>([]);
   const [layerDocuments, setLayerDocuments] = useState<Document[]>([]);
@@ -59,17 +66,13 @@ const useMapData = (
   const [viewBox, setViewBox] = useState<Transformation>();
   const [updateDoc, setUpdateDoc] = useState<UpdatedDocument>();
 
-  const focusMapOnDocumentIds = useCallback(
-    async (docIds: string[]) => {
+  const focusMapOnGeometryBoundings = useCallback(
+    (bounds: GeometryBoundings | null) => {
       if (!documentToWorldMatrix) return;
+      if (!bounds) return;
 
       try {
-        const docs = await repository.getMultiple(docIds);
-        const geometryBoundings = getDocumentsGeometryBoundings(docs);
-
-        if (!geometryBoundings) return;
-
-        const { minX, minY, maxX, maxY } = geometryBoundings;
+        const { minX, minY, maxX, maxY } = bounds;
         const [left, bottom] = processTransform2d(documentToWorldMatrix, [
           minX,
           minY,
@@ -90,11 +93,25 @@ const useMapData = (
           )
         );
       } catch (error) {
+        console.warn('Unable to focus map on geometry bounds', error);
+      }
+    },
+    [documentToWorldMatrix]
+  );
+
+  const focusMapOnDocumentIds = useCallback(
+    async (docIds: string[]) => {
+      if (!docIds.length) return;
+
+      try {
+        const docs = await repository.getMultiple(docIds);
+        focusMapOnGeometryBoundings(getDocumentsGeometryBoundings(docs));
+      } catch (error) {
         console.warn('Unable to focus map on selected documents', error);
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [repository, documentToWorldMatrix]
+    [repository, focusMapOnGeometryBoundings]
   );
 
   const focusMapOnDocumentId = (docId: string) =>
@@ -234,8 +251,19 @@ const useMapData = (
   );
 
   useEffect(() => {
+    if (options.focusMode === 'siteOverview') {
+      focusMapOnGeometryBoundings(geometryBoundings);
+      return;
+    }
+
     focusMapOnDocumentIds(selectedDocumentIds);
-  }, [selectedDocumentIds, focusMapOnDocumentIds]);
+  }, [
+    selectedDocumentIds,
+    focusMapOnDocumentIds,
+    focusMapOnGeometryBoundings,
+    geometryBoundings,
+    options.focusMode,
+  ]);
 
   useEffect(() => {
     if (!screen) return;

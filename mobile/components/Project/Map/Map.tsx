@@ -101,6 +101,7 @@ interface MapProps {
   documents: Document[];
   selectedDocumentIds: string[];
   highlightedDocId?: string;
+  focusMode?: 'selectedDocuments' | 'siteOverview';
   addDocument: (parentDoc: Document) => void;
   addDocumentOfCategory: (
     parentDoc: Document,
@@ -136,7 +137,9 @@ const Map: React.FC<MapProps> = (props) => {
     viewBox,
     focusMapOnDocumentId,
     updateDoc,
-  ] = useMapData(props.repository, props.selectedDocumentIds, screen);
+  ] = useMapData(props.repository, props.selectedDocumentIds, screen, {
+    focusMode: props.focusMode ?? 'selectedDocuments',
+  });
 
   const setHighlightedDocFromId = useCallback(
     (docId: string) => props.repository.get(docId).then(setHighlightedDoc),

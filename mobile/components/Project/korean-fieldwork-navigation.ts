@@ -7,6 +7,11 @@ export const KOREAN_FIELDWORK_RETURN_TARGETS = {
 } as const;
 
 export const KOREAN_FIELDWORK_FIELD_BOARD_RESET_PARAM = 'fieldBoardReset';
+export const KOREAN_FIELDWORK_MAP_VIEW_PARAM = 'fieldworkMapView';
+
+export const KOREAN_FIELDWORK_MAP_VIEWS = {
+  SITE_OVERVIEW: 'siteOverview',
+} as const;
 
 export type KoreanFieldworkReturnTarget =
   typeof KOREAN_FIELDWORK_RETURN_TARGETS[keyof typeof KOREAN_FIELDWORK_RETURN_TARGETS];
@@ -41,6 +46,14 @@ export const getKoreanFieldworkFieldBoardOverviewRoute = (
 ) => ({
   pathname: '/ProjectScreen' as const,
   params: { [KOREAN_FIELDWORK_FIELD_BOARD_RESET_PARAM]: resetKey },
+});
+
+export const getKoreanFieldworkSiteOverviewMapRoute = () => ({
+  pathname: '/ProjectScreen/DocumentsMap' as const,
+  params: {
+    [KOREAN_FIELDWORK_MAP_VIEW_PARAM]:
+      KOREAN_FIELDWORK_MAP_VIEWS.SITE_OVERVIEW,
+  },
 });
 
 export const navigateToKoreanFieldworkReturnTarget = (

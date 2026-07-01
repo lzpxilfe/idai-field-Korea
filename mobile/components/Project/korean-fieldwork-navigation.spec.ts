@@ -3,7 +3,10 @@ import {
   getKoreanFieldworkFieldBoardOverviewRoute,
   getKoreanFieldworkReturnParam,
   getKoreanFieldworkReturnTarget,
+  getKoreanFieldworkSiteOverviewMapRoute,
   KOREAN_FIELDWORK_FIELD_BOARD_RESET_PARAM,
+  KOREAN_FIELDWORK_MAP_VIEW_PARAM,
+  KOREAN_FIELDWORK_MAP_VIEWS,
   KOREAN_FIELDWORK_RETURN_TARGETS,
   navigateToKoreanFieldworkReturnTarget,
 } from './korean-fieldwork-navigation';
@@ -43,6 +46,16 @@ describe('Korean fieldwork navigation helpers', () => {
     expect(getKoreanFieldworkFieldBoardOverviewRoute('reset-1')).toEqual({
       pathname: '/ProjectScreen',
       params: { [KOREAN_FIELDWORK_FIELD_BOARD_RESET_PARAM]: 'reset-1' },
+    });
+  });
+
+  it('builds a map route that requests the whole-site overview', () => {
+    expect(getKoreanFieldworkSiteOverviewMapRoute()).toEqual({
+      pathname: '/ProjectScreen/DocumentsMap',
+      params: {
+        [KOREAN_FIELDWORK_MAP_VIEW_PARAM]:
+          KOREAN_FIELDWORK_MAP_VIEWS.SITE_OVERVIEW,
+      },
     });
   });
 

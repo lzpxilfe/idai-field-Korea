@@ -250,6 +250,37 @@ describe('Map', () => {
     }));
     expect(editDocument).not.toHaveBeenCalled();
   });
+
+  it('asks map data to focus all geometry in site overview mode', () => {
+    const repository = createRepositoryMock();
+
+    render(
+      <ConfigurationContext.Provider value={createConfigurationMock() as any}>
+        <PreferencesContext.Provider value={createPreferencesMock() as any}>
+          <Map
+            repository={repository as any}
+            documents={[createDoc(C.OPERATION, 'operation-1')]}
+            selectedDocumentIds={['feature-1']}
+            focusMode="siteOverview"
+            addDocument={jest.fn()}
+            addDocumentOfCategory={jest.fn()}
+            editDocument={jest.fn()}
+            removeDocument={jest.fn()}
+            selectParent={jest.fn()}
+            readinessIssues={[]}
+            investigationModeId="excavation"
+          />
+        </PreferencesContext.Provider>
+      </ConfigurationContext.Provider>
+    );
+
+    expect(useMapData).toHaveBeenCalledWith(
+      repository,
+      ['feature-1'],
+      undefined,
+      { focusMode: 'siteOverview' }
+    );
+  });
 });
 
 const createRepositoryMock = (documents: Document[] = []) => ({

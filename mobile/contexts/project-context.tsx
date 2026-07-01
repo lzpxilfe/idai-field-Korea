@@ -116,9 +116,11 @@ export const ProjectContextProvider = ({ children }) => {
   });
 
   const onDocumentSelected = (doc: Document) => {
-    router.setParams({ highlightedDocId: doc.resource.id })
-    router.navigate('/ProjectScreen/DocumentsMap' );
-};
+    router.navigate({
+      pathname: '/ProjectScreen/DocumentsMap',
+      params: { highlightedDocId: doc.resource.id },
+    });
+  };
 
 // useEffect(() => {
 
@@ -132,12 +134,14 @@ export const ProjectContextProvider = ({ children }) => {
 // }, [documents]);
 
 
-const onParentSelected = (doc: Document) => {
-  setHierarchyBack(false);
-  pushToHierarchy(doc);
-  router.setParams({ highlightedDocId: doc.resource.id })
-  router.navigate('/ProjectScreen/DocumentsMap',  );
-};
+  const onParentSelected = (doc: Document) => {
+    setHierarchyBack(false);
+    pushToHierarchy(doc);
+    router.navigate({
+      pathname: '/ProjectScreen/DocumentsMap',
+      params: { highlightedDocId: doc.resource.id },
+    });
+  };
 
 
 
