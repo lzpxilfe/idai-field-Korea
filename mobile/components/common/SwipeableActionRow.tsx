@@ -42,6 +42,7 @@ const SwipeableActionRow: React.FC<SwipeableActionRowProps> = ({
   const visibleOffset = dragOffset > 0
     ? dragOffset
     : isOpen ? revealWidth : 0;
+  const areActionsVisible = visibleOffset > 0;
   const close = () => {
     setDragOffset(0);
     setIsOpen(false);
@@ -75,8 +76,15 @@ const SwipeableActionRow: React.FC<SwipeableActionRowProps> = ({
   return (
     <View style={styles.container} testID={testID}>
       <View
-        pointerEvents={isOpen ? 'auto' : 'box-none'}
-        style={[styles.actions, { width: revealWidth }]}
+        pointerEvents={areActionsVisible ? 'auto' : 'none'}
+        style={[
+          styles.actions,
+          {
+            opacity: areActionsVisible ? 1 : 0,
+            width: revealWidth,
+          },
+        ]}
+        testID={`${testID}_actions`}
       >
         {actions.map((action) => (
           <TouchableOpacity
