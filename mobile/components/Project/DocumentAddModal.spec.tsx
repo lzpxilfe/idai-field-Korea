@@ -311,8 +311,6 @@ describe('DocumentAddModal', () => {
     fireEvent.press(getByTestId('featureType_pit'));
 
     expect(onAddCategory).toHaveBeenCalledWith(C.FEATURE, parentDoc, {
-      featureGeometryRevisionNote:
-        '위치 스케치: 타원, 중심 75%, 50%, 크기 110%, 회전 15°',
       featureLocationSketch: JSON.stringify({
         version: 2,
         source: 'boundarySketch',
@@ -326,9 +324,11 @@ describe('DocumentAddModal', () => {
       }),
       featureType: 'pit',
       identifier: '1호 수혈',
-      shortDescription:
-        '위치 스케치: 타원, 중심 75%, 50%, 크기 110%, 회전 15°',
     });
+    expect(onAddCategory.mock.calls[0][2]).not.toHaveProperty(
+      'featureGeometryRevisionNote'
+    );
+    expect(onAddCategory.mock.calls[0][2]).not.toHaveProperty('shortDescription');
   });
 
   it('shows the project boundary and keeps committed polygon lines in a map-first tablet layout', async () => {
@@ -536,13 +536,16 @@ describe('DocumentAddModal', () => {
       parentDoc,
       expect.objectContaining({
         featureGeometry: expect.stringContaining('"Polygon"'),
-        featureGeometryRevisionNote: '위치 스케치: 점 연결 3점, 닫힘, 마지막 75%, 60%',
         featureType: 'pit',
         geometryConfidence: 'rough',
         geometrySource: 'drawnOnBoundarySketch',
         identifier: '1호 유구',
       })
     );
+    expect(onAddCategory.mock.calls[0][2]).not.toHaveProperty(
+      'featureGeometryRevisionNote'
+    );
+    expect(onAddCategory.mock.calls[0][2]).not.toHaveProperty('shortDescription');
   });
 
   it('inserts a polygon point on an existing segment before closing the sketch', () => {
@@ -609,11 +612,13 @@ describe('DocumentAddModal', () => {
       parentDoc,
       expect.objectContaining({
         featureGeometry: expect.stringContaining('"Polygon"'),
-        featureGeometryRevisionNote:
-          '위치 스케치: 점 연결 4점, 닫힘, 마지막 75%, 60%',
         geometrySource: 'drawnOnBoundarySketch',
       })
     );
+    expect(onAddCategory.mock.calls[0][2]).not.toHaveProperty(
+      'featureGeometryRevisionNote'
+    );
+    expect(onAddCategory.mock.calls[0][2]).not.toHaveProperty('shortDescription');
   });
 
   it('resizes and rotates a shape with a two-finger gesture', () => {
@@ -679,11 +684,13 @@ describe('DocumentAddModal', () => {
       parentDoc,
       expect.objectContaining({
         featureGeometry: expect.stringContaining('"Polygon"'),
-        featureGeometryRevisionNote:
-          '위치 스케치: 사각형, 중심 50%, 50%, 크기 240%, 회전 -5°',
         geometrySource: 'drawnOnBoundarySketch',
       })
     );
+    expect(onAddCategory.mock.calls[0][2]).not.toHaveProperty(
+      'featureGeometryRevisionNote'
+    );
+    expect(onAddCategory.mock.calls[0][2]).not.toHaveProperty('shortDescription');
   });
 
   it('allows rectangle and oval sketches to become very small', () => {
@@ -726,11 +733,13 @@ describe('DocumentAddModal', () => {
       C.FEATURE,
       parentDoc,
       expect.objectContaining({
-        featureGeometryRevisionNote:
-          '위치 스케치: 사각형, 중심 50%, 50%, 크기 8%, 회전 0°',
         featureLocationSketch: expect.stringContaining('"scale":8'),
       })
     );
+    expect(onAddCategory.mock.calls[0][2]).not.toHaveProperty(
+      'featureGeometryRevisionNote'
+    );
+    expect(onAddCategory.mock.calls[0][2]).not.toHaveProperty('shortDescription');
   });
 
   it('closes when the backdrop is pressed', () => {

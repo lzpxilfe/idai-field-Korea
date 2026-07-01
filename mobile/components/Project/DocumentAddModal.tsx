@@ -1563,7 +1563,6 @@ const getFeatureLocationSketchDraftParams = ({
     scale,
     projectBoundaryPointCount: boundaryDraft?.coordinates.length ?? 0,
   };
-  const note = getFeatureLocationSketchNote(payload);
   const geometryPoints = getFeatureSketchGeometryPoints({
     center,
     isPolygonClosed,
@@ -1578,9 +1577,7 @@ const getFeatureLocationSketchDraftParams = ({
       : [];
 
   const draftParams: Record<string, string> = {
-    featureGeometryRevisionNote: note,
     featureLocationSketch: JSON.stringify(payload),
-    shortDescription: note,
   };
 
   if (geometryLocations.length >= 3) {
@@ -1590,49 +1587,6 @@ const getFeatureLocationSketchDraftParams = ({
   }
 
   return draftParams;
-};
-
-const getFeatureLocationSketchNote = ({
-  center,
-  isClosed,
-  points,
-  rotation,
-  scale,
-  shape,
-}: {
-  center: FeatureSketchPoint;
-  isClosed?: boolean;
-  points: FeatureSketchPoint[];
-  rotation: number;
-  scale: number;
-  shape: FeatureLocationSketchShape;
-}): string => {
-  if (shape === 'polygon') {
-    const closedLabel = isClosed ? ', 닫힘' : ', 열림';
-
-    return `위치 스케치: 점 연결 ${points.length}점${closedLabel}, 마지막 ${formatSketchPoint(
-      points[points.length - 1] ?? center
-    )}`;
-  }
-
-  return `위치 스케치: ${getFeatureLocationSketchShapeLabel(shape)}, 중심 ${formatSketchPoint(
-    center
-  )}, 크기 ${scale}%, 회전 ${rotation}°`;
-};
-
-const getFeatureLocationSketchShapeLabel = (
-  shape: FeatureLocationSketchShape
-): string => {
-  switch (shape) {
-    case 'oval':
-      return '타원';
-    case 'polygon':
-      return '점 연결';
-    case 'rectangle':
-      return '사각형';
-    default:
-      return '점';
-  }
 };
 
 const getFeatureSketchGeometryPoints = ({
@@ -2566,16 +2520,8 @@ const roundSketchPoint = (point: FeatureSketchPoint): FeatureSketchPoint => ({
   y: roundSketchCoordinate(point.y),
 });
 
-const formatSketchPoint = (point: FeatureSketchPoint): string =>
-  `${formatSketchCoordinate(point.x)}%, ${formatSketchCoordinate(point.y)}%`;
-
 const roundSketchCoordinate = (value: number): number =>
   Math.round(value * 10) / 10;
-
-const formatSketchCoordinate = (value: number): string =>
-  Number.isInteger(roundSketchCoordinate(value))
-    ? String(roundSketchCoordinate(value))
-    : roundSketchCoordinate(value).toFixed(1);
 
 const clamp = (value: number, min: number, max: number): number =>
   Math.min(max, Math.max(min, value));
