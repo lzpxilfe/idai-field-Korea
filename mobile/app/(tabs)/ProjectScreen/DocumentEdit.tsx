@@ -20,6 +20,8 @@ import FieldworkPhotoAnnotationPanel, {
 } from '@/components/Project/FieldworkPhotoAnnotationPanel';
 import KoreanFieldworkFeatureSketchReferencePanel
   from '@/components/Project/KoreanFieldworkFeatureSketchReferencePanel';
+import KoreanFieldworkFeaturePitLinePanel
+  from '@/components/Project/KoreanFieldworkFeaturePitLinePanel';
 import KoreanFieldworkFreeDrawingPanel, {
   KOREAN_FIELDWORK_FREE_DRAWING_FIELDS,
 } from '@/components/Project/KoreanFieldworkFreeDrawingPanel';
@@ -207,6 +209,15 @@ const DocumentEdit: React.FC = () => {
             <KoreanFieldworkFeatureSketchReferencePanel
               document={effectiveDocument}
               documents={documents ?? []}
+            />
+          )}
+          {isFeatureRecord && (
+            <KoreanFieldworkFeaturePitLinePanel
+              allowedAddCategoryNames={allowedAddCategoryNames}
+              document={effectiveDocument}
+              documents={documents ?? []}
+              onAddSoilProfilePhoto={addRelatedDocument}
+              onUpdateResourceFields={applyResourceUpdates}
             />
           )}
           <KoreanFieldworkRecordContextPanel
