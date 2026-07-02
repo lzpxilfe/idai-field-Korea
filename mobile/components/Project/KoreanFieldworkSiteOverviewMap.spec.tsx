@@ -1,6 +1,7 @@
 import { fireEvent, render } from '@testing-library/react-native';
 import { Document } from 'idai-field-core';
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import KoreanFieldworkSiteOverviewMap from './KoreanFieldworkSiteOverviewMap';
 import { KOREAN_FIELDWORK_CATEGORIES } from './korean-fieldwork-categories';
 
@@ -85,7 +86,61 @@ describe('KoreanFieldworkSiteOverviewMap', () => {
     expect(getAllByTestId('siteOverviewFeatureShape_feature-1')).toHaveLength(3);
     expect(getByText('2호 유구')).toBeTruthy();
   });
+
+  it('zooms the overview map with a two-finger pinch gesture', () => {
+    const boundary = createDocument(C.SURVEY_BOUNDARY, 'boundary-1', {
+      geometry: {
+        type: 'LineString',
+        coordinates: [
+          [126.1, 36.1],
+          [126.3, 36.1],
+          [126.3, 36.3],
+          [126.1, 36.3],
+          [126.1, 36.1],
+        ],
+      },
+    });
+
+    const { getByTestId } = render(
+      <KoreanFieldworkSiteOverviewMap documents={[boundary]} />
+    );
+    const canvas = getByTestId('siteOverviewCanvas');
+
+    fireEvent(canvas, 'responderGrant', {
+      nativeEvent: {
+        touches: [
+          { locationX: 220, locationY: 220 },
+          { locationX: 320, locationY: 220 },
+        ],
+      },
+    });
+    fireEvent(canvas, 'responderMove', {
+      nativeEvent: {
+        touches: [
+          { locationX: 170, locationY: 220 },
+          { locationX: 370, locationY: 220 },
+        ],
+      },
+    });
+
+    expect(getScaleFromStyle(getByTestId('siteOverviewMapContent').props.style))
+      .toBeGreaterThan(1);
+
+    fireEvent.press(getByTestId('siteOverviewZoomReset'));
+
+    expect(getScaleFromStyle(getByTestId('siteOverviewMapContent').props.style))
+      .toBe(1);
+  });
 });
+
+const getScaleFromStyle = (style: unknown): number => {
+  const flattened = StyleSheet.flatten(style) as {
+    transform?: { scale?: number }[];
+  };
+
+  return flattened.transform?.find((entry) =>
+    typeof entry.scale === 'number')?.scale ?? 1;
+};
 
 const createDocument = (
   category: string,

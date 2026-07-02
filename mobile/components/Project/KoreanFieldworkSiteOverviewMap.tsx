@@ -1,8 +1,9 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { Document } from 'idai-field-core';
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import type { DimensionValue, ViewStyle } from 'react-native';
 import {
+  GestureResponderEvent,
   LayoutChangeEvent,
   StyleSheet,
   Text,
@@ -35,6 +36,23 @@ interface PixelPoint {
 interface CanvasSize {
   height: number;
   width: number;
+}
+
+interface SiteOverviewViewport {
+  offsetX: number;
+  offsetY: number;
+  scale: number;
+}
+
+interface SiteOverviewPinchGesture {
+  center: PixelPoint;
+  distance: number;
+  viewport: SiteOverviewViewport;
+}
+
+interface SiteOverviewPanGesture {
+  start: PixelPoint;
+  viewport: SiteOverviewViewport;
 }
 
 interface FeatureLocationSketch {
@@ -71,6 +89,13 @@ const FEATURE_SHAPE_MAX_SCALE = 240;
 const FEATURE_MIN_SIZE = 8;
 const FEATURE_LABEL_WIDTH = 118;
 const FEATURE_LABEL_HEIGHT = 38;
+const SITE_OVERVIEW_MIN_SCALE = 1;
+const SITE_OVERVIEW_MAX_SCALE = 5;
+const SITE_OVERVIEW_DEFAULT_VIEWPORT: SiteOverviewViewport = {
+  offsetX: 0,
+  offsetY: 0,
+  scale: 1,
+};
 const VALID_FEATURE_SHAPES = new Set<FeatureLocationSketchShape>([
   'point',
   'polygon',
@@ -84,6 +109,9 @@ const KoreanFieldworkSiteOverviewMap: React.FC<Props> = ({
   onOpenFeature,
 }) => {
   const [canvasSize, setCanvasSize] = useState(CANVAS_DEFAULT_SIZE);
+  const [viewport, setViewport] = useState(SITE_OVERVIEW_DEFAULT_VIEWPORT);
+  const pinchGestureRef = useRef<SiteOverviewPinchGesture>();
+  const panGestureRef = useRef<SiteOverviewPanGesture>();
   const boundaryPoints = useMemo(
     () => getSurveyBoundaryPoints(documents, boundaryDraft),
     [boundaryDraft, documents]
@@ -92,10 +120,101 @@ const KoreanFieldworkSiteOverviewMap: React.FC<Props> = ({
     () => getSiteOverviewFeatures(documents),
     [documents]
   );
+  const normalizedViewport = useMemo(
+    () => normalizeSiteOverviewViewport(viewport, canvasSize),
+    [canvasSize, viewport]
+  );
 
   const handleCanvasLayout = (event: LayoutChangeEvent) => {
     const { height, width } = event.nativeEvent.layout;
     if (height > 0 && width > 0) setCanvasSize({ height, width });
+  };
+  const startViewportGesture = (event: GestureResponderEvent) => {
+    const pinchGesture = getSiteOverviewTouchGesture(event);
+    if (pinchGesture) {
+      pinchGestureRef.current = {
+        center: pinchGesture.center,
+        distance: Math.max(1, pinchGesture.distance),
+        viewport: normalizedViewport,
+      };
+      panGestureRef.current = undefined;
+      return;
+    }
+
+    const point = getPrimaryTouchPoint(event);
+    if (point && normalizedViewport.scale > SITE_OVERVIEW_MIN_SCALE) {
+      panGestureRef.current = {
+        start: point,
+        viewport: normalizedViewport,
+      };
+    }
+  };
+  const moveViewportGesture = (event: GestureResponderEvent) => {
+    const pinchGesture = getSiteOverviewTouchGesture(event);
+    if (pinchGesture) {
+      const initialGesture = pinchGestureRef.current ?? {
+        center: pinchGesture.center,
+        distance: Math.max(1, pinchGesture.distance),
+        viewport: normalizedViewport,
+      };
+      pinchGestureRef.current = initialGesture;
+      panGestureRef.current = undefined;
+      const nextScale = clamp(
+        initialGesture.viewport.scale
+          * (pinchGesture.distance / Math.max(1, initialGesture.distance)),
+        SITE_OVERVIEW_MIN_SCALE,
+        SITE_OVERVIEW_MAX_SCALE
+      );
+      const scaleRatio = nextScale / initialGesture.viewport.scale;
+      const canvasCenter = {
+        x: canvasSize.width / 2,
+        y: canvasSize.height / 2,
+      };
+
+      setViewport(normalizeSiteOverviewViewport({
+        offsetX: pinchGesture.center.x - canvasCenter.x
+          - (scaleRatio * (
+            initialGesture.center.x
+            - canvasCenter.x
+            - initialGesture.viewport.offsetX
+          )),
+        offsetY: pinchGesture.center.y - canvasCenter.y
+          - (scaleRatio * (
+            initialGesture.center.y
+            - canvasCenter.y
+            - initialGesture.viewport.offsetY
+          )),
+        scale: nextScale,
+      }, canvasSize));
+      return;
+    }
+
+    if (normalizedViewport.scale <= SITE_OVERVIEW_MIN_SCALE) return;
+
+    const point = getPrimaryTouchPoint(event);
+    if (!point) return;
+
+    const panGesture = panGestureRef.current ?? {
+      start: point,
+      viewport: normalizedViewport,
+    };
+    panGestureRef.current = panGesture;
+    setViewport(normalizeSiteOverviewViewport({
+      offsetX: panGesture.viewport.offsetX + point.x - panGesture.start.x,
+      offsetY: panGesture.viewport.offsetY + point.y - panGesture.start.y,
+      scale: panGesture.viewport.scale,
+    }, canvasSize));
+  };
+  const finishViewportGesture = () => {
+    pinchGestureRef.current = undefined;
+    panGestureRef.current = undefined;
+    setViewport((currentViewport) =>
+      normalizeSiteOverviewViewport(currentViewport, canvasSize));
+  };
+  const resetViewport = () => {
+    pinchGestureRef.current = undefined;
+    panGestureRef.current = undefined;
+    setViewport(SITE_OVERVIEW_DEFAULT_VIEWPORT);
   };
 
   return (
@@ -112,48 +231,82 @@ const KoreanFieldworkSiteOverviewMap: React.FC<Props> = ({
       <View style={styles.mapWrap}>
         <View
           onLayout={handleCanvasLayout}
+          onMoveShouldSetResponder={(event) =>
+            !event || shouldHandleViewportGesture(event, normalizedViewport)}
+          onMoveShouldSetResponderCapture={(event) =>
+            !event || shouldHandleViewportGesture(event, normalizedViewport)}
+          onResponderGrant={startViewportGesture}
+          onResponderMove={moveViewportGesture}
+          onResponderRelease={finishViewportGesture}
+          onResponderTerminate={finishViewportGesture}
+          onResponderTerminationRequest={() => false}
+          onStartShouldSetResponder={(event) => !event || getTouchCount(event) >= 2}
+          onStartShouldSetResponderCapture={(event) =>
+            !event || getTouchCount(event) >= 2}
           style={styles.canvas}
           testID="siteOverviewCanvas"
         >
           <View style={styles.northBand}>
             <Text style={styles.northText}>N</Text>
           </View>
-          <View style={styles.gridVertical} />
-          <View style={styles.gridHorizontal} />
-          {boundaryPoints.length >= 3 ? (
-            <>
-              {toLineSegments({
-                canvasSize,
-                closePath: true,
-                color: '#175cd3',
-                keyPrefix: 'site-boundary',
-                points: boundaryPoints,
-                testID: 'siteOverviewBoundaryLine',
-                width: 3,
-              })}
-              {boundaryPoints.map((point, index) => (
-                <View
-                  key={`site-boundary-point-${index}`}
-                  pointerEvents="none"
-                  style={[styles.boundaryPoint, getPointPercentStyle(point)]}
-                  testID={`siteOverviewBoundaryPoint_${index}`}
-                />
-              ))}
-            </>
-          ) : (
-            <EmptyOverlay text="조사 경계 없음" />
-          )}
-          {features.map((feature, index) => (
-            <FeatureOverlay
-              canvasSize={canvasSize}
-              feature={feature}
-              index={index}
-              key={feature.document.resource.id}
-              onOpenFeature={onOpenFeature}
-            />
-          ))}
-          {features.length === 0 && boundaryPoints.length >= 3 && (
-            <EmptyOverlay text="추가된 유구 없음" />
+          <View
+            pointerEvents="box-none"
+            style={[
+              styles.mapContent,
+              getViewportTransformStyle(normalizedViewport),
+            ]}
+            testID="siteOverviewMapContent"
+          >
+            <View style={styles.gridVertical} />
+            <View style={styles.gridHorizontal} />
+            {boundaryPoints.length >= 3 ? (
+              <>
+                {toLineSegments({
+                  canvasSize,
+                  closePath: true,
+                  color: '#175cd3',
+                  keyPrefix: 'site-boundary',
+                  points: boundaryPoints,
+                  testID: 'siteOverviewBoundaryLine',
+                  width: 3,
+                })}
+                {boundaryPoints.map((point, index) => (
+                  <View
+                    key={`site-boundary-point-${index}`}
+                    pointerEvents="none"
+                    style={[styles.boundaryPoint, getPointPercentStyle(point)]}
+                    testID={`siteOverviewBoundaryPoint_${index}`}
+                  />
+                ))}
+              </>
+            ) : (
+              <EmptyOverlay text="조사 경계 없음" />
+            )}
+            {features.map((feature, index) => (
+              <FeatureOverlay
+                canvasSize={canvasSize}
+                feature={feature}
+                index={index}
+                key={feature.document.resource.id}
+                onOpenFeature={onOpenFeature}
+              />
+            ))}
+            {features.length === 0 && boundaryPoints.length >= 3 && (
+              <EmptyOverlay text="추가된 유구 없음" />
+            )}
+          </View>
+          {normalizedViewport.scale > SITE_OVERVIEW_MIN_SCALE && (
+            <TouchableOpacity
+              activeOpacity={0.86}
+              onPress={resetViewport}
+              style={styles.zoomResetButton}
+              testID="siteOverviewZoomReset"
+            >
+              <MaterialIcons name="zoom-out-map" size={16} color="#175cd3" />
+              <Text style={styles.zoomResetText}>
+                {`${Math.round(normalizedViewport.scale * 100)}%`}
+              </Text>
+            </TouchableOpacity>
           )}
         </View>
       </View>
@@ -256,6 +409,125 @@ const EmptyOverlay: React.FC<{ text: string }> = ({ text }) => (
     <Text style={styles.emptyText}>{text}</Text>
   </View>
 );
+
+const shouldHandleViewportGesture = (
+  event: GestureResponderEvent,
+  viewport: SiteOverviewViewport
+): boolean =>
+  getTouchCount(event) >= 2 || viewport.scale > SITE_OVERVIEW_MIN_SCALE;
+
+const getViewportTransformStyle = (
+  viewport: SiteOverviewViewport
+): ViewStyle => ({
+  transform: [
+    { translateX: viewport.offsetX },
+    { translateY: viewport.offsetY },
+    { scale: viewport.scale },
+  ],
+});
+
+const normalizeSiteOverviewViewport = (
+  viewport: SiteOverviewViewport,
+  canvasSize: CanvasSize
+): SiteOverviewViewport => {
+  const scale = clamp(
+    viewport.scale,
+    SITE_OVERVIEW_MIN_SCALE,
+    SITE_OVERVIEW_MAX_SCALE
+  );
+  if (scale <= SITE_OVERVIEW_MIN_SCALE) return SITE_OVERVIEW_DEFAULT_VIEWPORT;
+
+  const maxOffsetX = (canvasSize.width * (scale - 1)) / 2;
+  const maxOffsetY = (canvasSize.height * (scale - 1)) / 2;
+
+  return {
+    offsetX: clamp(viewport.offsetX, -maxOffsetX, maxOffsetX),
+    offsetY: clamp(viewport.offsetY, -maxOffsetY, maxOffsetY),
+    scale,
+  };
+};
+
+const getSiteOverviewTouchGesture = (
+  event: GestureResponderEvent | undefined
+): {
+  center: PixelPoint;
+  distance: number;
+} | undefined => {
+  const touches = getNativeTouches(event);
+  if (touches.length < 2) return undefined;
+
+  const first = touches[0];
+  const second = touches[1];
+
+  return {
+    center: {
+      x: (first.x + second.x) / 2,
+      y: (first.y + second.y) / 2,
+    },
+    distance: Math.sqrt(
+      ((second.x - first.x) ** 2) + ((second.y - first.y) ** 2)
+    ),
+  };
+};
+
+const getPrimaryTouchPoint = (
+  event: GestureResponderEvent | undefined
+): PixelPoint | undefined =>
+  getNativeTouches(event)[0];
+
+const getTouchCount = (event: GestureResponderEvent | undefined): number =>
+  getNativeTouches(event).length;
+
+const getNativeTouches = (
+  event: GestureResponderEvent | undefined
+): PixelPoint[] => {
+  if (!event) return [];
+
+  const nativeEvent = event.nativeEvent as unknown as {
+    changedTouches?: TouchPointCandidate[];
+    locationX?: number;
+    locationY?: number;
+    touches?: TouchPointCandidate[];
+  };
+  const touches = (nativeEvent.touches?.length
+    ? nativeEvent.touches
+    : nativeEvent.changedTouches) ?? [];
+  const normalizedTouches = touches
+    .map(normalizeTouchPoint)
+    .filter((point): point is PixelPoint => !!point);
+
+  if (normalizedTouches.length > 0) return normalizedTouches;
+
+  if (
+    Number.isFinite(nativeEvent.locationX)
+    && Number.isFinite(nativeEvent.locationY)
+  ) {
+    return [{
+      x: nativeEvent.locationX as number,
+      y: nativeEvent.locationY as number,
+    }];
+  }
+
+  return [];
+};
+
+interface TouchPointCandidate {
+  locationX?: number;
+  locationY?: number;
+  x?: number;
+  y?: number;
+}
+
+const normalizeTouchPoint = (
+  touch: TouchPointCandidate
+): PixelPoint | undefined => {
+  const x = touch.locationX ?? touch.x;
+  const y = touch.locationY ?? touch.y;
+
+  return Number.isFinite(x) && Number.isFinite(y)
+    ? { x: x as number, y: y as number }
+    : undefined;
+};
 
 const getSiteOverviewFeatures = (
   documents: readonly Document[]
@@ -618,6 +890,13 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     position: 'relative',
   },
+  mapContent: {
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
   northBand: {
     alignItems: 'center',
     backgroundColor: '#eef4ff',
@@ -629,6 +908,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 0,
     top: 0,
+    zIndex: 30,
   },
   northText: {
     color: '#175cd3',
@@ -754,6 +1034,26 @@ const styles = StyleSheet.create({
     color: '#98a2b3',
     fontSize: 16,
     fontWeight: '900',
+  },
+  zoomResetButton: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.94)',
+    borderColor: '#b2ddff',
+    borderRadius: 6,
+    borderWidth: 1,
+    bottom: 10,
+    flexDirection: 'row',
+    minHeight: 34,
+    paddingHorizontal: 9,
+    position: 'absolute',
+    right: 10,
+    zIndex: 40,
+  },
+  zoomResetText: {
+    color: '#175cd3',
+    fontSize: 12,
+    fontWeight: '900',
+    marginLeft: 4,
   },
 });
 
