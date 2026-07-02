@@ -69,9 +69,9 @@ const TEXT = {
   brush: '\ud39c',
 };
 const MAX_COORDINATE = 10000;
-const FULLSCREEN_DRAWING_MIN_POINT_DISTANCE = 55;
+const FULLSCREEN_DRAWING_MIN_POINT_DISTANCE = 32;
 const FULLSCREEN_DRAWING_RELEASE_POINT_MIN_DISTANCE = 1;
-const FULLSCREEN_DRAWING_INTERPOLATED_POINT_SPACING = 140;
+const FULLSCREEN_DRAWING_INTERPOLATED_POINT_SPACING = 80;
 const FULLSCREEN_DRAWING_MAX_INTERPOLATED_POINTS_PER_MOVE = 18;
 const WEBVIEW_BASE_URL = 'https://idai-field.local/fullscreen-drawing/';
 
@@ -519,12 +519,17 @@ function toScreenPoint(point){
   };
 }
 function screenToNormalized(point){
+  if(!point||!Number.isFinite(point.x)||!Number.isFinite(point.y)) return undefined;
   const size=getCssSize();
   const frame=getBaseDrawingFrame();
+  if(!Number.isFinite(size.width)||!Number.isFinite(size.height)||!Number.isFinite(frame.width)||!Number.isFinite(frame.height)||frame.width<=0||frame.height<=0){
+    return undefined;
+  }
   const base={
     x:((point.x-viewport.offsetX-(size.width/2))/viewport.scale)+(size.width/2),
     y:((point.y-viewport.offsetY-(size.height/2))/viewport.scale)+(size.height/2)
   };
+  if(!Number.isFinite(base.x)||!Number.isFinite(base.y)) return undefined;
   if(base.x<frame.left||base.x>frame.left+frame.width||base.y<frame.top||base.y>frame.top+frame.height){
     return undefined;
   }
@@ -535,16 +540,19 @@ function screenToNormalized(point){
 }
 function getEventPoint(event){
   const source=event.touches&&event.touches.length?event.touches[0]:event.changedTouches&&event.changedTouches.length?event.changedTouches[0]:event;
+  if(!source||!Number.isFinite(source.clientX)||!Number.isFinite(source.clientY)) return undefined;
   const rect=canvas.getBoundingClientRect();
   return {x:source.clientX-rect.left,y:source.clientY-rect.top};
 }
 function getTouchPoint(touch){
+  if(!touch||!Number.isFinite(touch.clientX)||!Number.isFinite(touch.clientY)) return undefined;
   const rect=canvas.getBoundingClientRect();
   return {x:touch.clientX-rect.left,y:touch.clientY-rect.top};
 }
 function startGesture(event){
   const first=getTouchPoint(event.touches[0]);
   const second=getTouchPoint(event.touches[1]);
+  if(!first||!second) return;
   gesture={
     center:getMidpoint(first,second),
     distance:getPixelDistance(first,second),
@@ -561,6 +569,7 @@ function updateGesture(event){
   if(!gesture||!event.touches||event.touches.length<2) return;
   const first=getTouchPoint(event.touches[0]);
   const second=getTouchPoint(event.touches[1]);
+  if(!first||!second) return;
   const center=getMidpoint(first,second);
   const nextScale=clamp(
     gesture.scale*(getPixelDistance(first,second)/Math.max(gesture.distance,1)),
