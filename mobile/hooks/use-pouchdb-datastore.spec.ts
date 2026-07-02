@@ -123,6 +123,7 @@ jest.mock('@/components/Project/Map/korean-fieldwork-drafts', () => ({
   REFERENCE_BASEMAP_PROVIDER_KAKAO_HYBRID: 'kakaoHybrid',
   REFERENCE_BASEMAP_PROVIDER_KAKAO_ROADMAP: 'kakaoRoadmap',
   REFERENCE_BASEMAP_PROVIDER_KAKAO_SKYVIEW: 'kakaoSkyview',
+  REFERENCE_BASEMAP_PROVIDER_PLAIN_CANVAS: 'plainCanvas',
   SURVEY_BOUNDARY_ACCURACY_DEFAULT: 'defaultAccuracy',
   SURVEY_BOUNDARY_SOURCE_DEFAULT: 'defaultSource',
 }));

@@ -4160,6 +4160,7 @@
       "kakaoRoadmap": { "label": "카카오 일반지도" },
       "kakaoSkyview": { "label": "카카오 위성지도" },
       "kakaoHybrid": { "label": "카카오 하이브리드" },
+      "plainCanvas": { "label": "흰 도면 바탕" },
       "customWmts": { "label": "사용자 WMTS/TMS" },
       "importedRasterLayer": { "label": "가져온 래스터 레이어" },
       "importedVectorLayer": { "label": "가져온 벡터 레이어" }

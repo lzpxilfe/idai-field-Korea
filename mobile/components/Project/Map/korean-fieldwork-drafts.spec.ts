@@ -15,6 +15,7 @@ import {
   projectWgs84BoundaryToSurveyBoundaryGeometry,
   REFERENCE_BASEMAP_PROVIDER_DEFAULT,
   REFERENCE_BASEMAP_PROVIDER_KAKAO_HYBRID,
+  REFERENCE_BASEMAP_PROVIDER_PLAIN_CANVAS,
   SOIL_PROFILE_PHOTO_QUALITY_DEFAULT,
   SOIL_PROFILE_PHOTO_SIZE_HINT_KB_DEFAULT,
   SURVEY_BOUNDARY_ACCURACY_APPROXIMATE_GPS,
@@ -285,8 +286,9 @@ describe('Korean fieldwork map drafts', () => {
     expect(draft.resource.geometry).toBeUndefined();
   });
 
-  it('names the Kakao satellite provider value used by map boundary drafts', () => {
+  it('names the basemap provider values used by map boundary drafts', () => {
     expect(REFERENCE_BASEMAP_PROVIDER_KAKAO_HYBRID).toBe('kakaoHybrid');
+    expect(REFERENCE_BASEMAP_PROVIDER_PLAIN_CANVAS).toBe('plainCanvas');
   });
 
   it('copies the project boundary summary into SurveyBoundary drafts', () => {

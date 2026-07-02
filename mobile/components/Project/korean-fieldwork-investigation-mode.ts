@@ -24,7 +24,8 @@ export interface KoreanFieldworkProjectSetupDefaults {
 export type KoreanFieldworkBoundaryMapTypeId =
   'ROADMAP'
   | 'SKYVIEW'
-  | 'HYBRID';
+  | 'HYBRID'
+  | 'BLANK';
 
 export interface KoreanFieldworkBoundaryLocation {
   latitude: number;
@@ -391,4 +392,4 @@ const isKoreanFieldworkBoundaryLocation = (
 const isKoreanFieldworkBoundaryMapTypeId = (
   value: unknown
 ): value is KoreanFieldworkBoundaryMapTypeId =>
-  value === 'ROADMAP' || value === 'SKYVIEW' || value === 'HYBRID';
+  value === 'ROADMAP' || value === 'SKYVIEW' || value === 'HYBRID' || value === 'BLANK';

@@ -14,7 +14,7 @@ interface OpenBoundaryPickerHtmlOptions {
   mapTypeId?: KakaoMapTypeId;
 }
 
-export type KakaoMapTypeId = 'ROADMAP' | 'SKYVIEW' | 'HYBRID';
+export type KakaoMapTypeId = 'ROADMAP' | 'SKYVIEW' | 'HYBRID' | 'BLANK';
 export type BoundaryDrawingMode = 'surveyBoundary' | 'featureBoundary';
 
 interface BoundaryPickerHtmlCopy {
@@ -102,6 +102,9 @@ export const buildKakaoSatellitePickerHtml = ({
       margin: 0;
       padding: 0;
       width: 100%;
+    }
+    body.blank-map #map {
+      background: #ffffff;
     }
     .banner {
       background: rgba(21, 31, 38, 0.88);
@@ -234,6 +237,7 @@ export const buildKakaoSatellitePickerHtml = ({
     <button id="mapTypeRoadmap" class="map-type" data-map-type="ROADMAP" type="button">일반</button>
     <button id="mapTypeSkyview" class="map-type" data-map-type="SKYVIEW" type="button">위성</button>
     <button id="mapTypeHybrid" class="map-type" data-map-type="HYBRID" type="button">하이브리드</button>
+    <button id="mapTypeBlank" class="map-type" data-map-type="BLANK" type="button">도면</button>
   </div>
   <div id="banner" class="banner"></div>
   <div class="toolbar">
@@ -302,7 +306,7 @@ export const buildKakaoSatellitePickerHtml = ({
           SKYVIEW: kakao.maps.MapTypeId.SKYVIEW,
           HYBRID: kakao.maps.MapTypeId.HYBRID
         };
-        map.setMapTypeId(kakaoMapTypeIds[currentMapType]);
+        map.setMapTypeId(kakaoMapTypeIds[currentMapType] || kakaoMapTypeIds.ROADMAP);
 
         var points = [];
         var markers = [];
@@ -350,6 +354,8 @@ export const buildKakaoSatellitePickerHtml = ({
         kakao.maps.event.addListener(map, 'click', function(mouseEvent) {
           addPoint(mouseEvent.latLng);
         });
+        kakao.maps.event.addListener(map, 'tilesloaded', syncBlankMapTiles);
+        kakao.maps.event.addListener(map, 'idle', syncBlankMapTiles);
 
         undoEl.addEventListener('click', undoPoint);
         resetEl.addEventListener('click', resetPoints);
@@ -363,15 +369,32 @@ export const buildKakaoSatellitePickerHtml = ({
         });
 
         function setMapType(nextMapType) {
-          if (!kakaoMapTypeIds[nextMapType]) return;
+          var isBlankMap = nextMapType === 'BLANK';
+          if (!isBlankMap && !kakaoMapTypeIds[nextMapType]) return;
           currentMapType = nextMapType;
-          map.setMapTypeId(kakaoMapTypeIds[currentMapType]);
+          document.body.className = isBlankMap ? 'blank-map' : '';
+          map.setMapTypeId(isBlankMap ? kakaoMapTypeIds.ROADMAP : kakaoMapTypeIds[currentMapType]);
+          syncBlankMapTiles();
           mapTypeButtons.forEach(function(button) {
             button.className = button.getAttribute('data-map-type') === currentMapType
               ? 'map-type active'
               : 'map-type';
           });
           post('mapType', { mapTypeId: currentMapType });
+        }
+
+        function syncBlankMapTiles() {
+          var isBlankMap = currentMapType === 'BLANK';
+          Array.prototype.slice.call(document.querySelectorAll('#map img')).forEach(function(image) {
+            var width = Number(image.width || image.naturalWidth || 0);
+            var height = Number(image.height || image.naturalHeight || 0);
+            if (width >= 128 && height >= 128) {
+              image.style.opacity = isBlankMap ? '0' : '';
+            }
+          });
+          if (isBlankMap) {
+            setTimeout(syncBlankMapTiles, 120);
+          }
         }
 
         function handleNativeMessage(event) {
@@ -626,7 +649,7 @@ export const buildKakaoSatellitePickerHtml = ({
 };
 
 const getSafeMapTypeId = (mapTypeId: KakaoMapTypeId): KakaoMapTypeId => {
-  return ['ROADMAP', 'SKYVIEW', 'HYBRID'].includes(mapTypeId)
+  return ['ROADMAP', 'SKYVIEW', 'HYBRID', 'BLANK'].includes(mapTypeId)
     ? mapTypeId
     : 'HYBRID';
 };
@@ -669,6 +692,11 @@ export const buildOpenBoundaryPickerHtml = ({
     body {
       background: #eef2f4;
       overflow: hidden;
+    }
+    #map,
+    .leaflet-container,
+    body.blank-map {
+      background: #ffffff;
     }
     .toolbar {
       align-items: center;
@@ -826,18 +854,22 @@ export const buildOpenBoundaryPickerHtml = ({
       var pointTitlePrefix = ${safePointTitlePrefix};
       var readyInstruction = ${safeReadyInstruction};
       var saveButtonLabel = ${safeSaveButtonLabel};
+      var emptyTileUrl = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
       var roadmapLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors',
+        errorTileUrl: emptyTileUrl,
         maxNativeZoom: 19,
         maxZoom: 22
       });
       var imageryLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
         attribution: 'Tiles &copy; Esri',
+        errorTileUrl: emptyTileUrl,
         maxNativeZoom: 18,
         maxZoom: 22
       });
       var labelLayer = L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
         attribution: 'Labels &copy; Esri',
+        errorTileUrl: emptyTileUrl,
         maxNativeZoom: 18,
         maxZoom: 22
       });
@@ -862,18 +894,21 @@ export const buildOpenBoundaryPickerHtml = ({
       var saveEl = document.getElementById('save');
 
       function setMapType(nextMapType) {
-        if (nextMapType !== 'ROADMAP' && nextMapType !== 'SKYVIEW' && nextMapType !== 'HYBRID') return;
+        if (nextMapType !== 'ROADMAP' && nextMapType !== 'SKYVIEW' && nextMapType !== 'HYBRID' && nextMapType !== 'BLANK') return;
         activeLayers.forEach(function(layer) {
           map.removeLayer(layer);
         });
-        activeLayers = nextMapType === 'ROADMAP'
-          ? [roadmapLayer]
-          : nextMapType === 'SKYVIEW'
-            ? [imageryLayer]
-            : [imageryLayer, labelLayer];
+        activeLayers = nextMapType === 'BLANK'
+          ? []
+          : nextMapType === 'ROADMAP'
+            ? [roadmapLayer]
+            : nextMapType === 'SKYVIEW'
+              ? [imageryLayer]
+              : [imageryLayer, labelLayer];
         activeLayers.forEach(function(layer) {
           layer.addTo(map);
         });
+        document.body.className = nextMapType === 'BLANK' ? 'blank-map' : '';
         currentMapType = nextMapType;
         post('mapType', { mapTypeId: currentMapType });
       }

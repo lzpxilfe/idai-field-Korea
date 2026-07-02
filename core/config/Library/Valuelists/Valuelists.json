@@ -36822,6 +36822,7 @@
       "kakaoRoadmap": {},
       "kakaoSkyview": {},
       "kakaoHybrid": {},
+      "plainCanvas": {},
       "customWmts": {},
       "importedRasterLayer": {},
       "importedVectorLayer": {}
@@ -36835,6 +36836,7 @@
       "kakaoRoadmap",
       "kakaoSkyview",
       "kakaoHybrid",
+      "plainCanvas",
       "customWmts",
       "importedRasterLayer",
       "importedVectorLayer"

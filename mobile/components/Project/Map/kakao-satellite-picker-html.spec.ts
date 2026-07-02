@@ -15,7 +15,7 @@ describe('buildKakaoSatellitePickerHtml', () => {
     expect(html).toContain('appkey=js%20key%2Fwith%20spaces');
     expect(html).toContain("var currentMapType = 'HYBRID'");
     expect(html).toContain('kakao.maps.MapTypeId.HYBRID');
-    expect(html).toContain('map.setMapTypeId(kakaoMapTypeIds[currentMapType])');
+    expect(html).toContain('map.setMapTypeId(kakaoMapTypeIds[currentMapType] || kakaoMapTypeIds.ROADMAP)');
     expect(html).toContain('new kakao.maps.LatLng(36.12, 127.45)');
   });
 
@@ -29,8 +29,9 @@ describe('buildKakaoSatellitePickerHtml', () => {
 
     expect(html).toContain('data-map-type="ROADMAP"');
     expect(html).toContain('data-map-type="SKYVIEW"');
+    expect(html).toContain('data-map-type="BLANK"');
     expect(html).toContain("var currentMapType = 'ROADMAP'");
-    expect(html).toContain('map.setMapTypeId(kakaoMapTypeIds[currentMapType])');
+    expect(html).toContain('map.setMapTypeId(isBlankMap ? kakaoMapTypeIds.ROADMAP : kakaoMapTypeIds[currentMapType])');
     expect(html).toContain('mapTypeId: currentMapType');
     expect(html).toContain("data.type === 'setMapType'");
     expect(html).toContain('setMapType(data.payload && data.payload.mapTypeId)');
@@ -139,6 +140,7 @@ describe('buildKakaoSatellitePickerHtml', () => {
     expect(html).toContain('leaflet@1.9.4');
     expect(html).toContain('tile.openstreetmap.org');
     expect(html).toContain('World_Imagery');
+    expect(html).toContain('errorTileUrl: emptyTileUrl');
     expect(html).toContain('maxNativeZoom: 18');
     expect(html).toContain('maxZoom: 22');
     expect(html).toContain("var currentMapType = 'SKYVIEW'");
@@ -149,5 +151,30 @@ describe('buildKakaoSatellitePickerHtml', () => {
     expect(html).toContain('setMapType(data.payload && data.payload.mapTypeId)');
     expect(html).toContain("data.type === 'currentLocation'");
     expect(html).toContain('updateCurrentLocation(data.payload)');
+  });
+
+  it('supports a blank drawing basemap when map tiles are unavailable', () => {
+    const kakaoHtml = buildKakaoSatellitePickerHtml({
+      javaScriptKey: 'js-key',
+      latitude: 36.12,
+      longitude: 127.45,
+      mapTypeId: 'BLANK',
+    });
+    const openHtml = buildOpenBoundaryPickerHtml({
+      latitude: 36.12,
+      longitude: 127.45,
+      mapTypeId: 'BLANK',
+    });
+
+    expect(kakaoHtml).toContain("var currentMapType = 'BLANK'");
+    expect(kakaoHtml).toContain("document.body.className = isBlankMap ? 'blank-map' : ''");
+    expect(kakaoHtml).toContain('map.setMapTypeId(isBlankMap ? kakaoMapTypeIds.ROADMAP : kakaoMapTypeIds[currentMapType])');
+    expect(kakaoHtml).toContain('function syncBlankMapTiles()');
+    expect(kakaoHtml).toContain('width >= 128 && height >= 128');
+    expect(kakaoHtml).not.toContain('body.blank-map #map img');
+    expect(openHtml).toContain("var currentMapType = 'BLANK'");
+    expect(openHtml).toContain("nextMapType !== 'BLANK'");
+    expect(openHtml).toContain("activeLayers = nextMapType === 'BLANK'");
+    expect(openHtml).toContain("document.body.className = nextMapType === 'BLANK' ? 'blank-map' : ''");
   });
 });

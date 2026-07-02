@@ -188,6 +188,7 @@ describe('KakaoSatellitePicker', () => {
 
     expect(getByTestId('kakao-map-type-HYBRID').props.accessibilityState)
       .toEqual({ selected: true });
+    expect(getByTestId('kakao-map-type-BLANK')).toBeTruthy();
 
     fireEvent.press(getByTestId('kakao-map-type-ROADMAP'));
 
@@ -206,6 +207,20 @@ describe('KakaoSatellitePicker', () => {
     });
 
     expect(getByTestId('kakao-map-type-SKYVIEW').props.accessibilityState)
+      .toEqual({ selected: true });
+
+    act(() => {
+      fireEvent(getByTestId('kakao-satellite-picker-webview'), 'message', {
+        nativeEvent: {
+          data: JSON.stringify({
+            type: 'mapType',
+            payload: { mapTypeId: 'BLANK' },
+          }),
+        },
+      });
+    });
+
+    expect(getByTestId('kakao-map-type-BLANK').props.accessibilityState)
       .toEqual({ selected: true });
   });
 

@@ -17,6 +17,7 @@ import {
     KOREAN_FIELDWORK_PROJECT_LANGUAGES,
     KOREAN_FIELDWORK_RECORD_CREATION_TIMING_DURING_FIELDWORK,
     KOREAN_FIELDWORK_REFERENCE_BASEMAP_PROVIDER_DEFAULT,
+    KOREAN_FIELDWORK_REFERENCE_BASEMAP_PROVIDER_PLAIN_CANVAS,
     KOREAN_FIELDWORK_SOIL_COLOR_ASSIST_STATUS_DEFAULT,
     KOREAN_FIELDWORK_SOIL_PROFILE_PHOTO_QUALITY_DEFAULT,
     KOREAN_FIELDWORK_SOIL_PROFILE_PHOTO_SIZE_HINT_KB_DEFAULT,
@@ -519,12 +520,16 @@ describe('KoreanFieldwork project configuration', () => {
         expect(valuelists['KoreanFieldwork-referenceBasemapProvider'].values.kakaoRoadmap).toBeDefined();
         expect(valuelists['KoreanFieldwork-referenceBasemapProvider'].values.kakaoSkyview).toBeDefined();
         expect(valuelists['KoreanFieldwork-referenceBasemapProvider'].values.kakaoHybrid).toBeDefined();
+        expect(valuelists['KoreanFieldwork-referenceBasemapProvider']
+            .values[KOREAN_FIELDWORK_REFERENCE_BASEMAP_PROVIDER_PLAIN_CANVAS]).toBeDefined();
         expect(valuelistLanguages.projects.ko['KoreanFieldwork-surveyBoundarySource']
             .values.manualBasemapTrace.label).toBe('배경지도 수동 추적');
         expect(valuelistLanguages.projects.ko['KoreanFieldwork-referenceBasemapProvider']
             .values.kakaoRoadmap.label).toBe('카카오 일반지도');
         expect(valuelistLanguages.projects.ko['KoreanFieldwork-referenceBasemapProvider']
             .values.kakaoHybrid.label).toBe('카카오 하이브리드');
+        expect(valuelistLanguages.projects.ko['KoreanFieldwork-referenceBasemapProvider']
+            .values.plainCanvas.label).toBe('흰 도면 바탕');
         expect(valuelistLanguages.projects.en['KoreanFieldwork-referenceBasemapProvider']
             .values.googleRoadmap.label).toBe('Google Maps road map');
         expect(languages.ko.categories.SurveyBoundary.label).toBe('조사경계');

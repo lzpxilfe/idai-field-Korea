@@ -67,6 +67,7 @@ const KAKAO_MAP_TYPE_OPTIONS: Array<{ id: KakaoMapTypeId; label: string }> = [
   { id: 'ROADMAP', label: '일반' },
   { id: 'SKYVIEW', label: '위성' },
   { id: 'HYBRID', label: '혼합' },
+  { id: 'BLANK', label: '도면' },
 ];
 type BoundaryMapEngine = 'kakao' | 'open';
 type LiveLocationStatus = 'checking' | 'tracking' | 'denied' | 'unavailable';
@@ -699,7 +700,7 @@ const isPickedLocation = (
 const getPickedMapTypeId = (
   value: unknown
 ): KakaoMapTypeId | undefined => {
-  return value === 'ROADMAP' || value === 'SKYVIEW' || value === 'HYBRID'
+  return value === 'ROADMAP' || value === 'SKYVIEW' || value === 'HYBRID' || value === 'BLANK'
     ? value
     : undefined;
 };

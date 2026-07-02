@@ -31,7 +31,8 @@ const BOUNDARY_BASEMAP_PROVIDER_LABELS: Readonly<Record<string, string>> = {
     kakaoHybrid: '카카오 하이브리드',
     kakaoRoadmap: '카카오 일반지도',
     kakaoSkyview: '카카오 위성지도',
-    openStreetMap: 'OpenStreetMap'
+    openStreetMap: 'OpenStreetMap',
+    plainCanvas: '흰 도면 바탕'
 };
 
 

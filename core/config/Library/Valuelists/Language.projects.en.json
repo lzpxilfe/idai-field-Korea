@@ -15908,6 +15908,7 @@
       "kakaoRoadmap": { "label": "Kakao Maps road map" },
       "kakaoSkyview": { "label": "Kakao Maps satellite" },
       "kakaoHybrid": { "label": "Kakao Maps hybrid" },
+      "plainCanvas": { "label": "Plain drawing canvas" },
       "customWmts": { "label": "Custom WMTS/TMS" },
       "importedRasterLayer": { "label": "Imported raster layer" },
       "importedVectorLayer": { "label": "Imported vector layer" }
