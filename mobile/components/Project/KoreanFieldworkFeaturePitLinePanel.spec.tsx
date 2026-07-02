@@ -113,6 +113,31 @@ describe('KoreanFieldworkFeaturePitLinePanel', () => {
     expect(pitLines[1].end).toEqual({ x: 90, y: 80 });
   });
 
+  it('ignores non-finite touch coordinates instead of saving an invalid pit line', () => {
+    const onUpdateResourceFields = jest.fn();
+    const { getByTestId, queryByTestId } = render(
+      <KoreanFieldworkFeaturePitLinePanel
+        document={createDoc('feature-1', C.FEATURE)}
+        documents={[]}
+        onUpdateResourceFields={onUpdateResourceFields}
+      />
+    );
+    const canvas = getByTestId('featurePitLineCanvas');
+
+    fireEvent(canvas, 'layout', {
+      nativeEvent: { layout: { height: 200, width: 400 } },
+    });
+    fireEvent(canvas, 'responderGrant', {
+      nativeEvent: { locationX: Number.NaN, locationY: 50 },
+    });
+    fireEvent(canvas, 'responderGrant', {
+      nativeEvent: { locationX: 320, locationY: 150 },
+    });
+
+    expect(queryByTestId('featurePitLinePendingStart')).toBeTruthy();
+    expect(onUpdateResourceFields).not.toHaveBeenCalled();
+  });
+
   it('connects the feature pit line panel to soil profile photo creation', () => {
     const onAddSoilProfilePhoto = jest.fn();
     const feature = createDoc('feature-1', C.FEATURE);

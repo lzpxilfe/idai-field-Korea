@@ -653,7 +653,16 @@ const getNormalizedPoint = (
   canvasSize: CanvasSize
 ): SketchPoint | undefined => {
   const { locationX, locationY } = getLocalTouchPoint(event);
-  if (typeof locationX !== 'number' || typeof locationY !== 'number') {
+  if (
+    typeof locationX !== 'number'
+    || typeof locationY !== 'number'
+    || !Number.isFinite(locationX)
+    || !Number.isFinite(locationY)
+    || !Number.isFinite(canvasSize.width)
+    || !Number.isFinite(canvasSize.height)
+    || canvasSize.width <= 0
+    || canvasSize.height <= 0
+  ) {
     return undefined;
   }
   if (
