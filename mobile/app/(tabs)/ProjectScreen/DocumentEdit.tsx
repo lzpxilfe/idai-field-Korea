@@ -22,6 +22,8 @@ import KoreanFieldworkFeatureSketchReferencePanel
   from '@/components/Project/KoreanFieldworkFeatureSketchReferencePanel';
 import KoreanFieldworkFeaturePitLinePanel
   from '@/components/Project/KoreanFieldworkFeaturePitLinePanel';
+import KoreanFieldworkFindSpotPanel
+  from '@/components/Project/KoreanFieldworkFindSpotPanel';
 import KoreanFieldworkFreeDrawingPanel, {
   KOREAN_FIELDWORK_FREE_DRAWING_FIELDS,
 } from '@/components/Project/KoreanFieldworkFreeDrawingPanel';
@@ -220,6 +222,11 @@ const DocumentEdit: React.FC = () => {
               onUpdateResourceFields={applyResourceUpdates}
             />
           )}
+          <KoreanFieldworkFindSpotPanel
+            documents={documents ?? []}
+            resource={resource}
+            onUpdateResourceFields={applyResourceUpdates}
+          />
           <KoreanFieldworkRecordContextPanel
             document={effectiveDocument}
             documents={documents ?? []}

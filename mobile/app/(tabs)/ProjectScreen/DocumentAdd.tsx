@@ -2,7 +2,6 @@ import { MaterialIcons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system';
 import {
   CategoryForm,
-  Document,
   NewDocument,
   NewResource,
 } from 'idai-field-core';
@@ -20,6 +19,8 @@ import SoilProfileCameraButton, {
   SoilProfileCaptureData,
 } from '@/components/Project/SoilProfileCameraButton';
 import KoreanFieldworkDraftContextPanel from '@/components/Project/KoreanFieldworkDraftContextPanel';
+import KoreanFieldworkFindSpotPanel
+  from '@/components/Project/KoreanFieldworkFindSpotPanel';
 import FieldworkPhotoAnnotationPanel, {
   FIELDWORK_PHOTO_ANNOTATION_FIELDS,
   FieldworkPhotoSamplePoint,
@@ -49,7 +50,7 @@ import { createSoilColorAssistUpdatesFromPhotoBase64AtPoint } from '@/components
 const DocumentAdd: React.FC = () => {
   const config = useContext(ConfigurationContext);
   const { labels } = useContext(LabelsContext);
-  const { repository } = useContext(ProjectContext);
+  const { documents, repository } = useContext(ProjectContext);
   const preferencesContext = useContext(PreferencesContext);
   const params = useGlobalSearchParams();
   const parentDocId = getParam(params.parentDocId);
@@ -221,6 +222,12 @@ const DocumentAdd: React.FC = () => {
           <KoreanFieldworkDraftContextPanel
             parentDocument={parentDoc}
             resource={newResource}
+          />
+          <KoreanFieldworkFindSpotPanel
+            documents={documents ?? []}
+            parentDocument={parentDoc}
+            resource={newResource}
+            onUpdateResourceFields={applyResourceUpdates}
           />
           <KoreanFieldworkQuickRecordPanel
             category={category}
