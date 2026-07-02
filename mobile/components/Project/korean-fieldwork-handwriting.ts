@@ -5,6 +5,7 @@ export interface KoreanFieldworkHandwritingPoint {
 
 export interface KoreanFieldworkHandwritingStroke {
   points: KoreanFieldworkHandwritingPoint[];
+  width?: number;
 }
 
 export interface KoreanFieldworkHandwritingPayload {
@@ -13,6 +14,8 @@ export interface KoreanFieldworkHandwritingPayload {
 }
 
 const MAX_COORDINATE = 10000;
+const MIN_STROKE_WIDTH = 1;
+const MAX_STROKE_WIDTH = 24;
 
 export const normalizeKoreanFieldworkHandwritingStrokes = (
   value: unknown
@@ -121,7 +124,14 @@ const normalizeStroke = (
     .map(normalizePoint)
     .filter((point): point is KoreanFieldworkHandwritingPoint => !!point);
 
-  return points.length > 0 ? { points } : undefined;
+  if (points.length === 0) return undefined;
+
+  const width = isRecord(value) ? normalizeStrokeWidth(value.width) : undefined;
+
+  return {
+    points,
+    ...(width !== undefined ? { width } : {}),
+  };
 };
 
 const normalizePoint = (
@@ -139,6 +149,15 @@ const normalizeCoordinate = (value: unknown): number | undefined => {
   if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
 
   return Math.max(0, Math.min(MAX_COORDINATE, Math.round(value)));
+};
+
+const normalizeStrokeWidth = (value: unknown): number | undefined => {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
+
+  return Math.max(
+    MIN_STROKE_WIDTH,
+    Math.min(MAX_STROKE_WIDTH, Math.round(value))
+  );
 };
 
 const parseKoreanFieldworkHandwritingPayload = (value: string): unknown => {

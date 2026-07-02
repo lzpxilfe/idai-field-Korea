@@ -25,6 +25,10 @@ import {
   normalizeKoreanFieldworkHandwritingStrokes,
   serializeKoreanFieldworkHandwriting,
 } from './korean-fieldwork-handwriting';
+import KoreanFieldworkFullscreenDrawingModal, {
+  DEFAULT_FIELDWORK_BRUSH_WIDTH,
+  KoreanFieldworkBrushControls,
+} from './KoreanFieldworkFullscreenDrawingModal';
 
 export const KOREAN_FIELDWORK_DAILY_JOURNAL_FIELDS = {
   boundaryMemoImportedAt: 'dailyLogBoundaryMemoImportedAt',
@@ -441,15 +445,38 @@ const BoundaryMemoCanvas: React.FC<{
   strokes,
 }) => {
   const [canvasSize, setCanvasSize] = useState(DEFAULT_CANVAS_SIZE);
+  const [brushWidth, setBrushWidth] = useState(DEFAULT_FIELDWORK_BRUSH_WIDTH);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [activeStroke, setActiveStroke] =
     useState<KoreanFieldworkHandwritingStroke>();
   const activeStrokeRef = useRef<KoreanFieldworkHandwritingStroke>();
+  const latestStrokesRef = useRef<KoreanFieldworkHandwritingStroke[]>(strokes);
   const visibleStrokes = activeStroke ? strokes.concat(activeStroke) : strokes;
   const boundaryPoints = useMemo(
     () => getBoundaryCanvasPoints(boundaryDraft, canvasSize),
     [boundaryDraft, canvasSize]
   );
+  const fullscreenBoundaryPoints = useMemo(
+    () => getBoundaryCanvasPoints(boundaryDraft, {
+      height: MAX_COORDINATE,
+      width: MAX_COORDINATE,
+    }),
+    [boundaryDraft]
+  );
+  const fullscreenBackground = useMemo(
+    () => fullscreenBoundaryPoints.length >= 3
+      ? {
+        boundaryPoints: fullscreenBoundaryPoints,
+        label: '\uc870\uc0ac \uacbd\uacc4',
+      }
+      : undefined,
+    [fullscreenBoundaryPoints]
+  );
   const strokePointCount = countKoreanFieldworkHandwritingPoints(strokes);
+
+  useEffect(() => {
+    latestStrokesRef.current = strokes;
+  }, [strokes]);
 
   const updateCanvasSize = (event: LayoutChangeEvent) => {
     const { height, width } = event.nativeEvent.layout;
@@ -461,7 +488,7 @@ const BoundaryMemoCanvas: React.FC<{
     const point = getNormalizedPoint(event, canvasSize);
     if (!point) return;
 
-    activeStrokeRef.current = { points: [point] };
+    activeStrokeRef.current = { points: [point], width: brushWidth };
     setActiveStroke(activeStrokeRef.current);
   };
   const moveStroke = (event: GestureResponderEvent) => {
@@ -486,13 +513,20 @@ const BoundaryMemoCanvas: React.FC<{
 
     if (!stroke || stroke.points.length === 0) return;
 
-    onUpdateStrokes(serializeKoreanFieldworkHandwriting(strokes.concat(stroke)));
+    commitStrokes(latestStrokesRef.current.concat(stroke));
   };
   const undoStroke = () => {
-    onUpdateStrokes(serializeKoreanFieldworkHandwriting(strokes.slice(0, -1)));
+    commitStrokes(latestStrokesRef.current.slice(0, -1));
   };
   const clearStrokes = () => {
-    onUpdateStrokes(serializeKoreanFieldworkHandwriting([]));
+    commitStrokes([]);
+  };
+  const commitStrokes = (nextStrokes: KoreanFieldworkHandwritingStroke[]) => {
+    const normalizedStrokes = normalizeKoreanFieldworkHandwritingStrokes(
+      nextStrokes
+    );
+    latestStrokesRef.current = normalizedStrokes;
+    onUpdateStrokes(serializeKoreanFieldworkHandwriting(normalizedStrokes));
   };
   const appendActiveStrokePoint = (
     point: KoreanFieldworkHandwritingPoint,
@@ -516,6 +550,7 @@ const BoundaryMemoCanvas: React.FC<{
 
     activeStrokeRef.current = {
       points: currentStroke.points.concat(interpolatedPoints),
+      width: currentStroke.width,
     };
     setActiveStroke(activeStrokeRef.current);
   };
@@ -533,6 +568,12 @@ const BoundaryMemoCanvas: React.FC<{
         </View>
         <View style={styles.boundaryActions}>
           <IconButton
+            icon="open-in-full"
+            isDisabled={!canEdit}
+            onPress={() => setIsFullscreen(true)}
+            testID="dailyJournalBoundaryFullscreen"
+          />
+          <IconButton
             icon="undo"
             isDisabled={!canEdit || strokes.length === 0}
             onPress={undoStroke}
@@ -547,6 +588,12 @@ const BoundaryMemoCanvas: React.FC<{
           />
         </View>
       </View>
+      <KoreanFieldworkBrushControls
+        brushWidth={brushWidth}
+        isDisabled={!canEdit}
+        onSelectBrushWidth={setBrushWidth}
+        testIDPrefix="dailyJournalBoundaryBrush"
+      />
       <View
         onLayout={updateCanvasSize}
         onMoveShouldSetResponderCapture={() => canEdit}
@@ -590,6 +637,17 @@ const BoundaryMemoCanvas: React.FC<{
           toStrokeSegments(stroke, strokeIndex, canvasSize)
         )}
       </View>
+      <KoreanFieldworkFullscreenDrawingModal
+        background={fullscreenBackground}
+        brushWidth={brushWidth}
+        isVisible={isFullscreen}
+        onBrushWidthChange={setBrushWidth}
+        onClose={() => setIsFullscreen(false)}
+        onUpdateStrokes={commitStrokes}
+        strokes={latestStrokesRef.current}
+        testIDPrefix="dailyJournalBoundary"
+        title={'\uc720\uc801 \uacbd\uacc4 \uc704 \uba54\ubaa8'}
+      />
       <Text style={styles.boundaryHint}>
         제토 범위, 노출 유구, 유물 출토 지점처럼 하루 작업 상황을 펜으로 표시합니다.
         {strokePointCount > 0 ? ` 현재 ${strokePointCount}점 저장됨.` : ''}
@@ -1011,7 +1069,7 @@ const toStrokeSegments = (
   strokeIndex: number,
   canvasSize: { height: number; width: number }
 ) => {
-  const strokeWidth = 3;
+  const strokeWidth = getStrokeWidth(stroke);
 
   if (stroke.points.length === 1) {
     const point = denormalizePoint(stroke.points[0], canvasSize);
@@ -1024,6 +1082,7 @@ const toStrokeSegments = (
           {
             height: strokeWidth + 3,
             left: point.x - ((strokeWidth + 3) / 2),
+            borderRadius: (strokeWidth + 3) / 2,
             top: point.y - ((strokeWidth + 3) / 2),
             width: strokeWidth + 3,
           },
@@ -1046,6 +1105,9 @@ const toStrokeSegments = (
     );
   });
 };
+
+const getStrokeWidth = (stroke: KoreanFieldworkHandwritingStroke): number =>
+  clamp(stroke.width ?? 3, 1, 24);
 
 const LineSegment: React.FC<{
   color: string;

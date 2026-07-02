@@ -15,6 +15,21 @@ jest.mock('@expo/vector-icons', () => {
   };
 });
 
+jest.mock('react-native-webview', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  const MockWebView = React.forwardRef((props: Record<string, unknown>, ref: unknown) => {
+    React.useImperativeHandle(ref, () => ({
+      postMessage: jest.fn(),
+    }));
+
+    return <View {...props} />;
+  });
+  MockWebView.displayName = 'MockWebView';
+
+  return { WebView: MockWebView };
+});
+
 const FIELD = KOREAN_FIELDWORK_DAILY_JOURNAL_FIELDS;
 const C = KOREAN_FIELDWORK_CATEGORIES;
 
@@ -179,6 +194,30 @@ describe('KoreanFieldworkDailyJournalCalendar', () => {
     expect(strokePoints[0]).toEqual({ x: 1000, y: 1000 });
     expect(strokePoints[strokePoints.length - 1]).toEqual({ x: 5000, y: 5000 });
     expect(strokePoints.length).toBeGreaterThan(2);
+  });
+
+  it('opens the boundary memo as a full-screen drawing canvas', () => {
+    const { getByTestId } = render(
+      <KoreanFieldworkDailyJournalCalendar
+        boundaryDraft={{
+          coordinates: [
+            { latitude: 37.1, longitude: 127.1 },
+            { latitude: 37.1, longitude: 127.2 },
+            { latitude: 37.0, longitude: 127.2 },
+            { latitude: 37.0, longitude: 127.1 },
+          ],
+        }}
+        canEdit
+        dailyLog={createDailyLog() as any}
+        now={new Date('2026-06-30T09:00:00+09:00')}
+        onCreateDailyLog={jest.fn()}
+        onUpdateDailyLog={jest.fn()}
+      />
+    );
+
+    fireEvent.press(getByTestId('dailyJournalBoundaryFullscreen'));
+
+    expect(getByTestId('dailyJournalBoundaryFullscreenCanvas')).toBeTruthy();
   });
 });
 

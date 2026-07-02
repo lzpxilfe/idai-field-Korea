@@ -12,6 +12,21 @@ jest.mock('@expo/vector-icons', () => {
   };
 });
 
+jest.mock('react-native-webview', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  const MockWebView = React.forwardRef((props: Record<string, unknown>, ref: unknown) => {
+    React.useImperativeHandle(ref, () => ({
+      postMessage: jest.fn(),
+    }));
+
+    return <View {...props} />;
+  });
+  MockWebView.displayName = 'MockWebView';
+
+  return { WebView: MockWebView };
+});
+
 describe('KoreanFieldworkFreeDrawingPanel', () => {
   it('stores normalized strokes drawn on a blank field sketch canvas', () => {
     const handleUpdateStrokes = jest.fn();
@@ -149,6 +164,44 @@ describe('KoreanFieldworkFreeDrawingPanel', () => {
       .toBeGreaterThan(2);
     expect(getAllByTestId('fieldworkFreeDrawingStrokeJoint').length)
       .toBeGreaterThan(2);
+  });
+
+  it('stores the selected brush width with new free sketch strokes', () => {
+    const handleUpdateStrokes = jest.fn();
+    const { getByTestId } = render(
+      <KoreanFieldworkFreeDrawingPanel
+        onUpdateStrokes={handleUpdateStrokes}
+      />
+    );
+
+    fireEvent.press(getByTestId('fieldworkFreeDrawingBrush_8'));
+
+    const canvas = getByTestId('fieldworkFreeDrawingCanvas');
+    fireEvent(canvas, 'responderGrant', {
+      nativeEvent: { locationX: 32, locationY: 28 },
+    });
+    fireEvent(canvas, 'responderMove', {
+      nativeEvent: { locationX: 160, locationY: 140 },
+    });
+    fireEvent(canvas, 'responderRelease', {
+      nativeEvent: { locationX: 160, locationY: 140 },
+    });
+
+    const payload = JSON.parse(handleUpdateStrokes.mock.calls[0][0]);
+
+    expect(payload.strokes[0].width).toBe(8);
+  });
+
+  it('opens a full-screen free sketch canvas from the expand button', () => {
+    const { getByTestId } = render(
+      <KoreanFieldworkFreeDrawingPanel
+        onUpdateStrokes={jest.fn()}
+      />
+    );
+
+    fireEvent.press(getByTestId('fieldworkFreeDrawingFullscreen'));
+
+    expect(getByTestId('fieldworkFreeDrawingFullscreenCanvas')).toBeTruthy();
   });
 
   it('does not show technical stroke and point counts in the sketch header', () => {

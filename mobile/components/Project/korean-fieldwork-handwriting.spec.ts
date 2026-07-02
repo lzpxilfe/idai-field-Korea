@@ -51,4 +51,17 @@ describe('Korean fieldwork handwriting', () => {
     expect(serializeKoreanFieldworkHandwriting([]))
       .toBe('{"version":1,"strokes":[]}');
   });
+
+  it('preserves normalized stroke widths', () => {
+    expect(normalizeKoreanFieldworkHandwritingStrokes({
+      version: 1,
+      strokes: [
+        { points: [{ x: 10, y: 20 }], width: 8.4 },
+        { points: [{ x: 20, y: 30 }], width: 99 },
+      ],
+    })).toEqual([
+      { points: [{ x: 10, y: 20 }], width: 8 },
+      { points: [{ x: 20, y: 30 }], width: 24 },
+    ]);
+  });
 });
