@@ -117,6 +117,30 @@ describe('KoreanFieldworkDailyJournalCalendar', () => {
     });
   });
 
+  it('saves a memo draft even before today daily log exists', async () => {
+    const handleUpdateDailyLog = jest.fn();
+    const { getByTestId } = render(
+      <KoreanFieldworkDailyJournalCalendar
+        canEdit
+        now={new Date('2026-06-30T09:00:00+09:00')}
+        onCreateDailyLog={jest.fn()}
+        onUpdateDailyLog={handleUpdateDailyLog}
+      />
+    );
+
+    fireEvent.changeText(
+      getByTestId('dailyJournalWorkMemoInput'),
+      'A-1 surface cleanup reached the access road.'
+    );
+    fireEvent.press(getByTestId('dailyJournalWorkMemoSave'));
+
+    await waitFor(() => {
+      expect(handleUpdateDailyLog).toHaveBeenCalledWith(expect.objectContaining({
+        [FIELD.workMemo]: 'A-1 surface cleanup reached the access road.',
+      }));
+    });
+  });
+
   it('projects the journal boundary as a vertical plan without stretching axes independently', () => {
     const points = getBoundaryCanvasPoints(
       {

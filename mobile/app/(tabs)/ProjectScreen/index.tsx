@@ -27,7 +27,6 @@ import CategoryIcon from '@/components/common/CategoryIcon';
 import SwipeableActionRow from '@/components/common/SwipeableActionRow';
 import DocumentAddModal from '@/components/Project/DocumentAddModal';
 import KoreanFieldworkDailyJournalCalendar from '@/components/Project/KoreanFieldworkDailyJournalCalendar';
-import KoreanFieldworkDailyNotebookDigest from '@/components/Project/KoreanFieldworkDailyNotebookDigest';
 import KoreanFieldworkFieldNotePanel from '@/components/Project/KoreanFieldworkFieldNotePanel';
 import KoreanFieldworkInvestigationModePanel from '@/components/Project/KoreanFieldworkInvestigationModePanel';
 import KoreanFieldworkNotebookLedger from '@/components/Project/KoreanFieldworkNotebookLedger';
@@ -927,9 +926,6 @@ const DocumentsList: React.FC = () => {
   const openDailyJournalLog = (dailyLog: Document) => {
     selectWorkbenchDocument(dailyLog, { expand: true });
   };
-  const openDailyLog = () => {
-    runQuickAction(quickActions.dailyLog.action);
-  };
   const runQuickAction = (action?: KoreanFieldworkPriorityTaskAction) => {
     if (!action) return;
 
@@ -1087,13 +1083,6 @@ const DocumentsList: React.FC = () => {
             onCreateDailyLog={createDailyJournalLog}
             onOpenDailyLog={openDailyJournalLog}
             onUpdateDailyLog={saveDailyJournalFields}
-          />
-          <KoreanFieldworkDailyNotebookDigest
-            canOpenDailyLog={!quickActions.dailyLog.disabled}
-            documents={userVisibleDocuments}
-            now={now}
-            onContinueEntry={continueNotebookEntry}
-            onOpenDailyLog={openDailyLog}
           />
         </>
         )}

@@ -67,6 +67,10 @@ const RELEASE_POINT_MIN_DISTANCE = 1;
 const INTERPOLATED_POINT_SPACING = 90;
 const MAX_INTERPOLATED_POINTS_PER_MOVE = 18;
 const FIELD = KOREAN_FIELDWORK_DAILY_JOURNAL_FIELDS;
+const WORK_MEMO_PLACEHOLDER =
+  '\uc624\ub298 \uc870\uc0ac \ub0b4\uc6a9, \ubc1c\uacac \uc704\uce58, '
+  + '\uc81c\ud1a0 \ubc94\uc704, \ub0b4\uc77c \ud655\uc778\ud560 '
+  + '\uc810\uc744 \uc801\uc2b5\ub2c8\ub2e4.';
 
 const KoreanFieldworkDailyJournalCalendar: React.FC<
   KoreanFieldworkDailyJournalCalendarProps
@@ -145,6 +149,8 @@ const KoreanFieldworkDailyJournalCalendar: React.FC<
     saveUpdates({ [fieldName]: !currentValue });
   };
   const saveWorkMemo = () => {
+    if (!canEdit || isSaving) return;
+
     saveUpdates({
       [FIELD.workMemo]: normalizeText(workMemoDraft) || undefined,
     });
@@ -372,19 +378,18 @@ const KoreanFieldworkDailyJournalCalendar: React.FC<
           <Text style={styles.fieldLabel}>조사일지 메모</Text>
           <TouchableOpacity
             activeOpacity={0.86}
-            disabled={!canEdit || isSaving || !hasDailyLog}
+            disabled={!canEdit || isSaving}
             onPress={saveWorkMemo}
             style={[
               styles.smallButton,
-              (!canEdit || isSaving || !hasDailyLog) && styles.disabledButton,
+              (!canEdit || isSaving) && styles.disabledButton,
             ]}
             testID="dailyJournalWorkMemoSave"
           >
             <Text
               style={[
                 styles.smallButtonText,
-                (!canEdit || isSaving || !hasDailyLog)
-                  && styles.disabledButtonText,
+                (!canEdit || isSaving) && styles.disabledButtonText,
               ]}
             >
               저장
@@ -392,15 +397,11 @@ const KoreanFieldworkDailyJournalCalendar: React.FC<
           </TouchableOpacity>
         </View>
         <TextInput
-          editable={canEdit && !isSaving && hasDailyLog}
+          editable={canEdit && !isSaving}
           multiline
           onChangeText={setWorkMemoDraft}
           onEndEditing={saveWorkMemo}
-          placeholder={
-            hasDailyLog
-              ? '오늘 조사 내용, 발견 위치, 제토 범위, 내일 확인할 점을 적습니다.'
-              : '먼저 작업일지를 만들면 글 메모를 남길 수 있습니다.'
-          }
+          placeholder={WORK_MEMO_PLACEHOLDER}
           style={styles.workMemoInput}
           testID="dailyJournalWorkMemoInput"
           textAlignVertical="top"
