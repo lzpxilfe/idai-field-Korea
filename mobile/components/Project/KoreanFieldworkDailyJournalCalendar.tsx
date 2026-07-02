@@ -37,6 +37,7 @@ export const KOREAN_FIELDWORK_DAILY_JOURNAL_FIELDS = {
   safetyEducationPhoto: 'dailyLogSafetyEducationPhoto',
   safetyEducationStretching: 'dailyLogSafetyEducationStretching',
   workerCount: 'dailyLogWorkerCount',
+  workMemo: 'description',
   workMemoUpdatedAt: 'dailyLogWorkMemoUpdatedAt',
 } as const;
 
@@ -57,7 +58,10 @@ const DEFAULT_CANVAS_SIZE = {
   height: 230,
   width: 320,
 };
-const MIN_POINT_DISTANCE = 80;
+const MIN_POINT_DISTANCE = 18;
+const RELEASE_POINT_MIN_DISTANCE = 1;
+const INTERPOLATED_POINT_SPACING = 90;
+const MAX_INTERPOLATED_POINTS_PER_MOVE = 18;
 const FIELD = KOREAN_FIELDWORK_DAILY_JOURNAL_FIELDS;
 
 const KoreanFieldworkDailyJournalCalendar: React.FC<
@@ -75,6 +79,8 @@ const KoreanFieldworkDailyJournalCalendar: React.FC<
 }) => {
   const [personnelDraft, setPersonnelDraft] =
     useState(getPersonnelDraft(dailyLog));
+  const [workMemoDraft, setWorkMemoDraft] =
+    useState(getStringField(dailyLog, FIELD.workMemo));
   const [saveStatus, setSaveStatus] =
     useState<'saved'|'saving'|'error'|undefined>();
   const dayItems = useMemo(() => getCalendarWeek(now), [now]);
@@ -93,6 +99,7 @@ const KoreanFieldworkDailyJournalCalendar: React.FC<
 
   useEffect(() => {
     setPersonnelDraft(getPersonnelDraft(dailyLog));
+    setWorkMemoDraft(getStringField(dailyLog, FIELD.workMemo));
   }, [dailyLog]);
 
   const saveUpdates = async (updates: Record<string, unknown>) => {
@@ -132,6 +139,11 @@ const KoreanFieldworkDailyJournalCalendar: React.FC<
   };
   const toggleSafety = (fieldName: string, currentValue: boolean) => {
     saveUpdates({ [fieldName]: !currentValue });
+  };
+  const saveWorkMemo = () => {
+    saveUpdates({
+      [FIELD.workMemo]: normalizeText(workMemoDraft) || undefined,
+    });
   };
   const updateBoundaryStrokes = (serializedStrokes: string) => {
     saveUpdates({
@@ -351,6 +363,47 @@ const KoreanFieldworkDailyJournalCalendar: React.FC<
         </View>
       </View>
 
+      <View style={styles.workMemoSection}>
+        <View style={styles.fieldHeaderRow}>
+          <Text style={styles.fieldLabel}>조사일지 메모</Text>
+          <TouchableOpacity
+            activeOpacity={0.86}
+            disabled={!canEdit || isSaving || !hasDailyLog}
+            onPress={saveWorkMemo}
+            style={[
+              styles.smallButton,
+              (!canEdit || isSaving || !hasDailyLog) && styles.disabledButton,
+            ]}
+            testID="dailyJournalWorkMemoSave"
+          >
+            <Text
+              style={[
+                styles.smallButtonText,
+                (!canEdit || isSaving || !hasDailyLog)
+                  && styles.disabledButtonText,
+              ]}
+            >
+              저장
+            </Text>
+          </TouchableOpacity>
+        </View>
+        <TextInput
+          editable={canEdit && !isSaving && hasDailyLog}
+          multiline
+          onChangeText={setWorkMemoDraft}
+          onEndEditing={saveWorkMemo}
+          placeholder={
+            hasDailyLog
+              ? '오늘 조사 내용, 발견 위치, 제토 범위, 내일 확인할 점을 적습니다.'
+              : '먼저 작업일지를 만들면 글 메모를 남길 수 있습니다.'
+          }
+          style={styles.workMemoInput}
+          testID="dailyJournalWorkMemoInput"
+          textAlignVertical="top"
+          value={workMemoDraft}
+        />
+      </View>
+
       <BoundaryMemoCanvas
         boundaryDraft={boundaryDraft}
         boundarySummary={boundarySummary}
@@ -406,6 +459,8 @@ const BoundaryMemoCanvas: React.FC<{
     if (!canEdit) return;
 
     const point = getNormalizedPoint(event, canvasSize);
+    if (!point) return;
+
     activeStrokeRef.current = { points: [point] };
     setActiveStroke(activeStrokeRef.current);
   };
@@ -413,21 +468,17 @@ const BoundaryMemoCanvas: React.FC<{
     if (!canEdit) return;
 
     const point = getNormalizedPoint(event, canvasSize);
-    const currentStroke = activeStrokeRef.current;
-    if (!currentStroke) return;
+    if (!point) return;
 
-    const previousPoint = currentStroke.points[currentStroke.points.length - 1];
-    if (previousPoint && getPointDistance(previousPoint, point) < MIN_POINT_DISTANCE) {
-      return;
-    }
-
-    activeStrokeRef.current = {
-      points: currentStroke.points.concat(point),
-    };
-    setActiveStroke(activeStrokeRef.current);
+    appendActiveStrokePoint(point);
   };
-  const finishStroke = () => {
+  const finishStroke = (event?: GestureResponderEvent) => {
     if (!canEdit) return;
+
+    const releasePoint = event ? getNormalizedPoint(event, canvasSize) : undefined;
+    if (releasePoint) {
+      appendActiveStrokePoint(releasePoint, RELEASE_POINT_MIN_DISTANCE);
+    }
 
     const stroke = activeStrokeRef.current;
     activeStrokeRef.current = undefined;
@@ -442,6 +493,31 @@ const BoundaryMemoCanvas: React.FC<{
   };
   const clearStrokes = () => {
     onUpdateStrokes(serializeKoreanFieldworkHandwriting([]));
+  };
+  const appendActiveStrokePoint = (
+    point: KoreanFieldworkHandwritingPoint,
+    minimumDistance = MIN_POINT_DISTANCE
+  ) => {
+    const currentStroke = activeStrokeRef.current;
+    if (!currentStroke) return;
+
+    const previousPoint = currentStroke.points[currentStroke.points.length - 1];
+    if (
+      previousPoint
+      && getPointDistance(previousPoint, point) < minimumDistance
+    ) {
+      return;
+    }
+
+    const interpolatedPoints = previousPoint
+      ? getInterpolatedStrokePoints(previousPoint, point)
+      : [point];
+    if (interpolatedPoints.length === 0) return;
+
+    activeStrokeRef.current = {
+      points: currentStroke.points.concat(interpolatedPoints),
+    };
+    setActiveStroke(activeStrokeRef.current);
   };
 
   return (
@@ -473,10 +549,14 @@ const BoundaryMemoCanvas: React.FC<{
       </View>
       <View
         onLayout={updateCanvasSize}
+        onMoveShouldSetResponderCapture={() => canEdit}
+        onMoveShouldSetResponder={() => canEdit}
         onResponderGrant={startStroke}
         onResponderMove={moveStroke}
         onResponderRelease={finishStroke}
         onResponderTerminate={finishStroke}
+        onResponderTerminationRequest={() => false}
+        onStartShouldSetResponderCapture={() => canEdit}
         onStartShouldSetResponder={() => canEdit}
         style={styles.boundaryCanvas}
         testID="dailyJournalBoundaryCanvas"
@@ -737,7 +817,7 @@ const countToText = (value: number | undefined): string =>
   value === undefined ? '' : String(value);
 
 const sumCounts = (
-  ...counts: Array<number | undefined>
+  ...counts: (number | undefined)[]
 ): number | undefined => {
   const total = counts.reduce<number>((sum, count) => sum + (count ?? 0), 0);
   return total > 0 ? total : undefined;
@@ -809,14 +889,59 @@ export const getBoundaryCanvasPoints = (
 const getNormalizedPoint = (
   event: GestureResponderEvent,
   canvasSize: { height: number; width: number }
-): KoreanFieldworkHandwritingPoint => {
-  const { locationX, locationY } = event.nativeEvent;
+): KoreanFieldworkHandwritingPoint | undefined => {
+  const { locationX, locationY } = getLocalTouchPoint(event);
+  if (typeof locationX !== 'number' || typeof locationY !== 'number') {
+    return undefined;
+  }
+  if (
+    locationX < 0
+    || locationX > canvasSize.width
+    || locationY < 0
+    || locationY > canvasSize.height
+  ) {
+    return undefined;
+  }
 
   return {
     x: normalizeCoordinate((locationX / canvasSize.width) * MAX_COORDINATE),
     y: normalizeCoordinate((locationY / canvasSize.height) * MAX_COORDINATE),
   };
 };
+
+const getLocalTouchPoint = (event: GestureResponderEvent): {
+  locationX?: number;
+  locationY?: number;
+} => {
+  const nativeEvent = event.nativeEvent as unknown as {
+    changedTouches?: TouchPointCandidate[];
+    locationX?: number;
+    locationY?: number;
+    touches?: TouchPointCandidate[];
+  };
+  const localTouch = [
+    ...(nativeEvent.touches ?? []),
+    ...(nativeEvent.changedTouches ?? []),
+  ].find(hasLocalTouchCoordinates);
+
+  return {
+    locationX: localTouch?.locationX ?? localTouch?.x ?? nativeEvent.locationX,
+    locationY: localTouch?.locationY ?? localTouch?.y ?? nativeEvent.locationY,
+  };
+};
+
+interface TouchPointCandidate {
+  locationX?: number;
+  locationY?: number;
+  x?: number;
+  y?: number;
+}
+
+const hasLocalTouchCoordinates = (
+  value: TouchPointCandidate
+): boolean =>
+  Number.isFinite(value.locationX ?? value.x)
+  && Number.isFinite(value.locationY ?? value.y);
 
 const normalizeCoordinate = (value: number): number =>
   Number.isFinite(value)
@@ -837,6 +962,32 @@ const getPointDistance = (
 ): number => Math.sqrt(
   ((pointB.x - pointA.x) ** 2) + ((pointB.y - pointA.y) ** 2)
 );
+
+const getInterpolatedStrokePoints = (
+  start: KoreanFieldworkHandwritingPoint,
+  end: KoreanFieldworkHandwritingPoint
+): KoreanFieldworkHandwritingPoint[] => {
+  const distance = getPointDistance(start, end);
+  if (distance === 0) return [];
+
+  const steps = clamp(
+    Math.ceil(distance / INTERPOLATED_POINT_SPACING),
+    1,
+    MAX_INTERPOLATED_POINTS_PER_MOVE
+  );
+
+  return Array.from({ length: steps }, (_, index) => {
+    const ratio = (index + 1) / steps;
+
+    return {
+      x: normalizeCoordinate(start.x + ((end.x - start.x) * ratio)),
+      y: normalizeCoordinate(start.y + ((end.y - start.y) * ratio)),
+    };
+  });
+};
+
+const clamp = (value: number, min: number, max: number): number =>
+  Math.max(min, Math.min(max, value));
 
 const toBoundarySegments = (points: { x: number; y: number }[]) => {
   if (points.length < 2) return [];
@@ -1188,6 +1339,26 @@ const styles = StyleSheet.create({
   },
   boundaryActions: {
     flexDirection: 'row',
+  },
+  workMemoInput: {
+    backgroundColor: '#ffffff',
+    borderColor: '#d0d5dd',
+    borderRadius: 6,
+    borderWidth: 1,
+    color: '#101828',
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 18,
+    marginTop: 8,
+    minHeight: 96,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+  },
+  workMemoSection: {
+    borderTopColor: '#eaecf0',
+    borderTopWidth: 1,
+    marginTop: 12,
+    paddingTop: 12,
   },
   iconButton: {
     alignItems: 'center',

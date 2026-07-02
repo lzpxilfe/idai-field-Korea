@@ -77,6 +77,31 @@ describe('KoreanFieldworkDailyJournalCalendar', () => {
     expect(handleCreateDailyLog).toHaveBeenCalled();
   });
 
+  it('saves written daily journal memo text', async () => {
+    const handleUpdateDailyLog = jest.fn();
+    const { getByTestId } = render(
+      <KoreanFieldworkDailyJournalCalendar
+        canEdit
+        dailyLog={createDailyLog() as any}
+        now={new Date('2026-06-30T09:00:00+09:00')}
+        onCreateDailyLog={jest.fn()}
+        onUpdateDailyLog={handleUpdateDailyLog}
+      />
+    );
+
+    fireEvent.changeText(
+      getByTestId('dailyJournalWorkMemoInput'),
+      '서쪽 구역 제토 중 원형 윤곽 확인.'
+    );
+    fireEvent.press(getByTestId('dailyJournalWorkMemoSave'));
+
+    await waitFor(() => {
+      expect(handleUpdateDailyLog).toHaveBeenCalledWith(expect.objectContaining({
+        [FIELD.workMemo]: '서쪽 구역 제토 중 원형 윤곽 확인.',
+      }));
+    });
+  });
+
   it('projects the journal boundary as a vertical plan without stretching axes independently', () => {
     const points = getBoundaryCanvasPoints(
       {
@@ -125,13 +150,19 @@ describe('KoreanFieldworkDailyJournalCalendar', () => {
 
     const canvas = getByTestId('dailyJournalBoundaryCanvas');
     fireEvent(canvas, 'responderGrant', {
-      nativeEvent: { locationX: 32, locationY: 23 },
+      nativeEvent: {
+        changedTouches: [{ locationX: 32, locationY: 23 }],
+      },
     });
     fireEvent(canvas, 'responderMove', {
-      nativeEvent: { locationX: 160, locationY: 115 },
+      nativeEvent: {
+        changedTouches: [{ locationX: 160, locationY: 115 }],
+      },
     });
     fireEvent(canvas, 'responderRelease', {
-      nativeEvent: { locationX: 160, locationY: 115 },
+      nativeEvent: {
+        changedTouches: [{ locationX: 160, locationY: 115 }],
+      },
     });
 
     await waitFor(() => {
@@ -139,19 +170,15 @@ describe('KoreanFieldworkDailyJournalCalendar', () => {
         [FIELD.boundaryMemoStrokes]: expect.stringContaining('"strokes"'),
       }));
     });
-    expect(JSON.parse(handleUpdateDailyLog.mock.calls[0][0][
+    const serializedStrokes = JSON.parse(handleUpdateDailyLog.mock.calls[0][0][
       FIELD.boundaryMemoStrokes
-    ])).toMatchObject({
-      version: 1,
-      strokes: [
-        {
-          points: [
-            { x: 1000, y: 1000 },
-            { x: 5000, y: 5000 },
-          ],
-        },
-      ],
-    });
+    ]);
+    const strokePoints = serializedStrokes.strokes[0].points;
+
+    expect(serializedStrokes.version).toBe(1);
+    expect(strokePoints[0]).toEqual({ x: 1000, y: 1000 });
+    expect(strokePoints[strokePoints.length - 1]).toEqual({ x: 5000, y: 5000 });
+    expect(strokePoints.length).toBeGreaterThan(2);
   });
 });
 
