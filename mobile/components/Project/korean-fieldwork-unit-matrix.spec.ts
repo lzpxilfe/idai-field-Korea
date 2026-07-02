@@ -42,7 +42,7 @@ describe('Korean fieldwork unit matrix', () => {
     expect(items.find((item) => item.id === 'operation-1')).toMatchObject({
       categoryLabel: '조사 구역 기록',
       childStructureCount: 1,
-      nextChildCategoryName: C.TRENCH,
+      nextChildCategoryName: C.FEATURE,
     });
     expect(items.find((item) => item.id === 'feature-1')).toMatchObject({
       categoryLabel: '유구',

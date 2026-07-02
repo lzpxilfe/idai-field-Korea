@@ -26,12 +26,14 @@ describe('Korean fieldwork overview chart data', () => {
       createDoc('feature-1', C.FEATURE, '수혈 1', {
         liesWithin: ['trench-1'],
       }, {
+        featureType: 'pit',
         featureRecordingStatus: 'candidate',
         featureInvestigationChecklist: ['preInvestigationPhotoTaken'],
       }),
       createDoc('feature-2', C.FEATURE, '수혈 2', {
         liesWithin: ['trench-1'],
       }, {
+        featureType: 'ditch',
         featureRecordingStatus: 'confirmed',
         featureInvestigationChecklist: [
           'preInvestigationPhotoTaken',
@@ -80,6 +82,14 @@ describe('Korean fieldwork overview chart data', () => {
       value: 2,
       detail: '피트 1',
     });
+    expect(data.featureTypeSegments.map((segment) => [
+      segment.id,
+      segment.count,
+      segment.percent,
+    ])).toEqual([
+      ['featureType-pit', 1, 50],
+      ['featureType-ditch', 1, 50],
+    ]);
     expect(data.featureStatusSegments.map((segment) => [
       segment.id,
       segment.count,
@@ -174,7 +184,7 @@ describe('Korean fieldwork overview chart data', () => {
     expect(data.metrics.find((metric) => metric.id === 'investigation'))
       .toMatchObject({
         value: 0,
-        detail: '경계 0 · 트렌치 0',
+        detail: '경계 0',
         tone: 'neutral',
       });
   });

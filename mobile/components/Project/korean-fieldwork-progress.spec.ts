@@ -9,7 +9,7 @@ import { KOREAN_FIELDWORK_CATEGORIES } from './korean-fieldwork-categories';
 const C = KOREAN_FIELDWORK_CATEGORIES;
 
 describe('Korean fieldwork progress', () => {
-  it('marks an operation without trenches as setup work', () => {
+  it('starts an operation without features as investigation work by default', () => {
     const operation = createDoc('operation-1', C.OPERATION, '조사구역 1', {}, {
       fieldRecordQuality: [],
       recordCreationTiming: 'duringFieldwork',
@@ -20,14 +20,14 @@ describe('Korean fieldwork progress', () => {
       .toMatchObject([
         {
           id: 'operation-1',
-          stageId: 'setup',
-          stageLabel: '착수',
+          stageId: 'investigation',
+          stageLabel: '조사',
           tone: 'warning',
-          actionLabel: '트렌치 추가',
+          actionLabel: '유구 기록',
           action: {
             type: 'createDocument',
             parentDocumentId: 'operation-1',
-            categoryName: C.TRENCH,
+            categoryName: C.FEATURE,
           },
           metrics: {
             hierarchyCount: 0,

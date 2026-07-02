@@ -72,15 +72,13 @@ const KoreanFieldworkOverviewChart: React.FC<KoreanFieldworkOverviewChartProps> 
       </View>
 
       <ChartBlock
-        title="전체 유구 현황"
-        subtitle={`${data.investigationUnitCount}단위`}
-        segments={data.investigationSegments}
-        emptyText="유구 현황 없음"
-        actionSegmentId="operation"
-        onActionSegmentPress={onReturnToInvestigationOverview}
+        title="전체 유구 성격 비율"
+        subtitle={`유구 ${data.featureCount}건`}
+        segments={data.featureTypeSegments}
+        emptyText="유구 성격 기록 없음"
       />
       <ChartBlock
-        title="유구·피트 진행"
+        title="유구 조사 진행"
         subtitle={`${data.featureWorkflowCount}건`}
         segments={data.featureStatusSegments}
         emptyText="유구 기록 없음"

@@ -7,7 +7,7 @@ import { KOREAN_FIELDWORK_CATEGORIES } from './korean-fieldwork-categories';
 const C = KOREAN_FIELDWORK_CATEGORIES;
 
 describe('korean fieldwork add options', () => {
-  it('prioritizes Korean archaeological fieldwork records under operation records', () => {
+  it('prioritizes feature records under operation records by default', () => {
     const options = getKoreanFieldworkAddOptions(C.OPERATION, [
       C.PLACE,
       C.TRENCH,
@@ -18,7 +18,7 @@ describe('korean fieldwork add options', () => {
     ]);
 
     expect(options.primary.map((option) => option.categoryName)).toEqual([
-      C.TRENCH,
+      C.FEATURE,
       C.SURVEY_BOUNDARY,
       C.PEN_MEMO,
     ]);

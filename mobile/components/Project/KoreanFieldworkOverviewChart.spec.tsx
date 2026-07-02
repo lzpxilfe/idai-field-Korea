@@ -42,17 +42,17 @@ describe('KoreanFieldworkOverviewChart', () => {
     );
 
     expect(getByText('유적·유구 차트')).toBeTruthy();
-    expect(getByText('전체 유구 현황')).toBeTruthy();
-    expect(getByText('유구·피트 진행')).toBeTruthy();
+    expect(getByText('전체 유구 성격 비율')).toBeTruthy();
+    expect(getByText('유구 조사 진행')).toBeTruthy();
     expect(getByText('조사구역 1 / 수혈 1 · 기록 2')).toBeTruthy();
+    expect(getByText('미정')).toBeTruthy();
     expect(getByText('자료')).toBeTruthy();
     expect(getByText('사진 1 · 도면/메모 0 · 유물/시료 0')).toBeTruthy();
     expect(getByText('collections')).toBeTruthy();
 
     fireEvent.press(getByTestId('fieldworkOverviewReturnToInvestigation'));
-    fireEvent.press(getByTestId('overviewSegment_operation'));
 
-    expect(handleReturn).toHaveBeenCalledTimes(2);
+    expect(handleReturn).toHaveBeenCalledTimes(1);
   });
 });
 

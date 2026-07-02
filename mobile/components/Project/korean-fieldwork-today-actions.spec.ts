@@ -35,7 +35,7 @@ describe('Korean fieldwork today actions', () => {
     });
   });
 
-  it('uses trench before operation for new feature candidates', () => {
+  it('uses trench before operation for new feature candidates in trial trench mode', () => {
     const operation = createDoc('operation-1', C.OPERATION);
     const featureGroup = createDoc('feature-group-1', C.FEATURE_GROUP);
     const trench = createDoc('trench-1', C.TRENCH);
@@ -43,7 +43,8 @@ describe('Korean fieldwork today actions', () => {
 
     const targets = getKoreanFieldworkTodayActionTargets(
       summary as any,
-      [operation, featureGroup, trench] as any
+      [operation, featureGroup, trench] as any,
+      'trialTrench'
     );
 
     expect(targets.primaryOperation).toBe(operation);
@@ -133,7 +134,6 @@ describe('Korean fieldwork today actions', () => {
     expect(tasks.map((task) => task.id)).toEqual([
       'create-daily-log',
       'create-survey-boundary',
-      'create-trench',
       'create-detected-feature',
     ]);
     expect(tasks[0].action).toEqual({
@@ -141,7 +141,7 @@ describe('Korean fieldwork today actions', () => {
       parentDocumentId: 'operation-1',
       categoryName: C.DAILY_LOG,
     });
-    expect(tasks[3].action).toEqual({
+    expect(tasks[2].action).toEqual({
       type: 'createDocument',
       parentDocumentId: 'operation-1',
       categoryName: C.FEATURE,
@@ -289,12 +289,14 @@ describe('Korean fieldwork today actions', () => {
     });
   });
 
-  it('uses trench as the parent for the feature candidate priority task', () => {
+  it('uses trench as the parent for the feature candidate priority task in trial trench mode', () => {
     const operation = createDoc('operation-1', C.OPERATION);
     const trench = createDoc('trench-1', C.TRENCH);
     const tasks = getKoreanFieldworkPriorityTasks(
       createSummary() as any,
-      [operation, trench] as any
+      [operation, trench] as any,
+      5,
+      'trialTrench'
     );
 
     expect(tasks.find((task) =>
@@ -306,40 +308,55 @@ describe('Korean fieldwork today actions', () => {
     });
   });
 
-  it('does not restart the project when the current scoped parent is a trench', () => {
-    const trench = createDoc('trench-1', C.TRENCH);
+  it('does not restart the project when the current scoped parent is a trial trench', () => {
+    const operation = createDoc('operation-1', C.OPERATION);
+    const trench = createDoc('trench-1', C.TRENCH, {
+      relations: { isRecordedIn: ['operation-1'] },
+    });
+    const profile = createDoc('profile-1', C.SOIL_PROFILE_PHOTO, {
+      relations: { isRecordedIn: ['trench-1'] },
+    });
     const tasks = getKoreanFieldworkPriorityTasks(
-      createSummary() as any,
-      [trench] as any
+      createSummary({
+        dailyLogs: [createDoc('daily-log-1', C.DAILY_LOG)],
+        surveyBoundaries: [createDoc('boundary-1', C.SURVEY_BOUNDARY)],
+      }) as any,
+      [operation, trench, profile] as any,
+      5,
+      'trialTrench'
     );
 
-    expect(tasks.map((task) => task.id)).toEqual(['create-detected-feature']);
-    expect(tasks[0].action).toEqual({
+    expect(tasks.map((task) => task.id)).toContain('create-detected-feature');
+    expect(tasks.map((task) => task.id)).not.toContain('create-trench');
+    expect(tasks.find((task) => task.id === 'create-detected-feature')?.action)
+      .toEqual({
       type: 'createDocument',
       parentDocumentId: 'trench-1',
       categoryName: C.FEATURE,
     });
   });
 
-  it('keeps quick actions scoped to the current trench', () => {
+  it('keeps quick actions scoped to the current trial trench', () => {
     const trench = createDoc('trench-1', C.TRENCH);
     const summary = createSummary();
     const targets = getKoreanFieldworkTodayActionTargets(
       summary as any,
-      [trench] as any
+      [trench] as any,
+      'trialTrench'
     );
 
     expect(getKoreanFieldworkQuickActionStates(
       summary as any,
       targets,
-      trench as any
+      trench as any,
+      'trialTrench'
     )).toMatchObject({
       dailyLog: {
         detail: '현재 범위에서 작성',
         disabled: true,
       },
       featureCandidate: {
-        detail: '유구 추가',
+        detail: '트렌치 안에 유구 기록',
         action: {
           type: 'createDocument',
           parentDocumentId: 'trench-1',

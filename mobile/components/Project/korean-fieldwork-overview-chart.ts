@@ -6,7 +6,14 @@ import {
   FEATURE_WORKFLOW_CATEGORIES,
   KOREAN_FIELDWORK_CATEGORIES,
 } from './korean-fieldwork-categories';
-import { KoreanFieldworkInvestigationModeId } from './korean-fieldwork-investigation-mode';
+import {
+  KoreanFieldworkInvestigationModeId,
+  shouldUseKoreanFieldworkTrenchWorkflow,
+} from './korean-fieldwork-investigation-mode';
+import {
+  getKoreanFieldworkFeatureTypeOption,
+  KOREAN_FIELDWORK_FEATURE_TYPE_OPTIONS,
+} from './korean-fieldwork-feature-types';
 import {
   getKoreanFieldworkChecklistQuickOptions,
   isKoreanFieldworkChecklistRecord,
@@ -62,6 +69,7 @@ export interface KoreanFieldworkOverviewChartData {
   criticalIssueCount: number;
   metrics: KoreanFieldworkOverviewMetric[];
   investigationSegments: KoreanFieldworkOverviewSegment[];
+  featureTypeSegments: KoreanFieldworkOverviewSegment[];
   featureStatusSegments: KoreanFieldworkOverviewSegment[];
 }
 
@@ -104,6 +112,13 @@ const DIRECT_FIELDWORK_PHOTO_CATEGORIES = new Set<string>([
 ]);
 
 const DIRECT_FIELDWORK_PHOTO_URI_FIELDS = ['fieldworkPhotoUri', 'imageUri', 'fileUri'];
+
+const FEATURE_TYPE_SEGMENT_TONES: readonly KoreanFieldworkOverviewTone[] = [
+  'success',
+  'info',
+  'warning',
+  'neutral',
+];
 
 export const getKoreanFieldworkOverviewChartData = (
   summary: KoreanFieldworkTodaySummary,
@@ -152,6 +167,8 @@ export const getKoreanFieldworkOverviewChartData = (
   const checklistPercent = checklistStats.total > 0
     ? Math.round((checklistStats.done / checklistStats.total) * 100)
     : 0;
+  const usesTrenchWorkflow =
+    shouldUseKoreanFieldworkTrenchWorkflow(investigationModeId);
 
   return {
     totalDocumentCount: userVisibleDocuments.length,
@@ -179,7 +196,9 @@ export const getKoreanFieldworkOverviewChartData = (
         id: 'investigation',
         label: '조사',
         value: operationCount,
-        detail: `경계 ${surveyBoundaryCount} · 트렌치 ${trenchCount}`,
+        detail: usesTrenchWorkflow
+          ? `경계 ${surveyBoundaryCount} · 트렌치 ${trenchCount}`
+          : `경계 ${surveyBoundaryCount}`,
         tone: operationCount > 0 ? 'info' : 'neutral',
       },
       {
@@ -236,6 +255,7 @@ export const getKoreanFieldworkOverviewChartData = (
         'neutral'
       ),
     ],
+    featureTypeSegments: buildFeatureTypeSegments(userVisibleDocuments),
     featureStatusSegments: buildFeatureStatusSegments(featureWorkflowDocuments),
   };
 };
@@ -319,6 +339,61 @@ const buildFeatureStatusSegments = (
     createSegment('confirmed', '완료', counts.confirmed ?? 0, total, 'success'),
     createSegment('unclassified', '상태 없음', counts.unclassified ?? 0, total, 'neutral'),
   ];
+};
+
+const buildFeatureTypeSegments = (
+  documents: Document[]
+): KoreanFieldworkOverviewSegment[] => {
+  const featureDocuments = documents.filter((document) =>
+    document.resource.category === C.FEATURE
+  );
+  const total = featureDocuments.length;
+  const counts = featureDocuments.reduce((index, document) => {
+    const featureType = getFeatureTypeSegmentValue(document);
+    index.set(featureType, (index.get(featureType) ?? 0) + 1);
+    return index;
+  }, new Map<string, number>());
+
+  return Array.from(counts.entries())
+    .sort(([featureTypeA], [featureTypeB]) =>
+      getFeatureTypeRank(featureTypeA) - getFeatureTypeRank(featureTypeB)
+      || featureTypeA.localeCompare(featureTypeB)
+    )
+    .map(([featureType, count], index) => createSegment(
+      `featureType-${featureType}`,
+      getFeatureTypeSegmentLabel(featureType),
+      count,
+      total,
+      FEATURE_TYPE_SEGMENT_TONES[index % FEATURE_TYPE_SEGMENT_TONES.length]
+    ));
+};
+
+const getFeatureTypeSegmentValue = (
+  document: Document
+): string => {
+  const value = getResource(document).featureType;
+
+  return typeof value === 'string'
+    && value.trim().length > 0
+    && getKoreanFieldworkFeatureTypeOption(value)
+    ? value
+    : 'unknown';
+};
+
+const getFeatureTypeSegmentLabel = (
+  featureType: string
+): string =>
+  getKoreanFieldworkFeatureTypeOption(featureType)?.label
+  ?? (featureType === 'unknown' ? '미정' : featureType);
+
+const getFeatureTypeRank = (
+  featureType: string
+): number => {
+  const index = KOREAN_FIELDWORK_FEATURE_TYPE_OPTIONS.findIndex((option) =>
+    option.value === featureType
+  );
+
+  return index === -1 ? Number.MAX_SAFE_INTEGER : index;
 };
 
 const getFeatureRecordingStatus = (

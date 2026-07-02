@@ -5,7 +5,7 @@ import { getKoreanFieldworkRecordActionSummary } from './korean-fieldwork-record
 const C = KOREAN_FIELDWORK_CATEGORIES;
 
 describe('Korean fieldwork record actions', () => {
-  it('recommends the next structural child and first evidence for a fieldwork unit', () => {
+  it('recommends feature records and first evidence for a fieldwork unit by default', () => {
     const operation = createDoc('operation-1', C.OPERATION, '조사구역 1', {}, {
       fieldRecordQuality: [],
       recordCreationTiming: '',
@@ -14,7 +14,7 @@ describe('Korean fieldwork record actions', () => {
     const summary = getKoreanFieldworkRecordActionSummary(
       operation,
       [operation],
-      [C.TRENCH, C.PHOTO]
+      [C.TRENCH, C.FEATURE, C.PHOTO]
     );
 
     expect(summary).toMatchObject({
@@ -26,7 +26,7 @@ describe('Korean fieldwork record actions', () => {
       tone: 'warning',
     });
     expect(summary.actions.map((action) => action.id)).toEqual([
-      'create-Trench',
+      'create-Feature',
       'create-photos',
     ]);
   });

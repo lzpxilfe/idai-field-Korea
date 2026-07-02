@@ -12,7 +12,7 @@ describe('korean-fieldwork-record-list-empty-state', () => {
     })).toEqual({
       icon: 'add-location-alt',
       title: '아직 기록이 없습니다',
-      text: '지도에서 조사 경계를 먼저 만들고, 트렌치 기록을 이어가세요.',
+      text: '지도에서 조사 경계를 먼저 만들고, 유구 기록을 이어가세요.',
     });
   });
 

@@ -126,7 +126,7 @@ export const getKoreanFieldworkInvestigationMode = (
 
 export const shouldUseKoreanFieldworkTrenchWorkflow = (
   investigationModeId?: KoreanFieldworkInvestigationModeId
-): boolean => investigationModeId === undefined || investigationModeId === 'trialTrench';
+): boolean => investigationModeId === 'trialTrench';
 
 export const loadKoreanFieldworkInvestigationModeId = async (
   projectId: string
