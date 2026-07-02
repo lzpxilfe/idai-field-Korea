@@ -2,11 +2,13 @@ import { Ionicons } from '@expo/vector-icons';
 import React, {
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
 import {
   KeyboardAvoidingView,
+  LayoutChangeEvent,
   Platform,
   ScrollView,
   StyleSheet,
@@ -27,9 +29,13 @@ import {
   KoreanFieldworkInvestigationModeId,
   loadKoreanFieldworkDefaultInstitutionName,
   loadKoreanFieldworkProjectSetupDefaults,
+  loadKoreanFieldworkProjectBoundaryDraft,
   saveKoreanFieldworkDefaultInstitutionName,
   saveKoreanFieldworkBoundarySummary,
   saveKoreanFieldworkInvestigationModeId,
+} from '@/components/Project/korean-fieldwork-investigation-mode';
+import type {
+  KoreanFieldworkProjectBoundaryDraft,
 } from '@/components/Project/korean-fieldwork-investigation-mode';
 import {
   syncKoreanFieldworkProjectSetupDefaultsToProjectDocument,
@@ -54,6 +60,8 @@ const SettingsScreen: React.FC = () => {
   const [investigationModeId, setInvestigationModeId] =
     useState<KoreanFieldworkInvestigationModeId>();
   const [boundarySummary, setBoundarySummary] = useState('');
+  const [projectBoundaryDraft, setProjectBoundaryDraft] =
+    useState<KoreanFieldworkProjectBoundaryDraft>();
   const [hasProjectSetupInteraction, setHasProjectSetupInteraction] =
     useState(false);
   const [hasMapProviderInteraction, setHasMapProviderInteraction] =
@@ -112,6 +120,7 @@ const SettingsScreen: React.FC = () => {
     if (!hasCurrentProject) {
       setInvestigationModeId(undefined);
       setBoundarySummary('');
+      setProjectBoundaryDraft(undefined);
       setHasProjectSetupInteraction(false);
       hasProjectSetupInteractionRef.current = false;
       setIsLoadingProjectSettings(false);
@@ -123,6 +132,7 @@ const SettingsScreen: React.FC = () => {
     setIsLoadingProjectSettings(true);
     setInvestigationModeId(undefined);
     setBoundarySummary('');
+    setProjectBoundaryDraft(undefined);
     setHasProjectSetupInteraction(false);
     hasProjectSetupInteractionRef.current = false;
 
@@ -130,14 +140,18 @@ const SettingsScreen: React.FC = () => {
       const projectDocument = projectRepository
         ? await projectRepository.get('project').catch(() => undefined)
         : undefined;
-      const setupDefaults = await loadKoreanFieldworkProjectSetupDefaults(
-        currentProject,
-        projectDocument
-      );
+      const [setupDefaults, boundaryDraft] = await Promise.all([
+        loadKoreanFieldworkProjectSetupDefaults(
+          currentProject,
+          projectDocument
+        ),
+        loadKoreanFieldworkProjectBoundaryDraft(currentProject),
+      ]);
 
       if (!isActive || hasProjectSetupInteractionRef.current) return;
       setInvestigationModeId(setupDefaults.investigationModeId);
       setBoundarySummary(setupDefaults.boundarySummary ?? '');
+      setProjectBoundaryDraft(boundaryDraft);
       if (!hasInstitutionNameInteractionRef.current) {
         setInstitutionName(setupDefaults.institutionName ?? '');
       }
@@ -370,6 +384,13 @@ const SettingsScreen: React.FC = () => {
                   style={styles.input}
                 />
 
+                {projectBoundaryDraft && (
+                  <ProjectBoundaryPreview
+                    boundaryDraft={projectBoundaryDraft}
+                    boundarySummary={boundarySummary}
+                  />
+                )}
+
                 <View style={styles.boundaryNotice}>
                   <Ionicons
                     name={isProjectSetupIncomplete
@@ -486,6 +507,169 @@ const SettingsScreen: React.FC = () => {
   );
 };
 
+const BOUNDARY_PREVIEW_DEFAULT_SIZE = {
+  height: 180,
+  width: 320,
+};
+const BOUNDARY_PREVIEW_TEXT = {
+  title: '\uc9c0\ub3c4\uc5d0\uc11c \ucc0d\uc740 \uc870\uc0ac \uacbd\uacc4',
+  label: '\uc870\uc0ac \uacbd\uacc4',
+  pointSuffix: '\uc810',
+};
+
+interface BoundaryPreviewPoint {
+  x: number;
+  y: number;
+}
+
+interface BoundaryPreviewSize {
+  height: number;
+  width: number;
+}
+
+const ProjectBoundaryPreview: React.FC<{
+  boundaryDraft: KoreanFieldworkProjectBoundaryDraft;
+  boundarySummary: string;
+}> = ({ boundaryDraft, boundarySummary }) => {
+  const [canvasSize, setCanvasSize] = useState(BOUNDARY_PREVIEW_DEFAULT_SIZE);
+  const boundaryPoints = useMemo(
+    () => getBoundaryPreviewPoints(boundaryDraft, canvasSize),
+    [boundaryDraft, canvasSize]
+  );
+
+  const updateCanvasSize = (event: LayoutChangeEvent) => {
+    const { height, width } = event.nativeEvent.layout;
+    if (height > 0 && width > 0) setCanvasSize({ height, width });
+  };
+
+  return (
+    <View style={styles.boundaryPreview} testID="settings-boundary-preview">
+      <View style={styles.boundaryPreviewHeader}>
+        <Text style={styles.boundaryPreviewTitle}>
+          {BOUNDARY_PREVIEW_TEXT.title}
+        </Text>
+        <Text style={styles.boundaryPreviewDetail} numberOfLines={1}>
+          {boundarySummary.trim()
+            || `${boundaryDraft.coordinates.length}${BOUNDARY_PREVIEW_TEXT.pointSuffix}`}
+        </Text>
+      </View>
+      <View
+        onLayout={updateCanvasSize}
+        style={styles.boundaryPreviewCanvas}
+        testID="settings-boundary-preview-canvas"
+      >
+        {toBoundaryPreviewSegments(boundaryPoints)}
+        {boundaryPoints.map((point, index) => (
+          <View
+            key={`settings-boundary-preview-point-${index}`}
+            pointerEvents="none"
+            style={[
+              styles.boundaryPreviewPoint,
+              {
+                left: point.x - 9,
+                top: point.y - 9,
+              },
+            ]}
+            testID={`settings-boundary-preview-point_${index}`}
+          >
+            <Text style={styles.boundaryPreviewPointText}>{index + 1}</Text>
+          </View>
+        ))}
+        <Text style={styles.boundaryPreviewLabel}>
+          {BOUNDARY_PREVIEW_TEXT.label}
+        </Text>
+      </View>
+    </View>
+  );
+};
+
+const getBoundaryPreviewPoints = (
+  boundaryDraft: KoreanFieldworkProjectBoundaryDraft,
+  canvasSize: BoundaryPreviewSize
+): BoundaryPreviewPoint[] => {
+  if (boundaryDraft.coordinates.length === 0) return [];
+
+  const averageLatitude = boundaryDraft.coordinates.reduce(
+    (sum, point) => sum + point.latitude,
+    0
+  ) / boundaryDraft.coordinates.length;
+  const longitudeScale = Math.max(
+    Math.cos((averageLatitude * Math.PI) / 180),
+    0.000001
+  );
+  const projectedPoints = boundaryDraft.coordinates.map((point) => ({
+    x: point.longitude * longitudeScale,
+    y: point.latitude,
+  }));
+  const xs = projectedPoints.map((point) => point.x);
+  const ys = projectedPoints.map((point) => point.y);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+  const xRange = maxX - minX;
+  const yRange = maxY - minY;
+  const padding = 24;
+  const drawableWidth = Math.max(canvasSize.width - (padding * 2), 1);
+  const drawableHeight = Math.max(canvasSize.height - (padding * 2), 1);
+  const scale = Math.min(
+    drawableWidth / Math.max(xRange, 0.000001),
+    drawableHeight / Math.max(yRange, 0.000001)
+  );
+  const fittedWidth = xRange * scale;
+  const fittedHeight = yRange * scale;
+  const offsetX = (canvasSize.width - fittedWidth) / 2;
+  const offsetY = (canvasSize.height - fittedHeight) / 2;
+
+  return projectedPoints.map((point) => ({
+    x: offsetX + ((point.x - minX) * scale),
+    y: offsetY + ((maxY - point.y) * scale),
+  }));
+};
+
+const toBoundaryPreviewSegments = (points: BoundaryPreviewPoint[]) => {
+  if (points.length < 2) return [];
+
+  return points.map((point, index) => (
+    <BoundaryPreviewSegment
+      end={points[(index + 1) % points.length]}
+      key={`settings-boundary-preview-segment-${index}`}
+      start={point}
+      testID="settings-boundary-preview-segment"
+    />
+  ));
+};
+
+const BoundaryPreviewSegment: React.FC<{
+  end: BoundaryPreviewPoint;
+  start: BoundaryPreviewPoint;
+  testID: string;
+}> = ({ end, start, testID }) => {
+  const width = 3;
+  const distance = Math.sqrt(
+    ((end.x - start.x) ** 2) + ((end.y - start.y) ** 2)
+  );
+  const angle = Math.atan2(end.y - start.y, end.x - start.x);
+
+  return (
+    <View
+      pointerEvents="none"
+      style={{
+        backgroundColor: '#175cd3',
+        borderRadius: width,
+        height: width,
+        left: ((start.x + end.x) / 2) - (distance / 2),
+        opacity: 0.92,
+        position: 'absolute',
+        top: ((start.y + end.y) / 2) - (width / 2),
+        transform: [{ rotateZ: `${angle}rad` }],
+        width: distance,
+      }}
+      testID={testID}
+    />
+  );
+};
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -597,6 +781,70 @@ const styles = StyleSheet.create({
     marginTop: 18,
     paddingHorizontal: 12,
     paddingVertical: 11,
+  },
+  boundaryPreview: {
+    backgroundColor: '#ffffff',
+    borderColor: '#d0d5dd',
+    borderRadius: 6,
+    borderWidth: 1,
+    marginTop: 12,
+    padding: 10,
+  },
+  boundaryPreviewCanvas: {
+    backgroundColor: '#ffffff',
+    borderColor: '#e4e7ec',
+    borderRadius: 6,
+    borderWidth: 1,
+    height: BOUNDARY_PREVIEW_DEFAULT_SIZE.height,
+    marginTop: 8,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  boundaryPreviewDetail: {
+    color: '#667085',
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '800',
+    marginLeft: 8,
+    textAlign: 'right',
+  },
+  boundaryPreviewHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+  },
+  boundaryPreviewLabel: {
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderRadius: 4,
+    color: '#175cd3',
+    fontSize: 11,
+    fontWeight: '900',
+    left: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    position: 'absolute',
+    top: 8,
+  },
+  boundaryPreviewPoint: {
+    alignItems: 'center',
+    backgroundColor: '#175cd3',
+    borderColor: '#ffffff',
+    borderRadius: 9,
+    borderWidth: 2,
+    height: 18,
+    justifyContent: 'center',
+    position: 'absolute',
+    width: 18,
+  },
+  boundaryPreviewPointText: {
+    color: '#ffffff',
+    fontSize: 9,
+    fontWeight: '900',
+    lineHeight: 11,
+  },
+  boundaryPreviewTitle: {
+    color: '#27343b',
+    fontSize: 13,
+    fontWeight: '900',
   },
   boundaryText: {
     color: '#344054',

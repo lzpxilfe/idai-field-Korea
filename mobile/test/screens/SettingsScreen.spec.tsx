@@ -21,6 +21,7 @@ import {
   createKoreanFieldworkBoundarySummaryStorageKey,
   createKoreanFieldworkDefaultInstitutionNameStorageKey,
   createKoreanFieldworkInvestigationModeStorageKey,
+  createKoreanFieldworkProjectBoundaryDraftStorageKey,
 } from '@/components/Project/korean-fieldwork-investigation-mode';
 import useConfiguration from '@/hooks/use-configuration';
 import usePouchDbDatastore from '@/hooks/use-pouchdb-datastore';
@@ -131,6 +132,42 @@ describe('SettingsScreen', () => {
     }));
   }, 15000);
 
+  it('keeps the saved drawn boundary visible in project settings', async () => {
+    await AsyncStorage.setItem(
+      createKoreanFieldworkProjectBoundaryDraftStorageKey('fieldwork-1'),
+      JSON.stringify({
+        coordinates: [
+          { latitude: 37.1, longitude: 127.1 },
+          { latitude: 37.1, longitude: 127.2 },
+          { latitude: 37.2, longitude: 127.2 },
+          { latitude: 37.2, longitude: 127.1 },
+        ],
+        mapTypeId: 'SKYVIEW',
+      })
+    );
+
+    const preferences = createPreferencesContextValue(jest.fn());
+    const { getAllByTestId, getByTestId } = render(
+      <SafeAreaInsetsContext.Provider value={safeAreaInsets}>
+        <PreferencesContext.Provider value={preferences}>
+          <SettingsScreen />
+        </PreferencesContext.Provider>
+      </SafeAreaInsetsContext.Provider>
+    );
+
+    await waitFor(() => {
+      expect(getByTestId('settings-boundary-preview')).toBeTruthy();
+    });
+
+    fireEvent(getByTestId('settings-boundary-preview-canvas'), 'layout', {
+      nativeEvent: { layout: { height: 180, width: 360 } },
+    });
+
+    expect(getAllByTestId('settings-boundary-preview-segment')).toHaveLength(4);
+    expect(getByTestId('settings-boundary-preview-point_0')).toBeTruthy();
+    expect(getByTestId('settings-boundary-preview-point_3')).toBeTruthy();
+  });
+
   it('syncs current project setup changes to the project document', async () => {
     const projectDocument = {
       _id: 'project',
@@ -154,7 +191,7 @@ describe('SettingsScreen', () => {
     mockedUseRepository.mockReturnValue(repository);
 
     const preferences = createPreferencesContextValue(jest.fn());
-    const { getByTestId, getByText } = render(
+    const { getByTestId } = render(
       <SafeAreaInsetsContext.Provider value={safeAreaInsets}>
         <PreferencesContext.Provider value={preferences}>
           <SettingsScreen />
