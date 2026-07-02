@@ -201,6 +201,7 @@ function getDesktopFieldworkTestPaths() {
 
 function getMobileFieldworkTestPaths() {
   const testRoots = [
+    'app',
     'components/Home',
     'components/Project',
     'components/common/forms',
@@ -214,6 +215,7 @@ function getMobileFieldworkTestPaths() {
   const patterns = [
     /KoreanFieldwork.*\.spec\.(ts|tsx)$/,
     /korean-fieldwork.*\.spec\.ts$/,
+    /_layout\.spec\.tsx$/,
     /BoundaryFileImportModal\.spec\.tsx$/,
     /boundary-file-import\.spec\.ts$/,
     /KakaoSatellitePicker\.spec\.tsx$/,
