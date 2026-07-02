@@ -33,6 +33,12 @@ import {
 import { SOIL_COLOR_MUNSELL_REFERENCES } from './soil-color-photo-assist';
 
 export interface FieldworkPhotoSamplePoint {
+  munsell?: string;
+  rgb?: {
+    blue: number;
+    green: number;
+    red: number;
+  };
   x: number;
   y: number;
 }
@@ -651,6 +657,16 @@ const normalizeSamplePointPayload = (
   if (!value || typeof value !== 'object') return undefined;
 
   const candidate = value as Partial<FieldworkPhotoSamplePoint>;
+  const rgb = candidate.rgb
+    && typeof candidate.rgb.red === 'number'
+    && typeof candidate.rgb.green === 'number'
+    && typeof candidate.rgb.blue === 'number'
+    ? {
+      blue: Math.round(candidate.rgb.blue),
+      green: Math.round(candidate.rgb.green),
+      red: Math.round(candidate.rgb.red),
+    }
+    : undefined;
   if (
     typeof candidate.x !== 'number'
     || typeof candidate.y !== 'number'
@@ -661,6 +677,10 @@ const normalizeSamplePointPayload = (
   }
 
   return {
+    ...(typeof candidate.munsell === 'string'
+      ? { munsell: candidate.munsell }
+      : {}),
+    ...(rgb ? { rgb } : {}),
     x: normalizeCoordinate(candidate.x),
     y: normalizeCoordinate(candidate.y),
   };
@@ -1153,7 +1173,12 @@ function endTouch(event){
   const point=getEventPoint(event);
   if(mode==='sample'){
     const sample=updateSample(point);
-    if(sample&&sample.point) post('samplePoint',sample.point);
+    if(sample&&sample.point) post('samplePoint',{
+      x:sample.point.x,
+      y:sample.point.y,
+      munsell:sample.munsell,
+      rgb:sample.rgb
+    });
     return;
   }
   if(!isDrawing||!activeStroke) return;

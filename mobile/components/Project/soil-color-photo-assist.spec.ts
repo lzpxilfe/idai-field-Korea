@@ -2,6 +2,7 @@ import jpeg from 'jpeg-js';
 import {
   createSoilColorAssistUpdatesFromPhotoBase64,
   createSoilColorAssistUpdatesFromPhotoBase64AtPoint,
+  createSoilColorAssistUpdatesFromRgbSampleAtPoint,
   extractMunsellCandidateOptions,
   getNearestMunsellCandidates,
 } from './soil-color-photo-assist';
@@ -61,6 +62,18 @@ describe('soil color photo assist', () => {
     expect(leftUpdates.soilColorAssistCandidates).toContain('1: 10YR 4/3');
     expect(rightUpdates.soilColorAssistCandidates).toContain('사진 선택 지점 80%/50%');
     expect(rightUpdates.soilColorAssistCandidates).toContain('1: 2.5Y 5/3');
+  });
+
+  it('uses RGB sampled directly from the photo canvas', () => {
+    const updates = createSoilColorAssistUpdatesFromRgbSampleAtPoint(
+      { red: 139, green: 128, blue: 88 },
+      { x: 8000, y: 5000 }
+    );
+
+    expect(updates.soilColorAssistStatus).toBe('candidatesAvailable');
+    expect(updates.soilColorAssistCandidates).toContain('80%/50%');
+    expect(updates.soilColorAssistCandidates).toContain('RGB 139/128/88');
+    expect(updates.soilColorAssistCandidates).toContain('1: 2.5Y 5/3');
   });
 });
 

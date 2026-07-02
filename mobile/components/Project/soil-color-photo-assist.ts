@@ -109,6 +109,28 @@ export const createSoilColorAssistUpdatesFromPhotoBase64AtPoint = (
   };
 };
 
+export const createSoilColorAssistUpdatesFromRgbSampleAtPoint = (
+  rgb: RgbSample | undefined,
+  point: SoilColorSamplePoint
+): SoilColorAssistResourceUpdates => {
+  if (!rgb) return {};
+
+  const averageRgb = normalizeRgbSample(rgb);
+  const candidates = getNearestMunsellCandidates(averageRgb);
+  const status = candidates[0]?.deltaE > LOW_CONFIDENCE_DELTA_E
+    ? 'lowConfidence'
+    : 'candidatesAvailable';
+
+  return {
+    soilColorAssistCandidates: formatCandidates(
+      averageRgb,
+      candidates,
+      getPointSampleLabel(point)
+    ),
+    soilColorAssistStatus: status,
+  };
+};
+
 export const getSoilColorPhotoAssistFromJpegBase64 = (
   base64: string
 ): SoilColorPhotoAssistResult => {
@@ -299,6 +321,12 @@ const normalizeSampleCoordinate = (value: number): number =>
 
 const clamp = (value: number, min: number, max: number): number =>
   Math.max(min, Math.min(max, value));
+
+const normalizeRgbSample = (rgb: RgbSample): RgbSample => ({
+  blue: clamp(Math.round(rgb.blue), 0, 255),
+  green: clamp(Math.round(rgb.green), 0, 255),
+  red: clamp(Math.round(rgb.red), 0, 255),
+});
 
 const decodeBase64 = (base64: string): Uint8Array => {
   const sanitized = base64

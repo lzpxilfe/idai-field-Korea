@@ -47,7 +47,10 @@ import {
   KoreanFieldworkInvestigationModeId,
   loadKoreanFieldworkInvestigationModeId,
 } from '@/components/Project/korean-fieldwork-investigation-mode';
-import { createSoilColorAssistUpdatesFromPhotoBase64AtPoint } from '@/components/Project/soil-color-photo-assist';
+import {
+  createSoilColorAssistUpdatesFromPhotoBase64AtPoint,
+  createSoilColorAssistUpdatesFromRgbSampleAtPoint,
+} from '@/components/Project/soil-color-photo-assist';
 
 interface SoilProfileLayerSampleRequest {
   key: number;
@@ -384,13 +387,18 @@ const sampleSoilProfileColor = async (
 ) => {
   if (!imageUri) return;
 
-  const base64 = await FileSystem.readAsStringAsync(imageUri, {
-    encoding: FileSystem.EncodingType.Base64,
-  });
+  const assistUpdates = point.rgb
+    ? createSoilColorAssistUpdatesFromRgbSampleAtPoint(point.rgb, point)
+    : createSoilColorAssistUpdatesFromPhotoBase64AtPoint(
+      await FileSystem.readAsStringAsync(imageUri, {
+        encoding: FileSystem.EncodingType.Base64,
+      }),
+      point
+    );
 
   updateResourceFields(getSoilProfileColorSampleUpdates(
     resource,
-    createSoilColorAssistUpdatesFromPhotoBase64AtPoint(base64, point),
+    assistUpdates,
     targetLayerNumber
   ));
 };

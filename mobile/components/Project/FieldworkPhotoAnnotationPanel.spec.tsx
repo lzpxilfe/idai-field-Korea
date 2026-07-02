@@ -182,6 +182,42 @@ describe('FieldworkPhotoAnnotationPanel', () => {
       .toBe('3층 10YR 4/3 · RGB 111/87/61');
   });
 
+  it('passes the canvas-sampled RGB with the selected photo point', async () => {
+    const handleSamplePoint = jest.fn();
+    const { getByTestId } = render(
+      <FieldworkPhotoAnnotationPanel
+        imageUri="file:///tablet/profile.jpg"
+        onSamplePoint={handleSamplePoint}
+        onUpdateStrokes={jest.fn()}
+        sampleButtonLabel="토색 찍기"
+      />
+    );
+
+    fireEvent.press(getByTestId('fieldworkPhotoSamplePointButton'));
+    fireEvent(getByTestId('fieldworkPhotoAnnotationFullscreenCanvas'), 'message', {
+      nativeEvent: {
+        data: JSON.stringify({
+          payload: {
+            munsell: '2.5Y 5/3',
+            rgb: { red: 139, green: 128, blue: 88 },
+            x: 8000,
+            y: 5000,
+          },
+          type: 'samplePoint',
+        }),
+      },
+    });
+
+    await waitFor(() =>
+      expect(handleSamplePoint).toHaveBeenCalledWith({
+        munsell: '2.5Y 5/3',
+        rgb: { red: 139, green: 128, blue: 88 },
+        x: 8000,
+        y: 5000,
+      })
+    );
+  });
+
   it('stores full-screen photo drawing strokes with brush width', () => {
     const handleUpdateStrokes = jest.fn();
     const { getByTestId } = render(
