@@ -11,6 +11,7 @@ export const KOREAN_FIELDWORK_INITIAL_BOUNDARY_SYSTEM_RECORD =
   'initialProjectBoundary';
 
 const OPERATION_CATEGORY = 'Operation';
+const PROJECT_CATEGORY = 'Project';
 const SURVEY_BOUNDARY_CATEGORY = 'SurveyBoundary';
 const FEATURE_GROUP_CATEGORY = 'FeatureGroup';
 const PROJECT_BOUNDARY_SETUP_STATE = 'draftBoundary';
@@ -37,6 +38,7 @@ export const getKoreanFieldworkUserVisibleDocuments = (
   documents.forEach((document) => {
     if (
       isKoreanFieldworkInitialBoundaryDocument(document)
+      || document.resource.category === PROJECT_CATEGORY
       || document.resource.category === FEATURE_GROUP_CATEGORY
     ) {
       hiddenDocumentIds.add(document.resource.id);

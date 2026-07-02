@@ -20,12 +20,34 @@ describe('korean-fieldwork-system-records', () => {
       'feature-1',
     ]);
   });
+
+  it('keeps project setup records out of field record counts', () => {
+    const project = createDoc('project', 'Project');
+    const boundarySetupOperation = createDoc('boundary-setup', 'Operation', {}, {
+      projectBoundarySetupState: 'draftBoundary',
+      projectBoundarySummary: '지도에서 그린 조사경계 7점',
+    });
+    const boundary = createDoc('boundary-1', 'SurveyBoundary', {
+      isRecordedIn: ['boundary-setup'],
+    });
+    const feature = createDoc('feature-1', 'Feature');
+
+    expect(getKoreanFieldworkUserVisibleDocuments([
+      project,
+      boundarySetupOperation,
+      boundary,
+      feature,
+    ]).map((document) => document.resource.id)).toEqual([
+      'feature-1',
+    ]);
+  });
 });
 
 const createDoc = (
   id: string,
   category: string,
-  relations: Record<string, string[]> = {}
+  relations: Record<string, string[]> = {},
+  extraResource: Record<string, unknown> = {}
 ): Document => ({
   _id: id,
   resource: {
@@ -33,6 +55,7 @@ const createDoc = (
     identifier: id,
     category,
     relations,
+    ...extraResource,
   },
   created: { user: 'test', date: new Date(0) },
   modified: [],

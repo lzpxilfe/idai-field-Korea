@@ -476,7 +476,7 @@ const DocumentsList: React.FC = () => {
       : 0,
     [recordingBaseCount, userVisibleDocuments]
   );
-  const hasFieldRecords = documents.length > 0;
+  const hasFieldRecords = userVisibleDocuments.length > 0;
   const hierarchyLabel = hierarchyPath.length > 0
     ? hierarchyPath.map((document) =>
       getKoreanFieldworkDisplayIdentifier(document.resource.identifier)
