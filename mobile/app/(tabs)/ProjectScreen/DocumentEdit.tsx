@@ -18,6 +18,8 @@ import FieldworkPhotoAnnotationPanel, {
   FIELDWORK_PHOTO_ANNOTATION_FIELDS,
   FieldworkPhotoSamplePoint,
 } from '@/components/Project/FieldworkPhotoAnnotationPanel';
+import KoreanFieldworkDrawingSurveyPanel
+  from '@/components/Project/KoreanFieldworkDrawingSurveyPanel';
 import KoreanFieldworkFeatureSketchReferencePanel
   from '@/components/Project/KoreanFieldworkFeatureSketchReferencePanel';
 import KoreanFieldworkFeaturePitLinePanel
@@ -224,6 +226,10 @@ const DocumentEdit: React.FC = () => {
           )}
           <KoreanFieldworkFindSpotPanel
             documents={documents ?? []}
+            resource={resource}
+            onUpdateResourceFields={applyResourceUpdates}
+          />
+          <KoreanFieldworkDrawingSurveyPanel
             resource={resource}
             onUpdateResourceFields={applyResourceUpdates}
           />

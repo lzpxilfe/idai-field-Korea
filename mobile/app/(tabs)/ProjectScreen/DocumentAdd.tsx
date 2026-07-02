@@ -19,6 +19,8 @@ import SoilProfileCameraButton, {
   SoilProfileCaptureData,
 } from '@/components/Project/SoilProfileCameraButton';
 import KoreanFieldworkDraftContextPanel from '@/components/Project/KoreanFieldworkDraftContextPanel';
+import KoreanFieldworkDrawingSurveyPanel
+  from '@/components/Project/KoreanFieldworkDrawingSurveyPanel';
 import KoreanFieldworkFindSpotPanel
   from '@/components/Project/KoreanFieldworkFindSpotPanel';
 import FieldworkPhotoAnnotationPanel, {
@@ -226,6 +228,10 @@ const DocumentAdd: React.FC = () => {
           <KoreanFieldworkFindSpotPanel
             documents={documents ?? []}
             parentDocument={parentDoc}
+            resource={newResource}
+            onUpdateResourceFields={applyResourceUpdates}
+          />
+          <KoreanFieldworkDrawingSurveyPanel
             resource={newResource}
             onUpdateResourceFields={applyResourceUpdates}
           />
