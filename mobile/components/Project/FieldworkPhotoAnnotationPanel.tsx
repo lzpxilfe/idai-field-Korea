@@ -1080,12 +1080,17 @@ function toScreenPoint(point){
   };
 }
 function screenToNormalized(point){
+  if(!point||!Number.isFinite(point.x)||!Number.isFinite(point.y)) return undefined;
   const size=getCssSize();
   const frame=getBaseImageFrame();
+  if(!Number.isFinite(size.width)||!Number.isFinite(size.height)||!Number.isFinite(frame.width)||!Number.isFinite(frame.height)||frame.width<=0||frame.height<=0){
+    return undefined;
+  }
   const base={
     x:((point.x-viewport.offsetX-(size.width/2))/viewport.scale)+(size.width/2),
     y:((point.y-viewport.offsetY-(size.height/2))/viewport.scale)+(size.height/2)
   };
+  if(!Number.isFinite(base.x)||!Number.isFinite(base.y)) return undefined;
   if(base.x<frame.left||base.x>frame.left+frame.width||base.y<frame.top||base.y>frame.top+frame.height){
     return undefined;
   }
@@ -1096,6 +1101,7 @@ function screenToNormalized(point){
 }
 function getEventPoint(event){
   const source=event.touches&&event.touches.length?event.touches[0]:event.changedTouches&&event.changedTouches.length?event.changedTouches[0]:event;
+  if(!source||!Number.isFinite(source.clientX)||!Number.isFinite(source.clientY)) return undefined;
   const rect=canvas.getBoundingClientRect();
   return {x:source.clientX-rect.left,y:source.clientY-rect.top};
 }
@@ -1136,6 +1142,7 @@ function startTouch(event){
     return;
   }
   const point=getEventPoint(event);
+  if(!point) return;
   if(mode==='sample'){
     updateSample(point);
     return;
@@ -1153,6 +1160,7 @@ function moveTouch(event){
     return;
   }
   const point=getEventPoint(event);
+  if(!point) return;
   if(mode==='sample'){
     updateSample(point);
     return;
@@ -1168,9 +1176,9 @@ function endTouch(event){
     gesture=null;
     return;
   }
-  const point=getEventPoint(event);
   if(mode==='sample'){
-    const sample=updateSample(point);
+    const point=getEventPoint(event);
+    const sample=point?updateSample(point):activeSample;
     if(sample&&sample.point) post('samplePoint',{
       x:sample.point.x,
       y:sample.point.y,
@@ -1180,6 +1188,7 @@ function endTouch(event){
     return;
   }
   if(!isDrawing||!activeStroke) return;
+  const point=getEventPoint(event);
   const normalized=screenToNormalized(point);
   if(normalized) appendActiveStrokePoint(normalized,releasePointMinDistance);
   strokes=strokes.concat([activeStroke]);

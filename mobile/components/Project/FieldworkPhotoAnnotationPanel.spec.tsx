@@ -198,6 +198,29 @@ describe('FieldworkPhotoAnnotationPanel', () => {
       .toBe('3층 10YR 4/3 · RGB 111/87/61');
   });
 
+  it('keeps the last valid eyedropper sample when touch release has no coordinates', () => {
+    const { getByTestId } = render(
+      <FieldworkPhotoAnnotationPanel
+        imageUri="file:///tablet/profile.jpg"
+        onSamplePoint={jest.fn()}
+        onUpdateStrokes={jest.fn()}
+        sampleButtonLabel="토색 찍기"
+      />
+    );
+
+    fireEvent.press(getByTestId('fieldworkPhotoSamplePointButton'));
+    const fullscreenCanvas = getByTestId('fieldworkPhotoAnnotationFullscreenCanvas');
+    const html = fullscreenCanvas.props.source.html as string;
+
+    expect(html).toContain(
+      'if(!source||!Number.isFinite(source.clientX)||!Number.isFinite(source.clientY)) return undefined;'
+    );
+    expect(html).toContain(
+      'if(!point||!Number.isFinite(point.x)||!Number.isFinite(point.y)) return undefined;'
+    );
+    expect(html).toContain('const sample=point?updateSample(point):activeSample;');
+  });
+
   it('passes the canvas-sampled RGB with the selected photo point', async () => {
     const handleSamplePoint = jest.fn();
     const { getByTestId } = render(
