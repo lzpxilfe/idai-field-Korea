@@ -338,6 +338,53 @@ describe('DocumentAddModal', () => {
     expect(onAddCategory.mock.calls[0][2]).not.toHaveProperty('shortDescription');
   });
 
+  it('does not create a center sketch point from coordinate-less touch events', () => {
+    const onAddCategory = jest.fn();
+    const parentDoc = {
+      resource: {
+        id: 'trench-1',
+        identifier: 'T1',
+        category: C.TRENCH,
+        relations: {},
+      },
+    } as any;
+
+    const { getByTestId } = render(
+      <LabelsContext.Provider value={{ labels: new Labels(() => ['ko']) }}>
+        <ConfigurationContext.Provider value={createConfig([
+          createCategory(C.TRENCH),
+          createCategory(C.FEATURE),
+        ])}
+        >
+          <DocumentAddModal
+            onAddCategory={onAddCategory}
+            onClose={jest.fn()}
+            parentDoc={parentDoc}
+          />
+        </ConfigurationContext.Provider>
+      </LabelsContext.Provider>
+    );
+
+    fireEvent.press(getByTestId(`addCategory_${C.FEATURE}`));
+    fireEvent.press(getByTestId('featureSketchMode_polygon'));
+
+    const canvas = getByTestId('featureLocationSketchCanvas');
+    const touchLayer = getByTestId('featureLocationSketchTouchLayer');
+    fireEvent(canvas, 'layout', {
+      nativeEvent: { layout: { height: 100, width: 200 } },
+    });
+    fireEvent(touchLayer, 'responderGrant', { nativeEvent: {} });
+    fireEvent(touchLayer, 'responderRelease', { nativeEvent: {} });
+
+    fireEvent.changeText(getByTestId('featureIdentifierInput'), '1호 유구');
+    selectFeatureTypeAndSubmit(getByTestId, 'featureType_startUnknown');
+
+    expect(onAddCategory).toHaveBeenCalledWith(C.FEATURE, parentDoc, {
+      featureType: 'unknown',
+      identifier: '1호 유구',
+    });
+  });
+
   it('shows the project boundary and previews polygon lines in a map-first tablet layout', async () => {
     const parentDoc = {
       resource: {

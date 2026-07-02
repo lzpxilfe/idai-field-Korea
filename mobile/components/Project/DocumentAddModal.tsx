@@ -539,6 +539,8 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
       featureSketchCanvasSize,
       featureSketchViewport
     );
+    if (!point) return;
+
     if (!shouldUpdateFeatureSketchPreviewPoint(
       point,
       lastPreviewFeatureSketchPointRef.current
@@ -578,6 +580,11 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
       featureSketchCanvasSize,
       featureSketchViewport
     );
+    if (!point) {
+      cancelFeatureSketchPoint();
+      return;
+    }
+
     lastPreviewFeatureSketchPointRef.current = undefined;
     setFeatureSketchWasEdited(true);
     setActiveFeatureSketchPoint(undefined);
@@ -653,6 +660,8 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
     if (featureViewportGestureRef.current) return;
 
     const point = getFeatureSketchPressPixel(event, featureSketchCanvasSize);
+    if (!point) return;
+
     const panGesture = featureViewportPanRef.current ?? {
       offsetX: featureSketchViewport.offsetX,
       offsetY: featureSketchViewport.offsetY,
@@ -1805,29 +1814,25 @@ const getSketchPointFromPress = (
   event: GestureResponderEvent,
   canvasSize: { height: number; width: number },
   viewport: FeatureSketchViewport
-): FeatureSketchPoint => {
+): FeatureSketchPoint | undefined => {
   const pressPoint = getFeatureSketchPressPixel(event, canvasSize);
+  if (!pressPoint) return undefined;
 
   return getSketchPointFromPixel(pressPoint, canvasSize, viewport);
 };
 
 const getFeatureSketchPressPixel = (
   event: GestureResponderEvent,
-  canvasSize: { height: number; width: number }
-): FeatureSketchTouchPoint => {
-  const width = Math.max(1, canvasSize.width);
-  const height = Math.max(1, canvasSize.height);
-  const locationX = Number.isFinite(event.nativeEvent.locationX)
-    ? event.nativeEvent.locationX
-    : (width / 2);
-  const locationY = Number.isFinite(event.nativeEvent.locationY)
-    ? event.nativeEvent.locationY
-    : (height / 2);
+  _canvasSize: { height: number; width: number }
+): FeatureSketchTouchPoint | undefined => {
+  const nativeEvent = event.nativeEvent as unknown as FeatureSketchNativeEvent;
+  const localTouch = [
+    ...(nativeEvent.touches ?? []),
+    ...(nativeEvent.changedTouches ?? []),
+  ].map(getFeatureSketchLocalTouchPoint)
+    .find((touch): touch is FeatureSketchTouchPoint => !!touch);
 
-  return {
-    x: locationX,
-    y: locationY,
-  };
+  return localTouch ?? getFeatureSketchLocalTouchPoint(nativeEvent);
 };
 
 const getFeatureShapeGesture = (
@@ -1885,34 +1890,37 @@ const getFeatureSketchPixelGesture = (
 const getFeatureSketchTouches = (
   event: GestureResponderEvent
 ): FeatureSketchTouchPoint[] => {
-  const nativeEvent = event.nativeEvent as unknown as {
-    changedTouches?: Array<{
-      locationX?: number;
-      locationY?: number;
-      pageX?: number;
-      pageY?: number;
-      x?: number;
-      y?: number;
-    }>;
-    touches?: Array<{
-      locationX?: number;
-      locationY?: number;
-      pageX?: number;
-      pageY?: number;
-      x?: number;
-      y?: number;
-    }>;
-  };
+  const nativeEvent = event.nativeEvent as unknown as FeatureSketchNativeEvent;
   const touches = nativeEvent.touches?.length
     ? nativeEvent.touches
     : (nativeEvent.changedTouches ?? []);
 
   return touches
-    .map((touch) => ({
-      x: Number(touch.locationX ?? touch.x ?? touch.pageX),
-      y: Number(touch.locationY ?? touch.y ?? touch.pageY),
-    }))
-    .filter((touch) => Number.isFinite(touch.x) && Number.isFinite(touch.y));
+    .map(getFeatureSketchLocalTouchPoint)
+    .filter((touch): touch is FeatureSketchTouchPoint => !!touch);
+};
+
+interface FeatureSketchTouchCandidate {
+  locationX?: number;
+  locationY?: number;
+  x?: number;
+  y?: number;
+}
+
+interface FeatureSketchNativeEvent extends FeatureSketchTouchCandidate {
+  changedTouches?: FeatureSketchTouchCandidate[];
+  touches?: FeatureSketchTouchCandidate[];
+}
+
+const getFeatureSketchLocalTouchPoint = (
+  value?: FeatureSketchTouchCandidate
+): FeatureSketchTouchPoint | undefined => {
+  const x = value?.locationX ?? value?.x;
+  const y = value?.locationY ?? value?.y;
+
+  return Number.isFinite(x) && Number.isFinite(y)
+    ? { x: Number(x), y: Number(y) }
+    : undefined;
 };
 
 const getSketchPointFromPixel = (
