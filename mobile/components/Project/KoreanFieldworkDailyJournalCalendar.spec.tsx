@@ -1,6 +1,7 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import React from 'react';
 import KoreanFieldworkDailyJournalCalendar, {
+  getBoundaryPlanBackground,
   getBoundaryCanvasPoints,
   KOREAN_FIELDWORK_DAILY_JOURNAL_FIELDS,
 } from './KoreanFieldworkDailyJournalCalendar';
@@ -164,6 +165,25 @@ describe('KoreanFieldworkDailyJournalCalendar', () => {
     );
   });
 
+  it('keeps a reusable plan-space boundary for preview and full-screen notes', () => {
+    const background = getBoundaryPlanBackground({
+      coordinates: [
+        { latitude: 37.1, longitude: 127.1 },
+        { latitude: 37.1, longitude: 127.2 },
+        { latitude: 37.0, longitude: 127.2 },
+        { latitude: 37.0, longitude: 127.1 },
+      ],
+    });
+
+    expect(background?.boundaryPoints).toHaveLength(4);
+    expect(background?.aspectRatio).toBeCloseTo(
+      Math.cos((37.05 * Math.PI) / 180),
+      2
+    );
+    expect(background?.boundaryPoints?.[0]).toEqual({ x: 800, y: 800 });
+    expect(background?.boundaryPoints?.[2]).toEqual({ x: 9200, y: 9200 });
+  });
+
   it('stores handwriting strokes over the imported project boundary', async () => {
     const handleUpdateDailyLog = jest.fn();
     const { getByTestId, getByText } = render(
@@ -190,7 +210,7 @@ describe('KoreanFieldworkDailyJournalCalendar', () => {
     const canvas = getByTestId('dailyJournalBoundaryCanvas');
     fireEvent(canvas, 'responderGrant', {
       nativeEvent: {
-        changedTouches: [{ locationX: 32, locationY: 23 }],
+        changedTouches: [{ locationX: 87, locationY: 23 }],
       },
     });
     fireEvent(canvas, 'responderMove', {
@@ -215,7 +235,9 @@ describe('KoreanFieldworkDailyJournalCalendar', () => {
     const strokePoints = serializedStrokes.strokes[0].points;
 
     expect(serializedStrokes.version).toBe(1);
-    expect(strokePoints[0]).toEqual({ x: 1000, y: 1000 });
+    expect(strokePoints[0].x).toBeGreaterThan(900);
+    expect(strokePoints[0].x).toBeLessThan(1100);
+    expect(strokePoints[0].y).toEqual(1000);
     expect(strokePoints[strokePoints.length - 1]).toEqual({ x: 5000, y: 5000 });
     expect(strokePoints.length).toBeGreaterThan(2);
   });

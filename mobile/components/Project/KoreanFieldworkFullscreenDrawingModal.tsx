@@ -23,6 +23,7 @@ export const DEFAULT_FIELDWORK_BRUSH_WIDTH = 5;
 export const FIELDWORK_BRUSH_WIDTH_OPTIONS = [3, 5, 8, 12] as const;
 
 export interface FieldworkFullscreenDrawingBackground {
+  aspectRatio?: number;
   boundaryPoints?: { x: number; y: number }[];
   label?: string;
 }
@@ -342,10 +343,12 @@ const ctx=canvas.getContext('2d');
 let strokes=Array.isArray(state.strokes)?state.strokes:[];
 let brushWidth=state.brushWidth||5;
 let activeStroke=null;
+let gesture=null;
 let isDrawing=false;
 let renderQueued=false;
 const maxCoordinate=state.maxCoordinate||10000;
 const background=state.background||{};
+let viewport={offsetX:0,offsetY:0,scale:1};
 function post(type,payload){
   if(window.ReactNativeWebView){
     window.ReactNativeWebView.postMessage(JSON.stringify({type,payload}));
@@ -363,18 +366,49 @@ function getCssSize(){
   const rect=canvas.getBoundingClientRect();
   return {height:rect.height,width:rect.width};
 }
-function normalizePoint(point){
+function getBaseDrawingFrame(){
   const size=getCssSize();
+  const aspectRatio=Math.max(0.05,Math.min(20,Number(background.aspectRatio)||1));
+  const canvasAspect=size.width/Math.max(size.height,1);
+  let width=size.width;
+  let height=size.height;
+  if(canvasAspect>aspectRatio){
+    width=height*aspectRatio;
+  }else{
+    height=width/aspectRatio;
+  }
   return {
-    x:clamp(Math.round((point.x/Math.max(size.width,1))*maxCoordinate),0,maxCoordinate),
-    y:clamp(Math.round((point.y/Math.max(size.height,1))*maxCoordinate),0,maxCoordinate)
+    height,
+    left:(size.width-width)/2,
+    top:(size.height-height)/2,
+    width
   };
 }
-function denormalizePoint(point){
+function toScreenPoint(point){
   const size=getCssSize();
+  const frame=getBaseDrawingFrame();
+  const base={
+    x:frame.left+(point.x/maxCoordinate)*frame.width,
+    y:frame.top+(point.y/maxCoordinate)*frame.height
+  };
   return {
-    x:(point.x/maxCoordinate)*size.width,
-    y:(point.y/maxCoordinate)*size.height
+    x:(size.width/2)+((base.x-(size.width/2))*viewport.scale)+viewport.offsetX,
+    y:(size.height/2)+((base.y-(size.height/2))*viewport.scale)+viewport.offsetY
+  };
+}
+function screenToNormalized(point){
+  const size=getCssSize();
+  const frame=getBaseDrawingFrame();
+  const base={
+    x:((point.x-viewport.offsetX-(size.width/2))/viewport.scale)+(size.width/2),
+    y:((point.y-viewport.offsetY-(size.height/2))/viewport.scale)+(size.height/2)
+  };
+  if(base.x<frame.left||base.x>frame.left+frame.width||base.y<frame.top||base.y>frame.top+frame.height){
+    return undefined;
+  }
+  return {
+    x:clamp(Math.round(((base.x-frame.left)/frame.width)*maxCoordinate),0,maxCoordinate),
+    y:clamp(Math.round(((base.y-frame.top)/frame.height)*maxCoordinate),0,maxCoordinate)
   };
 }
 function getEventPoint(event){
@@ -382,29 +416,88 @@ function getEventPoint(event){
   const rect=canvas.getBoundingClientRect();
   return {x:source.clientX-rect.left,y:source.clientY-rect.top};
 }
+function getTouchPoint(touch){
+  const rect=canvas.getBoundingClientRect();
+  return {x:touch.clientX-rect.left,y:touch.clientY-rect.top};
+}
+function startGesture(event){
+  const first=getTouchPoint(event.touches[0]);
+  const second=getTouchPoint(event.touches[1]);
+  gesture={
+    center:getMidpoint(first,second),
+    distance:getPixelDistance(first,second),
+    offsetX:viewport.offsetX,
+    offsetY:viewport.offsetY,
+    scale:viewport.scale
+  };
+  activeStroke=null;
+  isDrawing=false;
+  post('drawingActive',false);
+  requestRender();
+}
+function updateGesture(event){
+  if(!gesture||!event.touches||event.touches.length<2) return;
+  const first=getTouchPoint(event.touches[0]);
+  const second=getTouchPoint(event.touches[1]);
+  const center=getMidpoint(first,second);
+  const nextScale=clamp(
+    gesture.scale*(getPixelDistance(first,second)/Math.max(gesture.distance,1)),
+    1,
+    6
+  );
+  viewport={
+    offsetX:gesture.offsetX+(center.x-gesture.center.x),
+    offsetY:gesture.offsetY+(center.y-gesture.center.y),
+    scale:nextScale
+  };
+  requestRender();
+}
+function endGesture(event){
+  if(event.touches&&event.touches.length>=2){
+    updateGesture(event);
+    return;
+  }
+  gesture=null;
+}
 function start(event){
   event.preventDefault();
-  const point=normalizePoint(getEventPoint(event));
+  if(event.touches&&event.touches.length>=2){
+    startGesture(event);
+    return;
+  }
+  const point=screenToNormalized(getEventPoint(event));
+  if(!point) return;
   activeStroke={points:[point],width:brushWidth};
   isDrawing=true;
   post('drawingActive',true);
   requestRender();
 }
 function move(event){
+  if(gesture||event.touches&&event.touches.length>=2){
+    event.preventDefault();
+    if(event.touches&&event.touches.length>=2) updateGesture(event);
+    return;
+  }
   if(!isDrawing||!activeStroke) return;
   event.preventDefault();
-  const point=normalizePoint(getEventPoint(event));
+  const point=screenToNormalized(getEventPoint(event));
+  if(!point) return;
   const previous=activeStroke.points[activeStroke.points.length-1];
   if(previous&&distance(previous,point)<8) return;
   activeStroke.points.push(point);
   requestRender();
 }
 function end(event){
+  if(gesture){
+    event.preventDefault();
+    endGesture(event);
+    return;
+  }
   if(!isDrawing||!activeStroke) return;
   event.preventDefault();
-  const point=normalizePoint(getEventPoint(event));
+  const point=screenToNormalized(getEventPoint(event));
   const previous=activeStroke.points[activeStroke.points.length-1];
-  if(!previous||distance(previous,point)>=1) activeStroke.points.push(point);
+  if(point&&(!previous||distance(previous,point)>=1)) activeStroke.points.push(point);
   strokes=strokes.concat([activeStroke]);
   activeStroke=null;
   isDrawing=false;
@@ -414,20 +507,20 @@ function end(event){
 }
 function drawStroke(stroke,color){
   if(!stroke||!Array.isArray(stroke.points)||stroke.points.length===0) return;
-  const width=Math.max(1,Math.min(24,stroke.width||5));
+  const width=Math.max(1,Math.min(24,stroke.width||5))*Math.sqrt(viewport.scale);
   ctx.strokeStyle=color||'#111827';
   ctx.fillStyle=color||'#111827';
   ctx.lineCap='round';
   ctx.lineJoin='round';
   ctx.lineWidth=width;
   if(stroke.points.length===1){
-    const dot=denormalizePoint(stroke.points[0]);
+    const dot=toScreenPoint(stroke.points[0]);
     ctx.beginPath();
     ctx.arc(dot.x,dot.y,(width+2)/2,0,Math.PI*2);
     ctx.fill();
     return;
   }
-  const points=stroke.points.map(denormalizePoint);
+  const points=stroke.points.map(toScreenPoint);
   ctx.beginPath();
   ctx.moveTo(points[0].x,points[0].y);
   for(let index=1;index<points.length-1;index+=1){
@@ -443,7 +536,7 @@ function drawStroke(stroke,color){
 }
 function drawBackground(){
   const points=Array.isArray(background.boundaryPoints)
-    ? background.boundaryPoints.map(denormalizePoint)
+    ? background.boundaryPoints.map(toScreenPoint)
     : [];
   if(points.length<3) return;
   ctx.save();
@@ -495,6 +588,12 @@ function handleCommand(event){
   }
 }
 function distance(a,b){
+  return Math.sqrt(Math.pow(b.x-a.x,2)+Math.pow(b.y-a.y,2));
+}
+function getMidpoint(a,b){
+  return {x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+}
+function getPixelDistance(a,b){
   return Math.sqrt(Math.pow(b.x-a.x,2)+Math.pow(b.y-a.y,2));
 }
 function clamp(value,min,max){

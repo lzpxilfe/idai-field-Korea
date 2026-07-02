@@ -27,6 +27,7 @@ import {
 } from './korean-fieldwork-handwriting';
 import KoreanFieldworkFullscreenDrawingModal, {
   DEFAULT_FIELDWORK_BRUSH_WIDTH,
+  FieldworkFullscreenDrawingBackground,
   KoreanFieldworkBrushControls,
 } from './KoreanFieldworkFullscreenDrawingModal';
 
@@ -66,6 +67,7 @@ const MIN_POINT_DISTANCE = 18;
 const RELEASE_POINT_MIN_DISTANCE = 1;
 const INTERPOLATED_POINT_SPACING = 90;
 const MAX_INTERPOLATED_POINTS_PER_MOVE = 18;
+const PLAN_PADDING_RATIO = 0.08;
 const FIELD = KOREAN_FIELDWORK_DAILY_JOURNAL_FIELDS;
 const WORK_MEMO_PLACEHOLDER =
   '\uc624\ub298 \uc870\uc0ac \ub0b4\uc6a9, \ubc1c\uacac \uc704\uce58, '
@@ -453,25 +455,27 @@ const BoundaryMemoCanvas: React.FC<{
   const activeStrokeRef = useRef<KoreanFieldworkHandwritingStroke>();
   const latestStrokesRef = useRef<KoreanFieldworkHandwritingStroke[]>(strokes);
   const visibleStrokes = activeStroke ? strokes.concat(activeStroke) : strokes;
-  const boundaryPoints = useMemo(
-    () => getBoundaryCanvasPoints(boundaryDraft, canvasSize),
-    [boundaryDraft, canvasSize]
-  );
-  const fullscreenBoundaryPoints = useMemo(
-    () => getBoundaryCanvasPoints(boundaryDraft, {
-      height: MAX_COORDINATE,
-      width: MAX_COORDINATE,
-    }),
+  const boundaryPlan = useMemo(
+    () => getBoundaryPlanBackground(boundaryDraft),
     [boundaryDraft]
   );
+  const boundaryAspectRatio = boundaryPlan?.aspectRatio ?? 1;
+  const boundaryPoints = useMemo(
+    () => mapNormalizedPointsToCanvas(
+      boundaryPlan?.boundaryPoints ?? [],
+      canvasSize,
+      boundaryAspectRatio
+    ),
+    [boundaryAspectRatio, boundaryPlan, canvasSize]
+  );
   const fullscreenBackground = useMemo(
-    () => fullscreenBoundaryPoints.length >= 3
+    () => boundaryPlan && boundaryPlan.boundaryPoints.length >= 3
       ? {
-        boundaryPoints: fullscreenBoundaryPoints,
+        ...boundaryPlan,
         label: '\uc870\uc0ac \uacbd\uacc4',
       }
       : undefined,
-    [fullscreenBoundaryPoints]
+    [boundaryPlan]
   );
   const strokePointCount = countKoreanFieldworkHandwritingPoints(strokes);
 
@@ -486,7 +490,7 @@ const BoundaryMemoCanvas: React.FC<{
   const startStroke = (event: GestureResponderEvent) => {
     if (!canEdit) return;
 
-    const point = getNormalizedPoint(event, canvasSize);
+    const point = getNormalizedPoint(event, canvasSize, boundaryAspectRatio);
     if (!point) return;
 
     activeStrokeRef.current = { points: [point], width: brushWidth };
@@ -495,7 +499,7 @@ const BoundaryMemoCanvas: React.FC<{
   const moveStroke = (event: GestureResponderEvent) => {
     if (!canEdit) return;
 
-    const point = getNormalizedPoint(event, canvasSize);
+    const point = getNormalizedPoint(event, canvasSize, boundaryAspectRatio);
     if (!point) return;
 
     appendActiveStrokePoint(point);
@@ -503,7 +507,9 @@ const BoundaryMemoCanvas: React.FC<{
   const finishStroke = (event?: GestureResponderEvent) => {
     if (!canEdit) return;
 
-    const releasePoint = event ? getNormalizedPoint(event, canvasSize) : undefined;
+    const releasePoint = event
+      ? getNormalizedPoint(event, canvasSize, boundaryAspectRatio)
+      : undefined;
     if (releasePoint) {
       appendActiveStrokePoint(releasePoint, RELEASE_POINT_MIN_DISTANCE);
     }
@@ -635,7 +641,12 @@ const BoundaryMemoCanvas: React.FC<{
           </View>
         )}
         {visibleStrokes.flatMap((stroke, strokeIndex) =>
-          toStrokeSegments(stroke, strokeIndex, canvasSize)
+          toStrokeSegments(
+            stroke,
+            strokeIndex,
+            canvasSize,
+            boundaryAspectRatio
+          )
         )}
       </View>
       <KoreanFieldworkFullscreenDrawingModal
@@ -901,11 +912,67 @@ const getResourceValue = (
 ): unknown => (document?.resource as unknown as Record<string, unknown> | undefined)
   ?.[fieldName];
 
+export const getBoundaryPlanBackground = (
+  boundaryDraft: KoreanFieldworkProjectBoundaryDraft | undefined
+): FieldworkFullscreenDrawingBackground | undefined => {
+  const projection = getBoundaryProjection(boundaryDraft);
+  if (!projection) return undefined;
+
+  const padding = MAX_COORDINATE * PLAN_PADDING_RATIO;
+  const drawableSize = MAX_COORDINATE - (padding * 2);
+
+  return {
+    aspectRatio: clamp(
+      projection.xRange / Math.max(projection.yRange, 0.000001),
+      0.05,
+      20
+    ),
+    boundaryPoints: projection.projectedPoints.map((point) => ({
+      x: normalizeCoordinate(
+        padding
+        + ((point.x - projection.minX) / Math.max(projection.xRange, 0.000001))
+        * drawableSize
+      ),
+      y: normalizeCoordinate(
+        padding
+        + ((projection.maxY - point.y) / Math.max(projection.yRange, 0.000001))
+        * drawableSize
+      ),
+    })),
+  };
+};
+
 export const getBoundaryCanvasPoints = (
   boundaryDraft: KoreanFieldworkProjectBoundaryDraft | undefined,
   canvasSize: { height: number; width: number }
 ): { x: number; y: number }[] => {
-  if (!boundaryDraft || boundaryDraft.coordinates.length === 0) return [];
+  const projection = getBoundaryProjection(boundaryDraft);
+  if (!projection) return [];
+
+  const padding = 24;
+  const drawableWidth = Math.max(canvasSize.width - (padding * 2), 1);
+  const drawableHeight = Math.max(canvasSize.height - (padding * 2), 1);
+  const scale = Math.min(
+    drawableWidth / Math.max(projection.xRange, 0.000001),
+    drawableHeight / Math.max(projection.yRange, 0.000001)
+  );
+  const fittedWidth = projection.xRange * scale;
+  const fittedHeight = projection.yRange * scale;
+  const offsetX = (canvasSize.width - fittedWidth) / 2;
+  const offsetY = (canvasSize.height - fittedHeight) / 2;
+
+  return projection.projectedPoints.map((point) => ({
+    x: offsetX + ((point.x - projection.minX) * scale),
+    y: offsetY + ((projection.maxY - point.y) * scale),
+  }));
+};
+
+const getBoundaryProjection = (
+  boundaryDraft: KoreanFieldworkProjectBoundaryDraft | undefined
+) => {
+  if (!boundaryDraft || boundaryDraft.coordinates.length === 0) {
+    return undefined;
+  }
 
   const averageLatitude = boundaryDraft.coordinates.reduce(
     (sum, point) => sum + point.latitude,
@@ -925,46 +992,43 @@ export const getBoundaryCanvasPoints = (
   const maxX = Math.max(...xs);
   const minY = Math.min(...ys);
   const maxY = Math.max(...ys);
-  const xRange = maxX - minX;
-  const yRange = maxY - minY;
-  const padding = 24;
-  const drawableWidth = Math.max(canvasSize.width - (padding * 2), 1);
-  const drawableHeight = Math.max(canvasSize.height - (padding * 2), 1);
-  const scale = Math.min(
-    drawableWidth / Math.max(xRange, 0.000001),
-    drawableHeight / Math.max(yRange, 0.000001)
-  );
-  const fittedWidth = xRange * scale;
-  const fittedHeight = yRange * scale;
-  const offsetX = (canvasSize.width - fittedWidth) / 2;
-  const offsetY = (canvasSize.height - fittedHeight) / 2;
 
-  return projectedPoints.map((point) => ({
-    x: offsetX + ((point.x - minX) * scale),
-    y: offsetY + ((maxY - point.y) * scale),
-  }));
+  return {
+    maxY,
+    minX,
+    minY,
+    projectedPoints,
+    xRange: Math.max(maxX - minX, 0.000001),
+    yRange: Math.max(maxY - minY, 0.000001),
+  };
 };
 
 const getNormalizedPoint = (
   event: GestureResponderEvent,
-  canvasSize: { height: number; width: number }
+  canvasSize: { height: number; width: number },
+  aspectRatio = 1
 ): KoreanFieldworkHandwritingPoint | undefined => {
   const { locationX, locationY } = getLocalTouchPoint(event);
   if (typeof locationX !== 'number' || typeof locationY !== 'number') {
     return undefined;
   }
+  const viewport = getDrawingViewport(canvasSize, aspectRatio);
   if (
-    locationX < 0
-    || locationX > canvasSize.width
-    || locationY < 0
-    || locationY > canvasSize.height
+    locationX < viewport.left
+    || locationX > viewport.left + viewport.width
+    || locationY < viewport.top
+    || locationY > viewport.top + viewport.height
   ) {
     return undefined;
   }
 
   return {
-    x: normalizeCoordinate((locationX / canvasSize.width) * MAX_COORDINATE),
-    y: normalizeCoordinate((locationY / canvasSize.height) * MAX_COORDINATE),
+    x: normalizeCoordinate(
+      ((locationX - viewport.left) / viewport.width) * MAX_COORDINATE
+    ),
+    y: normalizeCoordinate(
+      ((locationY - viewport.top) / viewport.height) * MAX_COORDINATE
+    ),
   };
 };
 
@@ -1009,11 +1073,46 @@ const normalizeCoordinate = (value: number): number =>
 
 const denormalizePoint = (
   point: KoreanFieldworkHandwritingPoint,
-  canvasSize: { height: number; width: number }
-) => ({
-  x: (point.x / MAX_COORDINATE) * canvasSize.width,
-  y: (point.y / MAX_COORDINATE) * canvasSize.height,
-});
+  canvasSize: { height: number; width: number },
+  aspectRatio = 1
+) => {
+  const viewport = getDrawingViewport(canvasSize, aspectRatio);
+
+  return {
+    x: viewport.left + ((point.x / MAX_COORDINATE) * viewport.width),
+    y: viewport.top + ((point.y / MAX_COORDINATE) * viewport.height),
+  };
+};
+
+const mapNormalizedPointsToCanvas = (
+  points: readonly { x: number; y: number }[],
+  canvasSize: { height: number; width: number },
+  aspectRatio = 1
+): { x: number; y: number }[] =>
+  points.map((point) => denormalizePoint(point, canvasSize, aspectRatio));
+
+const getDrawingViewport = (
+  canvasSize: { height: number; width: number },
+  aspectRatio = 1
+) => {
+  const safeAspectRatio = clamp(aspectRatio, 0.05, 20);
+  const canvasAspectRatio = canvasSize.width / Math.max(canvasSize.height, 1);
+  let width = canvasSize.width;
+  let height = canvasSize.height;
+
+  if (canvasAspectRatio > safeAspectRatio) {
+    width = height * safeAspectRatio;
+  } else {
+    height = width / safeAspectRatio;
+  }
+
+  return {
+    height,
+    left: (canvasSize.width - width) / 2,
+    top: (canvasSize.height - height) / 2,
+    width,
+  };
+};
 
 const getPointDistance = (
   pointA: KoreanFieldworkHandwritingPoint,
@@ -1068,12 +1167,13 @@ const toBoundarySegments = (points: { x: number; y: number }[]) => {
 const toStrokeSegments = (
   stroke: KoreanFieldworkHandwritingStroke,
   strokeIndex: number,
-  canvasSize: { height: number; width: number }
+  canvasSize: { height: number; width: number },
+  aspectRatio = 1
 ) => {
   const strokeWidth = getStrokeWidth(stroke);
 
   if (stroke.points.length === 1) {
-    const point = denormalizePoint(stroke.points[0], canvasSize);
+    const point = denormalizePoint(stroke.points[0], canvasSize, aspectRatio);
 
     return (
       <View
@@ -1098,9 +1198,9 @@ const toStrokeSegments = (
     return (
       <LineSegment
         color="#f97316"
-        end={denormalizePoint(point, canvasSize)}
+        end={denormalizePoint(point, canvasSize, aspectRatio)}
         key={`${strokeIndex}-${pointIndex}`}
-        start={denormalizePoint(previousPoint, canvasSize)}
+        start={denormalizePoint(previousPoint, canvasSize, aspectRatio)}
         width={strokeWidth}
       />
     );
