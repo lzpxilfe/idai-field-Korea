@@ -53,6 +53,7 @@ import {
 } from '@/components/Project/korean-fieldwork-field-notes';
 import {
   formatKoreanFieldworkParentPath,
+  getKoreanFieldworkPrimaryParent,
   getKoreanFieldworkRecordStatusChips,
   KoreanFieldworkStatusChip,
   KoreanFieldworkStatusTone,
@@ -276,6 +277,8 @@ const DocumentsList: React.FC = () => {
     useState<Record<string, string>>({});
   const [selectedWorkbenchDocumentId, setSelectedWorkbenchDocumentId] =
     useState<string>();
+  const [removingDocumentIds, setRemovingDocumentIds] =
+    useState<Set<string>>(() => new Set());
   const [selectedInvestigationModeId, setSelectedInvestigationModeId] =
     useState<KoreanFieldworkInvestigationModeId>();
   const [isSelectedWorkbenchExpanded, setIsSelectedWorkbenchExpanded] =
@@ -523,12 +526,31 @@ const DocumentsList: React.FC = () => {
       openFreeSketch: '1',
     });
   };
+  const openAddChildModal = useCallback((
+    document: Document,
+    initialCategoryName?: string,
+    initialDraftParams: Record<string, string> = {}
+  ) => {
+    setAddModalParent(document);
+    setAddModalInitialCategoryName(initialCategoryName);
+    setAddModalInitialDraftParams(initialDraftParams);
+  }, []);
+  const closeAddChildModal = useCallback(() => {
+    setAddModalParent(undefined);
+    setAddModalInitialCategoryName(undefined);
+    setAddModalInitialDraftParams({});
+  }, []);
   const confirmRemoveDocument = useCallback((document: Document) => {
     if (!relationsManager) {
       showToast(
         ToastType.Error,
         '관계 색인을 준비하는 중입니다. 잠시 후 다시 삭제해 주세요.'
       );
+      return;
+    }
+
+    if (removingDocumentIds.has(document.resource.id)) {
+      showToast(ToastType.Info, '삭제를 처리하는 중입니다. 잠시만 기다려 주세요.');
       return;
     }
 
@@ -545,12 +567,38 @@ const DocumentsList: React.FC = () => {
           text: '삭제',
           style: 'destructive',
           onPress: () => {
+            const removalScopeIds = getDocumentRemovalScopeIds(
+              document,
+              documentsById
+            );
+            setRemovingDocumentIds((currentIds) =>
+              mergeDocumentIdSets(currentIds, removalScopeIds)
+            );
             relationsManager
               .remove(document, { descendants: true })
               .then(() => {
-                if (selectedWorkbenchDocumentId === document.resource.id) {
+                if (
+                  selectedWorkbenchDocumentId
+                  && removalScopeIds.has(selectedWorkbenchDocumentId)
+                ) {
                   setSelectedWorkbenchDocumentId(undefined);
                   setIsSelectedWorkbenchExpanded(false);
+                }
+                if (
+                  addModalParent
+                  && removalScopeIds.has(addModalParent.resource.id)
+                ) {
+                  closeAddChildModal();
+                }
+                if (
+                  fieldNoteContinuation
+                  && removalScopeIds.has(fieldNoteContinuation.documentId)
+                ) {
+                  setFieldNoteContinuation(undefined);
+                }
+                if (hierarchyPath.some((item) =>
+                  removalScopeIds.has(item.resource.id))) {
+                  clearHierarchy();
                 }
                 showToast(ToastType.Info, `${identifier} 기록을 삭제했습니다.`);
               })
@@ -559,13 +607,25 @@ const DocumentsList: React.FC = () => {
                   ToastType.Error,
                   `${identifier} 기록을 삭제하지 못했습니다: ${err}`
                 );
+              })
+              .finally(() => {
+                setRemovingDocumentIds((currentIds) =>
+                  removeDocumentIdSet(currentIds, removalScopeIds)
+                );
               });
           },
         },
       ]
     );
   }, [
+    addModalParent,
+    clearHierarchy,
+    closeAddChildModal,
+    documentsById,
+    fieldNoteContinuation,
+    hierarchyPath,
     relationsManager,
+    removingDocumentIds,
     selectedWorkbenchDocumentId,
     showToast,
   ]);
@@ -709,20 +769,6 @@ const DocumentsList: React.FC = () => {
         id: `${seed.id}-${fieldNoteContinuationRequestId.current}`,
       },
     });
-  };
-  const openAddChildModal = (
-    document: Document,
-    initialCategoryName?: string,
-    initialDraftParams: Record<string, string> = {}
-  ) => {
-    setAddModalParent(document);
-    setAddModalInitialCategoryName(initialCategoryName);
-    setAddModalInitialDraftParams(initialDraftParams);
-  };
-  const closeAddChildModal = () => {
-    setAddModalParent(undefined);
-    setAddModalInitialCategoryName(undefined);
-    setAddModalInitialDraftParams({});
   };
   const selectInvestigationMode = (modeId: KoreanFieldworkInvestigationModeId) => {
     setSelectedInvestigationModeId(modeId);
@@ -1229,6 +1275,7 @@ const DocumentsList: React.FC = () => {
                 userVisibleTodaySummary.issueCountByDocumentId
               }
               investigationModeId={investigationModeId}
+              removingDocumentIds={removingDocumentIds}
               selectedDocumentId={selectedWorkbenchDocument?.resource.id}
               onOpenDocument={(document) =>
                 selectWorkbenchDocument(document, { toggle: true })}
@@ -1251,6 +1298,7 @@ const DocumentsList: React.FC = () => {
                 userVisibleTodaySummary.issueCountByDocumentId
               }
               investigationModeId={investigationModeId}
+              removingDocumentIds={removingDocumentIds}
               selectedDocumentId={selectedWorkbenchDocument?.resource.id}
               onOpenDocument={(document) =>
                 selectWorkbenchDocument(document, { toggle: true })}
@@ -1269,6 +1317,47 @@ const DocumentsList: React.FC = () => {
       </ScrollView>
     </View>
   );
+};
+
+const getDocumentRemovalScopeIds = (
+  document: Document,
+  documentsById: Map<string, Document>
+): Set<string> => {
+  const removedIds = new Set<string>([document.resource.id]);
+  let didAddDocument = true;
+
+  while (didAddDocument) {
+    didAddDocument = false;
+    Array.from(documentsById.values()).forEach((candidate) => {
+      if (removedIds.has(candidate.resource.id)) return;
+
+      const parent = getKoreanFieldworkPrimaryParent(candidate, documentsById);
+      if (parent && removedIds.has(parent.resource.id)) {
+        removedIds.add(candidate.resource.id);
+        didAddDocument = true;
+      }
+    });
+  }
+
+  return removedIds;
+};
+
+const mergeDocumentIdSets = (
+  currentIds: Set<string>,
+  idsToAdd: Set<string>
+): Set<string> => {
+  const nextIds = new Set(currentIds);
+  idsToAdd.forEach((id) => nextIds.add(id));
+  return nextIds;
+};
+
+const removeDocumentIdSet = (
+  currentIds: Set<string>,
+  idsToRemove: Set<string>
+): Set<string> => {
+  const nextIds = new Set(currentIds);
+  idsToRemove.forEach((id) => nextIds.delete(id));
+  return nextIds;
 };
 
 const getStringRouteParam = (
@@ -1527,6 +1616,7 @@ const RecordSection: React.FC<{
   getCategoryLabel: (categoryName: string) => string;
   issueCountByDocumentId: { [documentId: string]: number };
   investigationModeId?: KoreanFieldworkInvestigationModeId;
+  removingDocumentIds: Set<string>;
   selectedDocumentId?: string;
   onOpenDocument: (document: Document) => void;
   onAddChild: (document: Document) => void;
@@ -1541,6 +1631,7 @@ const RecordSection: React.FC<{
   getCategoryLabel,
   issueCountByDocumentId,
   investigationModeId,
+  removingDocumentIds,
   selectedDocumentId,
   onOpenDocument,
   onAddChild,
@@ -1570,6 +1661,7 @@ const RecordSection: React.FC<{
           categoryLabel={getCategoryLabel(document.resource.category)}
           issueCount={issueCountByDocumentId[document.resource.id] ?? 0}
           investigationModeId={investigationModeId}
+          isDeleting={removingDocumentIds.has(document.resource.id)}
           selected={selectedDocumentId === document.resource.id}
           onOpen={() => onOpenDocument(document)}
           onAddChild={() => onAddChild(document)}
@@ -1590,6 +1682,7 @@ const RecordRow: React.FC<{
   categoryLabel: string;
   issueCount: number;
   investigationModeId?: KoreanFieldworkInvestigationModeId;
+  isDeleting: boolean;
   selected: boolean;
   onOpen: () => void;
   onAddChild: () => void;
@@ -1604,6 +1697,7 @@ const RecordRow: React.FC<{
   categoryLabel,
   issueCount,
   investigationModeId,
+  isDeleting,
   selected,
   onOpen,
   onAddChild,
@@ -1667,8 +1761,10 @@ const RecordRow: React.FC<{
         {
           icon: 'delete-outline',
           id: 'delete',
-          label: '삭제',
-          onPress: onDelete,
+          label: isDeleting ? '삭제 중' : '삭제',
+          onPress: () => {
+            if (!isDeleting) onDelete();
+          },
           testID: `recordSwipeDelete_${document.resource.id}`,
           tone: 'danger',
         },
@@ -1677,7 +1773,11 @@ const RecordRow: React.FC<{
     >
       <TouchableOpacity
         activeOpacity={0.88}
-        style={[styles.recordRow, selected && styles.recordRowSelected]}
+        style={[
+          styles.recordRow,
+          selected && styles.recordRowSelected,
+          isDeleting && styles.recordRowDeleting,
+        ]}
         onPress={handleOpenOrEdit}
         testID={`recordRow_${document.resource.id}`}
       >
@@ -2353,6 +2453,9 @@ const styles = StyleSheet.create({
     borderLeftColor: '#2f5f4a',
     borderLeftWidth: 4,
     paddingLeft: 6,
+  },
+  recordRowDeleting: {
+    opacity: 0.55,
   },
   recordIcon: {
     alignItems: 'center',

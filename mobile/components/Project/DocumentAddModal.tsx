@@ -164,6 +164,7 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
   const config = useContext(ConfigurationContext);
   const { labels } = useContext(LabelsContext);
   const [expandedFeatureGuideType, setExpandedFeatureGuideType] = useState<string>();
+  const [selectedFeatureType, setSelectedFeatureType] = useState<string>('unknown');
   const [featureIdentifier, setFeatureIdentifier] = useState('');
   const isFeatureOnlyFlow =
     initialCategoryName === KOREAN_FIELDWORK_CATEGORIES.FEATURE;
@@ -326,6 +327,38 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
   const hasOtherOptions = optionGroups.other.length > 0;
   const parentCategoryLabel = labels?.get(parentCategory)
     ?? getKoreanFieldworkCategoryLabel(parentCategory.name);
+  const normalizedFeatureIdentifier = featureIdentifier.trim();
+  const selectedFeatureTypeLabel = selectedFeatureType === 'unknown'
+    ? '성격 미정 유구'
+    : getKoreanFieldworkFeatureTypeOption(selectedFeatureType ?? '')?.label;
+
+  const createFeature = (featureType = selectedFeatureType) => {
+    if (!featureType) return;
+
+    const resolvedFeatureIdentifier = normalizedFeatureIdentifier
+      || createNextFeatureIdentifier(featureType, existingDocuments);
+
+    onAddCategory(
+      KOREAN_FIELDWORK_CATEGORIES.FEATURE,
+      parentDoc,
+      {
+        ...initialDraftParams,
+        featureType,
+        identifier: resolvedFeatureIdentifier,
+        ...getFeatureLocationSketchDraftParams({
+          background: featureSketchBackground,
+          boundaryDraft,
+          center: featureSketchCenter,
+          isEdited: featureSketchWasEdited,
+          isPolygonClosed: featureSketchPolygonClosed,
+          points: featureSketchPoints,
+          rotation: featureSketchRotation,
+          scale: featureSketchScale,
+          shape: featureLocationShape,
+        }),
+      }
+    );
+  };
 
   const openAddOption = (option: KoreanFieldworkAddOption) => {
     if (option.categoryName === KOREAN_FIELDWORK_CATEGORIES.FEATURE) {
@@ -379,6 +412,7 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
 
   const openFeatureCreation = () => {
     setExpandedFeatureGuideType(undefined);
+    setSelectedFeatureType('unknown');
     setFeatureIdentifier('');
     resetFeatureLocationSketch();
     setIsChoosingFeatureType(true);
@@ -1192,36 +1226,8 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
       setExpandedFeatureGuideType((currentType) =>
         currentType === featureType ? undefined : featureType);
     };
-    const normalizedFeatureIdentifier = featureIdentifier.trim();
-
     const updateFeatureIdentifier = (value: string) => {
       setFeatureIdentifier(value);
-    };
-
-    const createFeature = (featureType: string) => {
-      const resolvedFeatureIdentifier = normalizedFeatureIdentifier
-        || createNextFeatureIdentifier(featureType, existingDocuments);
-
-      onAddCategory(
-        KOREAN_FIELDWORK_CATEGORIES.FEATURE,
-        parentDoc,
-        {
-          ...initialDraftParams,
-          featureType,
-          identifier: resolvedFeatureIdentifier,
-          ...getFeatureLocationSketchDraftParams({
-            background: featureSketchBackground,
-            boundaryDraft,
-            center: featureSketchCenter,
-            isEdited: featureSketchWasEdited,
-            isPolygonClosed: featureSketchPolygonClosed,
-            points: featureSketchPoints,
-            rotation: featureSketchRotation,
-            scale: featureSketchScale,
-            shape: featureLocationShape,
-          }),
-        }
-      );
     };
 
     const renderFeatureInvestigationGuide = (featureType: string) => (
@@ -1262,9 +1268,9 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
           ]}
           horizontal={false}
           keyboardShouldPersistTaps="handled"
-          scrollEnabled={isFeatureWideLayout}
+          scrollEnabled={true}
           showsHorizontalScrollIndicator={false}
-          showsVerticalScrollIndicator={isFeatureWideLayout}
+          showsVerticalScrollIndicator={true}
           style={[
             styles.featureCreationFormPane,
             isFeatureWideLayout && styles.featureCreationFormPaneWide,
@@ -1306,12 +1312,15 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
           </View>
           <View style={[
             styles.startUnknownFeature,
+            selectedFeatureType === 'unknown' && styles.startUnknownFeatureSelected,
             isFeatureWideLayout && styles.startUnknownFeatureWide,
           ]}>
             <View style={styles.featureTypeHeader}>
               <TouchableOpacity
                 activeOpacity={0.86}
-                onPress={() => createFeature('unknown')}
+                accessibilityRole="button"
+                accessibilityState={{ selected: selectedFeatureType === 'unknown' }}
+                onPress={() => setSelectedFeatureType('unknown')}
                 style={styles.featureTypeCreateArea}
                 testID="featureType_startUnknown"
               >
@@ -1353,13 +1362,16 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
                 key={option.value}
                 style={[
                   styles.featureTypeOption,
+                  selectedFeatureType === option.value && styles.featureTypeOptionSelected,
                   isFeatureWideLayout && styles.featureTypeOptionWide,
                 ]}
               >
                 <View style={styles.featureTypeHeader}>
                   <TouchableOpacity
                     activeOpacity={0.86}
-                    onPress={() => createFeature(option.value)}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: selectedFeatureType === option.value }}
+                    onPress={() => setSelectedFeatureType(option.value)}
                     style={styles.featureTypeCreateArea}
                     testID={`featureType_${option.value}`}
                   >
@@ -1393,6 +1405,23 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
                   && renderFeatureInvestigationGuide(option.value)}
               </View>
             ))}
+          </View>
+          <View style={styles.featureCreateFooter}>
+            <Text style={styles.featureCreateFooterText} testID="featureCreateSelection">
+              {selectedFeatureTypeLabel
+                ? `${selectedFeatureTypeLabel}로 추가합니다.`
+                : '유구 성격을 고른 뒤 추가하기를 누르세요.'}
+            </Text>
+            <Button
+              title="추가하기"
+              variant="success"
+              isDisabled={!selectedFeatureType}
+              onPress={() => {
+                createFeature();
+              }}
+              style={styles.featureCreateSubmitButton}
+              testID="featureCreateSubmit"
+            />
           </View>
         </ScrollView>
       </View>
@@ -1443,6 +1472,17 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
                 onPress={isChoosingFeatureType ? leaveFeatureCreation : onClose}
               />
             }
+            right={isChoosingFeatureType ? (
+              <Button
+                title="추가하기"
+                variant="success"
+                isDisabled={!selectedFeatureType}
+                onPress={() => {
+                  createFeature();
+                }}
+                testID="featureCreateSubmitTop"
+              />
+            ) : undefined}
           />
           <ScrollView
             style={[
@@ -3150,6 +3190,10 @@ const styles = StyleSheet.create({
     minHeight: 68,
     width: '49%',
   },
+  featureTypeOptionSelected: {
+    backgroundColor: '#fff7ed',
+    borderColor: '#f97316',
+  },
   startUnknownFeature: {
     alignItems: 'stretch',
     backgroundColor: '#ecfdf3',
@@ -3160,6 +3204,10 @@ const styles = StyleSheet.create({
     minHeight: 70,
     paddingHorizontal: 12,
     paddingVertical: 10,
+  },
+  startUnknownFeatureSelected: {
+    backgroundColor: '#fff7ed',
+    borderColor: '#f97316',
   },
   startUnknownFeatureWide: {
     alignSelf: 'stretch',
@@ -3227,6 +3275,29 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     lineHeight: 15,
+  },
+  featureCreateFooter: {
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderColor: '#d0d5dd',
+    borderRadius: 6,
+    borderWidth: 1,
+    flexDirection: 'row',
+    marginTop: 2,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+  },
+  featureCreateFooterText: {
+    color: '#344054',
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '800',
+    lineHeight: 17,
+    paddingRight: 10,
+  },
+  featureCreateSubmitButton: {
+    minWidth: 104,
+    paddingHorizontal: 14,
   },
   emptyState: {
     alignItems: 'center',

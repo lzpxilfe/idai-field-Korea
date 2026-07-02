@@ -71,7 +71,7 @@ describe('DocumentAddModal', () => {
     expect(queryByTestId(`addCategory_${C.FEATURE}`)).toBeNull();
 
     fireEvent.changeText(getByTestId('featureIdentifierInput'), '1호 유구');
-    fireEvent.press(getByTestId('featureType_startUnknown'));
+    selectFeatureTypeAndSubmit(getByTestId, 'featureType_startUnknown');
 
     expect(onAddCategory).toHaveBeenCalledWith(C.FEATURE, parentDoc, {
       featureType: 'unknown',
@@ -80,7 +80,7 @@ describe('DocumentAddModal', () => {
     });
   });
 
-  it('asks for a feature type before creating a Feature record', () => {
+  it('creates a Feature record only after the explicit add action', () => {
     const onAddCategory = jest.fn();
     const parentDoc = {
       resource: {
@@ -134,6 +134,13 @@ describe('DocumentAddModal', () => {
 
     fireEvent.press(getByTestId('featureType_pit'));
 
+    expect(getByTestId('featureType_pit').props.accessibilityState)
+      .toMatchObject({ selected: true });
+    expect(getByText('수혈로 추가합니다.')).toBeTruthy();
+    expect(onAddCategory).not.toHaveBeenCalled();
+
+    fireEvent.press(getByTestId('featureCreateSubmitTop'));
+
     expect(onAddCategory).toHaveBeenCalledWith(C.FEATURE, parentDoc, {
       featureType: 'pit',
       identifier: '1호 수혈',
@@ -168,7 +175,7 @@ describe('DocumentAddModal', () => {
     );
 
     fireEvent.press(getByTestId(`addCategory_${C.FEATURE}`));
-    fireEvent.press(getByTestId('featureType_pit'));
+    selectFeatureTypeAndSubmit(getByTestId, 'featureType_pit');
 
     expect(onAddCategory).toHaveBeenCalledWith(C.FEATURE, parentDoc, {
       featureType: 'pit',
@@ -209,7 +216,7 @@ describe('DocumentAddModal', () => {
     );
 
     fireEvent.press(getByTestId(`addCategory_${C.FEATURE}`));
-    fireEvent.press(getByTestId('featureType_pit'));
+    selectFeatureTypeAndSubmit(getByTestId, 'featureType_pit');
 
     expect(onAddCategory).toHaveBeenCalledWith(C.FEATURE, parentDoc, {
       featureType: 'pit',
@@ -246,7 +253,7 @@ describe('DocumentAddModal', () => {
 
     fireEvent.press(getByTestId(`addCategory_${C.FEATURE}`));
     fireEvent.changeText(getByTestId('featureIdentifierInput'), '1호 유구');
-    fireEvent.press(getByTestId('featureType_startUnknown'));
+    selectFeatureTypeAndSubmit(getByTestId, 'featureType_startUnknown');
 
     expect(onAddCategory).toHaveBeenCalledWith(C.FEATURE, parentDoc, {
       featureType: 'unknown',
@@ -308,7 +315,7 @@ describe('DocumentAddModal', () => {
     fireEvent.press(getByTestId('featureSketchRotateRight'));
     fireEvent.press(getByTestId('featureSketchScaleUp'));
     fireEvent.changeText(getByTestId('featureIdentifierInput'), '1호 수혈');
-    fireEvent.press(getByTestId('featureType_pit'));
+    selectFeatureTypeAndSubmit(getByTestId, 'featureType_pit');
 
     expect(onAddCategory).toHaveBeenCalledWith(C.FEATURE, parentDoc, {
       featureLocationSketch: JSON.stringify({
@@ -547,7 +554,7 @@ describe('DocumentAddModal', () => {
     });
 
     fireEvent.changeText(getByTestId('featureIdentifierInput'), '1호 유구');
-    fireEvent.press(getByTestId('featureType_pit'));
+    selectFeatureTypeAndSubmit(getByTestId, 'featureType_pit');
 
     expect(onAddCategory).toHaveBeenCalledWith(
       C.FEATURE,
@@ -623,7 +630,7 @@ describe('DocumentAddModal', () => {
     );
 
     fireEvent.changeText(getByTestId('featureIdentifierInput'), '1호 유구');
-    fireEvent.press(getByTestId('featureType_pit'));
+    selectFeatureTypeAndSubmit(getByTestId, 'featureType_pit');
 
     expect(onAddCategory).toHaveBeenCalledWith(
       C.FEATURE,
@@ -695,7 +702,7 @@ describe('DocumentAddModal', () => {
     });
 
     fireEvent.changeText(getByTestId('featureIdentifierInput'), '1호 유구');
-    fireEvent.press(getByTestId('featureType_pit'));
+    selectFeatureTypeAndSubmit(getByTestId, 'featureType_pit');
 
     expect(onAddCategory).toHaveBeenCalledWith(
       C.FEATURE,
@@ -745,7 +752,7 @@ describe('DocumentAddModal', () => {
       fireEvent.press(getByTestId('featureSketchScaleDown'));
     });
     fireEvent.changeText(getByTestId('featureIdentifierInput'), '1호 유구');
-    fireEvent.press(getByTestId('featureType_pit'));
+    selectFeatureTypeAndSubmit(getByTestId, 'featureType_pit');
 
     expect(onAddCategory).toHaveBeenCalledWith(
       C.FEATURE,
@@ -792,6 +799,14 @@ describe('DocumentAddModal', () => {
     expect(onClose).toHaveBeenCalled();
   });
 });
+
+const selectFeatureTypeAndSubmit = (
+  getByTestId: (testID: string) => any,
+  featureTypeTestID: string
+) => {
+  fireEvent.press(getByTestId(featureTypeTestID));
+  fireEvent.press(getByTestId('featureCreateSubmit'));
+};
 
 const createConfig = (categories: Forest<CategoryForm>) => ({
   getCategories: () => categories,
