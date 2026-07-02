@@ -166,7 +166,7 @@ const KoreanFieldworkSelectedRecordWorkbench: React.FC<
         {canAddSoilProfilePhoto && (
           <CommandButton
             icon="terrain"
-            label="토층사진"
+            label="피트·토층"
             onPress={() => onAddDocumentOfCategory(
               document,
               KOREAN_FIELDWORK_CATEGORIES.SOIL_PROFILE_PHOTO

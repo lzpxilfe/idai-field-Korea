@@ -16,6 +16,14 @@ describe('Korean fieldwork record evidence', () => {
     const photo = createDoc('photo-1', C.PHOTO, '사진 1', {
       depicts: ['feature-1'],
     });
+    const soilProfilePhoto = createDoc(
+      'soil-profile-1',
+      C.SOIL_PROFILE_PHOTO,
+      '토층사진 1',
+      {
+        depicts: ['feature-1'],
+      }
+    );
     const sketch = createDoc('sketch-1', C.PEN_MEMO, '약도 1', {
       depicts: ['feature-1'],
     });
@@ -30,6 +38,7 @@ describe('Korean fieldwork record evidence', () => {
       pit,
       layer,
       photo,
+      soilProfilePhoto,
       sketch,
       findCollection,
       sample,
@@ -44,12 +53,12 @@ describe('Korean fieldwork record evidence', () => {
       documentIds: chip.documents.map((document) => document.resource.id),
     }))).toEqual([
       {
-        id: 'featureSegments',
-        label: '피트',
-        count: 1,
+        id: 'pitSoilProfiles',
+        label: '피트·토층사진',
+        count: 2,
         tone: 'filled',
-        createCategoryName: C.FEATURE_SEGMENT,
-        documentIds: ['pit-1'],
+        createCategoryName: C.SOIL_PROFILE_PHOTO,
+        documentIds: ['soil-profile-1', 'pit-1'],
       },
       {
         id: 'layers',
@@ -66,14 +75,6 @@ describe('Korean fieldwork record evidence', () => {
         tone: 'filled',
         createCategoryName: C.PHOTO,
         documentIds: ['photo-1'],
-      },
-      {
-        id: 'soilProfilePhotos',
-        label: '토층사진',
-        count: 0,
-        tone: 'empty',
-        createCategoryName: C.SOIL_PROFILE_PHOTO,
-        documentIds: [],
       },
       {
         id: 'drawings',

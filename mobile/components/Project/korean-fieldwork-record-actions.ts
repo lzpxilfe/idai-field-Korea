@@ -43,13 +43,12 @@ const TRACKED_RECORD_CATEGORIES = new Set<string>([
 const NEXT_CHILD_CATEGORY: Readonly<Record<string, string | undefined>> = {
   [C.OPERATION]: C.TRENCH,
   [C.TRENCH]: C.FEATURE,
-  [C.FEATURE]: C.FEATURE_SEGMENT,
   [C.FEATURE_SEGMENT]: C.LAYER,
 };
 
 const EVIDENCE_CHIP_IDS = new Set<string>([
   'photos',
-  'soilProfilePhotos',
+  'pitSoilProfiles',
   'drawings',
   'sketches',
   'finds',
@@ -57,8 +56,8 @@ const EVIDENCE_CHIP_IDS = new Set<string>([
 ]);
 
 const PREFERRED_EVIDENCE_ACTION_IDS = [
+  'pitSoilProfiles',
   'photos',
-  'soilProfilePhotos',
   'drawings',
   'finds',
   'samples',

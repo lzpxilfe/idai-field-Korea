@@ -38,14 +38,18 @@ const PHOTO_ATTACHMENT_TARGET_CATEGORIES: readonly string[] = [
   C.FIND_COLLECTION,
   C.SAMPLE,
 ];
+const PIT_SOIL_PROFILE_LABEL = '피트·토층사진';
 
 const EVIDENCE_DEFINITIONS: EvidenceDefinition[] = [
   {
-    id: 'featureSegments',
-    label: '피트',
-    getDocuments: (bundle: EvidenceBundle) => bundle.featureSegments,
-    categories: [C.OPERATION, C.TRENCH, C.FEATURE],
-    createCategoryName: C.FEATURE_SEGMENT,
+    id: 'pitSoilProfiles',
+    label: PIT_SOIL_PROFILE_LABEL,
+    getDocuments: (bundle: EvidenceBundle) => [
+      ...bundle.soilProfilePhotos,
+      ...bundle.featureSegments,
+    ],
+    categories: [C.OPERATION, C.TRENCH, C.FEATURE, C.FEATURE_SEGMENT],
+    createCategoryName: C.SOIL_PROFILE_PHOTO,
   },
   {
     id: 'layers',
@@ -59,13 +63,6 @@ const EVIDENCE_DEFINITIONS: EvidenceDefinition[] = [
     getDocuments: (bundle: EvidenceBundle) => bundle.photos,
     categories: PHOTO_ATTACHMENT_TARGET_CATEGORIES,
     createCategoryName: C.PHOTO,
-  },
-  {
-    id: 'soilProfilePhotos',
-    label: '토층사진',
-    getDocuments: (bundle: EvidenceBundle) => bundle.soilProfilePhotos,
-    categories: [C.OPERATION, C.TRENCH, C.FEATURE, C.FEATURE_SEGMENT],
-    createCategoryName: C.SOIL_PROFILE_PHOTO,
   },
   {
     id: 'drawings',

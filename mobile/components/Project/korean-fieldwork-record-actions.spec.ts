@@ -75,7 +75,7 @@ describe('Korean fieldwork record actions', () => {
       tone: 'warning',
       document: feature,
     });
-    expect(summary.actions.map((action) => action.id)).toContain(
+    expect(summary.actions.map((action) => action.id)).not.toContain(
       'create-FeatureSegment'
     );
   });
@@ -94,16 +94,18 @@ describe('Korean fieldwork record actions', () => {
     const summary = getKoreanFieldworkRecordActionSummary(
       feature,
       [feature],
-      [C.FEATURE_SEGMENT, C.PHOTO]
+      [C.FEATURE_SEGMENT, C.SOIL_PROFILE_PHOTO, C.PHOTO]
     );
 
     expect(summary.checklistDone).toBe(2);
     expect(summary.checklistTotal).toBe(9);
     expect(summary.actions.map((action) => action.id).slice(0, 3)).toEqual([
       'issue-feature-complete-photo-feature-1',
-      'create-FeatureSegment',
-      'create-photos',
+      'create-pitSoilProfiles',
     ]);
+    expect(summary.actions.map((action) => action.id)).not.toContain(
+      'create-FeatureSegment'
+    );
   });
 
   it('uses trial trench checklist progress for trench records in trial mode', () => {

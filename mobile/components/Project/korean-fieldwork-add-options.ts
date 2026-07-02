@@ -46,11 +46,9 @@ const PRIMARY_OPTIONS_BY_PARENT: Readonly<Record<string, readonly string[]>> = {
     C.DRAWING,
   ],
   [C.FEATURE]: [
-    C.FEATURE_SEGMENT,
-    C.LAYER,
+    C.SOIL_PROFILE_PHOTO,
     C.FIND,
     C.SAMPLE,
-    C.SOIL_PROFILE_PHOTO,
     C.PEN_MEMO,
     C.PHOTO,
     C.DRAWING,
@@ -104,9 +102,14 @@ const PRIMARY_OPTIONS_BY_PARENT: Readonly<Record<string, readonly string[]>> = {
 const PRIMARY_ONLY_CATEGORIES = new Set<string>([
   C.AERIAL_MAP_LAYER,
   C.DAILY_LOG,
+  C.FEATURE_SEGMENT,
   C.FIELD_RECORD_QUALITY_REVIEW,
   C.SURVEY_BOUNDARY,
 ]);
+
+const PIT_SOIL_PROFILE_OPTION_LABEL = '피트·토층사진';
+const PIT_SOIL_PROFILE_OPTION_DESCRIPTION =
+  '피트선이나 절개선을 표시하고 토층 단면 사진, 토층 번호, 토색을 한곳에서 남깁니다.';
 
 export const KOREAN_FIELDWORK_HIERARCHY_HELP =
   '여기서는 층위 선후를 정하지 않습니다. 새 기록이 어느 조사 경계, 유구, 트렌치에 포함되는지만 정합니다.';
@@ -141,20 +144,40 @@ export const getKoreanFieldworkAddOptions = (
     .sort(compareKoreanFieldworkCategoryNames);
 
   return {
-    primary: primaryNames.map(toOption),
+    primary: primaryNames.map((categoryName) =>
+      toOption(categoryName, parentCategoryName)
+    ),
     special: specialNames.map(toSpecialOption),
-    other: otherNames.map(toOption),
+    other: otherNames.map((categoryName) =>
+      toOption(categoryName, parentCategoryName)
+    ),
   };
 };
 
 export const isVisibleAddCategory = (categoryName: string): boolean =>
   !KOREAN_FIELDWORK_HIDDEN_ADD_CATEGORIES.includes(categoryName);
 
-const toOption = (categoryName: string): KoreanFieldworkAddOption => ({
-  categoryName,
-  label: getKoreanFieldworkCategoryLabel(categoryName),
-  description: getKoreanFieldworkCategoryDescription(categoryName),
-});
+const toOption = (
+  categoryName: string,
+  parentCategoryName?: string
+): KoreanFieldworkAddOption => {
+  const isFeatureSoilProfileOption =
+    categoryName === C.SOIL_PROFILE_PHOTO
+    && (
+      parentCategoryName === C.FEATURE
+      || parentCategoryName === C.FEATURE_SEGMENT
+    );
+
+  return {
+    categoryName,
+    label: isFeatureSoilProfileOption
+      ? PIT_SOIL_PROFILE_OPTION_LABEL
+      : getKoreanFieldworkCategoryLabel(categoryName),
+    description: isFeatureSoilProfileOption
+      ? PIT_SOIL_PROFILE_OPTION_DESCRIPTION
+      : getKoreanFieldworkCategoryDescription(categoryName),
+  };
+};
 
 const toSpecialOption = (categoryName: string): KoreanFieldworkAddOption => {
   if (categoryName === C.TRENCH) {

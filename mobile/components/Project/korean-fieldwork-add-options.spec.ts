@@ -70,9 +70,10 @@ describe('korean fieldwork add options', () => {
     expect(options.other).toEqual([]);
   });
 
-  it('uses FeatureSegment as the tablet pit/feature segment record under features', () => {
+  it('uses the merged pit and soil profile option under features', () => {
     const options = getKoreanFieldworkAddOptions(C.FEATURE, [
       C.FEATURE_SEGMENT,
+      C.SOIL_PROFILE_PHOTO,
       C.LAYER,
       C.FIND,
       C.SAMPLE,
@@ -80,9 +81,11 @@ describe('korean fieldwork add options', () => {
     ]);
 
     expect(options.primary[0]).toMatchObject({
-      categoryName: C.FEATURE_SEGMENT,
-      label: '피트',
+      categoryName: C.SOIL_PROFILE_PHOTO,
+      label: '피트·토층사진',
     });
+    expect(options.primary.map((option) => option.categoryName))
+      .not.toContain(C.FEATURE_SEGMENT);
     expect(options.primary.map((option) => option.categoryName))
       .not.toContain(C.LAYER);
     expect(options.primary.map((option) => option.categoryName)).not.toContain(C.PLACE);
@@ -97,7 +100,6 @@ describe('korean fieldwork add options', () => {
     ]);
 
     expect(options.primary.map((option) => option.categoryName)).toEqual([
-      C.FEATURE_SEGMENT,
       C.PEN_MEMO,
     ]);
     expect(options.other.map((option) => option.categoryName)).not.toContain(C.AERIAL_MAP_LAYER);
@@ -120,6 +122,7 @@ describe('korean fieldwork add options', () => {
     expect(isVisibleAddCategory(C.PLACE)).toBe(false);
     expect(isVisibleAddCategory('Image')).toBe(false);
     expect(isVisibleAddCategory(C.FEATURE_GROUP)).toBe(false);
+    expect(isVisibleAddCategory(C.FEATURE_SEGMENT)).toBe(false);
     expect(isVisibleAddCategory(C.LAYER)).toBe(false);
     expect(isVisibleAddCategory(C.FEATURE)).toBe(true);
   });
