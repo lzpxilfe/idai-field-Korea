@@ -125,7 +125,7 @@ describe('Korean fieldwork closeout summary', () => {
     });
   });
 
-  it('adds missing Field Hub upload issues for local tablet photo records', () => {
+  it('adds missing original preservation issues for local tablet photo records', () => {
     const photo = createDocument('photo-1', 'Photo', 'A photo', {
       fieldworkPhotoCapturedAt: '2026-06-23T01:02:03.000Z',
       fieldworkPhotoUri: 'file:///tablet/photos/photo-1.jpg',
@@ -195,6 +195,19 @@ describe('Korean fieldwork closeout summary', () => {
       fieldworkImageStoredMd5: 'drawing-md5',
       fieldworkImageStoredSha256: 'drawing-server-sha256',
     });
+    const locallyPreservedPhoto = createDocument('photo-3', 'Photo', 'F preserved locally', {
+      fieldworkPhotoCapturedAt: '2026-06-23T01:02:03.000Z',
+      fieldworkPhotoUri: 'file:///tablet/photos/photo-3.jpg',
+      originalFilename: 'photo-3.jpg',
+      width: 4032,
+      height: 3024,
+      digitalSourcePreservation: [
+        'originalPhoto',
+        'originalImage',
+        'webOrServerBackup',
+        'backupVerified',
+      ],
+    });
 
     const summary = makeKoreanFieldworkCloseoutSummary([
       photo,
@@ -203,6 +216,7 @@ describe('Korean fieldwork closeout summary', () => {
       drawing,
       directFeaturePhoto,
       uploadedDrawing,
+      locallyPreservedPhoto,
     ] as any);
 
     expect(summary.status).toBe('needsReview');
@@ -231,7 +245,7 @@ describe('Korean fieldwork closeout summary', () => {
     });
     expect(summary.issues[2]).toMatchObject({
       documentId: 'drawing-1',
-      message: '도면 원본의 Field Hub 백업이 아직 확인되지 않았습니다.',
+      message: '도면 원본 보존 상태가 아직 확인되지 않았습니다.',
       relatedFields: [
         'fieldworkImageUploadStatus',
         'fieldworkImageUploadedAt',
@@ -248,9 +262,9 @@ describe('Korean fieldwork closeout summary', () => {
     });
     expect(summary.issues[3]).toMatchObject({
       documentId: 'feature-photo-1',
-      message: '기록에 직접 붙은 태블릿 사진의 Field Hub 백업이 아직 확인되지 않았습니다.',
+      message: '기록에 직접 붙은 태블릿 사진 원본 보존 상태가 아직 확인되지 않았습니다.',
     });
-    expect(summary.issues[0].recommendedAction).toContain('서버 업로드 시각');
+    expect(summary.issues[0].recommendedAction).toContain('보존 위치와 확인 시각');
   });
 
   it('adds closeout review issues for tablet photo annotations without descriptions', () => {

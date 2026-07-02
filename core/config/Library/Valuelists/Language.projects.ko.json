@@ -2995,7 +2995,7 @@
         "label": "두 곳 이상 백업"
       },
       "webOrServerBackup": {
-        "label": "웹·서버 백업"
+        "label": "외부·프로젝트 백업"
       },
       "backupVerified": {
         "label": "백업 검증"

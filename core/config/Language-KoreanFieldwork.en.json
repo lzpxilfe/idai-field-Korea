@@ -1527,34 +1527,34 @@
       "label": "Drawing",
       "fields": {
         "fieldworkImageUploadStatus": {
-          "label": "Server upload status"
+          "label": "Original backup status"
         },
         "fieldworkImageUploadedAt": {
-          "label": "Server upload time"
+          "label": "Original backup time"
         },
         "fieldworkImageUploadedUri": {
-          "label": "Uploaded source URI"
+          "label": "Backed-up source URI"
         },
         "fieldworkImageUploadTarget": {
-          "label": "Upload target"
+          "label": "Backup target"
         },
         "fieldworkImageUploadedProject": {
-          "label": "Upload project"
+          "label": "Backup project"
         },
         "fieldworkImageUploadedSizeBytes": {
-          "label": "Uploaded size (bytes)"
+          "label": "Backup size (bytes)"
         },
         "fieldworkImageUploadedMd5": {
-          "label": "Uploaded MD5 checksum"
+          "label": "Backup MD5 checksum"
         },
         "fieldworkImageStoredSizeBytes": {
-          "label": "Field Hub stored size (bytes)"
+          "label": "Stored backup size (bytes)"
         },
         "fieldworkImageStoredMd5": {
-          "label": "Field Hub stored MD5 checksum"
+          "label": "Stored backup MD5 checksum"
         },
         "fieldworkImageStoredSha256": {
-          "label": "Field Hub stored SHA-256 checksum"
+          "label": "Stored backup SHA-256 checksum"
         },
         "mediaEvidenceRole": {
           "label": "Media evidence role"
@@ -1731,34 +1731,34 @@
           "label": "Captured at"
         },
         "fieldworkImageUploadStatus": {
-          "label": "Server upload status"
+          "label": "Original backup status"
         },
         "fieldworkImageUploadedAt": {
-          "label": "Server upload time"
+          "label": "Original backup time"
         },
         "fieldworkImageUploadedUri": {
-          "label": "Uploaded source URI"
+          "label": "Backed-up source URI"
         },
         "fieldworkImageUploadTarget": {
-          "label": "Upload target"
+          "label": "Backup target"
         },
         "fieldworkImageUploadedProject": {
-          "label": "Upload project"
+          "label": "Backup project"
         },
         "fieldworkImageUploadedSizeBytes": {
-          "label": "Uploaded size (bytes)"
+          "label": "Backup size (bytes)"
         },
         "fieldworkImageUploadedMd5": {
-          "label": "Uploaded MD5 checksum"
+          "label": "Backup MD5 checksum"
         },
         "fieldworkImageStoredSizeBytes": {
-          "label": "Field Hub stored size (bytes)"
+          "label": "Stored backup size (bytes)"
         },
         "fieldworkImageStoredMd5": {
-          "label": "Field Hub stored MD5 checksum"
+          "label": "Stored backup MD5 checksum"
         },
         "fieldworkImageStoredSha256": {
-          "label": "Field Hub stored SHA-256 checksum"
+          "label": "Stored backup SHA-256 checksum"
         },
         "soilProfileAnnotationStrokes": {
           "label": "Annotation stroke JSON"
@@ -1887,34 +1887,34 @@
           "label": "Photo annotation stroke JSON"
         },
         "fieldworkImageUploadStatus": {
-          "label": "Server upload status"
+          "label": "Original backup status"
         },
         "fieldworkImageUploadedAt": {
-          "label": "Server upload time"
+          "label": "Original backup time"
         },
         "fieldworkImageUploadedUri": {
-          "label": "Uploaded source URI"
+          "label": "Backed-up source URI"
         },
         "fieldworkImageUploadTarget": {
-          "label": "Upload target"
+          "label": "Backup target"
         },
         "fieldworkImageUploadedProject": {
-          "label": "Upload project"
+          "label": "Backup project"
         },
         "fieldworkImageUploadedSizeBytes": {
-          "label": "Uploaded size (bytes)"
+          "label": "Backup size (bytes)"
         },
         "fieldworkImageUploadedMd5": {
-          "label": "Uploaded MD5 checksum"
+          "label": "Backup MD5 checksum"
         },
         "fieldworkImageStoredSizeBytes": {
-          "label": "Field Hub stored size (bytes)"
+          "label": "Stored backup size (bytes)"
         },
         "fieldworkImageStoredMd5": {
-          "label": "Field Hub stored MD5 checksum"
+          "label": "Stored backup MD5 checksum"
         },
         "fieldworkImageStoredSha256": {
-          "label": "Field Hub stored SHA-256 checksum"
+          "label": "Stored backup SHA-256 checksum"
         },
         "mediaEvidenceRole": {
           "label": "Media evidence role"

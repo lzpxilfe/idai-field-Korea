@@ -14749,7 +14749,7 @@
         "label": "Two-location backup"
       },
       "webOrServerBackup": {
-        "label": "Web or server backup"
+        "label": "External or project backup"
       },
       "backupVerified": {
         "label": "Backup verified"

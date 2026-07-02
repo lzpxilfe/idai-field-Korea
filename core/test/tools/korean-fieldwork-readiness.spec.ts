@@ -89,7 +89,7 @@ describe('Korean fieldwork readiness', () => {
     });
 
 
-    it('reports local tablet media without confirmed Field Hub original backup', () => {
+    it('reports local tablet media without confirmed original preservation', () => {
 
         const documents: any[] = [
             makeDocument('feature-photo-1', 'Feature', {
@@ -136,7 +136,7 @@ describe('Korean fieldwork readiness', () => {
         ]);
         expect(issues[0].documentId).toBe('feature-photo-1');
         expect(issues[0].message).toBe(
-            '기록에 직접 붙은 태블릿 사진의 Field Hub 원본 백업이 아직 확인되지 않았습니다.'
+            '기록에 직접 붙은 태블릿 사진 원본 보존 상태가 아직 확인되지 않았습니다.'
         );
         expect(issues[1].documentId).toBe('photo-1');
         expect(issues[1].relatedFields).toEqual([
@@ -152,6 +152,43 @@ describe('Korean fieldwork readiness', () => {
             'fieldworkImageStoredSha256',
             'digitalSourcePreservation'
         ]);
+    });
+
+
+    it('accepts locally preserved tablet media when server upload audit fields are absent', () => {
+
+        const documents: any[] = [
+            makeDocument('photo-1', 'Photo', {
+                fieldworkPhotoUri: 'file:///tablet/photos/photo-1.jpg',
+                digitalSourcePreservation: [
+                    'originalPhoto',
+                    'originalImage',
+                    'webOrServerBackup',
+                    'backupVerified'
+                ]
+            }),
+            makeDocument('soil-photo-1', 'SoilProfilePhoto', {
+                soilProfilePhotoUri: 'file:///tablet/photos/soil-photo-1.jpg',
+                digitalSourcePreservation: [
+                    'originalPhoto',
+                    'originalImage',
+                    'webOrServerBackup',
+                    'backupVerified'
+                ]
+            }),
+            makeDocument('drawing-1', 'Drawing', {
+                fileUri: 'file:///tablet/drawings/drawing-1.jpg',
+                digitalSourcePreservation: [
+                    'originalDrawing',
+                    'webOrServerBackup',
+                    'backupVerified'
+                ]
+            })
+        ];
+
+        const issues = getKoreanFieldworkReadinessIssues(documents as any);
+
+        expect(issues.filter((issue) => issue.ruleId.endsWith('-upload-missing'))).toEqual([]);
     });
 
 

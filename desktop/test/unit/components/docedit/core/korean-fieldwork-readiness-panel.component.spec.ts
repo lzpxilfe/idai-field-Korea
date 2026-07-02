@@ -384,7 +384,7 @@ describe('KoreanFieldworkReadinessPanelComponent', () => {
     });
 
 
-    it('shows linked tablet media records whose Field Hub original backup is not confirmed', async () => {
+    it('shows linked tablet media records whose original preservation is not confirmed', async () => {
 
         const featureDocument = createFeatureDocument({
             featureRecordingStatus: 'confirmed',

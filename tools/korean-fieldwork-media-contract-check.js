@@ -954,7 +954,7 @@ function checkCoreReadinessAndConfigContract() {
     requireIncludes(
       closeoutSource,
       'fieldwork-attached-photo-upload-missing',
-      `${label} must warn for direct fieldwork record photos without Field Hub backups`
+      `${label} must warn for direct fieldwork record photos without confirmed original preservation`
     );
     requireIncludes(
       closeoutSource,
@@ -1055,8 +1055,8 @@ function checkCloseoutUserTextContract() {
   ]) {
     requireIncludes(
       source,
-      '도면 원본의 Field Hub 백업이 아직 확인되지 않았습니다.',
-      `${label} must keep the Drawing backup warning readable for Korean field teams`
+      '도면 원본 보존 상태가 아직 확인되지 않았습니다.',
+      `${label} must keep the Drawing preservation warning readable for Korean field teams`
     );
     rejectMojibakeSuspects(source, label);
   }
@@ -1582,7 +1582,7 @@ function checkContractCoverage() {
   );
   requireIncludes(
     files.coreReadinessSpec,
-    'reports local tablet media without confirmed Field Hub original backup',
+    'reports local tablet media without confirmed original preservation',
     'core readiness tests must cover missing tablet media backups'
   );
   requireIncludes(

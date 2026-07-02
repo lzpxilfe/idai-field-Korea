@@ -761,11 +761,11 @@ describe('KoreanFieldwork project configuration', () => {
         expect(languages.ko.categories.Photo.fields.fieldworkPhotoCapturedAt.label)
             .toBe('촬영 시각');
         expect(languages.ko.categories.Photo.fields.fieldworkImageUploadedAt.label)
-            .toBe('서버 업로드 시각');
+            .toBe('원본 백업 시각');
         expect(languages.en.categories.Photo.fields.fieldworkPhotoCapturedAt.label)
             .toBe('Capture time');
         expect(languages.en.categories.Photo.fields.fieldworkImageUploadedAt.label)
-            .toBe('Server upload time');
+            .toBe('Original backup time');
         expect(languages.ko.categories.Layer.label).toBe('토층');
         expect(languages.ko.categories.SoilProfilePhoto.label).toBe('토층 단면 사진');
         expect(languages.ko.categories.SoilProfilePhoto.fields.soilProfilePhotoSizeHintKb.label)
@@ -4733,7 +4733,7 @@ describe('KoreanFieldwork project configuration', () => {
             .toBe('후속연구자 열람 이력');
         expect(valuelistLanguages.projects.ko['KoreanFieldwork-digitalSourcePreservation']
             .values.webOrServerBackup.label)
-            .toBe('웹·서버 백업');
+            .toBe('외부·프로젝트 백업');
         expect(valuelistLanguages.projects.en['KoreanFieldwork-reviewedRecordUnit'].values.personalNotebook.label)
             .toBe('Personal notebook');
         expect(valuelistLanguages.projects.en['KoreanFieldwork-qualityReviewStage'].values.sameDayReview.label)

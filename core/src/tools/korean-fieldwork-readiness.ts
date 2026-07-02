@@ -100,25 +100,25 @@ const FIELDWORK_IMAGE_UPLOAD_RULES = [
         categories: ['Photo'],
         uriFields: ['fieldworkPhotoUri', 'imageUri', 'fileUri'],
         ruleId: 'fieldwork-photo-upload-missing',
-        message: 'Field Hub 원본 사진 백업이 아직 확인되지 않았습니다.'
+        message: '현장사진 원본 보존 상태가 아직 확인되지 않았습니다.'
     },
     {
         categories: ['SoilProfilePhoto'],
         uriFields: ['soilProfilePhotoUri', 'imageUri', 'fieldworkPhotoUri'],
         ruleId: 'soil-profile-photo-upload-missing',
-        message: 'Field Hub 토층 원본 사진 백업이 아직 확인되지 않았습니다.'
+        message: '토층사진 원본 보존 상태가 아직 확인되지 않았습니다.'
     },
     {
         categories: ['Drawing'],
         uriFields: ['fieldworkPhotoUri', 'imageUri', 'fileUri'],
         ruleId: 'fieldwork-drawing-upload-missing',
-        message: 'Field Hub 원본 도면 백업이 아직 확인되지 않았습니다.'
+        message: '도면 원본 보존 상태가 아직 확인되지 않았습니다.'
     },
     {
         categories: DIRECT_FIELDWORK_PHOTO_CATEGORIES,
         uriFields: DIRECT_FIELDWORK_PHOTO_URI_FIELDS,
         ruleId: 'fieldwork-attached-photo-upload-missing',
-        message: '기록에 직접 붙은 태블릿 사진의 Field Hub 원본 백업이 아직 확인되지 않았습니다.'
+        message: '기록에 직접 붙은 태블릿 사진 원본 보존 상태가 아직 확인되지 않았습니다.'
     }
 ];
 
@@ -287,7 +287,7 @@ export const KOREAN_FIELDWORK_READINESS_RULES: KoreanFieldworkReadinessRule[] = 
     },
     {
         id: 'fieldwork-image-upload-missing',
-        label: 'Field Hub 원본 매체 백업 확인',
+        label: '원본 매체 보존 확인',
         relatedFields: FIELDWORK_IMAGE_UPLOAD_RELATED_FIELDS,
         evaluate: (document) => {
             const rule = FIELDWORK_IMAGE_UPLOAD_RULES.find((candidate) =>
@@ -307,7 +307,7 @@ export const KOREAN_FIELDWORK_READINESS_RULES: KoreanFieldworkReadinessRule[] = 
                 'warning',
                 rule.message,
                 FIELDWORK_IMAGE_UPLOAD_RELATED_FIELDS,
-                '동기화 연결 후 원본 매체 업로드가 완료됐는지 확인하고 서버 업로드 시각을 남기세요.'
+                '태블릿 또는 프로젝트 백업 위치에 원본 파일이 남아 있는지 확인하고, 보존 위치와 확인 시각을 남기세요.'
             )];
         }
     }
@@ -532,6 +532,10 @@ function isUploadableLocalUri(uri: string|undefined): boolean {
 export function hasConfirmedKoreanFieldworkImageUpload(resource: Record<string, any>,
                                                        sourceUri?: string): boolean {
 
+    if (!hasFieldworkImageUploadAuditEvidence(resource)) {
+        return hasConfirmedDigitalSourcePreservation(resource);
+    }
+
     const uploadedUri = getTextValue(resource.fieldworkImageUploadedUri);
     const uploadTarget = getTextValue(resource.fieldworkImageUploadTarget);
     const uploadedProject = getTextValue(resource.fieldworkImageUploadedProject);
@@ -549,6 +553,20 @@ export function hasConfirmedKoreanFieldworkImageUpload(resource: Record<string, 
         && hasConfirmedUploadSize(resource, sourceUri)
         && hasConfirmedStoredFileMetadata(resource)
         && hasConfirmedDigitalSourcePreservation(resource);
+}
+
+function hasFieldworkImageUploadAuditEvidence(resource: Record<string, any>): boolean {
+
+    return hasValue(resource.fieldworkImageUploadStatus)
+        || hasValue(resource.fieldworkImageUploadedAt)
+        || hasValue(resource.fieldworkImageUploadedUri)
+        || hasValue(resource.fieldworkImageUploadTarget)
+        || hasValue(resource.fieldworkImageUploadedProject)
+        || getNumberValue(resource.fieldworkImageUploadedSizeBytes) !== undefined
+        || hasValue(resource.fieldworkImageUploadedMd5)
+        || getNumberValue(resource.fieldworkImageStoredSizeBytes) !== undefined
+        || hasValue(resource.fieldworkImageStoredMd5)
+        || hasValue(resource.fieldworkImageStoredSha256);
 }
 
 function hasConfirmedUploadChecksum(resource: Record<string, any>, sourceUri?: string): boolean {

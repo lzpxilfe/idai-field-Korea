@@ -162,7 +162,7 @@ const getFieldworkPhotoCloseoutIssues = (
     document,
     ['fieldworkPhotoUri', 'imageUri', 'fileUri'],
     'fieldwork-photo-upload-missing',
-    '현장사진 원본의 Field Hub 백업이 아직 확인되지 않았습니다.'
+    '현장사진 원본 보존 상태가 아직 확인되지 않았습니다.'
   ),
   ...getPhotoAnnotationCloseoutIssues(
     document,
@@ -178,7 +178,7 @@ const getDrawingCloseoutIssues = (
   document,
   ['fieldworkPhotoUri', 'imageUri', 'fileUri'],
   'fieldwork-drawing-upload-missing',
-  '도면 원본의 Field Hub 백업이 아직 확인되지 않았습니다.'
+  '도면 원본 보존 상태가 아직 확인되지 않았습니다.'
 );
 
 const getDirectFieldworkPhotoCloseoutIssues = (
@@ -187,7 +187,7 @@ const getDirectFieldworkPhotoCloseoutIssues = (
   document,
   ['fieldworkPhotoUri', 'imageUri', 'fileUri'],
   'fieldwork-attached-photo-upload-missing',
-  '기록에 직접 붙은 태블릿 사진의 Field Hub 백업이 아직 확인되지 않았습니다.'
+  '기록에 직접 붙은 태블릿 사진 원본 보존 상태가 아직 확인되지 않았습니다.'
 );
 
 const getSoilProfilePhotoCloseoutIssues = (
@@ -203,7 +203,7 @@ const getSoilProfilePhotoCloseoutIssues = (
       document,
       ['soilProfilePhotoUri', 'imageUri', 'fieldworkPhotoUri'],
       'soil-profile-photo-upload-missing',
-      '토층사진 원본의 Field Hub 백업이 아직 확인되지 않았습니다.'
+      '토층사진 원본 보존 상태가 아직 확인되지 않았습니다.'
     )).concat(getPhotoAnnotationCloseoutIssues(
       document,
       SOIL_PROFILE_PHOTO_ANNOTATION_FIELDS,
@@ -293,7 +293,7 @@ const getPhotoUploadCloseoutIssues = (
     document,
     ruleId,
     message,
-    '동기화 연결 후 원본 이미지 업로드가 완료됐는지 확인하고 서버 업로드 시각을 남기세요.',
+    '태블릿 또는 프로젝트 백업 위치에 원본 파일이 남아 있는지 확인하고, 보존 위치와 확인 시각을 남기세요.',
     [
       'fieldworkImageUploadStatus',
       'fieldworkImageUploadedAt',

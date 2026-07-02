@@ -1533,34 +1533,34 @@
       "label": "도면",
       "fields": {
         "fieldworkImageUploadStatus": {
-          "label": "서버 업로드 상태"
+          "label": "원본 백업 상태"
         },
         "fieldworkImageUploadedAt": {
-          "label": "서버 업로드 시각"
+          "label": "원본 백업 시각"
         },
         "fieldworkImageUploadedUri": {
-          "label": "업로드 원본 URI"
+          "label": "백업 원본 URI"
         },
         "fieldworkImageUploadTarget": {
-          "label": "업로드 대상"
+          "label": "백업 대상"
         },
         "fieldworkImageUploadedProject": {
-          "label": "업로드 프로젝트"
+          "label": "백업 프로젝트"
         },
         "fieldworkImageUploadedSizeBytes": {
-          "label": "업로드 크기(bytes)"
+          "label": "백업 크기(bytes)"
         },
         "fieldworkImageUploadedMd5": {
-          "label": "업로드 MD5 체크섬"
+          "label": "백업 MD5 체크섬"
         },
         "fieldworkImageStoredSizeBytes": {
-          "label": "Field Hub 저장본 크기(bytes)"
+          "label": "백업 저장본 크기(bytes)"
         },
         "fieldworkImageStoredMd5": {
-          "label": "Field Hub 저장본 MD5 체크섬"
+          "label": "백업 저장본 MD5 체크섬"
         },
         "fieldworkImageStoredSha256": {
-          "label": "Field Hub 저장본 SHA-256 체크섬"
+          "label": "백업 저장본 SHA-256 체크섬"
         },
         "mediaEvidenceRole": {
           "label": "매체 증거 역할"
@@ -1737,34 +1737,34 @@
           "label": "촬영 시각"
         },
         "fieldworkImageUploadStatus": {
-          "label": "서버 업로드 상태"
+          "label": "원본 백업 상태"
         },
         "fieldworkImageUploadedAt": {
-          "label": "서버 업로드 시각"
+          "label": "원본 백업 시각"
         },
         "fieldworkImageUploadedUri": {
-          "label": "업로드 원본 URI"
+          "label": "백업 원본 URI"
         },
         "fieldworkImageUploadTarget": {
-          "label": "업로드 대상"
+          "label": "백업 대상"
         },
         "fieldworkImageUploadedProject": {
-          "label": "업로드 프로젝트"
+          "label": "백업 프로젝트"
         },
         "fieldworkImageUploadedSizeBytes": {
-          "label": "업로드 크기(bytes)"
+          "label": "백업 크기(bytes)"
         },
         "fieldworkImageUploadedMd5": {
-          "label": "업로드 MD5 체크섬"
+          "label": "백업 MD5 체크섬"
         },
         "fieldworkImageStoredSizeBytes": {
-          "label": "Field Hub 저장본 크기(bytes)"
+          "label": "백업 저장본 크기(bytes)"
         },
         "fieldworkImageStoredMd5": {
-          "label": "Field Hub 저장본 MD5 체크섬"
+          "label": "백업 저장본 MD5 체크섬"
         },
         "fieldworkImageStoredSha256": {
-          "label": "Field Hub 저장본 SHA-256 체크섬"
+          "label": "백업 저장본 SHA-256 체크섬"
         },
         "soilProfileAnnotationStrokes": {
           "label": "펜 표시"
@@ -1893,34 +1893,34 @@
           "label": "사진 펜 표시"
         },
         "fieldworkImageUploadStatus": {
-          "label": "서버 업로드 상태"
+          "label": "원본 백업 상태"
         },
         "fieldworkImageUploadedAt": {
-          "label": "서버 업로드 시각"
+          "label": "원본 백업 시각"
         },
         "fieldworkImageUploadedUri": {
-          "label": "업로드 원본 URI"
+          "label": "백업 원본 URI"
         },
         "fieldworkImageUploadTarget": {
-          "label": "업로드 대상"
+          "label": "백업 대상"
         },
         "fieldworkImageUploadedProject": {
-          "label": "업로드 프로젝트"
+          "label": "백업 프로젝트"
         },
         "fieldworkImageUploadedSizeBytes": {
-          "label": "업로드 크기(bytes)"
+          "label": "백업 크기(bytes)"
         },
         "fieldworkImageUploadedMd5": {
-          "label": "업로드 MD5 체크섬"
+          "label": "백업 MD5 체크섬"
         },
         "fieldworkImageStoredSizeBytes": {
-          "label": "Field Hub 저장본 크기(bytes)"
+          "label": "백업 저장본 크기(bytes)"
         },
         "fieldworkImageStoredMd5": {
-          "label": "Field Hub 저장본 MD5 체크섬"
+          "label": "백업 저장본 MD5 체크섬"
         },
         "fieldworkImageStoredSha256": {
-          "label": "Field Hub 저장본 SHA-256 체크섬"
+          "label": "백업 저장본 SHA-256 체크섬"
         },
         "mediaEvidenceRole": {
           "label": "매체 증거 역할"

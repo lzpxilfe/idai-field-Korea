@@ -94,7 +94,7 @@ describe('KoreanFieldworkRecordContextPanel', () => {
     expect(handleAddDocumentOfCategory).not.toHaveBeenCalled();
   });
 
-  it('opens linked tablet media records whose Field Hub original backup is not confirmed', () => {
+  it('opens linked tablet media records whose original preservation is not confirmed', () => {
     const feature = createDoc('feature-1', C.FEATURE, '?섑삁 1', {}, {
       featureRecordingStatus: 'confirmed',
       featureInvestigationChecklist: ['completionPhotoTaken'],
