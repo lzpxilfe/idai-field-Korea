@@ -85,6 +85,7 @@ const DocumentAdd: React.FC = () => {
 
       setNewResource(
         createKoreanFieldworkDraftResource(parentDoc, categoryName, config, {
+          existingDocuments: documents ?? [],
           featureGeometryRevisionNote,
           featureGeometry,
           featureLocationSketch,
@@ -98,6 +99,7 @@ const DocumentAdd: React.FC = () => {
     },
     [
       parentDoc,
+      documents,
       categoryName,
       config,
       featureGeometryRevisionNote,

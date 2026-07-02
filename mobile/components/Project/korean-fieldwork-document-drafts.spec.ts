@@ -250,8 +250,8 @@ describe('Korean fieldwork document drafts', () => {
     });
   });
 
-  it('creates offline-safe soil profile photo drafts from regular add flow', () => {
-    const featureDoc = createDoc('feature-1', C.FEATURE);
+  it('creates soil profile photo drafts named from the parent feature', () => {
+    const featureDoc = createDoc('feature-1', C.FEATURE, {}, '1호 주거지');
     const config = allowRelations({
       [`${C.SOIL_PROFILE_PHOTO}:${C.FEATURE}`]: ['depicts'],
     });
@@ -263,7 +263,7 @@ describe('Korean fieldwork document drafts', () => {
     );
 
     expect(draft).toMatchObject({
-      identifier: 'soil-profile-photo-1700000000000',
+      identifier: '1호 주거지 토층 1',
       category: C.SOIL_PROFILE_PHOTO,
       relations: { depicts: ['feature-1'] },
       soilProfileAnnotationStrokes: '[]',
@@ -277,6 +277,28 @@ describe('Korean fieldwork document drafts', () => {
       soilProfilePhotoQuality: SOIL_PROFILE_PHOTO_QUALITY_DEFAULT,
       layerSequenceMeaning: LAYER_SEQUENCE_MEANING_DEFAULT,
     });
+  });
+
+  it('numbers the next soil profile photo below the same feature', () => {
+    const featureDoc = createDoc('feature-1', C.FEATURE, {}, '1호 주거지');
+    const config = allowRelations({
+      [`${C.SOIL_PROFILE_PHOTO}:${C.FEATURE}`]: ['depicts'],
+    });
+
+    const draft = createKoreanFieldworkDraftResource(
+      featureDoc,
+      C.SOIL_PROFILE_PHOTO,
+      config,
+      {
+        existingDocuments: [
+          createDoc('profile-1', C.SOIL_PROFILE_PHOTO, { depicts: ['feature-1'] }, '1호 주거지 토층 1'),
+          createDoc('profile-2', C.SOIL_PROFILE_PHOTO, { depicts: ['feature-1'] }, '1호 주거지 토층 2'),
+          createDoc('other-profile', C.SOIL_PROFILE_PHOTO, { depicts: ['feature-2'] }, '2호 주거지 토층 1'),
+        ],
+      }
+    );
+
+    expect(draft.identifier).toBe('1호 주거지 토층 3');
   });
 
   it('creates regular Photo drafts with fieldwork capture defaults', () => {
@@ -376,10 +398,12 @@ describe('Korean fieldwork document drafts', () => {
 const createDoc = (
   id: string,
   category: string,
-  relations: Record<string, string[]> = {}
+  relations: Record<string, string[]> = {},
+  identifier = id
 ) => ({
   resource: {
     id,
+    identifier,
     category,
     relations,
   },

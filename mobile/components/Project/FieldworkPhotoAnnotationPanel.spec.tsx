@@ -40,17 +40,37 @@ describe('FieldworkPhotoAnnotationPanel', () => {
     expect(handleUpdateStrokes).toHaveBeenCalledWith(
       expect.stringContaining('"strokes"')
     );
-    expect(JSON.parse(handleUpdateStrokes.mock.calls[0][0])).toMatchObject({
-      version: 1,
-      strokes: [
-        {
-          points: [
-            { x: 1000, y: 1000 },
-            { x: 5000, y: 5000 },
-          ],
-        },
-      ],
+    const payload = JSON.parse(handleUpdateStrokes.mock.calls[0][0]);
+    const [stroke] = payload.strokes;
+    expect(payload.version).toBe(1);
+    expect(stroke.points[0]).toEqual({ x: 1000, y: 1000 });
+    expect(stroke.points[stroke.points.length - 1]).toEqual({ x: 5000, y: 5000 });
+    expect(stroke.points.length).toBeGreaterThan(2);
+  });
+
+  it('opens a full-screen drawing canvas from a single photo tap', () => {
+    const handleUpdateStrokes = jest.fn();
+    const { getByTestId, queryByTestId } = render(
+      <FieldworkPhotoAnnotationPanel
+        imageUri="file:///tablet/photo.jpg"
+        onUpdateStrokes={handleUpdateStrokes}
+      />
+    );
+
+    const canvas = getByTestId('fieldworkPhotoAnnotationCanvas');
+    fireEvent(canvas, 'responderGrant', {
+      nativeEvent: { locationX: 32, locationY: 24 },
     });
+    fireEvent(canvas, 'responderRelease', {
+      nativeEvent: { locationX: 32, locationY: 24 },
+    });
+
+    expect(handleUpdateStrokes).not.toHaveBeenCalled();
+    expect(getByTestId('fieldworkPhotoAnnotationFullscreenCanvas')).toBeTruthy();
+
+    fireEvent.press(getByTestId('fieldworkPhotoAnnotationFullscreenClose'));
+
+    expect(queryByTestId('fieldworkPhotoAnnotationFullscreenCanvas')).toBeNull();
   });
 
   it('clears and samples selected points when used for soil profile photos', async () => {

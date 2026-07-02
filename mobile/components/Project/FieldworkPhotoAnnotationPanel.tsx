@@ -9,6 +9,7 @@ import {
   GestureResponderEvent,
   Image,
   LayoutChangeEvent,
+  Modal,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -48,7 +49,11 @@ const DEFAULT_CANVAS_SIZE = {
   width: 320,
 };
 const MAX_COORDINATE = 10000;
-const MIN_POINT_DISTANCE = 80;
+const MIN_POINT_DISTANCE = 18;
+const RELEASE_POINT_MIN_DISTANCE = 1;
+const TAP_OPEN_FULLSCREEN_DISTANCE = 35;
+const INTERPOLATED_POINT_SPACING = 90;
+const MAX_INTERPOLATED_POINTS_PER_MOVE = 18;
 
 interface Rect {
   height: number;
@@ -70,18 +75,27 @@ const FieldworkPhotoAnnotationPanel: React.FC<FieldworkPhotoAnnotationPanelProps
     [strokesValue]
   );
   const [canvasSize, setCanvasSize] = useState(DEFAULT_CANVAS_SIZE);
+  const [fullscreenCanvasSize, setFullscreenCanvasSize] =
+    useState(DEFAULT_CANVAS_SIZE);
   const [imageSize, setImageSize] = useState(DEFAULT_CANVAS_SIZE);
   const [activeStroke, setActiveStroke] =
     useState<KoreanFieldworkHandwritingStroke>();
+  const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
   const [isSampleMode, setIsSampleMode] = useState(false);
   const [sampleStatus, setSampleStatus] = useState<string>();
   const activeStrokeRef = useRef<KoreanFieldworkHandwritingStroke>();
+  const touchStartPointRef = useRef<KoreanFieldworkHandwritingPoint>();
+  const activeCanvasRef = useRef<'fullscreen' | 'preview'>();
   const visibleStrokes = activeStroke ? strokes.concat(activeStroke) : strokes;
   const strokeCount = strokes.length;
   const pointCount = countKoreanFieldworkHandwritingPoints(strokes);
   const imageFrame = useMemo(
     () => getContainedImageFrame(canvasSize, imageSize),
     [canvasSize, imageSize]
+  );
+  const fullscreenImageFrame = useMemo(
+    () => getContainedImageFrame(fullscreenCanvasSize, imageSize),
+    [fullscreenCanvasSize, imageSize]
   );
 
   useEffect(() => {
@@ -110,8 +124,16 @@ const FieldworkPhotoAnnotationPanel: React.FC<FieldworkPhotoAnnotationPanelProps
     const { height, width } = event.nativeEvent.layout;
     if (height > 0 && width > 0) setCanvasSize({ height, width });
   };
-  const startStroke = (event: GestureResponderEvent) => {
-    const point = getNormalizedPoint(event, imageFrame);
+  const updateFullscreenCanvasSize = (event: LayoutChangeEvent) => {
+    const { height, width } = event.nativeEvent.layout;
+    if (height > 0 && width > 0) setFullscreenCanvasSize({ height, width });
+  };
+  const startStroke = (
+    event: GestureResponderEvent,
+    targetImageFrame: Rect,
+    canvasMode: 'fullscreen' | 'preview'
+  ) => {
+    const point = getNormalizedPoint(event, targetImageFrame);
     if (!point) return;
 
     if (isSampleMode && onSamplePoint) {
@@ -123,32 +145,83 @@ const FieldworkPhotoAnnotationPanel: React.FC<FieldworkPhotoAnnotationPanelProps
       return;
     }
 
+    touchStartPointRef.current = point;
+    activeCanvasRef.current = canvasMode;
     activeStrokeRef.current = { points: [point] };
     setActiveStroke(activeStrokeRef.current);
   };
-  const moveStroke = (event: GestureResponderEvent) => {
-    const point = getNormalizedPoint(event, imageFrame);
+  const moveStroke = (
+    event: GestureResponderEvent,
+    targetImageFrame: Rect,
+    canvasMode: 'fullscreen' | 'preview'
+  ) => {
+    if (activeCanvasRef.current && activeCanvasRef.current !== canvasMode) return;
+
+    const point = getNormalizedPoint(event, targetImageFrame);
     const currentStroke = activeStrokeRef.current;
     if (!point || !currentStroke) return;
 
-    const previousPoint = currentStroke.points[currentStroke.points.length - 1];
-    if (previousPoint && getPointDistance(previousPoint, point) < MIN_POINT_DISTANCE) {
-      return;
+    appendActiveStrokePoint(point);
+  };
+  const finishStroke = (
+    event?: GestureResponderEvent,
+    targetImageFrame?: Rect,
+    canvasMode: 'fullscreen' | 'preview' = 'preview'
+  ) => {
+    if (activeCanvasRef.current && activeCanvasRef.current !== canvasMode) return;
+    const releasePoint = event && targetImageFrame
+      ? getNormalizedPoint(event, targetImageFrame)
+      : undefined;
+    if (releasePoint) {
+      appendActiveStrokePoint(releasePoint, RELEASE_POINT_MIN_DISTANCE);
     }
 
-    activeStrokeRef.current = {
-      points: currentStroke.points.concat(point),
-    };
-    setActiveStroke(activeStrokeRef.current);
-  };
-  const finishStroke = () => {
     const stroke = activeStrokeRef.current;
+    const startPoint = touchStartPointRef.current;
     activeStrokeRef.current = undefined;
+    touchStartPointRef.current = undefined;
+    activeCanvasRef.current = undefined;
     setActiveStroke(undefined);
 
     if (!stroke || stroke.points.length === 0) return;
 
+    const lastPoint = stroke.points[stroke.points.length - 1];
+    if (
+      canvasMode === 'preview'
+      && startPoint
+      && lastPoint
+      && getPointDistance(startPoint, lastPoint) < TAP_OPEN_FULLSCREEN_DISTANCE
+    ) {
+      setIsFullscreenOpen(true);
+      return;
+    }
+
     onUpdateStrokes(serializeKoreanFieldworkHandwriting(strokes.concat(stroke)));
+  };
+  const appendActiveStrokePoint = (
+    point: KoreanFieldworkHandwritingPoint,
+    minimumDistance = MIN_POINT_DISTANCE
+  ) => {
+    const currentStroke = activeStrokeRef.current;
+    if (!currentStroke) return;
+
+    const previousPoint = currentStroke.points[currentStroke.points.length - 1];
+    if (
+      previousPoint
+      && getPointDistance(previousPoint, point) < minimumDistance
+    ) {
+      return;
+    }
+
+    const interpolatedPoints = previousPoint
+      ? getInterpolatedStrokePoints(previousPoint, point)
+      : [point];
+    if (interpolatedPoints.length === 0) return;
+
+    activeStrokeRef.current = {
+      points: currentStroke.points.concat(interpolatedPoints),
+    };
+    setActiveStroke(activeStrokeRef.current);
   };
   const undoStroke = () => {
     onUpdateStrokes(serializeKoreanFieldworkHandwriting(strokes.slice(0, -1)));
@@ -216,10 +289,14 @@ const FieldworkPhotoAnnotationPanel: React.FC<FieldworkPhotoAnnotationPanelProps
       )}
       <View
         onLayout={updateCanvasSize}
-        onResponderGrant={startStroke}
-        onResponderMove={moveStroke}
-        onResponderRelease={finishStroke}
-        onResponderTerminate={finishStroke}
+        onMoveShouldSetResponderCapture={() => true}
+        onMoveShouldSetResponder={() => true}
+        onResponderGrant={(event) => startStroke(event, imageFrame, 'preview')}
+        onResponderMove={(event) => moveStroke(event, imageFrame, 'preview')}
+        onResponderRelease={(event) => finishStroke(event, imageFrame, 'preview')}
+        onResponderTerminate={(event) => finishStroke(event, imageFrame, 'preview')}
+        onResponderTerminationRequest={() => false}
+        onStartShouldSetResponderCapture={() => true}
         onStartShouldSetResponder={() => true}
         style={styles.canvas}
         testID="fieldworkPhotoAnnotationCanvas"
@@ -234,6 +311,56 @@ const FieldworkPhotoAnnotationPanel: React.FC<FieldworkPhotoAnnotationPanelProps
           toStrokeSegments(stroke, strokeIndex, imageFrame)
         )}
       </View>
+      <Modal
+        animationType="fade"
+        onRequestClose={() => setIsFullscreenOpen(false)}
+        visible={isFullscreenOpen}
+      >
+        <View style={styles.fullscreenContainer}>
+          <View style={styles.fullscreenHeader}>
+            <View style={styles.titleRow}>
+              <MaterialIcons name="draw" size={18} color="white" />
+              <Text style={styles.fullscreenTitle}>{title}</Text>
+            </View>
+            <TouchableOpacity
+              activeOpacity={0.86}
+              onPress={() => setIsFullscreenOpen(false)}
+              style={styles.fullscreenCloseButton}
+              testID="fieldworkPhotoAnnotationFullscreenClose"
+            >
+              <MaterialIcons name="close" size={22} color="white" />
+            </TouchableOpacity>
+          </View>
+          <View
+            onLayout={updateFullscreenCanvasSize}
+            onMoveShouldSetResponderCapture={() => true}
+            onMoveShouldSetResponder={() => true}
+            onResponderGrant={(event) =>
+              startStroke(event, fullscreenImageFrame, 'fullscreen')}
+            onResponderMove={(event) =>
+              moveStroke(event, fullscreenImageFrame, 'fullscreen')}
+            onResponderRelease={(event) =>
+              finishStroke(event, fullscreenImageFrame, 'fullscreen')}
+            onResponderTerminate={(event) =>
+              finishStroke(event, fullscreenImageFrame, 'fullscreen')}
+            onResponderTerminationRequest={() => false}
+            onStartShouldSetResponderCapture={() => true}
+            onStartShouldSetResponder={() => true}
+            style={styles.fullscreenCanvas}
+            testID="fieldworkPhotoAnnotationFullscreenCanvas"
+          >
+            <Image
+              pointerEvents="none"
+              resizeMode="contain"
+              source={{ uri: imageUri }}
+              style={StyleSheet.absoluteFillObject}
+            />
+            {visibleStrokes.flatMap((stroke, strokeIndex) =>
+              toStrokeSegments(stroke, strokeIndex, fullscreenImageFrame)
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -301,10 +428,10 @@ const getLocalTouchPoint = (event: GestureResponderEvent): {
   locationY?: number;
 } => {
   const nativeEvent = event.nativeEvent as unknown as {
-    changedTouches?: Array<TouchPointCandidate>;
+    changedTouches?: TouchPointCandidate[];
     locationX?: number;
     locationY?: number;
-    touches?: Array<TouchPointCandidate>;
+    touches?: TouchPointCandidate[];
   };
   const localTouch = [
     ...(nativeEvent.touches ?? []),
@@ -383,6 +510,32 @@ const getPointDistance = (
   ((pointB.x - pointA.x) ** 2) + ((pointB.y - pointA.y) ** 2)
 );
 
+const getInterpolatedStrokePoints = (
+  start: KoreanFieldworkHandwritingPoint,
+  end: KoreanFieldworkHandwritingPoint
+): KoreanFieldworkHandwritingPoint[] => {
+  const distance = getPointDistance(start, end);
+  if (distance === 0) return [];
+
+  const steps = clamp(
+    Math.ceil(distance / INTERPOLATED_POINT_SPACING),
+    1,
+    MAX_INTERPOLATED_POINTS_PER_MOVE
+  );
+
+  return Array.from({ length: steps }, (_, index) => {
+    const t = (index + 1) / steps;
+
+    return {
+      x: normalizeCoordinate(start.x + ((end.x - start.x) * t)),
+      y: normalizeCoordinate(start.y + ((end.y - start.y) * t)),
+    };
+  });
+};
+
+const clamp = (value: number, min: number, max: number): number =>
+  Math.min(max, Math.max(min, value));
+
 const toStrokeSegments = (
   stroke: KoreanFieldworkHandwritingStroke,
   strokeIndex: number,
@@ -410,7 +563,7 @@ const toStrokeSegments = (
     );
   }
 
-  return stroke.points.slice(1).map((point, pointIndex) => {
+  const segments = stroke.points.slice(1).map((point, pointIndex) => {
     const previousPoint = stroke.points[pointIndex];
     const start = denormalizePoint(previousPoint, imageFrame);
     const end = denormalizePoint(point, imageFrame);
@@ -434,6 +587,28 @@ const toStrokeSegments = (
       />
     );
   });
+
+  const joints = stroke.points.map((point, pointIndex) => {
+    const pixelPoint = denormalizePoint(point, imageFrame);
+
+    return (
+      <View
+        key={`${strokeIndex}-joint-${pointIndex}`}
+        pointerEvents="none"
+        style={[
+          styles.strokeJoint,
+          {
+            height: strokeWidth,
+            left: pixelPoint.x - (strokeWidth / 2),
+            top: pixelPoint.y - (strokeWidth / 2),
+            width: strokeWidth,
+          },
+        ]}
+      />
+    );
+  });
+
+  return segments.concat(joints);
 };
 
 const styles = StyleSheet.create({
@@ -526,6 +701,41 @@ const styles = StyleSheet.create({
     height: DEFAULT_CANVAS_SIZE.height,
     position: 'relative',
   },
+  fullscreenCanvas: {
+    backgroundColor: '#111827',
+    flex: 1,
+    position: 'relative',
+  },
+  fullscreenCloseButton: {
+    alignItems: 'center',
+    borderColor: 'rgba(255, 255, 255, 0.35)',
+    borderRadius: 6,
+    borderWidth: 1,
+    height: 38,
+    justifyContent: 'center',
+    width: 38,
+  },
+  fullscreenContainer: {
+    backgroundColor: '#111827',
+    flex: 1,
+  },
+  fullscreenHeader: {
+    alignItems: 'center',
+    backgroundColor: '#101828',
+    borderBottomColor: 'rgba(255, 255, 255, 0.14)',
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    minHeight: 58,
+    paddingHorizontal: 12,
+    paddingTop: 8,
+  },
+  fullscreenTitle: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '900',
+    marginLeft: 6,
+  },
   strokeDot: {
     backgroundColor: '#ffea00',
     borderColor: '#111827',
@@ -534,6 +744,11 @@ const styles = StyleSheet.create({
     position: 'absolute',
   },
   strokeSegment: {
+    backgroundColor: '#ffea00',
+    borderRadius: 2,
+    position: 'absolute',
+  },
+  strokeJoint: {
     backgroundColor: '#ffea00',
     borderRadius: 2,
     position: 'absolute',

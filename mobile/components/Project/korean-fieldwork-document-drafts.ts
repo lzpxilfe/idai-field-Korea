@@ -48,6 +48,7 @@ const DRAFT_IDENTIFIER_PREFIXES: Readonly<Record<string, string>> = {
 };
 
 export interface KoreanFieldworkDraftResourceOptions {
+  existingDocuments?: readonly Document[];
   featureGeometry?: string;
   featureGeometryRevisionNote?: string;
   featureLocationSketch?: string;
@@ -68,11 +69,17 @@ export const createKoreanFieldworkDraftResource = (
     ? getKoreanFieldworkFeatureTypeOption(options.featureType)
     : undefined;
   const resource: NewResource = {
-    identifier: createDraftIdentifier(
-      categoryName,
-      featureTypeOption?.value,
-      options.identifier
-    ),
+    identifier: categoryName === C.SOIL_PROFILE_PHOTO
+      ? createSoilProfilePhotoDraftIdentifier(
+        parentDoc,
+        options.existingDocuments,
+        options.identifier
+      )
+      : createDraftIdentifier(
+        categoryName,
+        featureTypeOption?.value,
+        options.identifier
+      ),
     relations: createKoreanFieldworkDraftRelations(parentDoc, categoryName, config),
     category: categoryName,
   };
@@ -245,6 +252,76 @@ export const createDraftIdentifier = (
     ?? toKebabCase(categoryName);
 
   return `${prefix}-${Date.now()}`;
+};
+
+const createSoilProfilePhotoDraftIdentifier = (
+  parentDoc: Document,
+  existingDocuments: readonly Document[] = [],
+  preferredIdentifier?: string
+): string => {
+  const normalizedPreferredIdentifier = preferredIdentifier?.trim();
+  if (normalizedPreferredIdentifier) return normalizedPreferredIdentifier;
+
+  const parentIdentifier = getParentIdentifier(parentDoc);
+  const nextNumber = getNextSoilProfilePhotoNumber(
+    parentDoc.resource.id,
+    parentIdentifier,
+    existingDocuments
+  );
+
+  return `${parentIdentifier} 토층 ${nextNumber}`;
+};
+
+const getParentIdentifier = (parentDoc: Document): string => {
+  const identifier = parentDoc.resource.identifier?.trim()
+    || parentDoc.resource.id?.trim();
+
+  return identifier || '유구';
+};
+
+const getNextSoilProfilePhotoNumber = (
+  parentId: string | undefined,
+  parentIdentifier: string,
+  documents: readonly Document[]
+): number => {
+  const prefix = `${parentIdentifier} 토층 `;
+  const linkedNumbers = documents
+    .filter((document) =>
+      document.resource.category === C.SOIL_PROFILE_PHOTO
+      && (
+        isRelationLinkedToParent(document.resource.relations?.depicts, parentId)
+        || isRelationLinkedToParent(document.resource.relations?.liesWithin, parentId)
+      ))
+    .map((document) => getSoilProfilePhotoSuffixNumber(
+      document.resource.identifier,
+      prefix
+    ))
+    .filter((value): value is number => value !== undefined);
+
+  return linkedNumbers.length > 0
+    ? Math.max(...linkedNumbers) + 1
+    : 1;
+};
+
+const isRelationLinkedToParent = (
+  relationTargets: string[] | undefined,
+  parentId: string | undefined
+): boolean =>
+  !!parentId && !!relationTargets?.includes(parentId);
+
+const getSoilProfilePhotoSuffixNumber = (
+  identifier: string | undefined,
+  prefix: string
+): number | undefined => {
+  const normalizedIdentifier = identifier?.trim();
+  if (!normalizedIdentifier?.startsWith(prefix)) return undefined;
+
+  const suffix = normalizedIdentifier.slice(prefix.length).trim();
+  const parsedNumber = Number.parseInt(suffix, 10);
+
+  return Number.isFinite(parsedNumber) && parsedNumber > 0
+    ? parsedNumber
+    : undefined;
 };
 
 const isFeatureWorkflowCategory = (categoryName: string): boolean =>
