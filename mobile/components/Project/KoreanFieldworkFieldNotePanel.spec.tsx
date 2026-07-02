@@ -112,6 +112,17 @@ describe('KoreanFieldworkFieldNotePanel', () => {
     );
   });
 
+  it('does not show technical stroke and point counts in the handwriting header', () => {
+    const feature = createDoc('feature-1', C.FEATURE, 'Feature 1');
+    const { getByTestId, queryByText } = renderPanel(feature);
+
+    fireEvent.press(getByTestId('fieldNoteStylusModeToggle'));
+    drawHandwritingLine(getByTestId('fieldNoteHandwritingCanvas'));
+
+    expect(queryByText(/\uD68D\s*\d/)).toBeNull();
+    expect(queryByText(/\uC810\s*\d/)).toBeNull();
+  });
+
   it('restores autosaved handwriting strokes for the same project record', async () => {
     const feature = createDoc('feature-1', C.FEATURE, '수혈 1');
     const draftKey = createKoreanFieldworkFieldNoteDraftKey(

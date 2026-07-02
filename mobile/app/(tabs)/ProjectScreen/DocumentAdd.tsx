@@ -50,6 +50,7 @@ import {
 import {
   createSoilColorAssistUpdatesFromPhotoBase64AtPoint,
   createSoilColorAssistUpdatesFromRgbSampleAtPoint,
+  hasMunsellCandidateOptions,
 } from '@/components/Project/soil-color-photo-assist';
 
 interface SoilProfileLayerSampleRequest {
@@ -188,10 +189,9 @@ const DocumentAdd: React.FC = () => {
           setResourceToDefault();
           navigateToKoreanFieldworkReturnTarget(returnTarget, doc.resource.id);
         })
-        .catch((_err) => {
+        .catch(() => {
           Keyboard.dismiss();
           showToast(ToastType.Error, '기록을 만들지 못했습니다.');
-          console.log(_err);
         });
     }
   };
@@ -396,11 +396,16 @@ const sampleSoilProfileColor = async (
       point
     );
 
-  updateResourceFields(getSoilProfileColorSampleUpdates(
+  const updates = getSoilProfileColorSampleUpdates(
     resource,
     assistUpdates,
     targetLayerNumber
-  ));
+  );
+  updateResourceFields(updates);
+
+  if (!hasMunsellCandidateOptions(assistUpdates.soilColorAssistCandidates)) {
+    throw new Error('soil color sample did not produce a Munsell candidate');
+  }
 };
 
 const getMissingDependencies = (

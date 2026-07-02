@@ -68,7 +68,7 @@ describe('korean-fieldwork-record-evidence', () => {
                 documentIds: ['photo-1']
             },
             {
-                id: 'soilProfilePhotos',
+                id: 'pitSoilProfiles',
                 label: '토층사진',
                 count: 0,
                 tone: 'empty',

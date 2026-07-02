@@ -1532,11 +1532,6 @@ const HandwritingPad: React.FC<{
     ? strokes.concat(activeStroke)
     : strokes;
   const strokeCount = strokes.length;
-  const pointCount = useMemo(
-    () => visibleStrokes.reduce((count, stroke) =>
-      count + stroke.points.length, 0),
-    [visibleStrokes]
-  );
   const strokePreview = useMemo(
     () => serializeKoreanFieldworkHandwriting(strokes),
     [strokes]
@@ -1576,9 +1571,6 @@ const HandwritingPad: React.FC<{
         <View style={styles.handwritingTitleRow}>
           <MaterialIcons name="gesture" size={16} color="#344054" />
           <Text style={styles.handwritingTitle}>손그림 메모</Text>
-          <Text style={styles.handwritingCount}>
-            획 {strokeCount} · 점 {pointCount}
-          </Text>
         </View>
         <View style={styles.handwritingActions}>
           <TouchableOpacity
@@ -1865,7 +1857,7 @@ const getEvidenceActionIcon = (
 ): keyof typeof MaterialIcons.glyphMap => {
   switch (actionId) {
     case 'photos':
-    case 'soilProfilePhotos':
+    case 'pitSoilProfiles':
       return 'photo-camera';
     case 'drawings':
       return 'architecture';
@@ -2769,12 +2761,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '900',
     marginLeft: 5,
-  },
-  handwritingCount: {
-    color: '#667085',
-    fontSize: 11,
-    fontWeight: '800',
-    marginLeft: 7,
   },
   handwritingActions: {
     alignItems: 'center',

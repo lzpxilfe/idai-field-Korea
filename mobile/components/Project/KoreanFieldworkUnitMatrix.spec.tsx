@@ -43,6 +43,7 @@ describe('KoreanFieldworkUnitMatrix', () => {
       <KoreanFieldworkUnitMatrix
         summary={createSummary()}
         documents={[operation, feature]}
+        investigationModeId="trialTrench"
         onOpenDocument={handleOpenDocument}
         onAddDocumentOfCategory={handleAddDocumentOfCategory}
       />

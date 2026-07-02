@@ -69,6 +69,10 @@ const TEXT = {
   brush: '\ud39c',
 };
 const MAX_COORDINATE = 10000;
+const FULLSCREEN_DRAWING_MIN_POINT_DISTANCE = 55;
+const FULLSCREEN_DRAWING_RELEASE_POINT_MIN_DISTANCE = 1;
+const FULLSCREEN_DRAWING_INTERPOLATED_POINT_SPACING = 140;
+const FULLSCREEN_DRAWING_MAX_INTERPOLATED_POINTS_PER_MOVE = 18;
 const WEBVIEW_BASE_URL = 'https://idai-field.local/fullscreen-drawing/';
 
 const KoreanFieldworkFullscreenDrawingModal: React.FC<Props> = ({
@@ -461,6 +465,10 @@ let renderQueued=false;
 let pixelRatio=1;
 const maxCoordinate=state.maxCoordinate||10000;
 const background=state.background||{};
+const minPointDistance=${FULLSCREEN_DRAWING_MIN_POINT_DISTANCE};
+const releasePointMinDistance=${FULLSCREEN_DRAWING_RELEASE_POINT_MIN_DISTANCE};
+const interpolatedPointSpacing=${FULLSCREEN_DRAWING_INTERPOLATED_POINT_SPACING};
+const maxInterpolatedPointsPerMove=${FULLSCREEN_DRAWING_MAX_INTERPOLATED_POINTS_PER_MOVE};
 let viewport={offsetX:0,offsetY:0,scale:1};
 function post(type,payload){
   if(window.ReactNativeWebView){
@@ -596,10 +604,7 @@ function move(event){
   event.preventDefault();
   const point=screenToNormalized(getEventPoint(event));
   if(!point) return;
-  const previous=activeStroke.points[activeStroke.points.length-1];
-  if(previous&&distance(previous,point)<8) return;
-  activeStroke.points.push(point);
-  requestRender();
+  appendActiveStrokePoint(point,minPointDistance);
 }
 function end(event){
   if(gesture){
@@ -610,14 +615,38 @@ function end(event){
   if(!isDrawing||!activeStroke) return;
   event.preventDefault();
   const point=screenToNormalized(getEventPoint(event));
-  const previous=activeStroke.points[activeStroke.points.length-1];
-  if(point&&(!previous||distance(previous,point)>=1)) activeStroke.points.push(point);
+  if(point) appendActiveStrokePoint(point,releasePointMinDistance);
   strokes=strokes.concat([activeStroke]);
   activeStroke=null;
   isDrawing=false;
   post('drawingActive',false);
   post('strokes',strokes);
   requestRender();
+}
+function appendActiveStrokePoint(point,minDistance){
+  if(!activeStroke) return;
+  const previous=activeStroke.points[activeStroke.points.length-1];
+  if(previous&&distance(previous,point)<minDistance) return;
+  const points=previous?interpolatePoints(previous,point):[point];
+  if(points.length===0) return;
+  activeStroke.points=activeStroke.points.concat(points);
+  requestRender();
+}
+function interpolatePoints(start,end){
+  const gap=distance(start,end);
+  const steps=Math.max(
+    1,
+    Math.min(maxInterpolatedPointsPerMove,Math.ceil(gap/interpolatedPointSpacing))
+  );
+  const points=[];
+  for(let index=1;index<=steps;index+=1){
+    const progress=index/steps;
+    points.push({
+      x:Math.round(start.x+((end.x-start.x)*progress)),
+      y:Math.round(start.y+((end.y-start.y)*progress))
+    });
+  }
+  return points;
 }
 function drawStroke(stroke,fallbackColor,drawingContext){
   if(!stroke||!Array.isArray(stroke.points)||stroke.points.length===0) return;

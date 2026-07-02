@@ -18,7 +18,6 @@ import {
 } from 'react-native';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
 import {
-  countKoreanFieldworkHandwritingPoints,
   KoreanFieldworkHandwritingPoint,
   KoreanFieldworkHandwritingStroke,
   KoreanFieldworkHandwritingTool,
@@ -137,7 +136,6 @@ const FieldworkPhotoAnnotationPanel: React.FC<FieldworkPhotoAnnotationPanelProps
   const handledSampleRequestKeyRef = useRef<number | string>();
   const visibleStrokes = activeStroke ? strokes.concat(activeStroke) : strokes;
   const strokeCount = strokes.length;
-  const pointCount = countKoreanFieldworkHandwritingPoints(strokes);
   const imageFrame = useMemo(
     () => getContainedImageFrame(canvasSize, imageSize),
     [canvasSize, imageSize]
@@ -410,7 +408,6 @@ const FieldworkPhotoAnnotationPanel: React.FC<FieldworkPhotoAnnotationPanelProps
         <View style={styles.titleRow}>
           <MaterialIcons name="draw" size={17} color="#344054" />
           <Text style={styles.title}>{title}</Text>
-          <Text style={styles.countText}>획 {strokeCount} · 점 {pointCount}</Text>
         </View>
         <View style={styles.actionRow}>
           {!!onSamplePoint && (
@@ -1034,6 +1031,10 @@ let pixelRatio=1;
 let viewport={offsetX:0,offsetY:0,scale:1};
 const maxCoordinate=state.maxCoordinate||10000;
 const references=Array.isArray(state.munsellReferences)?state.munsellReferences:[];
+const minPointDistance=${MIN_POINT_DISTANCE};
+const releasePointMinDistance=${RELEASE_POINT_MIN_DISTANCE};
+const interpolatedPointSpacing=${INTERPOLATED_POINT_SPACING};
+const maxInterpolatedPointsPerMove=${MAX_INTERPOLATED_POINTS_PER_MOVE};
 function post(type,payload){
   if(window.ReactNativeWebView){
     window.ReactNativeWebView.postMessage(JSON.stringify({type,payload}));
@@ -1159,10 +1160,7 @@ function moveTouch(event){
   if(!isDrawing||!activeStroke) return;
   const normalized=screenToNormalized(point);
   if(!normalized) return;
-  const previous=activeStroke.points[activeStroke.points.length-1];
-  if(previous&&distance(previous,normalized)<8) return;
-  activeStroke.points.push(normalized);
-  requestRender();
+  appendActiveStrokePoint(normalized,minPointDistance);
 }
 function endTouch(event){
   event.preventDefault();
@@ -1183,15 +1181,37 @@ function endTouch(event){
   }
   if(!isDrawing||!activeStroke) return;
   const normalized=screenToNormalized(point);
-  const previous=activeStroke.points[activeStroke.points.length-1];
-  if(normalized&&(!previous||distance(previous,normalized)>=1)){
-    activeStroke.points.push(normalized);
-  }
+  if(normalized) appendActiveStrokePoint(normalized,releasePointMinDistance);
   strokes=strokes.concat([activeStroke]);
   activeStroke=null;
   isDrawing=false;
   post('strokes',strokes);
   requestRender();
+}
+function appendActiveStrokePoint(point,minDistance){
+  if(!activeStroke) return;
+  const previous=activeStroke.points[activeStroke.points.length-1];
+  if(previous&&distance(previous,point)<minDistance) return;
+  const points=previous?interpolatePoints(previous,point):[point];
+  if(points.length===0) return;
+  activeStroke.points=activeStroke.points.concat(points);
+  requestRender();
+}
+function interpolatePoints(start,end){
+  const gap=distance(start,end);
+  const steps=Math.max(
+    1,
+    Math.min(maxInterpolatedPointsPerMove,Math.ceil(gap/interpolatedPointSpacing))
+  );
+  const points=[];
+  for(let index=1;index<=steps;index+=1){
+    const progress=index/steps;
+    points.push({
+      x:Math.round(start.x+((end.x-start.x)*progress)),
+      y:Math.round(start.y+((end.y-start.y)*progress))
+    });
+  }
+  return points;
 }
 function updateSample(screenPoint){
   const point=screenToNormalized(screenPoint);
@@ -1478,12 +1498,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '900',
     marginLeft: 5,
-  },
-  countText: {
-    color: '#667085',
-    fontSize: 11,
-    fontWeight: '800',
-    marginLeft: 7,
   },
   actionRow: {
     alignItems: 'center',

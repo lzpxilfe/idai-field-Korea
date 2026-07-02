@@ -19,7 +19,7 @@ import {
   KoreanFieldworkProjectBoundaryDraft,
 } from './korean-fieldwork-investigation-mode';
 import {
-  countKoreanFieldworkHandwritingPoints,
+  hasKoreanFieldworkHandwriting,
   KoreanFieldworkHandwritingPoint,
   KoreanFieldworkHandwritingStroke,
   KoreanFieldworkHandwritingTool,
@@ -109,8 +109,7 @@ const KoreanFieldworkDailyJournalCalendar: React.FC<
   const boundaryStrokes = normalizeKoreanFieldworkHandwritingStrokes(
     getResourceValue(dailyLog, FIELD.boundaryMemoStrokes)
   );
-  const boundaryPointCount =
-    countKoreanFieldworkHandwritingPoints(boundaryStrokes);
+  const hasBoundaryMemo = hasKoreanFieldworkHandwriting(boundaryStrokes);
 
   useEffect(() => {
     setPersonnelDraft(getPersonnelDraft(dailyLog));
@@ -270,8 +269,8 @@ const KoreanFieldworkDailyJournalCalendar: React.FC<
         <JournalMetric
           icon="gesture"
           label="경계 메모"
-          value={boundaryPointCount > 0 ? `${boundaryPointCount}점` : '없음'}
-          warning={boundaryPointCount === 0}
+          value={hasBoundaryMemo ? '저장됨' : '없음'}
+          warning={!hasBoundaryMemo}
         />
       </View>
 
@@ -495,7 +494,7 @@ const BoundaryMemoCanvas: React.FC<{
     },
     [boundaryPlan]
   );
-  const strokePointCount = countKoreanFieldworkHandwritingPoints(strokes);
+  const hasMemoStrokes = hasKoreanFieldworkHandwriting(strokes);
 
   useEffect(() => {
     latestStrokesRef.current = strokes;
@@ -701,7 +700,7 @@ const BoundaryMemoCanvas: React.FC<{
       />
       <Text style={styles.boundaryHint}>
         제토 범위, 노출 유구, 유물 출토 지점처럼 하루 작업 상황을 펜으로 표시합니다.
-        {strokePointCount > 0 ? ` 현재 ${strokePointCount}점 저장됨.` : ''}
+        {hasMemoStrokes ? ' 저장된 메모가 있습니다.' : ''}
       </Text>
     </View>
   );

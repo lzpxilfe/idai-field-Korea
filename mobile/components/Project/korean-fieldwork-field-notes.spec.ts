@@ -263,7 +263,7 @@ describe('korean-fieldwork-field-notes', () => {
       nextWork: '도면 3번 정리, 유물 출토 위치 확인.',
       evidenceNumbers: '사진 12, 도면 3, 유물 24',
     }, evidenceActions).map((action) => action.id)).toEqual([
-      'soilProfilePhotos',
+      'pitSoilProfiles',
       'drawings',
       'finds',
     ]);

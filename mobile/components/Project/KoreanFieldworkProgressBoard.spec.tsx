@@ -22,6 +22,7 @@ describe('KoreanFieldworkProgressBoard', () => {
       <KoreanFieldworkProgressBoard
         summary={createSummary()}
         documents={[operation]}
+        investigationModeId="trialTrench"
         onAddDocumentOfCategory={handleAddDocumentOfCategory}
         onOpenDocument={jest.fn()}
       />

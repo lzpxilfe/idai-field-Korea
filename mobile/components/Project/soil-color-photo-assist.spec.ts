@@ -5,6 +5,7 @@ import {
   createSoilColorAssistUpdatesFromRgbSampleAtPoint,
   extractMunsellCandidateOptions,
   getNearestMunsellCandidates,
+  hasMunsellCandidateOptions,
 } from './soil-color-photo-assist';
 
 describe('soil color photo assist', () => {
@@ -74,6 +75,18 @@ describe('soil color photo assist', () => {
     expect(updates.soilColorAssistCandidates).toContain('80%/50%');
     expect(updates.soilColorAssistCandidates).toContain('RGB 139/128/88');
     expect(updates.soilColorAssistCandidates).toContain('1: 2.5Y 5/3');
+  });
+
+  it('marks missing canvas RGB as a failed sample instead of a silent success', () => {
+    const updates = createSoilColorAssistUpdatesFromRgbSampleAtPoint(
+      undefined,
+      { x: 8000, y: 5000 }
+    );
+
+    expect(updates.soilColorAssistStatus).toBe('lowConfidence');
+    expect(updates.soilColorAssistCandidates).toContain('RGB를 읽지 못했습니다');
+    expect(hasMunsellCandidateOptions(updates.soilColorAssistCandidates))
+      .toBe(false);
   });
 });
 

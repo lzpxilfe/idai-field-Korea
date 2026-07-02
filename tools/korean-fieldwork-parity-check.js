@@ -480,10 +480,15 @@ const classifiedSupportSourceGroups = [
       'mobile/components/Project/KoreanFieldworkDraftContextPanel.tsx',
       'mobile/components/Project/KoreanFieldworkDraftContinuationPanel.tsx',
       'mobile/components/Project/KoreanFieldworkDraftPresetPanel.tsx',
+      'mobile/components/Project/KoreanFieldworkDrawingSurveyPanel.tsx',
+      'mobile/components/Project/KoreanFieldworkFeaturePitLinePanel.tsx',
+      'mobile/components/Project/KoreanFieldworkFindSpotPanel.tsx',
+      'mobile/components/Project/KoreanFieldworkFullscreenDrawingModal.tsx',
       'mobile/components/Project/KoreanFieldworkHierarchyBoard.tsx',
       'mobile/components/Project/KoreanFieldworkNarrativeAssistPanel.tsx',
       'mobile/components/Project/KoreanFieldworkRecordActionPanel.tsx',
       'mobile/components/Project/KoreanFieldworkRecordContextPanel.tsx',
+      'mobile/components/Project/KoreanFieldworkSiteOverviewMap.tsx',
       'mobile/components/Project/KoreanFieldworkWorkbenchPanel.tsx'
     ]
   },
@@ -3759,7 +3764,7 @@ function validateRecordActionEvidencePriority() {
     'EVIDENCE_CATEGORIES'
   );
   const desktopChipIds = desktopCategories.map(mapEvidenceCategoryToChipId);
-  const expectedChipIds = ['photos', 'soilProfilePhotos', 'drawings', 'finds', 'samples'];
+  const expectedChipIds = ['pitSoilProfiles', 'photos', 'drawings', 'finds', 'samples'];
   const desktopRecordContextText = readTextFile(desktopRecordContextSource);
   const desktopRecordContextTemplateText = readTextFile(desktopRecordContextTemplate);
   const desktopRecordContextStyleText = readTextFile(
@@ -4075,7 +4080,7 @@ function mapEvidenceCategoryToChipId(categoryName) {
     case 'Photo':
       return 'photos';
     case 'SoilProfilePhoto':
-      return 'soilProfilePhotos';
+      return 'pitSoilProfiles';
     case 'Drawing':
       return 'drawings';
     case 'Find':

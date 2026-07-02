@@ -79,7 +79,7 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
             { id: 'featureSegments', label: '피트', count: 1, canCreate: false },
             { id: 'layers', label: '토색 메모', count: 1, canCreate: false },
             { id: 'photos', label: '사진', count: 1, canCreate: false },
-            { id: 'soilProfilePhotos', label: '토층사진', count: 1, canCreate: false },
+            { id: 'pitSoilProfiles', label: '토층사진', count: 1, canCreate: false },
             { id: 'penMemos', label: '야장 메모', count: 1, canCreate: false }
         ]));
         expect(component.getEvidenceInsights()).toEqual([

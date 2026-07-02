@@ -29,7 +29,7 @@ const LIES_WITHIN_RELATION = 'liesWithin';
 const EVIDENCE_CREATION_ACTIONS: EvidenceCreationAction[] = [
     { metricId: 'featureSegments', categoryName: 'FeatureSegment', label: '피트 기록 만들기' },
     { metricId: 'photos', categoryName: 'Photo', label: '사진 기록 만들기' },
-    { metricId: 'soilProfilePhotos', categoryName: SOIL_PROFILE_PHOTO_CATEGORY, label: '토층사진 기록 만들기' },
+    { metricId: 'pitSoilProfiles', categoryName: SOIL_PROFILE_PHOTO_CATEGORY, label: '토층사진 기록 만들기' },
     { metricId: 'drawings', categoryName: 'Drawing', label: '도면 기록 만들기' },
     { metricId: 'finds', categoryName: 'Find', label: '유물 기록 만들기' },
     { metricId: 'samples', categoryName: 'Sample', label: '시료 기록 만들기' }
@@ -137,7 +137,7 @@ export class KoreanFieldworkReadinessPanelComponent implements OnChanges {
             { id: 'featureSegments', label: '피트', count: this.evidenceReview.featureSegments.length },
             { id: 'layers', label: '토색 메모', count: this.evidenceReview.layers.length },
             { id: 'photos', label: '사진', count: this.evidenceReview.photos.length },
-            { id: 'soilProfilePhotos', label: '토층사진', count: this.evidenceReview.soilProfilePhotos.length },
+            { id: 'pitSoilProfiles', label: '토층사진', count: this.evidenceReview.soilProfilePhotos.length },
             {
                 id: 'photoAnnotations',
                 label: '사진 표시',

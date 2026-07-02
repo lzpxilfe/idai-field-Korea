@@ -265,6 +265,25 @@ describe('KoreanFieldworkDailyJournalCalendar', () => {
 
     expect(getByTestId('dailyJournalBoundaryFullscreenCanvas')).toBeTruthy();
   });
+
+  it('does not expose technical point counts for saved boundary memo strokes', () => {
+    const { getByText, queryByText } = render(
+      <KoreanFieldworkDailyJournalCalendar
+        canEdit
+        dailyLog={createDailyLog({
+          [FIELD.boundaryMemoStrokes]:
+            '{"version":1,"strokes":[{"points":[{"x":1000,"y":1000},{"x":5000,"y":5000}]}]}',
+        }) as any}
+        now={new Date('2026-06-30T09:00:00+09:00')}
+        onCreateDailyLog={jest.fn()}
+        onUpdateDailyLog={jest.fn()}
+      />
+    );
+
+    expect(getByText('저장됨')).toBeTruthy();
+    expect(queryByText(/현재\s*\d+\uC810/)).toBeNull();
+    expect(queryByText(/\d+\uC810/)).toBeNull();
+  });
 });
 
 const createDailyLog = (

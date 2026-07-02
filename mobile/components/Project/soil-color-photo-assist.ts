@@ -113,7 +113,12 @@ export const createSoilColorAssistUpdatesFromRgbSampleAtPoint = (
   rgb: RgbSample | undefined,
   point: SoilColorSamplePoint
 ): SoilColorAssistResourceUpdates => {
-  if (!rgb) return {};
+  if (!rgb) {
+    return {
+      soilColorAssistCandidates: formatSampleUnavailable(point),
+      soilColorAssistStatus: 'lowConfidence',
+    };
+  }
 
   const averageRgb = normalizeRgbSample(rgb);
   const candidates = getNearestMunsellCandidates(averageRgb);
@@ -226,6 +231,9 @@ export const extractMunsellCandidateOptions = (text: string): string[] => {
   ));
 };
 
+export const hasMunsellCandidateOptions = (text: unknown): boolean =>
+  typeof text === 'string' && extractMunsellCandidateOptions(text).length > 0;
+
 const getCentralAverageRgb = (
   image: RawImageData<Uint8Array>
 ): RgbSample => {
@@ -310,6 +318,9 @@ const formatCandidates = (
     `${index + 1}: ${candidate.munsell} (${getConfidenceLabel(candidate.confidence)}, 차이 ${candidate.deltaE.toFixed(1)})`
   ),
 ].join('\n');
+
+const formatSampleUnavailable = (point: SoilColorSamplePoint): string =>
+  `${getPointSampleLabel(point)}: RGB를 읽지 못했습니다. 사진을 다시 열거나 다른 지점을 선택하세요.`;
 
 const getPointSampleLabel = (point: SoilColorSamplePoint): string =>
   `사진 선택 지점 ${Math.round(normalizeSampleCoordinate(point.x) / 100)}%/${Math.round(normalizeSampleCoordinate(point.y) / 100)}% 평균 RGB`;

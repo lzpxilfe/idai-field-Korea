@@ -182,7 +182,7 @@ describe('KoreanFieldworkReadinessPanelComponent', () => {
             { id: 'featureSegments', label: '피트', count: 1 },
             { id: 'layers', label: '토색 메모', count: 1 },
             { id: 'photos', label: '사진', count: 1 },
-            { id: 'soilProfilePhotos', label: '토층사진', count: 1 },
+            { id: 'pitSoilProfiles', label: '토층사진', count: 1 },
             { id: 'photoAnnotations', label: '사진 표시', count: 2 },
             { id: 'soilColorCandidates', label: '토색 후보', count: 1 },
             { id: 'drawings', label: '도면', count: 1 },
@@ -274,7 +274,7 @@ describe('KoreanFieldworkReadinessPanelComponent', () => {
 
         expect(component.shouldShow()).toBe(true);
         expect(component.getEvidenceMetrics()).toEqual(expect.arrayContaining([
-            { id: 'soilProfilePhotos', label: '토층사진', count: 1 },
+            { id: 'pitSoilProfiles', label: '토층사진', count: 1 },
             { id: 'photoAnnotations', label: '사진 표시', count: 1 },
             { id: 'soilColorCandidates', label: '토색 후보', count: 1 }
         ]));
@@ -630,7 +630,7 @@ describe('KoreanFieldworkReadinessPanelComponent', () => {
         expect(component.getEvidenceMetrics()).toEqual(expect.arrayContaining([
             { id: 'featureSegments', label: '피트', count: 1 },
             { id: 'photos', label: '사진', count: 1 },
-            { id: 'soilProfilePhotos', label: '토층사진', count: 1 },
+            { id: 'pitSoilProfiles', label: '토층사진', count: 1 },
             { id: 'soilColorCandidates', label: '토색 후보', count: 0 },
             { id: 'samples', label: '시료', count: 1 }
         ]));

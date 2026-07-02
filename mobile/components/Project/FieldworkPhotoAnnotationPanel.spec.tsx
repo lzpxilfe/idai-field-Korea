@@ -63,6 +63,22 @@ describe('FieldworkPhotoAnnotationPanel', () => {
     expect(stroke.points.length).toBeGreaterThan(2);
   });
 
+  it('does not show technical stroke and point counts in the photo header', () => {
+    const { queryByText } = render(
+      <FieldworkPhotoAnnotationPanel
+        imageUri="file:///tablet/photo.jpg"
+        onUpdateStrokes={jest.fn()}
+        strokesValue={{
+          version: 1,
+          strokes: [{ points: [{ x: 1000, y: 1000 }] }],
+        }}
+      />
+    );
+
+    expect(queryByText(/\uD68D\s*\d/)).toBeNull();
+    expect(queryByText(/\uC810\s*\d/)).toBeNull();
+  });
+
   it('opens a full-screen drawing canvas from a single photo tap', () => {
     const handleUpdateStrokes = jest.fn();
     const { getByTestId, queryByTestId } = render(

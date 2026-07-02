@@ -58,6 +58,7 @@ import {
 import {
   createSoilColorAssistUpdatesFromPhotoBase64AtPoint,
   createSoilColorAssistUpdatesFromRgbSampleAtPoint,
+  hasMunsellCandidateOptions,
 } from '@/components/Project/soil-color-photo-assist';
 
 interface SoilProfileLayerSampleRequest {
@@ -417,11 +418,16 @@ const sampleSoilProfileColor = async (
       point
     );
 
-  updateResourceFields(getSoilProfileColorSampleUpdates(
+  const updates = getSoilProfileColorSampleUpdates(
     resource,
     assistUpdates,
     targetLayerNumber
-  ));
+  );
+  updateResourceFields(updates);
+
+  if (!hasMunsellCandidateOptions(assistUpdates.soilColorAssistCandidates)) {
+    throw new Error('soil color sample did not produce a Munsell candidate');
+  }
 };
 
 const getMissingDependencies = (

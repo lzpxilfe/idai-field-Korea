@@ -26,6 +26,7 @@ import {
 import CategoryIcon from '@/components/common/CategoryIcon';
 import SwipeableActionRow from '@/components/common/SwipeableActionRow';
 import DocumentAddModal from '@/components/Project/DocumentAddModal';
+import KoreanFieldworkDailyNotebookDigest from '@/components/Project/KoreanFieldworkDailyNotebookDigest';
 import KoreanFieldworkDailyJournalCalendar from '@/components/Project/KoreanFieldworkDailyJournalCalendar';
 import KoreanFieldworkFieldNotePanel from '@/components/Project/KoreanFieldworkFieldNotePanel';
 import KoreanFieldworkInvestigationModePanel from '@/components/Project/KoreanFieldworkInvestigationModePanel';
@@ -1190,11 +1191,20 @@ const DocumentsList: React.FC = () => {
         )}
 
         {activeWorkspaceTab === 'journal' && (
-          <KoreanFieldworkNotebookLedger
-            documents={userVisibleDocuments}
-            onContinueEntry={continueNotebookEntry}
-            onOpenDocument={selectWorkbenchDocument}
-          />
+          <>
+            <KoreanFieldworkDailyNotebookDigest
+              documents={userVisibleDocuments}
+              now={now}
+              onOpenDailyLog={(document) =>
+                selectWorkbenchDocument(document, { expand: true })}
+              onOpenEntryDocument={selectWorkbenchDocument}
+            />
+            <KoreanFieldworkNotebookLedger
+              documents={userVisibleDocuments}
+              onContinueEntry={continueNotebookEntry}
+              onOpenDocument={selectWorkbenchDocument}
+            />
+          </>
         )}
 
         {activeWorkspaceTab === 'records' && (

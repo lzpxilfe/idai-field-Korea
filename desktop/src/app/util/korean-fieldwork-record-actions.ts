@@ -29,8 +29,8 @@ const NEXT_CHILD_CATEGORY: Readonly<Record<string, string|undefined>> = {
 };
 
 const PREFERRED_EVIDENCE_CATEGORIES = [
-    'Photo',
     'SoilProfilePhoto',
+    'Photo',
     'Drawing',
     'Find',
     'Sample'

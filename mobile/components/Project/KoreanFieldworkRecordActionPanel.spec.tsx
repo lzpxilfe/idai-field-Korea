@@ -16,6 +16,7 @@ describe('KoreanFieldworkRecordActionPanel', () => {
         document={operation}
         documents={[operation]}
         allowedAddCategoryNames={[C.TRENCH, C.PHOTO]}
+        investigationModeId="trialTrench"
         onAddDocumentOfCategory={handleAddDocumentOfCategory}
         onOpenDocument={jest.fn()}
       />
