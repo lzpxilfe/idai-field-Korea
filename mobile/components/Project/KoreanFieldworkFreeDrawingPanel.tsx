@@ -35,6 +35,7 @@ interface PixelPoint {
 }
 
 interface Props {
+  onDrawingActiveChange?: (isActive: boolean) => void;
   onUpdateStrokes: (serializedStrokes: string) => void;
   strokesValue?: unknown;
   title?: string;
@@ -58,6 +59,7 @@ const TEXT = {
 };
 
 const KoreanFieldworkFreeDrawingPanel: React.FC<Props> = ({
+  onDrawingActiveChange,
   onUpdateStrokes,
   strokesValue,
   title = TEXT.title,
@@ -70,6 +72,7 @@ const KoreanFieldworkFreeDrawingPanel: React.FC<Props> = ({
   const [activeStroke, setActiveStroke] =
     useState<KoreanFieldworkHandwritingStroke>();
   const activeStrokeRef = useRef<KoreanFieldworkHandwritingStroke>();
+  const isDrawingInteractionActiveRef = useRef(false);
   const visibleStrokes = activeStroke ? strokes.concat(activeStroke) : strokes;
   const strokeCount = strokes.length;
 
@@ -81,6 +84,7 @@ const KoreanFieldworkFreeDrawingPanel: React.FC<Props> = ({
     const point = getNormalizedPoint(event, canvasSize);
     if (!point) return;
 
+    setDrawingInteractionActive(true);
     activeStrokeRef.current = { points: [point] };
     setActiveStroke(activeStrokeRef.current);
   };
@@ -99,10 +103,17 @@ const KoreanFieldworkFreeDrawingPanel: React.FC<Props> = ({
     const stroke = activeStrokeRef.current;
     activeStrokeRef.current = undefined;
     setActiveStroke(undefined);
+    setDrawingInteractionActive(false);
 
     if (!stroke || stroke.points.length === 0) return;
 
     onUpdateStrokes(serializeKoreanFieldworkHandwriting(strokes.concat(stroke)));
+  };
+  const setDrawingInteractionActive = (isActive: boolean) => {
+    if (isDrawingInteractionActiveRef.current === isActive) return;
+
+    isDrawingInteractionActiveRef.current = isActive;
+    onDrawingActiveChange?.(isActive);
   };
   const undoStroke = () => {
     onUpdateStrokes(serializeKoreanFieldworkHandwriting(strokes.slice(0, -1)));
@@ -170,6 +181,9 @@ const KoreanFieldworkFreeDrawingPanel: React.FC<Props> = ({
         onResponderTerminationRequest={() => false}
         onStartShouldSetResponderCapture={() => true}
         onStartShouldSetResponder={() => true}
+        onTouchCancel={() => setDrawingInteractionActive(false)}
+        onTouchEnd={() => setDrawingInteractionActive(false)}
+        onTouchStart={() => setDrawingInteractionActive(true)}
         style={styles.canvas}
         testID="fieldworkFreeDrawingCanvas"
       >

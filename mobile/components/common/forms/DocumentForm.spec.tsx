@@ -17,12 +17,16 @@ jest.mock('./EditFormField', () => {
   const React = require('react');
   const { Text } = require('react-native');
 
-  return ({ field, currentValue }: any) =>
+  const MockEditFormField = ({ field, currentValue }: any) =>
     React.createElement(
       Text,
       { testID: `inputField_${field.name}` },
       currentValue === undefined ? '' : String(currentValue)
     );
+
+  MockEditFormField.displayName = 'MockEditFormField';
+
+  return MockEditFormField;
 });
 
 describe('DocumentForm Korean fieldwork detail fields', () => {
@@ -161,6 +165,22 @@ describe('DocumentForm Korean fieldwork detail fields', () => {
     fireEvent.press(getByTestId('fullFormToggle'));
 
     expect(getByTestId('groupSelect_stem')).toBeTruthy();
+  });
+
+  it('can temporarily disable form scrolling while a child sketch owns touch input', () => {
+    const { getByTestId } = renderDocumentForm(
+      createCategoryForm([
+        {
+          name: 'stem',
+          fields: [{ name: 'identifier', inputType: 'input', editable: true }],
+        },
+      ], 'Pottery'),
+      { identifier: 'F-001' },
+      true,
+      false
+    );
+
+    expect(getByTestId('documentFormScroll').props.scrollEnabled).toBe(false);
   });
 
   it('does not expose Korean quick-record fields as auxiliary raw inputs', () => {
@@ -376,7 +396,8 @@ describe('DocumentForm Korean fieldwork detail fields', () => {
 const renderDocumentForm = (
   category: CategoryForm,
   resource: Record<string, unknown>,
-  collapseFormFieldsByDefault: boolean
+  collapseFormFieldsByDefault: boolean,
+  isScrollEnabled: boolean = true
 ) => render(
   <LabelsContext.Provider
     value={{
@@ -392,6 +413,7 @@ const renderDocumentForm = (
       category={category}
       collapseFormFieldsByDefault={collapseFormFieldsByDefault}
       headerText="유구 편집"
+      isScrollEnabled={isScrollEnabled}
       returnBtnHandler={jest.fn()}
       titleBarRight={null}
       resource={{

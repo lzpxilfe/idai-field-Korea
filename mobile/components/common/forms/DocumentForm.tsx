@@ -49,6 +49,7 @@ interface DocumentFormProps {
   formFooter?: ReactNode;
   resourceActions?: ReactNode;
   collapseFormFieldsByDefault?: boolean;
+  isScrollEnabled?: boolean;
   resource: Resource | NewResource | undefined;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   updateFunction: (key: string, value: any) => void;
@@ -166,6 +167,7 @@ const DocumentForm: React.FC<DocumentFormProps> = ({
   formFooter,
   resourceActions,
   collapseFormFieldsByDefault = false,
+  isScrollEnabled = true,
   resource,
   updateFunction,
 }) => {
@@ -317,8 +319,10 @@ const DocumentForm: React.FC<DocumentFormProps> = ({
             currentValue={resource![item.name]}
           />
         )}
+        scrollEnabled={isScrollEnabled}
         showsVerticalScrollIndicator={false}
         style={styles.formScroll}
+        testID="documentFormScroll"
       />
     </SafeAreaView>
   );

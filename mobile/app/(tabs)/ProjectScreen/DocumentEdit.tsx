@@ -76,6 +76,7 @@ const DocumentEdit: React.FC = () => {
   const [resource, setResource] = useState<Resource>();
   const [investigationModeId, setInvestigationModeId] =
     useState<KoreanFieldworkInvestigationModeId>();
+  const [isFreeDrawingActive, setIsFreeDrawingActive] = useState(false);
   const projectId = preferencesContext.preferences.currentProject;
 
   useEffect(() => {
@@ -266,6 +267,7 @@ const DocumentEdit: React.FC = () => {
       }
       formFooter={isFeatureRecord ? (
         <KoreanFieldworkFreeDrawingPanel
+          onDrawingActiveChange={setIsFreeDrawingActive}
           strokesValue={resource[KOREAN_FIELDWORK_FREE_DRAWING_FIELDS.featureStrokes]}
           onUpdateStrokes={(serializedStrokes) => applyResourceUpdates({
             [KOREAN_FIELDWORK_FREE_DRAWING_FIELDS.featureStrokes]: serializedStrokes,
@@ -274,6 +276,7 @@ const DocumentEdit: React.FC = () => {
           })}
         />
       ) : undefined}
+      isScrollEnabled={!isFreeDrawingActive}
       resource={resource}
       updateFunction={updateResource}
       resourceActions={renderPhotoResourceActions(

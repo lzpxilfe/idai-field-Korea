@@ -85,6 +85,33 @@ describe('KoreanFieldworkFreeDrawingPanel', () => {
     expect(stroke.points.length).toBeGreaterThan(2);
   });
 
+  it('locks parent scrolling from the first touch on the sketch background', () => {
+    const handleDrawingActiveChange = jest.fn();
+    const handleUpdateStrokes = jest.fn();
+    const { getByTestId } = render(
+      <KoreanFieldworkFreeDrawingPanel
+        onDrawingActiveChange={handleDrawingActiveChange}
+        onUpdateStrokes={handleUpdateStrokes}
+      />
+    );
+
+    const canvas = getByTestId('fieldworkFreeDrawingCanvas');
+    fireEvent(canvas, 'touchStart');
+    fireEvent(canvas, 'responderGrant', {
+      nativeEvent: { locationX: 48, locationY: 42 },
+    });
+    fireEvent(canvas, 'responderMove', {
+      nativeEvent: { locationX: 160, locationY: 140 },
+    });
+    fireEvent(canvas, 'responderRelease', {
+      nativeEvent: { locationX: 160, locationY: 140 },
+    });
+    fireEvent(canvas, 'touchEnd');
+
+    expect(handleDrawingActiveChange.mock.calls).toEqual([[true], [false]]);
+    expect(handleUpdateStrokes).toHaveBeenCalledTimes(1);
+  });
+
   it('loads serialized strokes and can clear them', () => {
     const handleUpdateStrokes = jest.fn();
     const { getByTestId } = render(
