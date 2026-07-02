@@ -11,7 +11,7 @@ import {
 } from '@/components/Project/korean-fieldwork-categories';
 import { ConfigurationContext } from '@/contexts/configuration-context';
 import { DocumentRepository } from '@/repositories/document-repository';
-import useSearch from './use-search';
+import { useSearchResult } from './use-search';
 
 interface ProjectData {
   documents: Document[];
@@ -20,6 +20,9 @@ interface ProjectData {
   popFromHierarchy: () => void;
   clearHierarchy: () => void;
   isInOverview: (category: string) => boolean;
+  isLoading: boolean;
+  hasLoaded: boolean;
+  hasLoadedInitialDocuments: boolean;
 }
 
 const useProjectData = (
@@ -32,7 +35,12 @@ const useProjectData = (
     categories: getOverviewCategoryNames(config),
     constraints: {},
   });
-  const documents = useSearch(repository, query);
+  const searchResult = useSearchResult(repository, query);
+  const documents = searchResult.documents;
+  const [hasLoadedInitialDocuments, setHasLoadedInitialDocuments] =
+    useState(false);
+  const [initialDocumentsRepository, setInitialDocumentsRepository] =
+    useState<DocumentRepository>();
   const [hierarchyPath, setHierarchyPath] = useState<Document[]>([]);
 
   const pushToHierarchy = (doc: Document) =>
@@ -41,6 +49,18 @@ const useProjectData = (
   const clearHierarchy = () => setHierarchyPath([]);
   const isInOverview = (category: string): boolean =>
     getOverviewCategoryNames(config).includes(category);
+
+  useEffect(() => {
+    setHasLoadedInitialDocuments(false);
+    setInitialDocumentsRepository(undefined);
+  }, [repository]);
+
+  useEffect(() => {
+    if (!searchResult.hasLoaded || !repository) return;
+
+    setHasLoadedInitialDocuments(true);
+    setInitialDocumentsRepository(repository);
+  }, [repository, searchResult.hasLoaded]);
 
   useEffect(() => {
     const overviewCategories = getOverviewCategoryNames(config);
@@ -68,6 +88,10 @@ const useProjectData = (
     popFromHierarchy,
     clearHierarchy,
     isInOverview,
+    isLoading: searchResult.isLoading,
+    hasLoaded: searchResult.hasLoaded,
+    hasLoadedInitialDocuments:
+      hasLoadedInitialDocuments && initialDocumentsRepository === repository,
   };
 };
 

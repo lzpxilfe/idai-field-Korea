@@ -32,12 +32,8 @@ describe('ProjectContextProvider', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (useProjectData as jest.Mock).mockReturnValue({
-      documents: [createDocument('visible-feature', 'Feature')],
-      hierarchyPath: [],
-      pushToHierarchy: jest.fn(),
-      popFromHierarchy: jest.fn(),
-      clearHierarchy: jest.fn(),
-      isInOverview: jest.fn(),
+      ...createProjectData(),
+      hasLoadedInitialDocuments: true,
     });
     (useSearch as jest.Mock).mockReturnValue([
       createDocument('visible-feature', 'Feature'),
@@ -77,6 +73,36 @@ describe('ProjectContextProvider', () => {
       })
     );
   });
+
+  it('keeps the project board hidden until initial project documents are loaded', () => {
+    const preferences = createPreferences();
+    (useProjectData as jest.Mock).mockReturnValue({
+      ...createProjectData(),
+      hasLoadedInitialDocuments: false,
+    });
+
+    const { getByTestId, queryByText } = render(
+      <PreferencesContext.Provider value={createPreferencesContext(preferences)}>
+        <ProjectContextProvider>
+          <Text>child</Text>
+        </ProjectContextProvider>
+      </PreferencesContext.Provider>
+    );
+
+    expect(getByTestId('project-opening-loading-state')).toBeTruthy();
+    expect(queryByText('child')).toBeNull();
+  });
+});
+
+const createProjectData = () => ({
+  documents: [createDocument('visible-feature', 'Feature')],
+  hierarchyPath: [],
+  pushToHierarchy: jest.fn(),
+  popFromHierarchy: jest.fn(),
+  clearHierarchy: jest.fn(),
+  isInOverview: jest.fn(),
+  isLoading: false,
+  hasLoaded: true,
 });
 
 const createDocument = (

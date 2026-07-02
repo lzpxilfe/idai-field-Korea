@@ -2,9 +2,11 @@ import React, {
   createContext,
   useState,
   useContext,
+  useEffect,
   Dispatch,
   SetStateAction,
 } from 'react';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { Document, FindOptions, Query } from 'idai-field-core';
 import usePouchDbDatastore from '@/hooks/use-pouchdb-datastore';
 import useRepository from '@/hooks/use-repository';
@@ -18,12 +20,17 @@ import useProjectData from '@/hooks/use-project-data';
 import useFieldworkImageSync from '@/hooks/use-fieldwork-image-sync';
 import useSearch from '@/hooks/use-search';
 import {router} from 'expo-router'
-import useOrientation from '@/hooks/use-orientation';
 
 const ALL_DOCUMENTS_QUERY: Query = {};
 const ALL_DOCUMENTS_FIND_OPTIONS: FindOptions = {
   includeResourcesWithoutValidParent: true,
 };
+const PROJECT_BOARD_MIN_LOADING_MS = 850;
+
+interface ProjectOpeningGate {
+  project: string;
+  canShow: boolean;
+}
 
 interface ProjectContextType {
   q: string;
@@ -39,6 +46,7 @@ interface ProjectContextType {
   repository: DocumentRepository | undefined;
   syncStatus: SyncStatus | undefined;
   relationsManager: RelationsManager | undefined;
+  isPreparingProject: boolean;
 }
 
 const defaultProjectContext: ProjectContextType = {
@@ -55,6 +63,7 @@ const defaultProjectContext: ProjectContextType = {
   repository: undefined,
   syncStatus: undefined,
   relationsManager: undefined,
+  isPreparingProject: true,
 };
 
 export const ProjectContext = createContext<ProjectContextType>(defaultProjectContext);
@@ -62,15 +71,35 @@ export const ProjectContext = createContext<ProjectContextType>(defaultProjectCo
 export const ProjectContextProvider = ({ children }) => {
   const [q, setQ] = useState<string>('');
 
-  const [hierarchyBack, setHierarchyBack] = useState<boolean>(false);
-
-  const orientation = useOrientation();
-
   const config = useContext(ConfigurationContext);
   const preferences = useContext(PreferencesContext);
+  const currentProject = preferences.preferences.currentProject;
+  const [projectOpeningGate, setProjectOpeningGate] =
+    useState<ProjectOpeningGate>({
+      project: currentProject,
+      canShow: false,
+    });
+
+  useEffect(() => {
+    setProjectOpeningGate({
+      project: currentProject,
+      canShow: false,
+    });
+
+    const timeoutId = setTimeout(
+      () =>
+        setProjectOpeningGate({
+          project: currentProject,
+          canShow: true,
+        }),
+      PROJECT_BOARD_MIN_LOADING_MS
+    );
+
+    return () => clearTimeout(timeoutId);
+  }, [currentProject]);
 
   const pouchdbDatastore = usePouchDbDatastore(
-    preferences.preferences.currentProject
+    currentProject
   );
 
   const repository = useRepository(
@@ -80,9 +109,9 @@ export const ProjectContextProvider = ({ children }) => {
   );
 
   const syncStatus = useSync({
-    project: preferences.preferences.currentProject,
+    project: currentProject,
     projectSettings:
-      preferences.preferences.projects[preferences.preferences.currentProject],
+      preferences.preferences.projects[currentProject],
     pouchdbDatastore,
   });
 
@@ -99,6 +128,7 @@ export const ProjectContextProvider = ({ children }) => {
     popFromHierarchy,
     clearHierarchy,
     isInOverview,
+    hasLoadedInitialDocuments,
   } = useProjectData(repository, q);
   const allDocuments = useSearch(
     repository,
@@ -108,9 +138,9 @@ export const ProjectContextProvider = ({ children }) => {
 
   useFieldworkImageSync({
     documents: allDocuments,
-    project: preferences.preferences.currentProject,
+    project: currentProject,
     projectSettings:
-      preferences.preferences.projects[preferences.preferences.currentProject],
+      preferences.preferences.projects[currentProject],
     repository,
     syncStatus,
   });
@@ -135,7 +165,6 @@ export const ProjectContextProvider = ({ children }) => {
 
 
   const onParentSelected = (doc: Document) => {
-    setHierarchyBack(false);
     pushToHierarchy(doc);
     router.navigate({
       pathname: '/ProjectScreen/DocumentsMap',
@@ -143,6 +172,16 @@ export const ProjectContextProvider = ({ children }) => {
     });
   };
 
+
+  const isPreparingProject =
+    !repository ||
+    !hasLoadedInitialDocuments ||
+    projectOpeningGate.project !== currentProject ||
+    !projectOpeningGate.canShow;
+
+  if (isPreparingProject) {
+    return <ProjectOpeningLoadingState projectName={currentProject} />;
+  }
 
 
   return (
@@ -159,6 +198,7 @@ export const ProjectContextProvider = ({ children }) => {
         syncStatus,
         repository,
         relationsManager,
+        isPreparingProject,
         onDocumentSelected,
         onParentSelected,
       }}
@@ -167,3 +207,44 @@ export const ProjectContextProvider = ({ children }) => {
     </ProjectContext.Provider>
   );
 };
+
+const ProjectOpeningLoadingState = ({
+  projectName,
+}: {
+  projectName?: string;
+}) => (
+  <View style={styles.loadingContainer} testID="project-opening-loading-state">
+    <ActivityIndicator color="#2f5f4a" size="large" />
+    <Text style={styles.loadingTitle}>현장 기록판을 준비하고 있습니다</Text>
+    <Text style={styles.loadingText}>
+      {projectName
+        ? `${projectName} 프로젝트 기록을 불러오는 중입니다.`
+        : '프로젝트 기록을 불러오는 중입니다.'}
+    </Text>
+  </View>
+);
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    alignItems: 'center',
+    backgroundColor: '#f7faf8',
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 28,
+  },
+  loadingTitle: {
+    color: '#20313a',
+    fontSize: 20,
+    fontWeight: '900',
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  loadingText: {
+    color: '#526272',
+    fontSize: 14,
+    fontWeight: '700',
+    lineHeight: 20,
+    marginTop: 10,
+    textAlign: 'center',
+  },
+});

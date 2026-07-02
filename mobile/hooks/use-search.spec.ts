@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { assoc } from 'tsfun';
 import { bu1 } from '../test_data/test_docs/bu1';
 import { DocumentRepository } from '../repositories/document-repository';
-import useSearch from './use-search';
+import useSearch, { useSearchResult } from './use-search';
 
 jest.mock('../repositories/document-repository');
 jest.mock('idai-field-core');
@@ -40,6 +40,17 @@ describe('useSearch', () => {
     await waitFor(() => {
       expect(repository.find).toHaveBeenCalledWith(query, options);
     });
+  });
+
+  it('reports when the first search result has loaded', async () => {
+    const query = {};
+    const { result } = renderHook(() => useSearchResult(repository, query));
+
+    await waitFor(() => expect(result.current.isLoading).toBe(true));
+    await waitFor(() => expect(result.current.hasLoaded).toBe(true));
+
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.documents.length).toBeGreaterThan(0);
   });
 
   it('should trigger find when q is changed', async () => {
