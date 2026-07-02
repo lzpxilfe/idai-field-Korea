@@ -19,6 +19,7 @@ import Button from '@/components/common/Button';
 import DocumentAddModal from './DocumentAddModal';
 import DocumentRemoveModal from './DocumentRemoveModal';
 import KoreanFieldworkTodayBoard from './KoreanFieldworkTodayBoard';
+import KoreanFieldworkSiteOverviewMap from './KoreanFieldworkSiteOverviewMap';
 
 import Map from './Map/Map';
 import { router, useGlobalSearchParams } from 'expo-router';
@@ -73,7 +74,8 @@ const DocumentsMap: React.FC<DocumentsMapProps> = ({
   const params = useGlobalSearchParams();
 
   const { showToast } = useToast();
-  const { documents, onDocumentSelected } = useContext(ProjectContext);
+  const { allDocuments, documents, onDocumentSelected } =
+    useContext(ProjectContext);
   const todaySummary = useMemo(
     () => getKoreanFieldworkTodaySummary(documents),
     [documents]
@@ -169,6 +171,21 @@ const DocumentsMap: React.FC<DocumentsMapProps> = ({
   const openBoundaryFileImport = useCallback(() => {
     setBoundaryFileImportRequestId((value) => value + 1);
   }, []);
+
+  if (isSiteOverviewMap) {
+    const overviewDocuments = allDocuments.length > 0
+      ? allDocuments
+      : documents;
+
+    return (
+      <KoreanFieldworkSiteOverviewMap
+        boundaryDraft={boundaryDraft}
+        documents={overviewDocuments}
+        onOpenFeature={(document) =>
+          handleEditDocument(document.resource.id, document.resource.category)}
+      />
+    );
+  }
 
   const closeAddModal = () => {
     setIsAddModalOpen(false);

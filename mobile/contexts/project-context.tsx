@@ -34,6 +34,7 @@ interface ProjectOpeningGate {
 
 interface ProjectContextType {
   q: string;
+  allDocuments: Document[];
   documents: Document[];
   hierarchyPath: Document[];
   pushToHierarchy: (doc: Document) => void;
@@ -51,6 +52,7 @@ interface ProjectContextType {
 
 const defaultProjectContext: ProjectContextType = {
   q: '',
+  allDocuments: [],
   documents: [],
   hierarchyPath: [],
   pushToHierarchy: () => {},
@@ -188,6 +190,7 @@ export const ProjectContextProvider = ({ children }) => {
     <ProjectContext.Provider
       value={{
         documents,
+        allDocuments,
         hierarchyPath,
         pushToHierarchy,
         popFromHierarchy,
