@@ -43,12 +43,13 @@ const TRACKED_RECORD_CATEGORIES = new Set<string>([
 const NEXT_CHILD_CATEGORY: Readonly<Record<string, string | undefined>> = {
   [C.OPERATION]: C.TRENCH,
   [C.TRENCH]: C.FEATURE,
+  [C.FEATURE]: C.FEATURE_SEGMENT,
   [C.FEATURE_SEGMENT]: C.LAYER,
 };
 
 const EVIDENCE_CHIP_IDS = new Set<string>([
   'photos',
-  'pitSoilProfiles',
+  'soilProfilePhotos',
   'drawings',
   'sketches',
   'finds',
@@ -56,7 +57,7 @@ const EVIDENCE_CHIP_IDS = new Set<string>([
 ]);
 
 const PREFERRED_EVIDENCE_ACTION_IDS = [
-  'pitSoilProfiles',
+  'soilProfilePhotos',
   'photos',
   'drawings',
   'finds',
@@ -65,6 +66,7 @@ const PREFERRED_EVIDENCE_ACTION_IDS = [
 
 const OPEN_EVIDENCE_ACTION_IDS = [
   ...PREFERRED_EVIDENCE_ACTION_IDS,
+  'pits',
   'sketches',
 ];
 
@@ -252,6 +254,14 @@ const getMissingEvidenceAction = (
   evidenceChips: ReturnType<typeof getKoreanFieldworkEvidenceChips>,
   allowedAddCategories: Set<string>
 ): KoreanFieldworkRecordActionItem | undefined => {
+  const extraSoilProfilePhotoChip = getSoilProfilePhotoGapChip(evidenceChips);
+  if (
+    extraSoilProfilePhotoChip?.createCategoryName
+    && allowedAddCategories.has(extraSoilProfilePhotoChip.createCategoryName)
+  ) {
+    return createEvidenceAction(document, extraSoilProfilePhotoChip);
+  }
+
   const missingChip = PREFERRED_EVIDENCE_ACTION_IDS
     .map((chipId) => evidenceChips.find((chip) => chip.id === chipId))
     .find((chip) =>
@@ -263,14 +273,40 @@ const getMissingEvidenceAction = (
 
   if (!missingChip?.createCategoryName) return undefined;
 
+  return createEvidenceAction(document, missingChip);
+};
+
+const getSoilProfilePhotoGapChip = (
+  evidenceChips: ReturnType<typeof getKoreanFieldworkEvidenceChips>
+) => {
+  const soilProfilePhotoChip = evidenceChips.find((chip) =>
+    chip.id === 'soilProfilePhotos'
+  );
+  const pitChip = evidenceChips.find((chip) => chip.id === 'pits');
+  if (
+    soilProfilePhotoChip
+    && pitChip
+    && pitChip.count > 0
+    && soilProfilePhotoChip.count < pitChip.count
+  ) {
+    return soilProfilePhotoChip;
+  }
+
+  return undefined;
+};
+
+const createEvidenceAction = (
+  document: Document,
+  chip: ReturnType<typeof getKoreanFieldworkEvidenceChips>[number]
+): KoreanFieldworkRecordActionItem => {
   return {
-    id: `create-${missingChip.id}`,
+    id: `create-${chip.id}`,
     type: 'createDocument',
-    label: `${missingChip.label} 추가`,
-    detail: `${getKoreanFieldworkCategoryLabel(document.resource.category)} 기록에 ${missingChip.label} 근거를 추가합니다.`,
-    icon: getCreateIcon(missingChip.createCategoryName),
+    label: `${chip.label} 추가`,
+    detail: `${getKoreanFieldworkCategoryLabel(document.resource.category)} 기록에 ${chip.label} 근거를 추가합니다.`,
+    icon: getCreateIcon(chip.createCategoryName!),
     tone: 'warning',
-    categoryName: missingChip.createCategoryName,
+    categoryName: chip.createCategoryName,
   };
 };
 

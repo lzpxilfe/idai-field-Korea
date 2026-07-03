@@ -1209,7 +1209,7 @@ const getKoreanSubjectParticle = (text: string): '은'|'는' => {
 
 const FIELD_NOTE_EVIDENCE_ACTION_IDS = new Set<string>([
   'photos',
-  'pitSoilProfiles',
+  'soilProfilePhotos',
   'drawings',
   'sketches',
   'finds',
@@ -1218,7 +1218,7 @@ const FIELD_NOTE_EVIDENCE_ACTION_IDS = new Set<string>([
 
 const FIELD_NOTE_EVIDENCE_NUMBER_LABELS: Record<string, string> = {
   photos: '사진',
-  pitSoilProfiles: '토층사진',
+  soilProfilePhotos: '토층사진',
   drawings: '도면',
   sketches: '약도·스케치',
   finds: '유물',
@@ -1254,7 +1254,7 @@ const FIELD_NOTE_FOLLOW_UP_MATCHERS: {
   reason: string;
 }[] = [
   {
-    actionIds: ['pitSoilProfiles'],
+    actionIds: ['soilProfilePhotos'],
     pattern: /토층|단면|벽면/,
     reason: '현장 메모에 토층·단면 내용이 언급됐습니다.',
   },
@@ -1294,7 +1294,7 @@ const compareFollowUpActions = (
   - FIELD_NOTE_EVIDENCE_ACTION_ORDER.indexOf(actionB.id);
 
 const FIELD_NOTE_EVIDENCE_ACTION_ORDER = [
-  'pitSoilProfiles',
+  'soilProfilePhotos',
   'photos',
   'drawings',
   'sketches',

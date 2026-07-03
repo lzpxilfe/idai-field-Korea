@@ -513,6 +513,7 @@ const classifiedSupportSourceGroups = [
       'mobile/components/Project/korean-fieldwork-project-setup-sync.ts',
       'mobile/components/Project/korean-fieldwork-record-actions.ts',
       'mobile/components/Project/korean-fieldwork-record-list-empty-state.ts',
+      'mobile/components/Project/korean-fieldwork-record-selection.ts',
       'mobile/components/Project/korean-fieldwork-record-summary.ts',
       'mobile/components/Project/korean-fieldwork-record-work-filters.ts',
       'mobile/components/Project/korean-fieldwork-scope.ts',
@@ -3764,7 +3765,7 @@ function validateRecordActionEvidencePriority() {
     'EVIDENCE_CATEGORIES'
   );
   const desktopChipIds = desktopCategories.map(mapEvidenceCategoryToChipId);
-  const expectedChipIds = ['pitSoilProfiles', 'photos', 'drawings', 'finds', 'samples'];
+  const expectedChipIds = ['soilProfilePhotos', 'photos', 'drawings', 'finds', 'samples'];
   const desktopRecordContextText = readTextFile(desktopRecordContextSource);
   const desktopRecordContextTemplateText = readTextFile(desktopRecordContextTemplate);
   const desktopRecordContextStyleText = readTextFile(
@@ -4080,7 +4081,7 @@ function mapEvidenceCategoryToChipId(categoryName) {
     case 'Photo':
       return 'photos';
     case 'SoilProfilePhoto':
-      return 'pitSoilProfiles';
+      return 'soilProfilePhotos';
     case 'Drawing':
       return 'drawings';
     case 'Find':

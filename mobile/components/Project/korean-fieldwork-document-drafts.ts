@@ -70,11 +70,21 @@ export const createKoreanFieldworkDraftResource = (
     : undefined;
   const resource: NewResource = {
     identifier: categoryName === C.SOIL_PROFILE_PHOTO
-      ? createSoilProfilePhotoDraftIdentifier(
+      ? createLinkedPhotoDraftIdentifier(
         parentDoc,
+        categoryName,
+        '\ud1a0\uce35\uc0ac\uc9c4',
         options.existingDocuments,
         options.identifier
       )
+      : categoryName === C.PHOTO
+        ? createLinkedPhotoDraftIdentifier(
+          parentDoc,
+          categoryName,
+          '\uc0ac\uc9c4',
+          options.existingDocuments,
+          options.identifier
+        )
       : createDraftIdentifier(
         categoryName,
         featureTypeOption?.value,
@@ -262,8 +272,10 @@ export const createDraftIdentifier = (
   return `${prefix}-${Date.now()}`;
 };
 
-const createSoilProfilePhotoDraftIdentifier = (
+const createLinkedPhotoDraftIdentifier = (
   parentDoc: Document,
+  categoryName: string,
+  label: string,
   existingDocuments: readonly Document[] = [],
   preferredIdentifier?: string
 ): string => {
@@ -271,36 +283,40 @@ const createSoilProfilePhotoDraftIdentifier = (
   if (normalizedPreferredIdentifier) return normalizedPreferredIdentifier;
 
   const parentIdentifier = getParentIdentifier(parentDoc);
-  const nextNumber = getNextSoilProfilePhotoNumber(
+  const nextNumber = getNextLinkedPhotoNumber(
     parentDoc.resource.id,
     parentIdentifier,
+    categoryName,
+    label,
     existingDocuments
   );
 
-  return `${parentIdentifier} 토층 ${nextNumber}`;
+  return `${parentIdentifier} ${label} ${nextNumber}`;
 };
 
 const getParentIdentifier = (parentDoc: Document): string => {
   const identifier = parentDoc.resource.identifier?.trim()
     || parentDoc.resource.id?.trim();
 
-  return identifier || '유구';
+  return identifier || '\uc720\uad6c';
 };
 
-const getNextSoilProfilePhotoNumber = (
+const getNextLinkedPhotoNumber = (
   parentId: string | undefined,
   parentIdentifier: string,
+  categoryName: string,
+  label: string,
   documents: readonly Document[]
 ): number => {
-  const prefix = `${parentIdentifier} 토층 `;
+  const prefix = `${parentIdentifier} ${label} `;
   const linkedNumbers = documents
     .filter((document) =>
-      document.resource.category === C.SOIL_PROFILE_PHOTO
+      document.resource.category === categoryName
       && (
         isRelationLinkedToParent(document.resource.relations?.depicts, parentId)
         || isRelationLinkedToParent(document.resource.relations?.liesWithin, parentId)
       ))
-    .map((document) => getSoilProfilePhotoSuffixNumber(
+    .map((document) => getLinkedPhotoSuffixNumber(
       document.resource.identifier,
       prefix
     ))
@@ -317,7 +333,7 @@ const isRelationLinkedToParent = (
 ): boolean =>
   !!parentId && !!relationTargets?.includes(parentId);
 
-const getSoilProfilePhotoSuffixNumber = (
+const getLinkedPhotoSuffixNumber = (
   identifier: string | undefined,
   prefix: string
 ): number | undefined => {

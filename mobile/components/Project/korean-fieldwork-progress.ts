@@ -102,7 +102,7 @@ const HIERARCHY_CATEGORIES = new Set<string>([
 
 const EVIDENCE_CHIP_IDS = new Set<string>([
   'photos',
-  'pitSoilProfiles',
+  'soilProfilePhotos',
   'drawings',
   'sketches',
   'finds',

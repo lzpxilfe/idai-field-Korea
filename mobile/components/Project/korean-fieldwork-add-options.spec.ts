@@ -70,7 +70,7 @@ describe('korean fieldwork add options', () => {
     expect(options.other).toEqual([]);
   });
 
-  it('uses the merged pit and soil profile option under features', () => {
+  it('uses the soil profile photo option under features', () => {
     const options = getKoreanFieldworkAddOptions(C.FEATURE, [
       C.FEATURE_SEGMENT,
       C.SOIL_PROFILE_PHOTO,
@@ -82,7 +82,7 @@ describe('korean fieldwork add options', () => {
 
     expect(options.primary[0]).toMatchObject({
       categoryName: C.SOIL_PROFILE_PHOTO,
-      label: '피트·토층사진',
+      label: '토층사진',
     });
     expect(options.primary.map((option) => option.categoryName))
       .not.toContain(C.FEATURE_SEGMENT);

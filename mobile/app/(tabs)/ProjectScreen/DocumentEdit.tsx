@@ -345,6 +345,7 @@ const renderPhotoResourceActions = (
       <View>
         <PhotoCameraButton
           capturedUri={imageUri}
+          captureFilenameBase={getStringValue(resource.identifier)}
           onCapture={updatePhotoCapture}
           username={username}
         />
@@ -367,6 +368,7 @@ const renderPhotoResourceActions = (
       <View>
         <SoilProfileCameraButton
           capturedUri={imageUri}
+          captureFilenameBase={getStringValue(resource.identifier)}
           onCapture={updateSoilProfileCapture}
           username={username}
         />

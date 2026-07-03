@@ -107,9 +107,9 @@ const PRIMARY_ONLY_CATEGORIES = new Set<string>([
   C.SURVEY_BOUNDARY,
 ]);
 
-const PIT_SOIL_PROFILE_OPTION_LABEL = '피트·토층사진';
-const PIT_SOIL_PROFILE_OPTION_DESCRIPTION =
-  '피트선이나 절개선을 표시하고 토층 단면 사진, 토층 번호, 토색을 한곳에서 남깁니다.';
+const SOIL_PROFILE_PHOTO_OPTION_LABEL = '\ud1a0\uce35\uc0ac\uc9c4';
+const SOIL_PROFILE_PHOTO_OPTION_DESCRIPTION =
+  '\ud53c\ud2b8\ub098 \uc808\uac1c\uba74\ubcc4 \ud1a0\uce35 \ub2e8\uba74 \uc0ac\uc9c4, \ud1a0\uce35 \ubc88\ud638, \ud1a0\uc0c9\uc744 \ub0a8\uae41\ub2c8\ub2e4.';
 
 export const KOREAN_FIELDWORK_HIERARCHY_HELP =
   '여기서는 층위 선후를 정하지 않습니다. 새 기록이 어느 조사 경계, 유구, 트렌치에 포함되는지만 정합니다.';
@@ -171,10 +171,10 @@ const toOption = (
   return {
     categoryName,
     label: isFeatureSoilProfileOption
-      ? PIT_SOIL_PROFILE_OPTION_LABEL
+      ? SOIL_PROFILE_PHOTO_OPTION_LABEL
       : getKoreanFieldworkCategoryLabel(categoryName),
     description: isFeatureSoilProfileOption
-      ? PIT_SOIL_PROFILE_OPTION_DESCRIPTION
+      ? SOIL_PROFILE_PHOTO_OPTION_DESCRIPTION
       : getKoreanFieldworkCategoryDescription(categoryName),
   };
 };

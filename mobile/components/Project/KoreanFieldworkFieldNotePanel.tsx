@@ -1857,7 +1857,7 @@ const getEvidenceActionIcon = (
 ): keyof typeof MaterialIcons.glyphMap => {
   switch (actionId) {
     case 'photos':
-    case 'pitSoilProfiles':
+    case 'soilProfilePhotos':
       return 'photo-camera';
     case 'drawings':
       return 'architecture';

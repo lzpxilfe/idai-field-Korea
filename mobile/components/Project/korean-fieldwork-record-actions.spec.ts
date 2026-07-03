@@ -75,9 +75,10 @@ describe('Korean fieldwork record actions', () => {
       tone: 'warning',
       document: feature,
     });
-    expect(summary.actions.map((action) => action.id)).not.toContain(
-      'create-FeatureSegment'
-    );
+    expect(summary.actions.map((action) => action.id).slice(0, 2)).toEqual([
+      'issue-feature-complete-photo-feature-1',
+      'create-FeatureSegment',
+    ]);
   });
 
   it('keeps compact card actions in the fieldwork work order', () => {
@@ -101,11 +102,31 @@ describe('Korean fieldwork record actions', () => {
     expect(summary.checklistTotal).toBe(9);
     expect(summary.actions.map((action) => action.id).slice(0, 3)).toEqual([
       'issue-feature-complete-photo-feature-1',
-      'create-pitSoilProfiles',
+      'create-FeatureSegment',
+      'create-soilProfilePhotos',
     ]);
-    expect(summary.actions.map((action) => action.id)).not.toContain(
-      'create-FeatureSegment'
+  });
+
+  it('offers another soil profile photo when pit records outnumber profile photos', () => {
+    const feature = createDoc('feature-1', C.FEATURE, '유구 1', {}, {
+      fieldRecordQuality: ['immediateRecording'],
+      recordCreationTiming: 'duringFieldwork',
+    });
+    const pit = createDoc('pit-1', C.FEATURE_SEGMENT, '피트 1', {
+      liesWithin: ['feature-1'],
+    });
+
+    const summary = getKoreanFieldworkRecordActionSummary(
+      feature,
+      [feature, pit],
+      [C.SOIL_PROFILE_PHOTO]
     );
+
+    expect(summary.actions).toContainEqual(expect.objectContaining({
+      id: 'create-soilProfilePhotos',
+      type: 'createDocument',
+      categoryName: C.SOIL_PROFILE_PHOTO,
+    }));
   });
 
   it('uses trial trench checklist progress for trench records in trial mode', () => {

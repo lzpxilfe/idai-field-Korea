@@ -1,9 +1,3 @@
-jest.mock('expo-file-system', () => ({
-  documentDirectory: 'file:///app/documents/',
-  makeDirectoryAsync: jest.fn(),
-  copyAsync: jest.fn(),
-}));
-
 import * as FileSystem from 'expo-file-system';
 import {
   createFieldworkPhotoCaptureData,
@@ -15,6 +9,12 @@ import {
   SOIL_PROFILE_PHOTO_QUALITY_DEFAULT,
   SOIL_PROFILE_PHOTO_SIZE_HINT_KB_DEFAULT,
 } from './Map/korean-fieldwork-drafts';
+
+jest.mock('expo-file-system', () => ({
+  documentDirectory: 'file:///app/documents/',
+  makeDirectoryAsync: jest.fn(),
+  copyAsync: jest.fn(),
+}));
 
 describe('fieldwork camera capture data', () => {
   beforeEach(() => {
@@ -96,7 +96,7 @@ describe('fieldwork camera capture data', () => {
     );
 
     expect(data.soilColorAssistStatus).toBe('candidatesAvailable');
-    expect(data.soilColorAssistCandidates).toContain('1: 10YR 4/3');
+    expect(data.soilColorAssistCandidates).toContain('1: 10YR 3/4');
   });
 
   it('copies camera output into persistent document storage before recording the capture', async () => {
@@ -115,6 +115,22 @@ describe('fieldwork camera capture data', () => {
     });
     expect(persistedUri).toBe(
       'file:///app/documents/fieldwork-captures/fieldwork-photo-2026-06-23T01-02-03-000Z-field-photo.jpg'
+    );
+  });
+
+  it('uses the fieldwork record name for persisted capture filenames when available', async () => {
+    const persistedUri = await persistFieldworkCaptureFile(
+      'file:///cache/Camera/IMG_0001.JPG',
+      new Date('2026-06-23T01:02:03.000Z'),
+      '1호 수혈 사진 1'
+    );
+
+    expect(FileSystem.copyAsync).toHaveBeenCalledWith({
+      from: 'file:///cache/Camera/IMG_0001.JPG',
+      to: 'file:///app/documents/fieldwork-captures/1호-수혈-사진-1.jpg',
+    });
+    expect(persistedUri).toBe(
+      'file:///app/documents/fieldwork-captures/1호-수혈-사진-1.jpg'
     );
   });
 });

@@ -38,16 +38,21 @@ const PHOTO_ATTACHMENT_TARGET_CATEGORIES: readonly string[] = [
   C.FIND_COLLECTION,
   C.SAMPLE,
 ];
-const PIT_SOIL_PROFILE_LABEL = '피트·토층사진';
+const PIT_LABEL = '\ud53c\ud2b8';
+const SOIL_PROFILE_PHOTO_LABEL = '\ud1a0\uce35\uc0ac\uc9c4';
 
 const EVIDENCE_DEFINITIONS: EvidenceDefinition[] = [
   {
-    id: 'pitSoilProfiles',
-    label: PIT_SOIL_PROFILE_LABEL,
-    getDocuments: (bundle: EvidenceBundle) => [
-      ...bundle.soilProfilePhotos,
-      ...bundle.featureSegments,
-    ],
+    id: 'pits',
+    label: PIT_LABEL,
+    getDocuments: (bundle: EvidenceBundle) => bundle.featureSegments,
+    categories: [C.OPERATION, C.TRENCH, C.FEATURE],
+    createCategoryName: C.FEATURE_SEGMENT,
+  },
+  {
+    id: 'soilProfilePhotos',
+    label: SOIL_PROFILE_PHOTO_LABEL,
+    getDocuments: (bundle: EvidenceBundle) => bundle.soilProfilePhotos,
     categories: [C.OPERATION, C.TRENCH, C.FEATURE, C.FEATURE_SEGMENT],
     createCategoryName: C.SOIL_PROFILE_PHOTO,
   },

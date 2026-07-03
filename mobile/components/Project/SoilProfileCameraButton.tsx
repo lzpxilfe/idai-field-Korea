@@ -57,6 +57,7 @@ interface FieldworkCaptureImageDimensions {
 interface FieldworkCameraButtonProps<TCaptureData> {
   buttonTitle: string;
   captureButtonTestID: string;
+  captureFilenameBase?: string;
   closeButtonTestID: string;
   includeBase64?: boolean;
   openButtonTestID: string;
@@ -75,12 +76,14 @@ interface FieldworkCameraButtonProps<TCaptureData> {
 interface SoilProfileCameraButtonProps {
   onCapture: (data: SoilProfileCaptureData) => void;
   capturedUri?: string;
+  captureFilenameBase?: string;
   username?: string;
 }
 
 interface PhotoCameraButtonProps {
   onCapture: (data: FieldworkPhotoCaptureData) => void;
   capturedUri?: string;
+  captureFilenameBase?: string;
   username?: string;
 }
 
@@ -123,11 +126,13 @@ export const createSoilProfileCaptureData = (
 export const PhotoCameraButton: React.FC<PhotoCameraButtonProps> = ({
   onCapture,
   capturedUri,
+  captureFilenameBase,
   username,
 }) => (
   <FieldworkCameraButton
     buttonTitle="현장사진 촬영"
     captureButtonTestID="fieldworkPhotoCameraCaptureButton"
+    captureFilenameBase={captureFilenameBase}
     closeButtonTestID="fieldworkPhotoCameraCloseButton"
     openButtonTestID="fieldworkPhotoCameraButton"
     capturedUri={capturedUri}
@@ -140,11 +145,13 @@ export const PhotoCameraButton: React.FC<PhotoCameraButtonProps> = ({
 const SoilProfileCameraButton: React.FC<SoilProfileCameraButtonProps> = ({
   onCapture,
   capturedUri,
+  captureFilenameBase,
   username,
 }) => (
   <FieldworkCameraButton
     buttonTitle="토층사진 촬영"
     captureButtonTestID="soilProfileCameraCaptureButton"
+    captureFilenameBase={captureFilenameBase}
     closeButtonTestID="soilProfileCameraCloseButton"
     openButtonTestID="soilProfileCameraButton"
     capturedUri={capturedUri}
@@ -160,6 +167,7 @@ const FIELDWORK_CAPTURE_DIRECTORY_NAME = 'fieldwork-captures';
 const FieldworkCameraButton = <TCaptureData,>({
   buttonTitle,
   captureButtonTestID,
+  captureFilenameBase,
   closeButtonTestID,
   openButtonTestID,
   capturedUri,
@@ -202,7 +210,11 @@ const FieldworkCameraButton = <TCaptureData,>({
       if (!picture) return;
 
       const capturedAt = new Date();
-      const persistedUri = await persistFieldworkCaptureFile(picture.uri, capturedAt);
+      const persistedUri = await persistFieldworkCaptureFile(
+        picture.uri,
+        capturedAt,
+        captureFilenameBase
+      );
 
       onCapture(createCaptureData(
         persistedUri,
@@ -281,7 +293,8 @@ const FieldworkCameraButton = <TCaptureData,>({
 
 export const persistFieldworkCaptureFile = async (
   uri: string,
-  capturedAt: Date = new Date()
+  capturedAt: Date = new Date(),
+  filenameBase?: string
 ): Promise<string> => {
   if (!FileSystem.documentDirectory) {
     throw new Error('Document directory is not available.');
@@ -290,7 +303,9 @@ export const persistFieldworkCaptureFile = async (
   const targetDirectory = `${FileSystem.documentDirectory.replace(/\/+$/, '')}/${FIELDWORK_CAPTURE_DIRECTORY_NAME}`;
   await FileSystem.makeDirectoryAsync(targetDirectory, { intermediates: true });
 
-  const targetUri = `${targetDirectory}/${getPersistentCaptureFilename(uri, capturedAt)}`;
+  const targetUri = `${targetDirectory}/${
+    getPersistentCaptureFilename(uri, capturedAt, filenameBase)
+  }`;
   await FileSystem.copyAsync({
     from: uri,
     to: targetUri,
@@ -308,10 +323,17 @@ const getFilenameFromUri = (uri: string): string => {
     : `fieldwork-photo-${Date.now()}.jpg`;
 };
 
-const getPersistentCaptureFilename = (uri: string, capturedAt: Date): string => {
+const getPersistentCaptureFilename = (
+  uri: string,
+  capturedAt: Date,
+  filenameBase?: string
+): string => {
   const filename = getFilenameFromUri(uri);
   const extension = getImageFileExtension(filename);
-  const basename = getSafeFilenameBase(filename);
+  const preferredBasename = getSafeFilenameBase(filenameBase);
+  if (preferredBasename) return `${preferredBasename}.${extension}`;
+
+  const basename = getSafeFilenameBase(filename) || 'capture';
   const timestamp = capturedAt.toISOString().replace(/[:.]/g, '-');
 
   return `fieldwork-photo-${timestamp}-${basename}.${extension}`;
@@ -325,13 +347,14 @@ const getImageFileExtension = (filename: string): string => {
     : 'jpg';
 };
 
-const getSafeFilenameBase = (filename: string): string => {
-  const basename = filename.replace(/\.[^.]*$/, '')
-    .replace(/[^a-z0-9_-]+/gi, '-')
+const getSafeFilenameBase = (filename: string | undefined): string => {
+  const basename = (filename ?? '').replace(/\.[^.]*$/, '')
+    .normalize('NFC')
+    .replace(/[^0-9A-Za-z가-힣ㄱ-ㅎㅏ-ㅣ_-]+/g, '-')
     .replace(/^-+|-+$/g, '')
-    .slice(0, 40);
+    .slice(0, 70);
 
-  return basename || 'capture';
+  return basename;
 };
 
 const getImageDimension = (dimension: number | undefined): number => (

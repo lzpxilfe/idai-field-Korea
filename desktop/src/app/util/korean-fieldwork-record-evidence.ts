@@ -75,7 +75,7 @@ const EVIDENCE_DEFINITIONS: EvidenceDefinition[] = [
         createCategoryName: C.PHOTO
     },
     {
-        id: 'pitSoilProfiles',
+        id: 'soilProfilePhotos',
         label: '토층사진',
         getDocuments: bundle => bundle.soilProfilePhotos,
         categories: [C.OPERATION, C.TRENCH, C.FEATURE, C.FEATURE_SEGMENT],

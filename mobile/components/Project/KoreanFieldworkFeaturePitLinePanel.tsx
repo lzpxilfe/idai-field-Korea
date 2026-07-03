@@ -46,9 +46,10 @@ interface FeatureSoilPitLine {
   end: SketchPoint;
   id: string;
   label: string;
+  points: SketchPoint[];
   start: SketchPoint;
   updatedAt?: string;
-  version: 1;
+  version: 1|2;
 }
 
 interface Props {
@@ -88,12 +89,13 @@ const TEXT = {
   clear: '\uc9c0\uc6b0\uae30',
   connectedCount: '\uc5f0\uacb0\ub41c \ud1a0\uce35\uc0ac\uc9c4',
   drawHint:
-    '\ud53c\ud2b8\uc120\uacfc \ud1a0\uce35\uc0ac\uc9c4\uc744 \ud55c \uacf3\uc5d0\uc11c \ub2e4\ub8f9\ub2c8\ub2e4. \uc2dc\uc791\uc810\uacfc \ub05d\uc810\uc744 \ucc28\ub840\ub85c \ucc0d\uc5b4 \ud53c\ud2b8/\uc808\ub2e8\uc120\uc744 \ud45c\uc2dc\ud569\ub2c8\ub2e4.',
+    '\ud53c\ud2b8\ub294 \uc218\uc9c1\u00b7\uc218\ud3c9 \uc120\uc73c\ub85c\ub9cc \uc800\uc7a5\ub429\ub2c8\ub2e4. \ub300\uac01\uc120\uc73c\ub85c \ucc0d\uc5b4\ub3c4 \u3131\uc790 \uc120\uc73c\ub85c \ubcf4\uc815\ub429\ub2c8\ub2e4.',
   feature: '\uc720\uad6c',
   lineCount: '\ud53c\ud2b8\uc120',
   noSketch: '\uc720\uad6c \uc2a4\ucf00\uce58 \uc5c6\uc74c',
-  pendingHint: '\ub05d\uc810\uc744 \ucc0d\uc73c\uba74 \uc120\uc774 \ucd94\uac00\ub429\ub2c8\ub2e4.',
-  title: '\ud53c\ud2b8\u00b7\ud1a0\uce35\uc0ac\uc9c4',
+  pendingHint: '\ub2e4\uc74c \uc810\uc744 \ucc0d\uc73c\uba74 \uc218\uc9c1\u00b7\uc218\ud3c9 \ud53c\ud2b8\uc120\uc774 \ucd94\uac00\ub429\ub2c8\ub2e4.',
+  readyHint: '\uc2dc\uc791\uc810\uc744 \ucc0d\uc73c\uba74 \ub2e4\uc74c \uc810\uae4c\uc9c0 \ud53c\ud2b8\uc120\uc744 \uc5f0\uacb0\ud569\ub2c8\ub2e4.',
+  title: '\ud53c\ud2b8\uc120\u00b7\ud1a0\uce35\uc0ac\uc9c4',
   undo: '\ub9c8\uc9c0\ub9c9 \uc9c0\uc6b0\uae30',
 };
 
@@ -135,6 +137,9 @@ const KoreanFieldworkFeaturePitLinePanel: React.FC<Props> = ({
   const canAddSoilProfilePhoto =
     allowedAddCategoryNames.includes(KOREAN_FIELDWORK_CATEGORIES.SOIL_PROFILE_PHOTO)
     && !!onAddSoilProfilePhoto;
+  const pitLineStatusText = pendingStartPoint
+    ? TEXT.pendingHint
+    : TEXT.readyHint;
 
   if (document.resource.category !== KOREAN_FIELDWORK_CATEGORIES.FEATURE) {
     return null;
@@ -166,8 +171,9 @@ const KoreanFieldworkFeaturePitLinePanel: React.FC<Props> = ({
       ...line,
       id: createFeatureSoilPitLineId(index),
       label: `${index + 1}`,
+      points: normalizePitLinePoints(line.points, line.start, line.end),
       updatedAt,
-      version: 1 as const,
+      version: 2 as const,
     }));
     onUpdateResourceFields({
       [KOREAN_FIELDWORK_FEATURE_PIT_LINE_FIELDS.lines]:
@@ -265,11 +271,9 @@ const KoreanFieldworkFeaturePitLinePanel: React.FC<Props> = ({
         </View>
       </View>
       <Text style={styles.hint}>{TEXT.drawHint}</Text>
-      {pendingStartPoint && (
-        <Text style={styles.pendingHint} testID="featurePitLinePendingHint">
-          {TEXT.pendingHint}
-        </Text>
-      )}
+      <Text style={styles.pendingHint} testID="featurePitLinePendingHint">
+        {pitLineStatusText}
+      </Text>
       <View
         onLayout={updateCanvasSize}
         onMoveShouldSetResponder={() => false}
@@ -291,37 +295,50 @@ const KoreanFieldworkFeaturePitLinePanel: React.FC<Props> = ({
               <Text style={styles.emptyPreviewText}>{TEXT.noSketch}</Text>
             </View>
           )}
-        {savedLines.map((line, index) => (
-          <React.Fragment key={`${line.id}-${index}`}>
-            <SketchLineSegment
-              color="#2f5f4a"
-              end={denormalizePoint(line.end, canvasSize)}
-              start={denormalizePoint(line.start, canvasSize)}
-              testID="featurePitLineSegment"
-              width={4}
-            />
-            <LineHandle
-              label={line.label}
-              point={line.start}
-              testID="featurePitLineStart"
-            />
-            <LineHandle
-              label={line.label}
-              point={line.end}
-              testID="featurePitLineEnd"
-            />
-            <View
-              pointerEvents="none"
-              style={[
-                styles.lineLabel,
-                getPointPercentStyle(getLineMidpoint(line)),
-              ]}
-              testID={`featurePitLineLabel_${index}`}
-            >
-              <Text style={styles.lineLabelText}>{line.label}</Text>
-            </View>
-          </React.Fragment>
-        ))}
+        {savedLines.map((line, index) => {
+          const points = getPitLinePoints(line);
+
+          return (
+            <React.Fragment key={`${line.id}-${index}`}>
+              {toLineSegments({
+                canvasSize,
+                closePath: false,
+                color: '#2f5f4a',
+                keyPrefix: `feature-pit-line-${line.id}-${index}`,
+                points,
+                testID: 'featurePitLineSegment',
+                width: 4,
+              })}
+              <LineHandle
+                label={line.label}
+                point={points[0]}
+                testID="featurePitLineStart"
+              />
+              {points.slice(1, -1).map((point, cornerIndex) => (
+                <LineHandle
+                  key={`feature-pit-line-corner-${line.id}-${cornerIndex}`}
+                  point={point}
+                  testID={`featurePitLineCorner_${index}_${cornerIndex}`}
+                />
+              ))}
+              <LineHandle
+                label={line.label}
+                point={points[points.length - 1]}
+                testID="featurePitLineEnd"
+              />
+              <View
+                pointerEvents="none"
+                style={[
+                  styles.lineLabel,
+                  getPointPercentStyle(getLineMidpoint(line)),
+                ]}
+                testID={`featurePitLineLabel_${index}`}
+              >
+                <Text style={styles.lineLabelText}>{line.label}</Text>
+              </View>
+            </React.Fragment>
+          );
+        })}
         {pendingStartPoint && (
           <>
             <LineHandle
@@ -434,20 +451,24 @@ const normalizeFeatureSoilPitLine = (
   const start = normalizeSketchPoint(rawValue.start);
   const end = normalizeSketchPoint(rawValue.end);
   if (!start || !end) return undefined;
+  const points = Array.isArray(rawValue.points)
+    ? normalizePitLinePoints(rawValue.points, start, end)
+    : createOrthogonalPitLinePoints(start, end);
 
   return {
-    end,
+    end: points[points.length - 1],
     id: typeof rawValue.id === 'string'
       ? rawValue.id
       : createFeatureSoilPitLineId(index),
     label: typeof rawValue.label === 'string'
       ? rawValue.label
       : `${index + 1}`,
-    start,
+    points,
+    start: points[0],
     updatedAt: typeof rawValue.updatedAt === 'string'
       ? rawValue.updatedAt
       : undefined,
-    version: 1,
+    version: rawValue.version === 2 ? 2 : 1,
   };
 };
 
@@ -455,21 +476,65 @@ const createFeatureSoilPitLine = (
   start: SketchPoint,
   end: SketchPoint,
   index: number
-): FeatureSoilPitLine => ({
-  end,
-  id: createFeatureSoilPitLineId(index),
-  label: `${index + 1}`,
-  start,
-  version: 1,
-});
+): FeatureSoilPitLine => {
+  const points = createOrthogonalPitLinePoints(start, end);
+
+  return {
+    end: points[points.length - 1],
+    id: createFeatureSoilPitLineId(index),
+    label: `${index + 1}`,
+    points,
+    start: points[0],
+    version: 2,
+  };
+};
+
+const getPitLinePoints = (line: FeatureSoilPitLine): SketchPoint[] =>
+  normalizePitLinePoints(line.points, line.start, line.end);
+
+const normalizePitLinePoints = (
+  rawPoints: unknown,
+  fallbackStart: SketchPoint,
+  fallbackEnd: SketchPoint
+): SketchPoint[] => {
+  const points = Array.isArray(rawPoints)
+    ? rawPoints
+      .map(normalizeSketchPoint)
+      .filter((point): point is SketchPoint => !!point)
+    : [];
+  if (points.length >= 2) return points;
+
+  return [fallbackStart, fallbackEnd];
+};
+
+const createOrthogonalPitLinePoints = (
+  start: SketchPoint,
+  end: SketchPoint
+): SketchPoint[] => {
+  if (Math.abs(start.x - end.x) < MIN_LINE_DISTANCE) {
+    return [start, { x: start.x, y: end.y }];
+  }
+  if (Math.abs(start.y - end.y) < MIN_LINE_DISTANCE) {
+    return [start, { x: end.x, y: start.y }];
+  }
+
+  const shouldRunHorizontalFirst =
+    Math.abs(end.x - start.x) >= Math.abs(end.y - start.y);
+  const corner = shouldRunHorizontalFirst
+    ? { x: end.x, y: start.y }
+    : { x: start.x, y: end.y };
+
+  return [start, corner, end];
+};
 
 const createFeatureSoilPitLineId = (index: number): string =>
   `soil-pit-line-${index + 1}`;
 
-const getLineMidpoint = (line: FeatureSoilPitLine): SketchPoint => ({
-  x: (line.start.x + line.end.x) / 2,
-  y: (line.start.y + line.end.y) / 2,
-});
+const getLineMidpoint = (line: FeatureSoilPitLine): SketchPoint => {
+  const points = getPitLinePoints(line);
+
+  return points[Math.floor((points.length - 1) / 2)] ?? line.start;
+};
 
 const normalizeFeatureLocationSketch = (
   value: unknown

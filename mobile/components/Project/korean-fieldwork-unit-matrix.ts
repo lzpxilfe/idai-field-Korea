@@ -42,7 +42,7 @@ const UNIT_CATEGORY_SET = new Set<string>(UNIT_CATEGORIES);
 
 const EVIDENCE_CHIP_IDS = new Set<string>([
   'photos',
-  'pitSoilProfiles',
+  'soilProfilePhotos',
   'drawings',
   'sketches',
   'finds',

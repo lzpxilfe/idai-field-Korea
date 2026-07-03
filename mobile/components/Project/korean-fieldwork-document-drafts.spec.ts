@@ -263,7 +263,7 @@ describe('Korean fieldwork document drafts', () => {
     );
 
     expect(draft).toMatchObject({
-      identifier: '1호 주거지 토층 1',
+      identifier: '1호 주거지 토층사진 1',
       category: C.SOIL_PROFILE_PHOTO,
       relations: { depicts: ['feature-1'] },
       soilProfileAnnotationStrokes: '[]',
@@ -291,18 +291,18 @@ describe('Korean fieldwork document drafts', () => {
       config,
       {
         existingDocuments: [
-          createDoc('profile-1', C.SOIL_PROFILE_PHOTO, { depicts: ['feature-1'] }, '1호 주거지 토층 1'),
-          createDoc('profile-2', C.SOIL_PROFILE_PHOTO, { depicts: ['feature-1'] }, '1호 주거지 토층 2'),
-          createDoc('other-profile', C.SOIL_PROFILE_PHOTO, { depicts: ['feature-2'] }, '2호 주거지 토층 1'),
+          createDoc('profile-1', C.SOIL_PROFILE_PHOTO, { depicts: ['feature-1'] }, '1호 주거지 토층사진 1'),
+          createDoc('profile-2', C.SOIL_PROFILE_PHOTO, { depicts: ['feature-1'] }, '1호 주거지 토층사진 2'),
+          createDoc('other-profile', C.SOIL_PROFILE_PHOTO, { depicts: ['feature-2'] }, '2호 주거지 토층사진 1'),
         ],
       }
     );
 
-    expect(draft.identifier).toBe('1호 주거지 토층 3');
+    expect(draft.identifier).toBe('1호 주거지 토층사진 3');
   });
 
   it('creates regular Photo drafts with fieldwork capture defaults', () => {
-    const trenchDoc = createDoc('trench-1', C.TRENCH);
+    const trenchDoc = createDoc('trench-1', C.TRENCH, {}, '1호 트렌치');
     const config = allowRelations({
       [`${C.PHOTO}:${C.TRENCH}`]: ['depicts'],
     });
@@ -314,7 +314,7 @@ describe('Korean fieldwork document drafts', () => {
     );
 
     expect(draft).toMatchObject({
-      identifier: 'photo-1700000000000',
+      identifier: '1호 트렌치 사진 1',
       category: C.PHOTO,
       relations: { depicts: ['trench-1'] },
       fieldworkPhotoAnnotationStrokes: '[]',
@@ -322,6 +322,28 @@ describe('Korean fieldwork document drafts', () => {
       fieldworkPhotoQuality: SOIL_PROFILE_PHOTO_QUALITY_DEFAULT,
       mediaEvidenceRole: ['fieldResultRecord'],
     });
+  });
+
+  it('numbers the next regular Photo below the same record', () => {
+    const featureDoc = createDoc('feature-1', C.FEATURE, {}, '1호 수혈');
+    const config = allowRelations({
+      [`${C.PHOTO}:${C.FEATURE}`]: ['depicts'],
+    });
+
+    const draft = createKoreanFieldworkDraftResource(
+      featureDoc,
+      C.PHOTO,
+      config,
+      {
+        existingDocuments: [
+          createDoc('photo-1', C.PHOTO, { depicts: ['feature-1'] }, '1호 수혈 사진 1'),
+          createDoc('photo-2', C.PHOTO, { depicts: ['feature-1'] }, '1호 수혈 사진 2'),
+          createDoc('other-photo', C.PHOTO, { depicts: ['feature-2'] }, '2호 수혈 사진 1'),
+        ],
+      }
+    );
+
+    expect(draft.identifier).toBe('1호 수혈 사진 3');
   });
 
   it('creates SurveyBoundary drafts with operation-level boundary defaults', () => {

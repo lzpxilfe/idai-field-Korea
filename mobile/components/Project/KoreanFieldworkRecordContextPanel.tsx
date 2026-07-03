@@ -161,13 +161,17 @@ export const getEvidenceMetrics = (
 ): EvidenceMetric[] => {
   const metrics: EvidenceMetric[] = [
     {
-      id: 'pitSoilProfiles',
-      label: '피트·토층사진',
+      id: 'pits',
+      label: '피트',
+      icon: 'account-tree',
+      documents: evidenceBundle.featureSegments,
+      createCategoryName: KOREAN_FIELDWORK_CATEGORIES.FEATURE_SEGMENT,
+    },
+    {
+      id: 'soilProfilePhotos',
+      label: '토층사진',
       icon: 'terrain',
-      documents: [
-        ...evidenceBundle.soilProfilePhotos,
-        ...evidenceBundle.featureSegments,
-      ],
+      documents: evidenceBundle.soilProfilePhotos,
       createCategoryName: KOREAN_FIELDWORK_CATEGORIES.SOIL_PROFILE_PHOTO,
     },
     {
