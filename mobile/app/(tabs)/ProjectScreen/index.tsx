@@ -1161,10 +1161,7 @@ const DocumentsList: React.FC = () => {
               }}
               onEditDocument={editDocument}
               onOpenFeatureSketch={openFeatureSketch}
-              onOpenDocument={(document) =>
-                selectWorkbenchDocument(document, {
-                  expand: isSelectedWorkbenchExpanded,
-                })}
+              onOpenDocument={editDocument}
               onOpenMapDocument={onDocumentSelected}
               onToggleExpanded={() =>
                 setIsSelectedWorkbenchExpanded((current) => !current)}
@@ -1299,8 +1296,7 @@ const DocumentsList: React.FC = () => {
               expandedDocumentIds={expandedRecordDocumentIds}
               onOpenDocument={(document) =>
                 selectWorkbenchDocument(document, { toggle: true })}
-              onOpenRelatedDocument={(document) =>
-                selectWorkbenchDocument(document, { expand: true })}
+              onOpenRelatedDocument={editDocument}
               onAddChild={openAddChildModal}
               onAddDocumentOfCategory={(parentDoc, categoryName) =>
                 navigateAddCategory(categoryName, parentDoc)}
@@ -1324,8 +1320,7 @@ const DocumentsList: React.FC = () => {
               expandedDocumentIds={expandedRecordDocumentIds}
               onOpenDocument={(document) =>
                 selectWorkbenchDocument(document, { toggle: true })}
-              onOpenRelatedDocument={(document) =>
-                selectWorkbenchDocument(document, { expand: true })}
+              onOpenRelatedDocument={editDocument}
               onAddChild={openAddChildModal}
               onAddDocumentOfCategory={(parentDoc, categoryName) =>
                 navigateAddCategory(categoryName, parentDoc)}
