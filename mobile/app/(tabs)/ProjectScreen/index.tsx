@@ -79,6 +79,9 @@ import {
   getKoreanFieldworkRecordListEmptyState,
 } from '@/components/Project/korean-fieldwork-record-list-empty-state';
 import {
+  hasKoreanFieldworkProjectStartContext,
+} from '@/components/Project/korean-fieldwork-project-start';
+import {
   getKoreanFieldworkSiteOverviewMapRoute,
   getKoreanFieldworkReturnParam,
   KOREAN_FIELDWORK_FIELD_BOARD_RESET_PARAM,
@@ -479,7 +482,14 @@ const DocumentsList: React.FC = () => {
       : 0,
     [recordingBaseCount, userVisibleDocuments]
   );
-  const hasFieldRecords = userVisibleDocuments.length > 0;
+  const hasRecordingBase = recordingBaseCount > 0;
+  const hasStoredBoundary = todaySummary.surveyBoundaries.length > 0;
+  const hasProjectStartContext = hasKoreanFieldworkProjectStartContext({
+    boundarySummary,
+    recordingBaseCount,
+    storedBoundaryCount: todaySummary.surveyBoundaries.length,
+    userVisibleDocumentCount: userVisibleDocuments.length,
+  });
   const hierarchyLabel = hierarchyPath.length > 0
     ? hierarchyPath.map((document) =>
       getKoreanFieldworkDisplayIdentifier(document.resource.identifier)
@@ -1071,16 +1081,16 @@ const DocumentsList: React.FC = () => {
           modeId={investigationModeId}
           onSelectMode={selectInvestigationMode}
           operationCount={operationCount}
-          hasRecordingBase={recordingBaseCount > 0}
+          hasRecordingBase={hasRecordingBase}
           totalDocumentCount={userVisibleDocuments.length}
           legacyRootDocumentCount={legacyRootDocumentCount}
           surveyBoundaryCount={userVisibleTodaySummary.surveyBoundaries.length}
-          hasStoredBoundary={todaySummary.surveyBoundaries.length > 0}
+          hasStoredBoundary={hasStoredBoundary}
           boundarySummary={boundarySummary}
           onOpenMap={openMap}
         />
 
-        {hasFieldRecords && (
+        {hasProjectStartContext && (
           <>
             <View style={styles.workspaceTabs}>
               <WorkspaceTabButton
