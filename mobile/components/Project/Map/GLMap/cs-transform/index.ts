@@ -5,7 +5,10 @@ import {
     getGeometryBoundings, getLayerCoordinates, getMinMaxGeometryCoords
 } from './document-to-world/utils/cs-transform-utils';
 import { matrixInverse4, processTransform2d } from './matrix-utils/matrix-utils';
-import { getScreenToWorldTransformationMatrix } from './screen-to-world/screen-to-world-transformation';
+import {
+    getAspectPreservingWorldViewport,
+    getScreenToWorldTransformationMatrix,
+} from './screen-to-world/screen-to-world-transformation';
 import { GeometryBoundings, Transformation } from './types';
 
 export {
@@ -13,6 +16,7 @@ export {
     WORLD_CS_WIDTH,
     defineWorldCoordinateSystem,
     getDocumentToWorldTransformMatrix,
+    getAspectPreservingWorldViewport,
     getScreenToWorldTransformationMatrix,
     matrixInverse4,
     processTransform2d,

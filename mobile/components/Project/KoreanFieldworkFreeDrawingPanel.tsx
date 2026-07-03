@@ -21,6 +21,7 @@ import {
   normalizeKoreanFieldworkHandwritingStrokes,
   serializeKoreanFieldworkHandwriting,
 } from './korean-fieldwork-handwriting';
+import { KOREAN_FIELDWORK_CATEGORIES } from './korean-fieldwork-categories';
 import KoreanFieldworkFullscreenDrawingModal, {
   DEFAULT_FIELDWORK_BRUSH_COLOR,
   DEFAULT_FIELDWORK_BRUSH_WIDTH,
@@ -29,9 +30,18 @@ import KoreanFieldworkFullscreenDrawingModal, {
 } from './KoreanFieldworkFullscreenDrawingModal';
 
 export const KOREAN_FIELDWORK_FREE_DRAWING_FIELDS = {
+  drawingStrokes: 'drawingSketchStrokes',
+  drawingUpdatedAt: 'drawingSketchUpdatedAt',
   featureStrokes: 'featureFreeDrawingStrokes',
   featureUpdatedAt: 'featureFreeDrawingUpdatedAt',
+  penMemoStrokes: 'penMemoStrokes',
 } as const;
+
+export interface KoreanFieldworkFreeDrawingConfig {
+  strokesField: string;
+  title: string;
+  updatedAtField?: string;
+}
 
 interface CanvasSize {
   height: number;
@@ -71,6 +81,32 @@ const DOUBLE_TAP_DELAY_MS = 260;
 const DOUBLE_TAP_DISTANCE = 520;
 const TEXT = {
   title: '\uc57d\ub3c4 \uc2a4\ucf00\uce58',
+};
+
+export const getKoreanFieldworkFreeDrawingConfig = (
+  categoryName?: string
+): KoreanFieldworkFreeDrawingConfig | undefined => {
+  switch (categoryName) {
+    case KOREAN_FIELDWORK_CATEGORIES.DRAWING:
+      return {
+        strokesField: KOREAN_FIELDWORK_FREE_DRAWING_FIELDS.drawingStrokes,
+        title: TEXT.title,
+        updatedAtField: KOREAN_FIELDWORK_FREE_DRAWING_FIELDS.drawingUpdatedAt,
+      };
+    case KOREAN_FIELDWORK_CATEGORIES.FEATURE:
+      return {
+        strokesField: KOREAN_FIELDWORK_FREE_DRAWING_FIELDS.featureStrokes,
+        title: TEXT.title,
+        updatedAtField: KOREAN_FIELDWORK_FREE_DRAWING_FIELDS.featureUpdatedAt,
+      };
+    case KOREAN_FIELDWORK_CATEGORIES.PEN_MEMO:
+      return {
+        strokesField: KOREAN_FIELDWORK_FREE_DRAWING_FIELDS.penMemoStrokes,
+        title: TEXT.title,
+      };
+    default:
+      return undefined;
+  }
 };
 
 const KoreanFieldworkFreeDrawingPanel: React.FC<Props> = ({

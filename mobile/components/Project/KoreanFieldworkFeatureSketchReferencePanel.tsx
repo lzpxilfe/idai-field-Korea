@@ -27,6 +27,13 @@ interface CanvasSize {
   width: number;
 }
 
+interface SketchViewport {
+  height: number;
+  left: number;
+  top: number;
+  width: number;
+}
+
 interface FeatureLocationSketch {
   center: SketchPoint;
   points: SketchPoint[];
@@ -87,6 +94,10 @@ const KoreanFieldworkFeatureSketchReferencePanel: React.FC<Props> = ({
     ),
     [document.resource]
   );
+  const boundaryViewport = useMemo(
+    () => getSquarePlanViewport(boundaryCanvasSize),
+    [boundaryCanvasSize]
+  );
 
   if (document.resource.category !== KOREAN_FIELDWORK_CATEGORIES.FEATURE) {
     return null;
@@ -114,13 +125,17 @@ const KoreanFieldworkFeatureSketchReferencePanel: React.FC<Props> = ({
                   keyPrefix: 'boundary',
                   points: boundaryPoints,
                   testID: 'featureBoundaryLine',
+                  viewport: boundaryViewport,
                   width: 2,
                 })}
                 {boundaryPoints.map((point, index) => (
                   <View
                     key={`boundary-point-${index}`}
                     pointerEvents="none"
-                    style={[styles.boundaryPoint, getPointPercentStyle(point)]}
+                    style={[
+                      styles.boundaryPoint,
+                      getPointStyle(point, boundaryCanvasSize, boundaryViewport),
+                    ]}
                     testID={`featureBoundaryPoint_${index}`}
                   />
                 ))}
@@ -133,7 +148,8 @@ const KoreanFieldworkFeatureSketchReferencePanel: React.FC<Props> = ({
             sketch,
             boundaryCanvasSize,
             'featureBoundaryFeatureShape',
-            true
+            true,
+            boundaryViewport
           )}
         </SketchCard>
         <SketchCard
@@ -206,7 +222,8 @@ const renderFeatureSketch = (
   sketch: FeatureLocationSketch,
   canvasSize: CanvasSize,
   testID: string,
-  compact: boolean
+  compact: boolean,
+  viewport?: SketchViewport
 ) => {
   if (sketch.shape === 'rectangle' || sketch.shape === 'oval') {
     return (
@@ -216,7 +233,7 @@ const renderFeatureSketch = (
           styles.featureShape,
           compact && styles.featureShapeCompact,
           sketch.shape === 'oval' && styles.featureShapeOval,
-          getFeatureShapeFrame(sketch, canvasSize, compact),
+          getFeatureShapeFrame(sketch, canvasSize, compact, viewport),
         ]}
         testID={testID}
       >
@@ -241,6 +258,7 @@ const renderFeatureSketch = (
         keyPrefix: `${testID}-line`,
         points,
         testID,
+        viewport,
         width: compact ? 2 : 3,
       })}
       {points.map((point, index) => (
@@ -250,7 +268,7 @@ const renderFeatureSketch = (
           style={[
             styles.featurePoint,
             compact && styles.featurePointCompact,
-            getPointPercentStyle(point),
+            getPointStyle(point, canvasSize, viewport),
           ]}
           testID={`${testID}_${index}`}
         >
@@ -382,6 +400,7 @@ const toLineSegments = ({
   keyPrefix,
   points,
   testID,
+  viewport,
   width,
 }: {
   canvasSize: CanvasSize;
@@ -390,6 +409,7 @@ const toLineSegments = ({
   keyPrefix: string;
   points: SketchPoint[];
   testID: string;
+  viewport?: SketchViewport;
   width: number;
 }) => {
   if (points.length < 2) return [];
@@ -399,9 +419,13 @@ const toLineSegments = ({
   return segmentStartPoints.map((point, index) => (
     <SketchLineSegment
       color={color}
-      end={denormalizePoint(points[(index + 1) % points.length], canvasSize)}
+      end={denormalizePoint(
+        points[(index + 1) % points.length],
+        canvasSize,
+        viewport
+      )}
       key={`${keyPrefix}-${index}`}
-      start={denormalizePoint(point, canvasSize)}
+      start={denormalizePoint(point, canvasSize, viewport)}
       testID={testID}
       width={width}
     />
@@ -446,37 +470,30 @@ const SketchLineSegment: React.FC<{
 const getFeatureShapeFrame = (
   sketch: FeatureLocationSketch,
   canvasSize: CanvasSize,
-  compact: boolean
+  compact: boolean,
+  viewport?: SketchViewport
 ) => {
   if (!compact) {
     return getFittedFeatureShapeFrame(sketch, canvasSize);
   }
 
-  const center = compact
-    ? denormalizePoint(sketch.center, canvasSize)
-    : {
-      x: canvasSize.width / 2,
-      y: SHAPE_PREVIEW_TOP_PADDING
-        + ((canvasSize.height - SHAPE_PREVIEW_TOP_PADDING) / 2),
-    };
+  const center = denormalizePoint(sketch.center, canvasSize, viewport);
   const shapeScale = sketch.scale / 100;
-  const widthRatio = compact ? 0.22 : 0.36;
-  const heightRatio = compact ? 0.26 : 0.42;
+  const sizeReference = viewport ?? {
+    height: canvasSize.height,
+    left: 0,
+    top: 0,
+    width: canvasSize.width,
+  };
   const width = clamp(
-    canvasSize.width * widthRatio * shapeScale * (compact ? 0.84 : 1),
+    sizeReference.width * 0.22 * shapeScale * 0.84,
     FEATURE_SKETCH_REFERENCE_SHAPE_MIN_WIDTH,
-    compact ? 120 : Math.max(
-      FEATURE_SKETCH_REFERENCE_SHAPE_MIN_WIDTH,
-      canvasSize.width - (SHAPE_PREVIEW_SIDE_PADDING * 2)
-    )
+    120
   );
   const height = clamp(
-    canvasSize.height * heightRatio * shapeScale * (compact ? 0.84 : 1),
+    sizeReference.height * 0.26 * shapeScale * 0.84,
     FEATURE_SKETCH_REFERENCE_SHAPE_MIN_HEIGHT,
-    compact ? 96 : Math.max(
-      FEATURE_SKETCH_REFERENCE_SHAPE_MIN_HEIGHT,
-      canvasSize.height - SHAPE_PREVIEW_TOP_PADDING - SHAPE_PREVIEW_BOTTOM_PADDING
-    )
+    96
   );
 
   return {
@@ -560,11 +577,39 @@ const fitFeatureSketchPoints = (points: SketchPoint[]): SketchPoint[] => {
 
 const denormalizePoint = (
   point: SketchPoint,
-  canvasSize: CanvasSize
+  canvasSize: CanvasSize,
+  viewport?: SketchViewport
 ): PixelPoint => ({
-  x: (point.x / 100) * canvasSize.width,
-  y: (point.y / 100) * canvasSize.height,
+  x: (viewport?.left ?? 0)
+    + ((point.x / 100) * (viewport?.width ?? canvasSize.width)),
+  y: (viewport?.top ?? 0)
+    + ((point.y / 100) * (viewport?.height ?? canvasSize.height)),
 });
+
+const getSquarePlanViewport = (canvasSize: CanvasSize): SketchViewport => {
+  const size = Math.max(1, Math.min(canvasSize.width, canvasSize.height));
+
+  return {
+    height: size,
+    left: (canvasSize.width - size) / 2,
+    top: (canvasSize.height - size) / 2,
+    width: size,
+  };
+};
+
+const getPointStyle = (
+  point: SketchPoint,
+  canvasSize: CanvasSize,
+  viewport?: SketchViewport
+) => {
+  if (!viewport) return getPointPercentStyle(point);
+
+  const viewportPoint = denormalizePoint(point, canvasSize, viewport);
+  return {
+    left: viewportPoint.x,
+    top: viewportPoint.y,
+  };
+};
 
 const getPointPercentStyle = (point: SketchPoint) => ({
   left: toPercent(point.x),

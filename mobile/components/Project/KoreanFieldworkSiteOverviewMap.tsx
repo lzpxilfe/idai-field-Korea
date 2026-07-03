@@ -38,6 +38,18 @@ interface CanvasSize {
   width: number;
 }
 
+interface SketchFrame {
+  height: number;
+  minX: number;
+  minY: number;
+  width: number;
+}
+
+interface BoundaryProjection {
+  frame?: SketchFrame;
+  points: SketchPoint[];
+}
+
 interface SiteOverviewViewport {
   offsetX: number;
   offsetY: number;
@@ -112,13 +124,14 @@ const KoreanFieldworkSiteOverviewMap: React.FC<Props> = ({
   const [viewport, setViewport] = useState(SITE_OVERVIEW_DEFAULT_VIEWPORT);
   const pinchGestureRef = useRef<SiteOverviewPinchGesture>();
   const panGestureRef = useRef<SiteOverviewPanGesture>();
-  const boundaryPoints = useMemo(
-    () => getSurveyBoundaryPoints(documents, boundaryDraft),
-    [boundaryDraft, documents]
+  const boundaryProjection = useMemo(
+    () => getSurveyBoundaryProjection(documents, boundaryDraft, canvasSize),
+    [boundaryDraft, canvasSize, documents]
   );
+  const boundaryPoints = boundaryProjection.points;
   const features = useMemo(
-    () => getSiteOverviewFeatures(documents),
-    [documents]
+    () => getSiteOverviewFeatures(documents, boundaryProjection.frame),
+    [boundaryProjection.frame, documents]
   );
   const normalizedViewport = useMemo(
     () => normalizeSiteOverviewViewport(viewport, canvasSize),
@@ -530,14 +543,18 @@ const normalizeTouchPoint = (
 };
 
 const getSiteOverviewFeatures = (
-  documents: readonly Document[]
+  documents: readonly Document[],
+  boundaryFrame?: SketchFrame
 ): SiteOverviewFeature[] =>
   documents
     .filter((document) =>
       document.resource.category === KOREAN_FIELDWORK_CATEGORIES.FEATURE)
     .map((document): SiteOverviewFeature | undefined => {
       const resource = document.resource as Record<string, unknown>;
-      const sketch = normalizeFeatureLocationSketch(resource.featureLocationSketch);
+      const sketch = normalizeFeatureLocationSketch(
+        resource.featureLocationSketch,
+        boundaryFrame
+      );
       if (!sketch) return undefined;
       const typeLabel = getKoreanFieldworkFeatureTypeLabel(resource.featureType);
 
@@ -552,7 +569,8 @@ const getSiteOverviewFeatures = (
     .filter((feature): feature is SiteOverviewFeature => !!feature);
 
 const normalizeFeatureLocationSketch = (
-  value: unknown
+  value: unknown,
+  boundaryFrame?: SketchFrame
 ): FeatureLocationSketch | undefined => {
   const rawValue = typeof value === 'string' ? parseJsonObject(value) : value;
   if (!isRecord(rawValue)) return undefined;
@@ -570,9 +588,10 @@ const normalizeFeatureLocationSketch = (
     : [];
 
   return {
-    center,
+    center: projectStoredSketchPointToBoundaryFrame(center, boundaryFrame),
     isClosed: rawValue.isClosed === true,
-    points,
+    points: points.map((point) =>
+      projectStoredSketchPointToBoundaryFrame(point, boundaryFrame)),
     rotation: normalizeNumber(rawValue.rotation, 0),
     scale: clamp(
       normalizeNumber(rawValue.scale, 100),
@@ -583,34 +602,37 @@ const normalizeFeatureLocationSketch = (
   };
 };
 
-const getSurveyBoundaryPoints = (
+const getSurveyBoundaryProjection = (
   documents: readonly Document[],
-  boundaryDraft?: KoreanFieldworkProjectBoundaryDraft
-): SketchPoint[] => {
+  boundaryDraft: KoreanFieldworkProjectBoundaryDraft | undefined,
+  canvasSize: CanvasSize
+): BoundaryProjection => {
   const boundaryDocument = documents.find((candidate) =>
     candidate.resource.category === KOREAN_FIELDWORK_CATEGORIES.SURVEY_BOUNDARY
     && getBoundaryCoordinatePairs(candidate.resource.geometry).length >= 3
   );
   if (boundaryDocument) {
-    return normalizeCoordinatePairs(
-      getBoundaryCoordinatePairs(boundaryDocument.resource.geometry)
+    return projectCoordinatePairsToBoundaryFrame(
+      getBoundaryCoordinatePairs(boundaryDocument.resource.geometry),
+      canvasSize
     );
   }
 
-  return getBoundaryDraftSketchPoints(boundaryDraft);
+  return projectCoordinatePairsToBoundaryFrame(
+    getBoundaryDraftCoordinatePairs(boundaryDraft),
+    canvasSize
+  );
 };
 
-const getBoundaryDraftSketchPoints = (
+const getBoundaryDraftCoordinatePairs = (
   boundaryDraft?: KoreanFieldworkProjectBoundaryDraft
-): SketchPoint[] => {
+): number[][] => {
   if (!boundaryDraft || boundaryDraft.coordinates.length < 3) return [];
 
-  const coordinatePairs = boundaryDraft.coordinates.map((point) => [
+  return boundaryDraft.coordinates.map((point) => [
     point.longitude,
     point.latitude,
   ]);
-
-  return normalizeCoordinatePairs(coordinatePairs);
 };
 
 const getBoundaryCoordinatePairs = (geometry: unknown): number[][] => {
@@ -644,11 +666,12 @@ const getNumericCoordinatePairs = (value: unknown): number[][] => {
       && Number.isFinite(coordinate[1]));
 };
 
-const normalizeCoordinatePairs = (
-  coordinatePairs: number[][]
-): SketchPoint[] => {
+const projectCoordinatePairsToBoundaryFrame = (
+  coordinatePairs: number[][],
+  canvasSize: CanvasSize
+): BoundaryProjection => {
   const openPairs = getOpenCoordinatePairs(coordinatePairs);
-  if (openPairs.length < 3) return [];
+  if (openPairs.length < 3) return { points: [] };
 
   const xs = openPairs.map((coordinate) => coordinate[0]);
   const ys = openPairs.map((coordinate) => coordinate[1]);
@@ -658,12 +681,98 @@ const normalizeCoordinatePairs = (
   const maxY = Math.max(...ys);
   const xRange = Math.max(maxX - minX, 0.000001);
   const yRange = Math.max(maxY - minY, 0.000001);
-  const drawableSize = 100 - (BOUNDARY_PADDING * 2);
+  const frame = getAspectPreservingBoundaryFrame(
+    openPairs,
+    xRange,
+    yRange,
+    canvasSize
+  );
 
-  return openPairs.map((coordinate) => ({
-    x: BOUNDARY_PADDING + (((coordinate[0] - minX) / xRange) * drawableSize),
-    y: BOUNDARY_PADDING + (((maxY - coordinate[1]) / yRange) * drawableSize),
-  }));
+  return {
+    frame,
+    points: openPairs.map((coordinate) => ({
+      x: frame.minX + (((coordinate[0] - minX) / xRange) * frame.width),
+      y: frame.minY + (((maxY - coordinate[1]) / yRange) * frame.height),
+    })),
+  };
+};
+
+const getAspectPreservingBoundaryFrame = (
+  coordinatePairs: number[][],
+  xRange: number,
+  yRange: number,
+  canvasSize: CanvasSize
+): SketchFrame => {
+  const drawableSize = 100 - (BOUNDARY_PADDING * 2);
+  const canvasAspectRatio = getCanvasAspectRatio(canvasSize);
+  const coordinateAspectRatio =
+    getCoordinateRangeAspectRatio(coordinatePairs, xRange, yRange);
+  const percentAspectRatio = coordinateAspectRatio / canvasAspectRatio;
+  const width = percentAspectRatio >= 1
+    ? drawableSize
+    : drawableSize * percentAspectRatio;
+  const height = percentAspectRatio >= 1
+    ? drawableSize / percentAspectRatio
+    : drawableSize;
+
+  return {
+    height,
+    minX: 50 - (width / 2),
+    minY: 50 - (height / 2),
+    width,
+  };
+};
+
+const getCoordinateRangeAspectRatio = (
+  coordinatePairs: number[][],
+  xRange: number,
+  yRange: number
+): number => {
+  if (areWgs84CoordinatePairs(coordinatePairs)) {
+    const averageLatitude = coordinatePairs.reduce(
+      (sum, coordinate) => sum + coordinate[1],
+      0
+    ) / coordinatePairs.length;
+    const longitudeScale = Math.max(
+      Math.cos((averageLatitude * Math.PI) / 180),
+      0.000001
+    );
+
+    return (xRange * longitudeScale) / yRange;
+  }
+
+  return xRange / yRange;
+};
+
+const areWgs84CoordinatePairs = (coordinatePairs: number[][]): boolean =>
+  coordinatePairs.every((coordinate) =>
+    coordinate[0] >= -180
+    && coordinate[0] <= 180
+    && coordinate[1] >= -90
+    && coordinate[1] <= 90);
+
+const getCanvasAspectRatio = (canvasSize: CanvasSize): number => {
+  if (canvasSize.width > 0 && canvasSize.height > 0) {
+    return canvasSize.width / canvasSize.height;
+  }
+
+  return CANVAS_DEFAULT_SIZE.width / CANVAS_DEFAULT_SIZE.height;
+};
+
+const projectStoredSketchPointToBoundaryFrame = (
+  point: SketchPoint,
+  boundaryFrame?: SketchFrame
+): SketchPoint => {
+  if (!boundaryFrame) return point;
+
+  const drawableSize = 100 - (BOUNDARY_PADDING * 2);
+  const normalizedX = clamp((point.x - BOUNDARY_PADDING) / drawableSize, 0, 1);
+  const normalizedY = clamp((point.y - BOUNDARY_PADDING) / drawableSize, 0, 1);
+
+  return {
+    x: boundaryFrame.minX + (normalizedX * boundaryFrame.width),
+    y: boundaryFrame.minY + (normalizedY * boundaryFrame.height),
+  };
 };
 
 const getOpenCoordinatePairs = (coordinatePairs: number[][]): number[][] => {

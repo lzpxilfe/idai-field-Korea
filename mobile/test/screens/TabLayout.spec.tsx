@@ -2,7 +2,7 @@ import { render } from '@testing-library/react-native';
 import { router } from 'expo-router';
 import React from 'react';
 import { Alert } from 'react-native';
-import TabLayout from './_layout';
+import TabLayout from '../../app/(tabs)/_layout';
 
 const mockUsePreferences = jest.fn();
 const mockTabScreens: Record<string, any>[] = [];

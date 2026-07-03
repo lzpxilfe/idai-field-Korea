@@ -60,6 +60,9 @@ import {
   KoreanFieldworkStatusTone,
 } from '@/components/Project/korean-fieldwork-record-summary';
 import {
+  getKoreanFieldworkExpandedRecordIds,
+} from '@/components/Project/korean-fieldwork-record-selection';
+import {
   getKoreanFieldworkEvidenceChips,
   KoreanFieldworkEvidenceChip,
 } from '@/components/Project/korean-fieldwork-record-evidence';
@@ -645,6 +648,13 @@ const DocumentsList: React.FC = () => {
       documentsById,
       selectedWorkbenchDocumentId,
     ]
+  );
+  const expandedRecordDocumentIds = useMemo(
+    () => getKoreanFieldworkExpandedRecordIds(
+      selectedWorkbenchDocument,
+      documentsById
+    ),
+    [documentsById, selectedWorkbenchDocument]
   );
   const shouldShowSelectedRecordWorkbench =
     !!selectedWorkbenchDocument
@@ -1286,7 +1296,7 @@ const DocumentsList: React.FC = () => {
               }
               investigationModeId={investigationModeId}
               removingDocumentIds={removingDocumentIds}
-              selectedDocumentId={selectedWorkbenchDocument?.resource.id}
+              expandedDocumentIds={expandedRecordDocumentIds}
               onOpenDocument={(document) =>
                 selectWorkbenchDocument(document, { toggle: true })}
               onAddChild={openAddChildModal}
@@ -1309,7 +1319,7 @@ const DocumentsList: React.FC = () => {
               }
               investigationModeId={investigationModeId}
               removingDocumentIds={removingDocumentIds}
-              selectedDocumentId={selectedWorkbenchDocument?.resource.id}
+              expandedDocumentIds={expandedRecordDocumentIds}
               onOpenDocument={(document) =>
                 selectWorkbenchDocument(document, { toggle: true })}
               onAddChild={openAddChildModal}
@@ -1627,7 +1637,7 @@ const RecordSection: React.FC<{
   issueCountByDocumentId: { [documentId: string]: number };
   investigationModeId?: KoreanFieldworkInvestigationModeId;
   removingDocumentIds: Set<string>;
-  selectedDocumentId?: string;
+  expandedDocumentIds: Set<string>;
   onOpenDocument: (document: Document) => void;
   onAddChild: (document: Document) => void;
   onAddDocumentOfCategory: (parentDoc: Document, categoryName: string) => void;
@@ -1642,7 +1652,7 @@ const RecordSection: React.FC<{
   issueCountByDocumentId,
   investigationModeId,
   removingDocumentIds,
-  selectedDocumentId,
+  expandedDocumentIds,
   onOpenDocument,
   onAddChild,
   onAddDocumentOfCategory,
@@ -1672,7 +1682,7 @@ const RecordSection: React.FC<{
           issueCount={issueCountByDocumentId[document.resource.id] ?? 0}
           investigationModeId={investigationModeId}
           isDeleting={removingDocumentIds.has(document.resource.id)}
-          selected={selectedDocumentId === document.resource.id}
+          selected={expandedDocumentIds.has(document.resource.id)}
           onOpen={() => onOpenDocument(document)}
           onAddChild={() => onAddChild(document)}
           onOpenEvidence={onOpenDocument}
@@ -1742,6 +1752,11 @@ const RecordRow: React.FC<{
     [allowedAddCategoryNames, document, documents, investigationModeId]
   );
   const visibleActions = actionSummary.actions.slice(0, 2);
+  const hasExpandedBody = selected && (
+    evidenceChips.length > 0
+    || !!description
+    || actionSummary.isTracked
+  );
   const handleOpenOrEdit = () => {
     const nowMs = Date.now();
     if (
@@ -1781,117 +1796,128 @@ const RecordRow: React.FC<{
       ]}
       testID={`recordSwipe_${document.resource.id}`}
     >
-      <TouchableOpacity
-        activeOpacity={0.88}
+      <View
         style={[
           styles.recordRow,
           selected && styles.recordRowSelected,
           isDeleting && styles.recordRowDeleting,
         ]}
-        onPress={handleOpenOrEdit}
-        testID={`recordRow_${document.resource.id}`}
+        testID={`recordRowContainer_${document.resource.id}`}
       >
-      <View style={styles.recordIcon}>
-        {category
-          ? <CategoryIcon category={category} size={24} />
-          : <MaterialIcons name="article" size={24} color="#555" />}
-      </View>
-      <View style={styles.recordMain}>
-        <View style={styles.recordTitleRow}>
-          <Text style={styles.recordTitle} numberOfLines={1}>{title}</Text>
-          {issueCount > 0 && (
-            <View style={styles.issueBadge}>
-              <MaterialIcons name="priority-high" size={12} color="white" />
-              <Text style={styles.issueBadgeText}>{issueCount}</Text>
+        <View style={styles.recordRowHeader}>
+          <TouchableOpacity
+            activeOpacity={0.88}
+            style={styles.recordOpenArea}
+            onPress={handleOpenOrEdit}
+            testID={`recordRow_${document.resource.id}`}
+          >
+            <View style={styles.recordIcon}>
+              {category
+                ? <CategoryIcon category={category} size={24} />
+                : <MaterialIcons name="article" size={24} color="#555" />}
             </View>
-          )}
+            <View style={styles.recordMain}>
+              <View style={styles.recordTitleRow}>
+                <Text style={styles.recordTitle} numberOfLines={1}>{title}</Text>
+                {issueCount > 0 && (
+                  <View style={styles.issueBadge}>
+                    <MaterialIcons name="priority-high" size={12} color="white" />
+                    <Text style={styles.issueBadgeText}>{issueCount}</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={styles.recordMeta} numberOfLines={1}>
+                {categoryLabel}{contextPath ? ` · 맥락 ${contextPath}` : ''}
+              </Text>
+              {statusChips.length > 0 && (
+                <View style={styles.statusChipRow}>
+                  {statusChips.map((chip) => (
+                    <StatusChip key={`${title}-${chip.label}`} chip={chip} />
+                  ))}
+                </View>
+              )}
+            </View>
+          </TouchableOpacity>
+          <View style={styles.recordActions}>
+            <TouchableOpacity
+              accessibilityLabel={`${title} 이어 만들 기록 추가`}
+              style={styles.iconButton}
+              onPress={(event) => {
+                event.stopPropagation();
+                onAddChild();
+              }}
+              hitSlop={8}
+            >
+              <MaterialIcons name="add" size={20} color="#475467" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              accessibilityLabel={`${title} 편집`}
+              style={styles.iconButton}
+              onPress={(event) => {
+                event.stopPropagation();
+                onEdit();
+              }}
+              hitSlop={8}
+            >
+              <MaterialIcons name="edit" size={20} color="#475467" />
+            </TouchableOpacity>
+          </View>
         </View>
-        <Text style={styles.recordMeta} numberOfLines={1}>
-          {categoryLabel}{contextPath ? ` · 맥락 ${contextPath}` : ''}
-        </Text>
-        {statusChips.length > 0 && (
-          <View style={styles.statusChipRow}>
-            {statusChips.map((chip) => (
-              <StatusChip key={`${title}-${chip.label}`} chip={chip} />
-            ))}
+        {hasExpandedBody && (
+          <View style={styles.recordExpandedBody}>
+            {evidenceChips.length > 0 && (
+              <View style={styles.evidenceChipRow}>
+                {evidenceChips.map((chip) => {
+                  const [firstEvidenceDocument] = chip.documents;
+                  const canCreate = !firstEvidenceDocument
+                    && !!chip.createCategoryName
+                    && allowedEvidenceCategories.has(chip.createCategoryName);
+                  const isPressable = !!firstEvidenceDocument || canCreate;
+
+                  return (
+                    <EvidenceChip
+                      key={`${title}-${chip.id}`}
+                      chip={chip}
+                      canCreate={canCreate}
+                      disabled={!isPressable}
+                      onPress={() => {
+                        if (firstEvidenceDocument) {
+                          onOpenEvidence(firstEvidenceDocument);
+                          return;
+                        }
+                        if (canCreate && chip.createCategoryName) {
+                          onAddEvidence(document, chip.createCategoryName);
+                        }
+                      }}
+                    />
+                  );
+                })}
+              </View>
+            )}
+            {!!description && (
+              <Text style={styles.recordDescription} numberOfLines={2}>
+                {description}
+              </Text>
+            )}
+            {actionSummary.isTracked && (
+              <RecordWorkSummary
+                summary={actionSummary}
+                actions={visibleActions}
+                onActionPress={(action) => {
+                  if (action.type === 'openDocument' && action.document) {
+                    onOpenEvidence(action.document);
+                    return;
+                  }
+
+                  if (action.type === 'createDocument' && action.categoryName) {
+                    onAddEvidence(document, action.categoryName);
+                  }
+                }}
+              />
+            )}
           </View>
         )}
-        {selected && evidenceChips.length > 0 && (
-          <View style={styles.evidenceChipRow}>
-            {evidenceChips.map((chip) => {
-              const [firstEvidenceDocument] = chip.documents;
-              const canCreate = !firstEvidenceDocument
-                && !!chip.createCategoryName
-                && allowedEvidenceCategories.has(chip.createCategoryName);
-              const isPressable = !!firstEvidenceDocument || canCreate;
-
-              return (
-                <EvidenceChip
-                  key={`${title}-${chip.id}`}
-                  chip={chip}
-                  canCreate={canCreate}
-                  disabled={!isPressable}
-                  onPress={() => {
-                    if (firstEvidenceDocument) {
-                      onOpenEvidence(firstEvidenceDocument);
-                      return;
-                    }
-                    if (canCreate && chip.createCategoryName) {
-                      onAddEvidence(document, chip.createCategoryName);
-                    }
-                  }}
-                />
-              );
-            })}
-          </View>
-        )}
-        {selected && description && (
-          <Text style={styles.recordDescription} numberOfLines={2}>
-            {description}
-          </Text>
-        )}
-        {selected && actionSummary.isTracked && (
-          <RecordWorkSummary
-            summary={actionSummary}
-            actions={visibleActions}
-            onActionPress={(action) => {
-              if (action.type === 'openDocument' && action.document) {
-                onOpenEvidence(action.document);
-                return;
-              }
-
-              if (action.type === 'createDocument' && action.categoryName) {
-                onAddEvidence(document, action.categoryName);
-              }
-            }}
-          />
-        )}
       </View>
-      <View style={styles.recordActions}>
-        <TouchableOpacity
-          accessibilityLabel={`${title} 이어 만들 기록 추가`}
-          style={styles.iconButton}
-          onPress={(event) => {
-            event.stopPropagation();
-            onAddChild();
-          }}
-          hitSlop={8}
-        >
-          <MaterialIcons name="add" size={20} color="#475467" />
-        </TouchableOpacity>
-        <TouchableOpacity
-          accessibilityLabel={`${title} 편집`}
-          style={styles.iconButton}
-          onPress={(event) => {
-            event.stopPropagation();
-            onEdit();
-          }}
-          hitSlop={8}
-        >
-          <MaterialIcons name="edit" size={20} color="#475467" />
-        </TouchableOpacity>
-      </View>
-      </TouchableOpacity>
     </SwipeableActionRow>
   );
 };
@@ -2450,10 +2476,8 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   recordRow: {
-    alignItems: 'center',
     borderBottomColor: '#eef0f3',
     borderBottomWidth: 1,
-    flexDirection: 'row',
     minHeight: 74,
     paddingHorizontal: 10,
     paddingVertical: 8,
@@ -2466,6 +2490,21 @@ const styles = StyleSheet.create({
   },
   recordRowDeleting: {
     opacity: 0.55,
+  },
+  recordRowHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+  },
+  recordOpenArea: {
+    alignItems: 'center',
+    flex: 1,
+    flexDirection: 'row',
+    minHeight: 58,
+    minWidth: 0,
+  },
+  recordExpandedBody: {
+    marginLeft: 42,
+    paddingRight: 2,
   },
   recordIcon: {
     alignItems: 'center',

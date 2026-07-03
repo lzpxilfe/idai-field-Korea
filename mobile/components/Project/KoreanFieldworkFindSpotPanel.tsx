@@ -4,8 +4,8 @@ import {
   NewResource,
   Resource,
 } from 'idai-field-core';
-import React, { useMemo, useState } from 'react';
-import type { DimensionValue } from 'react-native';
+import React, { useMemo, useRef, useState } from 'react';
+import type { DimensionValue, ViewStyle } from 'react-native';
 import {
   GestureResponderEvent,
   LayoutChangeEvent,
@@ -38,6 +38,28 @@ interface CanvasSize {
   width: number;
 }
 
+interface FindSpotViewport {
+  offsetX: number;
+  offsetY: number;
+  scale: number;
+}
+
+interface FindSpotPanGesture {
+  start: PixelPoint;
+  viewport: FindSpotViewport;
+}
+
+interface FindSpotPinchGesture {
+  center: PixelPoint;
+  distance: number;
+  viewport: FindSpotViewport;
+}
+
+interface FindSpotTapGesture {
+  start: PixelPoint;
+  viewport: FindSpotViewport;
+}
+
 interface FeatureLocationSketch {
   center: SketchPoint;
   points: SketchPoint[];
@@ -68,6 +90,11 @@ const DEFAULT_CANVAS_SIZE = {
   height: 240,
   width: 320,
 };
+const DEFAULT_FIND_SPOT_VIEWPORT: FindSpotViewport = {
+  offsetX: 0,
+  offsetY: 0,
+  scale: 1,
+};
 const FEATURE_SKETCH_SHAPE_BASE_WIDTH = 18;
 const FEATURE_SKETCH_SHAPE_BASE_HEIGHT = 12;
 const FEATURE_SKETCH_SHAPE_MIN_SCALE = 8;
@@ -75,6 +102,9 @@ const FEATURE_SKETCH_SHAPE_MAX_SCALE = 240;
 const SHAPE_PREVIEW_SIDE_PADDING = 10;
 const SHAPE_PREVIEW_TOP_PADDING = 24;
 const SHAPE_PREVIEW_BOTTOM_PADDING = 12;
+const FIND_SPOT_MIN_SCALE = 1;
+const FIND_SPOT_MAX_SCALE = 5;
+const FIND_SPOT_TAP_DISTANCE = 8;
 const VALID_SHAPES = new Set<FeatureLocationSketchShape>([
   'point',
   'polygon',
@@ -102,6 +132,11 @@ const KoreanFieldworkFindSpotPanel: React.FC<Props> = ({
   resource,
 }) => {
   const [canvasSize, setCanvasSize] = useState(DEFAULT_CANVAS_SIZE);
+  const [viewport, setViewport] = useState(DEFAULT_FIND_SPOT_VIEWPORT);
+  const pinchGestureRef = useRef<FindSpotPinchGesture>();
+  const panGestureRef = useRef<FindSpotPanGesture>();
+  const tapGestureRef = useRef<FindSpotTapGesture>();
+  const didMoveGestureRef = useRef(false);
   const featureDocument = useMemo(
     () => getFeatureContextDocument(resource, documents, parentDocument),
     [documents, parentDocument, resource]
@@ -127,8 +162,114 @@ const KoreanFieldworkFindSpotPanel: React.FC<Props> = ({
     const { height, width } = event.nativeEvent.layout;
     if (height > 0 && width > 0) setCanvasSize({ height, width });
   };
+  const normalizedViewport = normalizeFindSpotViewport(viewport, canvasSize);
+  const startViewportGesture = (event: GestureResponderEvent) => {
+    const pinchGesture = getFindSpotTouchGesture(event);
+    didMoveGestureRef.current = false;
+
+    if (pinchGesture) {
+      pinchGestureRef.current = {
+        center: pinchGesture.center,
+        distance: Math.max(1, pinchGesture.distance),
+        viewport: normalizedViewport,
+      };
+      panGestureRef.current = undefined;
+      tapGestureRef.current = undefined;
+      return;
+    }
+
+    const point = getPrimaryTouchPoint(event);
+    tapGestureRef.current = point
+      ? { start: point, viewport: normalizedViewport }
+      : undefined;
+    panGestureRef.current = point && normalizedViewport.scale > FIND_SPOT_MIN_SCALE
+      ? { start: point, viewport: normalizedViewport }
+      : undefined;
+  };
+  const moveViewportGesture = (event: GestureResponderEvent) => {
+    const pinchGesture = getFindSpotTouchGesture(event);
+    if (pinchGesture) {
+      const initialGesture = pinchGestureRef.current ?? {
+        center: pinchGesture.center,
+        distance: Math.max(1, pinchGesture.distance),
+        viewport: normalizedViewport,
+      };
+      pinchGestureRef.current = initialGesture;
+      panGestureRef.current = undefined;
+      tapGestureRef.current = undefined;
+      didMoveGestureRef.current = true;
+
+      const nextScale = clamp(
+        initialGesture.viewport.scale
+          * (pinchGesture.distance / Math.max(1, initialGesture.distance)),
+        FIND_SPOT_MIN_SCALE,
+        FIND_SPOT_MAX_SCALE
+      );
+      const scaleRatio = nextScale / initialGesture.viewport.scale;
+      const canvasCenter = getCanvasCenter(canvasSize);
+
+      setViewport(normalizeFindSpotViewport({
+        offsetX: pinchGesture.center.x - canvasCenter.x
+          - (scaleRatio * (
+            initialGesture.center.x
+            - canvasCenter.x
+            - initialGesture.viewport.offsetX
+          )),
+        offsetY: pinchGesture.center.y - canvasCenter.y
+          - (scaleRatio * (
+            initialGesture.center.y
+            - canvasCenter.y
+            - initialGesture.viewport.offsetY
+          )),
+        scale: nextScale,
+      }, canvasSize));
+      return;
+    }
+
+    const point = getPrimaryTouchPoint(event);
+    const tapGesture = tapGestureRef.current;
+    if (point && tapGesture && getPixelDistance(tapGesture.start, point) > FIND_SPOT_TAP_DISTANCE) {
+      didMoveGestureRef.current = true;
+    }
+    if (!point || normalizedViewport.scale <= FIND_SPOT_MIN_SCALE) return;
+
+    const panGesture = panGestureRef.current ?? {
+      start: point,
+      viewport: normalizedViewport,
+    };
+    panGestureRef.current = panGesture;
+    setViewport(normalizeFindSpotViewport({
+      offsetX: panGesture.viewport.offsetX + point.x - panGesture.start.x,
+      offsetY: panGesture.viewport.offsetY + point.y - panGesture.start.y,
+      scale: panGesture.viewport.scale,
+    }, canvasSize));
+  };
+  const finishViewportGesture = (event?: GestureResponderEvent) => {
+    const tapGesture = tapGestureRef.current;
+    const point = event ? getPrimaryTouchPoint(event) : undefined;
+    const shouldAddPoint = !!tapGesture
+      && !!point
+      && !didMoveGestureRef.current
+      && getPixelDistance(tapGesture.start, point) <= FIND_SPOT_TAP_DISTANCE;
+
+    pinchGestureRef.current = undefined;
+    panGestureRef.current = undefined;
+    tapGestureRef.current = undefined;
+    didMoveGestureRef.current = false;
+    setViewport((currentViewport) =>
+      normalizeFindSpotViewport(currentViewport, canvasSize));
+
+    if (shouldAddPoint) addPoint(event as GestureResponderEvent);
+  };
+  const resetViewport = () => {
+    pinchGestureRef.current = undefined;
+    panGestureRef.current = undefined;
+    tapGestureRef.current = undefined;
+    didMoveGestureRef.current = false;
+    setViewport(DEFAULT_FIND_SPOT_VIEWPORT);
+  };
   const addPoint = (event: GestureResponderEvent) => {
-    const point = getNormalizedPoint(event, canvasSize);
+    const point = getNormalizedPoint(event, canvasSize, normalizedViewport);
     if (!point) return;
 
     writeItems(
@@ -178,7 +319,11 @@ const KoreanFieldworkFindSpotPanel: React.FC<Props> = ({
       <Text style={styles.hint}>{TEXT.addHint}</Text>
       <View
         onLayout={updateCanvasSize}
-        onResponderRelease={addPoint}
+        onResponderGrant={startViewportGesture}
+        onResponderMove={moveViewportGesture}
+        onResponderRelease={finishViewportGesture}
+        onResponderTerminate={() => finishViewportGesture()}
+        onResponderTerminationRequest={() => false}
         onStartShouldSetResponder={() => true}
         style={styles.canvas}
         testID="findSpotCanvas"
@@ -186,25 +331,47 @@ const KoreanFieldworkFindSpotPanel: React.FC<Props> = ({
         <View style={styles.northBand}>
           <Text style={styles.northText}>N</Text>
         </View>
-        <View style={styles.verticalAxis} />
-        <View style={styles.horizontalAxis} />
-        {featureSketch
-          ? renderFeatureSketch(featureSketch, canvasSize)
-          : (
-            <View style={styles.emptyPreview}>
-              <Text style={styles.emptyPreviewText}>{TEXT.noFeature}</Text>
+        <View
+          pointerEvents="none"
+          style={[
+            styles.mapContent,
+            getViewportTransformStyle(normalizedViewport),
+          ]}
+          testID="findSpotMapContent"
+        >
+          <View style={styles.verticalAxis} />
+          <View style={styles.horizontalAxis} />
+          {featureSketch
+            ? renderFeatureSketch(featureSketch, canvasSize)
+            : (
+              <View style={styles.emptyPreview}>
+                <Text style={styles.emptyPreviewText}>{TEXT.noFeature}</Text>
+              </View>
+            )}
+          {items.map((item) => (
+            <View
+              key={`find-spot-${item.number}`}
+              pointerEvents="none"
+              style={[styles.findPoint, getPointPercentStyle(item.point)]}
+              testID={`findSpotPoint_${item.number}`}
+            >
+              <Text style={styles.findPointText}>{item.number}</Text>
             </View>
-          )}
-        {items.map((item) => (
-          <View
-            key={`find-spot-${item.number}`}
-            pointerEvents="none"
-            style={[styles.findPoint, getPointPercentStyle(item.point)]}
-            testID={`findSpotPoint_${item.number}`}
+          ))}
+        </View>
+        {normalizedViewport.scale > FIND_SPOT_MIN_SCALE && (
+          <TouchableOpacity
+            activeOpacity={0.86}
+            onPress={resetViewport}
+            style={styles.zoomResetButton}
+            testID="findSpotZoomReset"
           >
-            <Text style={styles.findPointText}>{item.number}</Text>
-          </View>
-        ))}
+            <MaterialIcons name="zoom-out-map" size={15} color="#175cd3" />
+            <Text style={styles.zoomResetText}>
+              {`${Math.round(normalizedViewport.scale * 100)}%`}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
       {items.length > 0 && (
         <View style={styles.itemList}>
@@ -568,47 +735,152 @@ const SketchLineSegment: React.FC<{
 
 const getNormalizedPoint = (
   event: GestureResponderEvent,
-  canvasSize: CanvasSize
+  canvasSize: CanvasSize,
+  viewport: FindSpotViewport
 ): SketchPoint | undefined => {
-  const { locationX, locationY } = getLocalTouchPoint(event);
-  if (typeof locationX !== 'number' || typeof locationY !== 'number') {
-    return undefined;
-  }
+  const touchPoint = getPrimaryTouchPoint(event);
+  if (!touchPoint) return undefined;
+
+  const { x, y } = screenToViewportContentPoint(
+    touchPoint,
+    canvasSize,
+    viewport
+  );
   if (
-    locationX < 0
-    || locationX > canvasSize.width
-    || locationY < 0
-    || locationY > canvasSize.height
+    x < 0
+    || x > canvasSize.width
+    || y < 0
+    || y > canvasSize.height
   ) {
     return undefined;
   }
 
   return {
-    x: clamp((locationX / canvasSize.width) * 100, 0, 100),
-    y: clamp((locationY / canvasSize.height) * 100, 0, 100),
+    x: clamp((x / canvasSize.width) * 100, 0, 100),
+    y: clamp((y / canvasSize.height) * 100, 0, 100),
   };
 };
 
-const getLocalTouchPoint = (event: GestureResponderEvent): {
-  locationX?: number;
-  locationY?: number;
-} => {
+const screenToViewportContentPoint = (
+  point: PixelPoint,
+  canvasSize: CanvasSize,
+  viewport: FindSpotViewport
+): PixelPoint => {
+  const center = getCanvasCenter(canvasSize);
+
+  return {
+    x: center.x + ((point.x - center.x - viewport.offsetX) / viewport.scale),
+    y: center.y + ((point.y - center.y - viewport.offsetY) / viewport.scale),
+  };
+};
+
+const getViewportTransformStyle = (
+  viewport: FindSpotViewport
+): ViewStyle => ({
+  transform: [
+    { translateX: viewport.offsetX },
+    { translateY: viewport.offsetY },
+    { scale: viewport.scale },
+  ],
+});
+
+const normalizeFindSpotViewport = (
+  viewport: FindSpotViewport,
+  canvasSize: CanvasSize
+): FindSpotViewport => {
+  const scale = clamp(
+    viewport.scale,
+    FIND_SPOT_MIN_SCALE,
+    FIND_SPOT_MAX_SCALE
+  );
+  if (scale <= FIND_SPOT_MIN_SCALE) return DEFAULT_FIND_SPOT_VIEWPORT;
+
+  const maxOffsetX = (canvasSize.width * (scale - 1)) / 2;
+  const maxOffsetY = (canvasSize.height * (scale - 1)) / 2;
+
+  return {
+    offsetX: clamp(viewport.offsetX, -maxOffsetX, maxOffsetX),
+    offsetY: clamp(viewport.offsetY, -maxOffsetY, maxOffsetY),
+    scale,
+  };
+};
+
+const getFindSpotTouchGesture = (
+  event: GestureResponderEvent | undefined
+): {
+  center: PixelPoint;
+  distance: number;
+} | undefined => {
+  const touches = getNativeTouches(event);
+  if (touches.length < 2) return undefined;
+
+  const first = touches[0];
+  const second = touches[1];
+
+  return {
+    center: {
+      x: (first.x + second.x) / 2,
+      y: (first.y + second.y) / 2,
+    },
+    distance: getPixelDistance(first, second),
+  };
+};
+
+const getPrimaryTouchPoint = (
+  event: GestureResponderEvent | undefined
+): PixelPoint | undefined =>
+  getNativeTouches(event)[0];
+
+const getNativeTouches = (
+  event: GestureResponderEvent | undefined
+): PixelPoint[] => {
+  if (!event) return [];
+
   const nativeEvent = event.nativeEvent as unknown as {
     changedTouches?: TouchPointCandidate[];
     locationX?: number;
     locationY?: number;
     touches?: TouchPointCandidate[];
   };
-  const localTouch = [
-    ...(nativeEvent.touches ?? []),
-    ...(nativeEvent.changedTouches ?? []),
-  ].find(hasLocalTouchCoordinates);
+  const touches = (nativeEvent.touches?.length
+    ? nativeEvent.touches
+    : nativeEvent.changedTouches) ?? [];
+  const normalizedTouches = touches
+    .map(normalizeTouchPoint)
+    .filter((point): point is PixelPoint => !!point);
 
-  return {
-    locationX: localTouch?.locationX ?? localTouch?.x ?? nativeEvent.locationX,
-    locationY: localTouch?.locationY ?? localTouch?.y ?? nativeEvent.locationY,
-  };
+  if (normalizedTouches.length > 0) return normalizedTouches;
+  if (
+    Number.isFinite(nativeEvent.locationX)
+    && Number.isFinite(nativeEvent.locationY)
+  ) {
+    return [{
+      x: nativeEvent.locationX as number,
+      y: nativeEvent.locationY as number,
+    }];
+  }
+
+  return [];
 };
+
+const normalizeTouchPoint = (
+  touch: TouchPointCandidate
+): PixelPoint | undefined => {
+  const x = touch.locationX ?? touch.x;
+  const y = touch.locationY ?? touch.y;
+
+  return Number.isFinite(x) && Number.isFinite(y)
+    ? { x: x as number, y: y as number }
+    : undefined;
+};
+
+const getPixelDistance = (first: PixelPoint, second: PixelPoint): number =>
+  Math.sqrt(((second.x - first.x) ** 2) + ((second.y - first.y) ** 2));
+
+const getCanvasCenter = (canvasSize: CanvasSize): PixelPoint => ({
+  x: canvasSize.width / 2,
+  y: canvasSize.height / 2,
+});
 
 interface TouchPointCandidate {
   locationX?: number;
@@ -616,10 +888,6 @@ interface TouchPointCandidate {
   x?: number;
   y?: number;
 }
-
-const hasLocalTouchCoordinates = (value: TouchPointCandidate): boolean =>
-  Number.isFinite(value.locationX ?? value.x)
-  && Number.isFinite(value.locationY ?? value.y);
 
 const denormalizePoint = (
   point: SketchPoint,
@@ -829,6 +1097,13 @@ const styles = StyleSheet.create({
   itemList: {
     marginTop: 8,
   },
+  mapContent: {
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
   itemNumber: {
     alignItems: 'center',
     backgroundColor: '#2f5f4a',
@@ -859,6 +1134,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 0,
     top: 0,
+    zIndex: 20,
   },
   northText: {
     color: '#175cd3',
@@ -884,6 +1160,26 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 18,
     width: 1,
+  },
+  zoomResetButton: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderColor: '#b2ddff',
+    borderRadius: 6,
+    borderWidth: 1,
+    bottom: 8,
+    flexDirection: 'row',
+    minHeight: 32,
+    paddingHorizontal: 8,
+    position: 'absolute',
+    right: 8,
+    zIndex: 30,
+  },
+  zoomResetText: {
+    color: '#175cd3',
+    fontSize: 11,
+    fontWeight: '900',
+    marginLeft: 4,
   },
 });
 

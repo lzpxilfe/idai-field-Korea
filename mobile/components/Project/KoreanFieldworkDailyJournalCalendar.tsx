@@ -70,14 +70,13 @@ const MIN_POINT_DISTANCE = 18;
 const RELEASE_POINT_MIN_DISTANCE = 1;
 const INTERPOLATED_POINT_SPACING = 90;
 const MAX_INTERPOLATED_POINTS_PER_MOVE = 18;
+const BOUNDARY_MEMO_SMOOTHING_SEGMENT_LENGTH = 16;
+const BOUNDARY_MEMO_MIN_SMOOTHING_STEPS = 1;
+const BOUNDARY_MEMO_MAX_SMOOTHING_STEPS = 4;
 const PLAN_PADDING_RATIO = 0.08;
 const BOUNDARY_MEMO_STROKE_COLOR = '#f97316';
 const BOUNDARY_MEMO_ERASER_COLOR = '#ffffff';
 const FIELD = KOREAN_FIELDWORK_DAILY_JOURNAL_FIELDS;
-const WORK_MEMO_PLACEHOLDER =
-  '\uc624\ub298 \uc870\uc0ac \ub0b4\uc6a9, \ubc1c\uacac \uc704\uce58, '
-  + '\uc81c\ud1a0 \ubc94\uc704, \ub0b4\uc77c \ud655\uc778\ud560 '
-  + '\uc810\uc744 \uc801\uc2b5\ub2c8\ub2e4.';
 
 const KoreanFieldworkDailyJournalCalendar: React.FC<
   KoreanFieldworkDailyJournalCalendarProps
@@ -94,8 +93,6 @@ const KoreanFieldworkDailyJournalCalendar: React.FC<
 }) => {
   const [personnelDraft, setPersonnelDraft] =
     useState(getPersonnelDraft(dailyLog));
-  const [workMemoDraft, setWorkMemoDraft] =
-    useState(getStringField(dailyLog, FIELD.workMemo));
   const [saveStatus, setSaveStatus] =
     useState<'saved'|'saving'|'error'|undefined>();
   const dayItems = useMemo(() => getCalendarWeek(now), [now]);
@@ -113,7 +110,6 @@ const KoreanFieldworkDailyJournalCalendar: React.FC<
 
   useEffect(() => {
     setPersonnelDraft(getPersonnelDraft(dailyLog));
-    setWorkMemoDraft(getStringField(dailyLog, FIELD.workMemo));
   }, [dailyLog]);
 
   const saveUpdates = async (updates: Record<string, unknown>) => {
@@ -153,13 +149,6 @@ const KoreanFieldworkDailyJournalCalendar: React.FC<
   };
   const toggleSafety = (fieldName: string, currentValue: boolean) => {
     saveUpdates({ [fieldName]: !currentValue });
-  };
-  const saveWorkMemo = () => {
-    if (!canEdit || isSaving) return;
-
-    saveUpdates({
-      [FIELD.workMemo]: normalizeText(workMemoDraft) || undefined,
-    });
   };
   const updateBoundaryStrokes = (serializedStrokes: string) => {
     saveUpdates({
@@ -377,42 +366,6 @@ const KoreanFieldworkDailyJournalCalendar: React.FC<
             />
           </View>
         </View>
-      </View>
-
-      <View style={styles.workMemoSection}>
-        <View style={styles.fieldHeaderRow}>
-          <Text style={styles.fieldLabel}>조사일지 메모</Text>
-          <TouchableOpacity
-            activeOpacity={0.86}
-            disabled={!canEdit || isSaving}
-            onPress={saveWorkMemo}
-            style={[
-              styles.smallButton,
-              (!canEdit || isSaving) && styles.disabledButton,
-            ]}
-            testID="dailyJournalWorkMemoSave"
-          >
-            <Text
-              style={[
-                styles.smallButtonText,
-                (!canEdit || isSaving) && styles.disabledButtonText,
-              ]}
-            >
-              저장
-            </Text>
-          </TouchableOpacity>
-        </View>
-        <TextInput
-          editable={canEdit && !isSaving}
-          multiline
-          onChangeText={setWorkMemoDraft}
-          onEndEditing={saveWorkMemo}
-          placeholder={WORK_MEMO_PLACEHOLDER}
-          style={styles.workMemoInput}
-          testID="dailyJournalWorkMemoInput"
-          textAlignVertical="top"
-          value={workMemoDraft}
-        />
       </View>
 
       <BoundaryMemoCanvas
@@ -1232,19 +1185,45 @@ const toStrokeSegments = (
     );
   }
 
-  return stroke.points.slice(1).map((point, pointIndex) => {
-    const previousPoint = stroke.points[pointIndex];
+  const smoothedPoints = getSmoothedBoundaryMemoStrokePoints(
+    stroke,
+    canvasSize,
+    aspectRatio
+  );
+  const segments = smoothedPoints.slice(1).map((point, pointIndex) => {
+    const previousPoint = smoothedPoints[pointIndex];
 
     return (
       <LineSegment
         color={strokeColor}
-        end={denormalizePoint(point, canvasSize, aspectRatio)}
+        end={point}
         key={`${strokeIndex}-${pointIndex}`}
-        start={denormalizePoint(previousPoint, canvasSize, aspectRatio)}
+        start={previousPoint}
+        testID="dailyJournalBoundaryStrokeSegment"
         width={strokeWidth}
       />
     );
   });
+  const joints = smoothedPoints.map((point, pointIndex) => (
+    <View
+      key={`${strokeIndex}-joint-${pointIndex}`}
+      pointerEvents="none"
+      style={[
+        styles.strokeJoint,
+        {
+          backgroundColor: strokeColor,
+          borderRadius: strokeWidth / 2,
+          height: strokeWidth,
+          left: point.x - (strokeWidth / 2),
+          top: point.y - (strokeWidth / 2),
+          width: strokeWidth,
+        },
+      ]}
+      testID="dailyJournalBoundaryStrokeJoint"
+    />
+  ));
+
+  return segments.concat(joints);
 };
 
 const getStrokeWidth = (stroke: KoreanFieldworkHandwritingStroke): number =>
@@ -1256,12 +1235,111 @@ const getBoundaryMemoStrokeColor = (
   ? BOUNDARY_MEMO_ERASER_COLOR
   : stroke.color ?? BOUNDARY_MEMO_STROKE_COLOR;
 
+const getSmoothedBoundaryMemoStrokePoints = (
+  stroke: KoreanFieldworkHandwritingStroke,
+  canvasSize: { height: number; width: number },
+  aspectRatio = 1
+): { x: number; y: number }[] => {
+  const points = stroke.points.map((point) =>
+    denormalizePoint(point, canvasSize, aspectRatio));
+  if (points.length < 3) return points;
+
+  const smoothedPoints: { x: number; y: number }[] = [];
+
+  points.slice(0, -1).forEach((point, index) => {
+    const nextPoint = points[index + 1];
+    const previousPoint = points[Math.max(index - 1, 0)];
+    const followingPoint = points[Math.min(index + 2, points.length - 1)];
+    const steps = clamp(
+      Math.ceil(getPixelPointDistance(
+        point,
+        nextPoint
+      ) / BOUNDARY_MEMO_SMOOTHING_SEGMENT_LENGTH),
+      BOUNDARY_MEMO_MIN_SMOOTHING_STEPS,
+      BOUNDARY_MEMO_MAX_SMOOTHING_STEPS
+    );
+
+    for (let step = 0; step < steps; step += 1) {
+      const smoothedPoint = getCatmullRomPoint(
+        previousPoint,
+        point,
+        nextPoint,
+        followingPoint,
+        step / steps,
+        canvasSize
+      );
+      appendPixelPointIfDistinct(smoothedPoints, smoothedPoint);
+    }
+  });
+
+  appendPixelPointIfDistinct(smoothedPoints, points[points.length - 1]);
+
+  return smoothedPoints;
+};
+
+const getCatmullRomPoint = (
+  point0: { x: number; y: number },
+  point1: { x: number; y: number },
+  point2: { x: number; y: number },
+  point3: { x: number; y: number },
+  t: number,
+  canvasSize: { height: number; width: number }
+): { x: number; y: number } => {
+  const t2 = t * t;
+  const t3 = t2 * t;
+
+  return clampPixelPoint({
+    x: 0.5 * (
+      (2 * point1.x)
+      + ((-point0.x + point2.x) * t)
+      + (((2 * point0.x) - (5 * point1.x) + (4 * point2.x) - point3.x) * t2)
+      + ((-point0.x + (3 * point1.x) - (3 * point2.x) + point3.x) * t3)
+    ),
+    y: 0.5 * (
+      (2 * point1.y)
+      + ((-point0.y + point2.y) * t)
+      + (((2 * point0.y) - (5 * point1.y) + (4 * point2.y) - point3.y) * t2)
+      + ((-point0.y + (3 * point1.y) - (3 * point2.y) + point3.y) * t3)
+    ),
+  }, canvasSize);
+};
+
+const appendPixelPointIfDistinct = (
+  points: { x: number; y: number }[],
+  point: { x: number; y: number }
+) => {
+  const previousPoint = points[points.length - 1];
+  if (
+    previousPoint
+    && Math.round(previousPoint.x) === Math.round(point.x)
+    && Math.round(previousPoint.y) === Math.round(point.y)
+  ) {
+    return;
+  }
+
+  points.push(point);
+};
+
+const clampPixelPoint = (
+  point: { x: number; y: number },
+  canvasSize: { height: number; width: number }
+): { x: number; y: number } => ({
+  x: clamp(point.x, 0, canvasSize.width),
+  y: clamp(point.y, 0, canvasSize.height),
+});
+
+const getPixelPointDistance = (
+  start: { x: number; y: number },
+  end: { x: number; y: number }
+): number => Math.sqrt(((end.x - start.x) ** 2) + ((end.y - start.y) ** 2));
+
 const LineSegment: React.FC<{
   color: string;
   end: { x: number; y: number };
   start: { x: number; y: number };
+  testID?: string;
   width: number;
-}> = ({ color, end, start, width }) => {
+}> = ({ color, end, start, testID, width }) => {
   const distance = Math.sqrt(((end.x - start.x) ** 2) + ((end.y - start.y) ** 2));
   const angle = Math.atan2(end.y - start.y, end.x - start.x);
 
@@ -1277,6 +1355,7 @@ const LineSegment: React.FC<{
         transform: [{ rotateZ: `${angle}rad` }],
         width: distance,
       }}
+      testID={testID}
     />
   );
 };
@@ -1549,26 +1628,6 @@ const styles = StyleSheet.create({
   boundaryActions: {
     flexDirection: 'row',
   },
-  workMemoInput: {
-    backgroundColor: '#ffffff',
-    borderColor: '#d0d5dd',
-    borderRadius: 6,
-    borderWidth: 1,
-    color: '#101828',
-    fontSize: 13,
-    fontWeight: '700',
-    lineHeight: 18,
-    marginTop: 8,
-    minHeight: 96,
-    paddingHorizontal: 10,
-    paddingVertical: 9,
-  },
-  workMemoSection: {
-    borderTopColor: '#eaecf0',
-    borderTopWidth: 1,
-    marginTop: 12,
-    paddingTop: 12,
-  },
   iconButton: {
     alignItems: 'center',
     borderColor: '#d0d5dd',
@@ -1637,6 +1696,10 @@ const styles = StyleSheet.create({
     borderColor: '#7c2d12',
     borderRadius: 4,
     borderWidth: 1,
+    position: 'absolute',
+  },
+  strokeJoint: {
+    backgroundColor: '#f97316',
     position: 'absolute',
   },
   statusText: {

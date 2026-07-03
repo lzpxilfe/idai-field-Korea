@@ -171,6 +171,14 @@ export const createKoreanFieldworkDraftResource = (
     };
   }
 
+  if (categoryName === C.DRAWING) {
+    return {
+      ...resource,
+      drawingSketchStrokes: '[]',
+      mediaEvidenceRole: ['fieldResultRecord'],
+    };
+  }
+
   if (categoryName === C.SURVEY_BOUNDARY) {
     return {
       ...resource,

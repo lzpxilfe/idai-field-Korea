@@ -23,6 +23,9 @@ import KoreanFieldworkDrawingSurveyPanel
   from '@/components/Project/KoreanFieldworkDrawingSurveyPanel';
 import KoreanFieldworkFindSpotPanel
   from '@/components/Project/KoreanFieldworkFindSpotPanel';
+import KoreanFieldworkFreeDrawingPanel, {
+  getKoreanFieldworkFreeDrawingConfig,
+} from '@/components/Project/KoreanFieldworkFreeDrawingPanel';
 import FieldworkPhotoAnnotationPanel, {
   FIELDWORK_PHOTO_ANNOTATION_FIELDS,
   FieldworkPhotoSamplePoint,
@@ -83,6 +86,7 @@ const DocumentAdd: React.FC = () => {
   const [saveBtnEnabled, setSaveBtnEnabled] = useState<boolean>(false);
   const [investigationModeId, setInvestigationModeId] =
     useState<KoreanFieldworkInvestigationModeId>();
+  const [isFreeDrawingActive, setIsFreeDrawingActive] = useState(false);
   const [soilProfileSampleRequest, setSoilProfileSampleRequest] =
     useState<SoilProfileLayerSampleRequest>();
   const projectId = preferencesContext.preferences.currentProject;
@@ -216,6 +220,8 @@ const DocumentAdd: React.FC = () => {
     );
   }
 
+  const freeDrawingConfig = getKoreanFieldworkFreeDrawingConfig(categoryName);
+
   return (
     <DocumentForm
       titleBarRight={
@@ -277,6 +283,23 @@ const DocumentAdd: React.FC = () => {
           />
         </View>
       }
+      formFooter={freeDrawingConfig ? (
+        <KoreanFieldworkFreeDrawingPanel
+          onDrawingActiveChange={setIsFreeDrawingActive}
+          strokesValue={newResource[freeDrawingConfig.strokesField]}
+          title={freeDrawingConfig.title}
+          onUpdateStrokes={(serializedStrokes) => {
+            const updates: Record<string, unknown> = {
+              [freeDrawingConfig.strokesField]: serializedStrokes,
+            };
+            if (freeDrawingConfig.updatedAtField) {
+              updates[freeDrawingConfig.updatedAtField] = new Date().toISOString();
+            }
+            applyResourceUpdates(updates);
+          }}
+        />
+      ) : undefined}
+      isScrollEnabled={!isFreeDrawingActive}
       resource={newResource}
       updateFunction={updateResource}
       resourceActions={renderPhotoResourceActions(

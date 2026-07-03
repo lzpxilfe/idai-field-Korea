@@ -22,6 +22,7 @@ import { PreferencesContext } from '@/contexts/preferences-context';
 import { UpdatedDocument } from '@/hooks/use-mapdata';
 import usePrevious from '@/hooks/use-previous';
 import {
+  getAspectPreservingWorldViewport,
   Transformation,
   WORLD_CS_HEIGHT,
   WORLD_CS_WIDTH,
@@ -126,6 +127,16 @@ const GLMap: React.FC<GLMapProps> = ({
       glContext.current.endFrameEXP();
     }
   }, [camera, scene]);
+  const updateCameraFrame = useCallback(() => {
+    if (!isUsableScreen(screen)) return;
+
+    const viewport = getAspectPreservingWorldViewport(screen);
+    camera.left = viewport.minX;
+    camera.right = viewport.minX + viewport.width;
+    camera.bottom = viewport.minY;
+    camera.top = viewport.minY + viewport.height;
+    camera.updateProjectionMatrix();
+  }, [camera, screen]);
 
   const panResponder = useMapGestureHandler(
     top,
@@ -248,6 +259,11 @@ const GLMap: React.FC<GLMapProps> = ({
   }, [viewBox]);
 
   useEffect(() => {
+    updateCameraFrame();
+    renderScene();
+  }, [renderScene, updateCameraFrame]);
+
+  useEffect(() => {
     scene.clear();
     geoDocuments.forEach((doc) => {
       try {
@@ -334,9 +350,10 @@ const GLMap: React.FC<GLMapProps> = ({
         screen.height * glContextToScreenFactor.current
       );
 
+      updateCameraFrame();
       renderScene();
     }
-  }, [screen, renderScene]);
+  }, [screen, renderScene, updateCameraFrame]);
 
   useEffect(() => {
     if (!updateDoc) return;
@@ -412,6 +429,7 @@ const GLMap: React.FC<GLMapProps> = ({
       }
       renderer.current.setSize(width, height);
       renderer.current.setClearColor(FIELDWORK_MAP_WORKSPACE_BACKGROUND);
+      updateCameraFrame();
 
       camera.position.set(
         cameraDefaultPos.x,
@@ -464,11 +482,18 @@ const styles = StyleSheet.create({
   mapSettingsContainer: {
     backgroundColor: FIELDWORK_MAP_WORKSPACE_BACKGROUND,
     flex: 1,
+    position: 'relative',
   },
   mapSettings: {
-    padding: 4,
-    marginLeft: 'auto',
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderRadius: 6,
     margin: 4,
+    marginLeft: 'auto',
+    padding: 4,
+    position: 'absolute',
+    right: 4,
+    top: 4,
+    zIndex: 10,
   },
 });
 

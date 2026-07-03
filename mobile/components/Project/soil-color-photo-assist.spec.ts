@@ -6,6 +6,7 @@ import {
   extractMunsellCandidateOptions,
   getNearestMunsellCandidates,
   hasMunsellCandidateOptions,
+  SOIL_COLOR_MUNSELL_REFERENCES,
 } from './soil-color-photo-assist';
 
 describe('soil color photo assist', () => {
@@ -15,7 +16,7 @@ describe('soil color photo assist', () => {
     );
 
     expect(updates.soilColorAssistStatus).toBe('candidatesAvailable');
-    expect(updates.soilColorAssistCandidates).toContain('1: 10YR 4/3');
+    expect(updates.soilColorAssistCandidates).toContain('1: 10YR 3/4');
     expect(updates.soilColorAssistCandidates).toContain('사진 중앙부 평균 RGB');
   });
 
@@ -26,8 +27,20 @@ describe('soil color photo assist', () => {
       blue: 88,
     });
 
-    expect(candidates[0].munsell).toBe('2.5Y 5/3');
+    expect(candidates[0].munsell).toBe('2.5Y 5/4');
     expect(candidates[0].confidence).toBe('high');
+  });
+
+  it('uses expanded Munsell chips without automatic Korean color names', () => {
+    expect(SOIL_COLOR_MUNSELL_REFERENCES.length).toBeGreaterThan(200);
+    expect(SOIL_COLOR_MUNSELL_REFERENCES.some(
+      (reference) => reference.munsell === '5YR 4/4'
+    )).toBe(true);
+
+    SOIL_COLOR_MUNSELL_REFERENCES.forEach((reference) => {
+      expect(reference).not.toHaveProperty('korName');
+      expect(reference).not.toHaveProperty('soilClass');
+    });
   });
 
   it('extracts unique Munsell options from candidate text', () => {
@@ -60,9 +73,9 @@ describe('soil color photo assist', () => {
     );
 
     expect(leftUpdates.soilColorAssistCandidates).toContain('사진 선택 지점 20%/50%');
-    expect(leftUpdates.soilColorAssistCandidates).toContain('1: 10YR 4/3');
+    expect(leftUpdates.soilColorAssistCandidates).toContain('1: 10YR 3/4');
     expect(rightUpdates.soilColorAssistCandidates).toContain('사진 선택 지점 80%/50%');
-    expect(rightUpdates.soilColorAssistCandidates).toContain('1: 2.5Y 5/3');
+    expect(rightUpdates.soilColorAssistCandidates).toContain('1: 2.5Y 5/4');
   });
 
   it('uses RGB sampled directly from the photo canvas', () => {
@@ -74,7 +87,7 @@ describe('soil color photo assist', () => {
     expect(updates.soilColorAssistStatus).toBe('candidatesAvailable');
     expect(updates.soilColorAssistCandidates).toContain('80%/50%');
     expect(updates.soilColorAssistCandidates).toContain('RGB 139/128/88');
-    expect(updates.soilColorAssistCandidates).toContain('1: 2.5Y 5/3');
+    expect(updates.soilColorAssistCandidates).toContain('1: 2.5Y 5/4');
   });
 
   it('marks missing canvas RGB as a failed sample instead of a silent success', () => {

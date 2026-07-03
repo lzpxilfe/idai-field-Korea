@@ -131,6 +131,51 @@ describe('KoreanFieldworkSiteOverviewMap', () => {
     expect(getScaleFromStyle(getByTestId('siteOverviewMapContent').props.style))
       .toBe(1);
   });
+
+  it('preserves the measured survey boundary aspect ratio in the overview map', () => {
+    const boundary = createDocument(C.SURVEY_BOUNDARY, 'boundary-1', {
+      geometry: {
+        type: 'LineString',
+        coordinates: [
+          [1000, 1000],
+          [5000, 1000],
+          [5000, 2000],
+          [1000, 2000],
+          [1000, 1000],
+        ],
+      },
+    });
+    const feature = createDocument(C.FEATURE, 'feature-1', {
+      featureLocationSketch: JSON.stringify({
+        center: { x: 50, y: 86 },
+        points: [{ x: 50, y: 86 }],
+        shape: 'point',
+      }),
+      identifier: '1???좉뎄',
+    });
+
+    const { getByTestId } = render(
+      <KoreanFieldworkSiteOverviewMap documents={[boundary, feature]} />
+    );
+    fireEvent(getByTestId('siteOverviewCanvas'), 'layout', {
+      nativeEvent: {
+        layout: { height: 400, width: 400, x: 0, y: 0 },
+      },
+    });
+
+    expect(getPercentStyleValue(
+      getByTestId('siteOverviewBoundaryPoint_0').props.style,
+      'top'
+    )).toBeCloseTo(59);
+    expect(getPercentStyleValue(
+      getByTestId('siteOverviewBoundaryPoint_2').props.style,
+      'top'
+    )).toBeCloseTo(41);
+    expect(getPercentStyleValue(
+      getByTestId('siteOverviewFeatureShape_feature-1_0').props.style,
+      'top'
+    )).toBeCloseTo(59);
+  });
 });
 
 const getScaleFromStyle = (style: unknown): number => {
@@ -140,6 +185,18 @@ const getScaleFromStyle = (style: unknown): number => {
 
   return flattened.transform?.find((entry) =>
     typeof entry.scale === 'number')?.scale ?? 1;
+};
+
+const getPercentStyleValue = (
+  style: unknown,
+  property: 'left' | 'top'
+): number => {
+  const flattened = StyleSheet.flatten(style) as Record<string, unknown>;
+  const value = flattened[property];
+  if (typeof value === 'number') return value;
+  if (typeof value !== 'string') return Number.NaN;
+
+  return parseFloat(value.replace('%', ''));
 };
 
 const createDocument = (

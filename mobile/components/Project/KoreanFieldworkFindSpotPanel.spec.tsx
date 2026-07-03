@@ -35,6 +35,9 @@ describe('KoreanFieldworkFindSpotPanel', () => {
     fireEvent(canvas, 'layout', {
       nativeEvent: { layout: { height: 200, width: 400 } },
     });
+    fireEvent(canvas, 'responderGrant', {
+      nativeEvent: { locationX: 100, locationY: 150 },
+    });
     fireEvent(canvas, 'responderRelease', {
       nativeEvent: { locationX: 100, locationY: 150 },
     });
@@ -52,6 +55,118 @@ describe('KoreanFieldworkFindSpotPanel', () => {
     ]);
     expect(updates[KOREAN_FIELDWORK_FIND_SPOT_FIELDS.updatedAt])
       .toEqual(payload.updatedAt);
+  });
+
+  it('zooms the feature sketch before placing a precise find spot', () => {
+    const onUpdateResourceFields = jest.fn();
+    const feature = createFeature();
+    const findResource = createFindResource();
+    const { getByTestId } = render(
+      <KoreanFieldworkFindSpotPanel
+        documents={[feature]}
+        parentDocument={feature}
+        resource={findResource}
+        onUpdateResourceFields={onUpdateResourceFields}
+      />
+    );
+    const canvas = getByTestId('findSpotCanvas');
+
+    fireEvent(canvas, 'layout', {
+      nativeEvent: { layout: { height: 200, width: 400 } },
+    });
+    fireEvent(canvas, 'responderGrant', {
+      nativeEvent: {
+        touches: [
+          { locationX: 150, locationY: 100 },
+          { locationX: 250, locationY: 100 },
+        ],
+      },
+    });
+    fireEvent(canvas, 'responderMove', {
+      nativeEvent: {
+        touches: [
+          { locationX: 100, locationY: 100 },
+          { locationX: 300, locationY: 100 },
+        ],
+      },
+    });
+    fireEvent(canvas, 'responderRelease', {
+      nativeEvent: {
+        changedTouches: [
+          { locationX: 100, locationY: 100 },
+          { locationX: 300, locationY: 100 },
+        ],
+      },
+    });
+
+    expect(getByTestId('findSpotZoomReset')).toBeTruthy();
+
+    fireEvent(canvas, 'responderGrant', {
+      nativeEvent: { locationX: 300, locationY: 100 },
+    });
+    fireEvent(canvas, 'responderRelease', {
+      nativeEvent: { locationX: 300, locationY: 100 },
+    });
+
+    const updates = onUpdateResourceFields.mock.calls[0][0];
+    const payload = JSON.parse(updates[KOREAN_FIELDWORK_FIND_SPOT_FIELDS.items]);
+
+    expect(payload.items[0].point.x).toBeCloseTo(62.5);
+    expect(payload.items[0].point.y).toBeCloseTo(50);
+  });
+
+  it('pans the zoomed feature sketch without adding a find spot', () => {
+    const onUpdateResourceFields = jest.fn();
+    const feature = createFeature();
+    const findResource = createFindResource();
+    const { getByTestId } = render(
+      <KoreanFieldworkFindSpotPanel
+        documents={[feature]}
+        parentDocument={feature}
+        resource={findResource}
+        onUpdateResourceFields={onUpdateResourceFields}
+      />
+    );
+    const canvas = getByTestId('findSpotCanvas');
+
+    fireEvent(canvas, 'layout', {
+      nativeEvent: { layout: { height: 200, width: 400 } },
+    });
+    fireEvent(canvas, 'responderGrant', {
+      nativeEvent: {
+        touches: [
+          { locationX: 150, locationY: 100 },
+          { locationX: 250, locationY: 100 },
+        ],
+      },
+    });
+    fireEvent(canvas, 'responderMove', {
+      nativeEvent: {
+        touches: [
+          { locationX: 100, locationY: 100 },
+          { locationX: 300, locationY: 100 },
+        ],
+      },
+    });
+    fireEvent(canvas, 'responderRelease', {
+      nativeEvent: {
+        changedTouches: [
+          { locationX: 100, locationY: 100 },
+          { locationX: 300, locationY: 100 },
+        ],
+      },
+    });
+    fireEvent(canvas, 'responderGrant', {
+      nativeEvent: { locationX: 220, locationY: 100 },
+    });
+    fireEvent(canvas, 'responderMove', {
+      nativeEvent: { locationX: 260, locationY: 100 },
+    });
+    fireEvent(canvas, 'responderRelease', {
+      nativeEvent: { locationX: 260, locationY: 100 },
+    });
+
+    expect(onUpdateResourceFields).not.toHaveBeenCalled();
   });
 
   it('lets each numbered find spot store an item label', () => {

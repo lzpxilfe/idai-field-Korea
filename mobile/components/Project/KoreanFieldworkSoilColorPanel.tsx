@@ -36,7 +36,22 @@ interface SoilColorLayerRow {
   munsell: string;
   note: string;
   number: number;
+  sample?: SoilColorSampleSummary;
   value: string;
+}
+
+interface SoilColorSampleSummary {
+  blue: number;
+  green: number;
+  label: string;
+  point?: SoilColorSamplePointSummary;
+  pointLabel?: string;
+  red: number;
+}
+
+interface SoilColorSamplePointSummary {
+  xPercent: number;
+  yPercent: number;
 }
 
 const C = KOREAN_FIELDWORK_CATEGORIES;
@@ -78,6 +93,10 @@ const MUNSELL_HUE_NUMBER_OPTIONS = MUNSELL_HUE_OPTIONS.numbers;
 const MUNSELL_HUE_FAMILY_OPTIONS = MUNSELL_HUE_OPTIONS.families;
 const MUNSELL_VALUE_PATTERN =
   /^(GLEY\s*[12]\s*\d(?:\.\d)?\/N|(?:10|7\.5|5|2\.5)(?:R|YR|Y|GY|G|BG|B|PB|P|RP)\s+\d(?:\.\d)?\/\d+(?:\.\d)?|N\s*\d(?:\.\d)?\/0)\s*(.*)$/i;
+const RGB_SAMPLE_PATTERN = /\bRGB\s+(\d{1,3})\/(\d{1,3})\/(\d{1,3})\b/i;
+const RGB_SAMPLE_NOTE_PATTERN =
+  /\s*\bRGB\s+\d{1,3}\/\d{1,3}\/\d{1,3}(?:\s*@\s*\d{1,3}%\/\d{1,3}%)?/gi;
+const SAMPLE_POINT_PATTERN = /(\d{1,3})%\/(\d{1,3})%/;
 
 const MUNSELL_VALUE_OPTIONS: readonly SoilColorOption[] =
   ['1', '2', '2.5', '3', '4', '5', '6', '7', '8', '9'].map((value) => ({
@@ -370,6 +389,61 @@ const KoreanFieldworkSoilColorPanel: React.FC<KoreanFieldworkSoilColorPanelProps
                     </TouchableOpacity>
                   )}
                 </View>
+                {row.sample && (
+                  <View
+                    style={styles.layerSampleResult}
+                    testID={`soilColorLayerSampleResult_${row.number}`}
+                  >
+                    <View
+                      style={[
+                        styles.layerSampleSwatch,
+                        {
+                          backgroundColor:
+                            `rgb(${row.sample.red}, ${row.sample.green}, ${row.sample.blue})`,
+                        },
+                      ]}
+                    />
+                    <View style={styles.layerSampleTextColumn}>
+                      <Text
+                        numberOfLines={1}
+                        style={styles.layerSampleResultText}
+                        testID={`soilColorLayerSampleResultText_${row.number}`}
+                      >
+                        {row.sample.label}
+                      </Text>
+                      {row.sample.point && row.sample.pointLabel && (
+                        <View
+                          style={styles.layerSampleLocationRow}
+                          testID={`soilColorLayerSampleLocation_${row.number}`}
+                        >
+                          <View
+                            style={styles.layerSampleLocationMap}
+                            testID={`soilColorLayerSampleLocationMap_${row.number}`}
+                          >
+                            <View
+                              style={[
+                                styles.layerSampleLocationMarker,
+                                {
+                                  left: `${getMarkerPercent(row.sample.point.xPercent)}%`,
+                                  top: `${getMarkerPercent(row.sample.point.yPercent)}%`,
+                                },
+                              ]}
+                              testID={`soilColorLayerSampleLocationMarker_${row.number}`}
+                            />
+                          </View>
+                          <MaterialIcons name="my-location" size={13} color="#175cd3" />
+                          <Text
+                            numberOfLines={1}
+                            style={styles.layerSampleLocationText}
+                            testID={`soilColorLayerSampleLocationText_${row.number}`}
+                          >
+                            {`선택 위치 ${row.sample.pointLabel}`}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                )}
                 <TextInput
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -730,13 +804,16 @@ const createSoilColorLayerRow = (
   number: number,
   value: string
 ): SoilColorLayerRow => {
-  const { munsell, note } = splitSoilColorRowValue(value);
+  const { munsell, note: rawNote } = splitSoilColorRowValue(value);
+  const sample = getSoilColorSampleSummary(rawNote);
+  const note = removeSoilColorSampleSummary(rawNote);
 
   return {
     munsell,
     note,
     number,
-    value: formatSoilColorRowValue(munsell, note),
+    sample,
+    value: formatSoilColorRowValue(munsell, note, sample?.label),
   };
 };
 
@@ -762,10 +839,73 @@ const splitSoilColorRowValue = (value: string): {
 const normalizeMunsellText = (value: string): string =>
   value.toUpperCase().replace(/\s+/g, ' ').trim();
 
+const getSoilColorSampleSummary = (
+  value: string
+): SoilColorSampleSummary | undefined => {
+  const rgbMatch = value.match(RGB_SAMPLE_PATTERN);
+  if (!rgbMatch) return undefined;
+
+  const red = Number.parseInt(rgbMatch[1], 10);
+  const green = Number.parseInt(rgbMatch[2], 10);
+  const blue = Number.parseInt(rgbMatch[3], 10);
+  if (![red, green, blue].every(isValidRgbChannel)) return undefined;
+
+  const pointMatch = value.match(SAMPLE_POINT_PATTERN);
+  const point = pointMatch
+    ? {
+      xPercent: clampSamplePercent(Number.parseInt(pointMatch[1], 10)),
+      yPercent: clampSamplePercent(Number.parseInt(pointMatch[2], 10)),
+    }
+    : undefined;
+  const pointLabel = point
+    ? `${point.xPercent}%/${point.yPercent}%`
+    : undefined;
+
+  return {
+    blue,
+    green,
+    label: formatSoilColorSampleLabel(red, green, blue, pointLabel),
+    point,
+    pointLabel,
+    red,
+  };
+};
+
+const removeSoilColorSampleSummary = (value: string): string =>
+  value
+    .replace(RGB_SAMPLE_NOTE_PATTERN, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+
+const isValidRgbChannel = (value: number): boolean =>
+  Number.isFinite(value) && value >= 0 && value <= 255;
+
+const clampSamplePercent = (value: number): number =>
+  Number.isFinite(value)
+    ? Math.max(0, Math.min(100, Math.round(value)))
+    : 0;
+
+const getMarkerPercent = (value: number): number =>
+  Math.max(4, Math.min(96, clampSamplePercent(value)));
+
+const formatSoilColorSampleLabel = (
+  red: number,
+  green: number,
+  blue: number,
+  pointLabel?: string
+): string =>
+  [`RGB ${red}/${green}/${blue}`, pointLabel ? `@ ${pointLabel}` : '']
+    .filter(Boolean)
+    .join(' ');
+
 const formatSoilColorRowValue = (
   munsell: string,
-  note: string
-): string => [munsell.trim(), note.trim()].filter(Boolean).join(' ');
+  note: string,
+  sampleLabel?: string
+): string =>
+  [munsell.trim(), note.trim(), sampleLabel?.trim() ?? '']
+    .filter(Boolean)
+    .join(' ');
 
 const appendEmptySoilColorRow = (currentValue: string): string => {
   const rows = getSoilColorRows(currentValue);
@@ -806,7 +946,7 @@ const updateSoilColorRowMunsellValue = (
       index === rowIndex
         ? createSoilColorLayerRow(
           row.number,
-          formatSoilColorRowValue(nextMunsell, row.note)
+          formatSoilColorRowValue(nextMunsell, row.note, row.sample?.label)
         )
         : row
     );
@@ -827,8 +967,30 @@ const updateSoilColorRowNoteValue = (
       index === rowIndex
         ? createSoilColorLayerRow(
           row.number,
-          formatSoilColorRowValue(row.munsell, nextNote)
+          formatSoilColorRowValue(row.munsell, nextNote, row.sample?.label)
         )
+        : row
+    );
+
+  return serializeSoilColorRows(nextRows);
+};
+
+const updateSoilColorRowSampleValue = (
+  currentValue: string,
+  rowNumber: number,
+  nextMunsell: string,
+  assistCandidateText: string
+): string => {
+  const rows = getSoilColorRows(currentValue);
+  const rowIndex = rows.findIndex((row) => row.number === rowNumber);
+  const sample = getSoilColorSampleSummary(assistCandidateText);
+  const formatSampledValue = (note = '') =>
+    formatSoilColorRowValue(nextMunsell, note, sample?.label);
+  const nextRows = rowIndex < 0
+    ? rows.concat(createSoilColorLayerRow(rowNumber, formatSampledValue()))
+    : rows.map((row, index) =>
+      index === rowIndex
+        ? createSoilColorLayerRow(row.number, formatSampledValue(row.note))
         : row
     );
 
@@ -838,7 +1000,7 @@ const updateSoilColorRowNoteValue = (
 const serializeSoilColorRows = (rows: SoilColorLayerRow[]): string =>
   rows
     .sort((left, right) => left.number - right.number)
-    .map((row) => `${row.number}: ${formatSoilColorRowValue(row.munsell, row.note)}`)
+    .map((row) => `${row.number}: ${row.value}`)
     .join('\n');
 
 const getActiveLayerNumber = (resource: NewResource): number | undefined => {
@@ -862,9 +1024,10 @@ export const getSoilProfileColorSampleUpdates = (
   },
   targetLayerNumber?: number
 ): Record<string, unknown> => {
-  const sampledMunsell = extractMunsellCandidateOptions(
-    getTextFromUnknown(assistUpdates.soilColorAssistCandidates)
-  )[0];
+  const assistCandidateText = getTextFromUnknown(
+    assistUpdates.soilColorAssistCandidates
+  );
+  const sampledMunsell = extractMunsellCandidateOptions(assistCandidateText)[0];
   if (!sampledMunsell) return { ...assistUpdates };
 
   const activeRowNumber = normalizeLayerNumber(targetLayerNumber)
@@ -877,10 +1040,11 @@ export const getSoilProfileColorSampleUpdates = (
 
   return {
     ...assistUpdates,
-    [SOIL_COLOR_FIELDS.profileColorSwatches]: updateSoilColorRowMunsellValue(
+    [SOIL_COLOR_FIELDS.profileColorSwatches]: updateSoilColorRowSampleValue(
       getTextValue(resource, SOIL_COLOR_FIELDS.profileColorSwatches),
       activeRowNumber,
-      sampledMunsell
+      sampledMunsell,
+      assistCandidateText
     ),
     [SOIL_COLOR_FIELDS.activeLayerNumber]: activeRowNumber,
     [SOIL_COLOR_FIELDS.assistStatus]:
@@ -1029,6 +1193,64 @@ const styles = StyleSheet.create({
   },
   layerSampleButtonTextDisabled: {
     color: '#98a2b3',
+  },
+  layerSampleResult: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    marginTop: 5,
+    minHeight: 26,
+  },
+  layerSampleTextColumn: {
+    flex: 1,
+    minWidth: 0,
+  },
+  layerSampleResultText: {
+    color: '#344054',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  layerSampleLocationRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    marginTop: 4,
+    minHeight: 24,
+  },
+  layerSampleLocationMap: {
+    backgroundColor: '#f8fafc',
+    borderColor: '#84caff',
+    borderRadius: 4,
+    borderWidth: 1,
+    height: 24,
+    marginRight: 6,
+    overflow: 'hidden',
+    position: 'relative',
+    width: 42,
+  },
+  layerSampleLocationMarker: {
+    backgroundColor: '#175cd3',
+    borderColor: 'white',
+    borderRadius: 4,
+    borderWidth: 1,
+    height: 8,
+    marginLeft: -4,
+    marginTop: -4,
+    position: 'absolute',
+    width: 8,
+  },
+  layerSampleLocationText: {
+    color: '#175cd3',
+    flex: 1,
+    fontSize: 11,
+    fontWeight: '900',
+    marginLeft: 3,
+  },
+  layerSampleSwatch: {
+    borderColor: '#98a2b3',
+    borderRadius: 4,
+    borderWidth: 1,
+    height: 18,
+    marginRight: 7,
+    width: 26,
   },
   layerNoteInput: {
     fontWeight: '700',

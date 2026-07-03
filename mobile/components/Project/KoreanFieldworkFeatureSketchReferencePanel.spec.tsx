@@ -52,6 +52,11 @@ describe('KoreanFieldworkFeatureSketchReferencePanel', () => {
     expect(getByTestId('featureBoundaryLocationPreview')).toBeTruthy();
     expect(getAllByTestId('featureBoundaryLine')).toHaveLength(4);
     expect(getByTestId('featureBoundaryFeatureShape')).toBeTruthy();
+    expect(StyleSheet.flatten(getByTestId('featureBoundaryPoint_0').props.style))
+      .toMatchObject({
+        left: 73,
+        top: 132,
+      });
     expect(getByTestId('featureShapeSketchPreview')).toBeTruthy();
     expect(getByTestId('featureShapeSketchShape')).toBeTruthy();
     expect(StyleSheet.flatten(getByTestId('featureShapeSketchShape').props.style).width)

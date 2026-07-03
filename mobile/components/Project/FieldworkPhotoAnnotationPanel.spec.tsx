@@ -1,4 +1,5 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import * as FileSystem from 'expo-file-system';
 import React from 'react';
 import { Image } from 'react-native';
 import FieldworkPhotoAnnotationPanel from './FieldworkPhotoAnnotationPanel';
@@ -11,6 +12,13 @@ jest.mock('@expo/vector-icons', () => {
     MaterialIcons: ({ name }: { name: string }) => <Text>{name}</Text>,
   };
 });
+
+jest.mock('expo-file-system', () => ({
+  EncodingType: {
+    Base64: 'base64',
+  },
+  readAsStringAsync: jest.fn(() => new Promise(() => undefined)),
+}));
 
 jest.mock('react-native-webview', () => {
   const React = require('react');
@@ -29,6 +37,7 @@ jest.mock('react-native-webview', () => {
 
 describe('FieldworkPhotoAnnotationPanel', () => {
   afterEach(() => {
+    jest.clearAllMocks();
     jest.restoreAllMocks();
   });
 
@@ -131,6 +140,12 @@ describe('FieldworkPhotoAnnotationPanel', () => {
       },
     });
 
+    expect(handleSamplePoint).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(getByTestId('fieldworkPhotoAnnotationSampleConfirm')).toBeTruthy()
+    );
+    fireEvent.press(getByTestId('fieldworkPhotoAnnotationSampleConfirm'));
+
     await waitFor(() =>
       expect(handleSamplePoint).toHaveBeenCalledWith({ x: 5000, y: 5000 })
     );
@@ -164,6 +179,12 @@ describe('FieldworkPhotoAnnotationPanel', () => {
     });
 
     expect(handleUpdateStrokes).toHaveBeenCalledWith('{"version":1,"strokes":[]}');
+    expect(handleSamplePoint).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(getByTestId('fieldworkPhotoAnnotationSampleConfirm')).toBeTruthy()
+    );
+    fireEvent.press(getByTestId('fieldworkPhotoAnnotationSampleConfirm'));
+
     await waitFor(() =>
       expect(handleSamplePoint).toHaveBeenCalledWith({ x: 8000, y: 5000 })
     );
@@ -218,7 +239,82 @@ describe('FieldworkPhotoAnnotationPanel', () => {
     expect(html).toContain(
       'if(!point||!Number.isFinite(point.x)||!Number.isFinite(point.y)) return undefined;'
     );
-    expect(html).toContain('const sample=point?updateSample(point):activeSample;');
+    expect(html).toContain(
+      'const sample=point?updateSample(point,true):activeSample&&activeSample.screenPoint?updateSample(activeSample.screenPoint,true):activeSample;'
+    );
+  });
+
+  it('loads local photos into the full-screen sampler as data URIs', async () => {
+    (FileSystem.readAsStringAsync as jest.Mock).mockResolvedValueOnce(
+      'prepared-local-photo'
+    );
+
+    const { getByTestId } = render(
+      <FieldworkPhotoAnnotationPanel
+        imageUri="file:///tablet/profile.png"
+        onSamplePoint={jest.fn()}
+        onUpdateStrokes={jest.fn()}
+        sampleButtonLabel="sample"
+      />
+    );
+
+    await waitFor(() =>
+      expect(FileSystem.readAsStringAsync).toHaveBeenCalledWith(
+        'file:///tablet/profile.png',
+        { encoding: FileSystem.EncodingType.Base64 }
+      )
+    );
+
+    fireEvent.press(getByTestId('fieldworkPhotoSamplePointButton'));
+    await waitFor(() => {
+      const fullscreenCanvas = getByTestId(
+        'fieldworkPhotoAnnotationFullscreenCanvas'
+      );
+      const html = fullscreenCanvas.props.source.html as string;
+
+      expect(html).toContain('data:image/png;base64,prepared-local-photo');
+    });
+  });
+
+  it('averages a small canvas area for eyedropper RGB sampling', () => {
+    const { getByTestId } = render(
+      <FieldworkPhotoAnnotationPanel
+        imageUri="file:///tablet/profile.jpg"
+        onSamplePoint={jest.fn()}
+        onUpdateStrokes={jest.fn()}
+        sampleButtonLabel="sample"
+      />
+    );
+
+    fireEvent.press(getByTestId('fieldworkPhotoSamplePointButton'));
+    const fullscreenCanvas = getByTestId('fieldworkPhotoAnnotationFullscreenCanvas');
+    const html = fullscreenCanvas.props.source.html as string;
+
+    expect(html).toContain(
+      'Math.min(sampleCanvas.width,sampleCanvas.height)*0.015'
+    );
+    expect(html).toContain('Math.round(red/count)');
+    expect(html).not.toContain('getImageData(x,y,1,1)');
+  });
+
+  it('throttles eyedropper color analysis while dragging', () => {
+    const { getByTestId } = render(
+      <FieldworkPhotoAnnotationPanel
+        imageUri="file:///tablet/profile.jpg"
+        onSamplePoint={jest.fn()}
+        onUpdateStrokes={jest.fn()}
+        sampleButtonLabel="sample"
+      />
+    );
+
+    fireEvent.press(getByTestId('fieldworkPhotoSamplePointButton'));
+    const fullscreenCanvas = getByTestId('fieldworkPhotoAnnotationFullscreenCanvas');
+    const html = fullscreenCanvas.props.source.html as string;
+
+    expect(html).toContain('samplePreviewIntervalMs=140');
+    expect(html).toContain('function shouldAnalyzeSamplePreview(screenPoint)');
+    expect(html).toContain('updateSample(point,false)');
+    expect(html).toContain('updateSample(point,true)');
   });
 
   it('passes the canvas-sampled RGB with the selected photo point', async () => {
@@ -246,6 +342,12 @@ describe('FieldworkPhotoAnnotationPanel', () => {
         }),
       },
     });
+
+    expect(handleSamplePoint).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(getByTestId('fieldworkPhotoAnnotationSampleConfirm')).toBeTruthy()
+    );
+    fireEvent.press(getByTestId('fieldworkPhotoAnnotationSampleConfirm'));
 
     await waitFor(() =>
       expect(handleSamplePoint).toHaveBeenCalledWith({
@@ -344,6 +446,12 @@ describe('FieldworkPhotoAnnotationPanel', () => {
         }),
       },
     });
+
+    expect(handleSamplePoint).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(getByTestId('fieldworkPhotoAnnotationSampleConfirm')).toBeTruthy()
+    );
+    fireEvent.press(getByTestId('fieldworkPhotoAnnotationSampleConfirm'));
 
     await waitFor(() =>
       expect(handleSamplePoint).toHaveBeenCalledWith({ x: 5000, y: 5000 })

@@ -287,6 +287,31 @@ describe('KoreanFieldworkSoilColorPanel', () => {
     expect(queryByTestId('soilColorCandidateOption_10YR 4/3')).toBeNull();
   });
 
+  it('shows stored RGB sample details on the sampled soil layer row', () => {
+    const { getByTestId } = render(
+      <KoreanFieldworkSoilColorPanel
+        category={createCategoryForm([
+          'soilProfileColorSwatches',
+        ])}
+        resource={createResource(C.SOIL_PROFILE_PHOTO, {
+          soilProfileColorSwatches:
+            '1: 10YR 4/3 RGB 111/87/61 @ 20%/50%',
+        })}
+        onUpdateResourceField={jest.fn()}
+        onUpdateResourceFields={jest.fn()}
+      />
+    );
+
+    expect(getByTestId('soilColorLayerSampleResultText_1').props.children)
+      .toBe('RGB 111/87/61 @ 20%/50%');
+    expect(getByTestId('soilColorLayerSampleLocation_1')).toBeTruthy();
+    expect(getByTestId('soilColorLayerSampleLocationMap_1')).toBeTruthy();
+    expect(getByTestId('soilColorLayerSampleLocationMarker_1')).toBeTruthy();
+    expect(getByTestId('soilColorLayerSampleLocationText_1').props.children)
+      .toBe('선택 위치 20%/50%');
+    expect(getByTestId('soilColorLayerNoteInput_1').props.value).toBe('');
+  });
+
   it('writes the first photo-sampled Munsell candidate into the active layer row', () => {
     expect(getSoilProfileColorSampleUpdates(
       createResource(C.SOIL_PROFILE_PHOTO, {
@@ -303,7 +328,8 @@ describe('KoreanFieldworkSoilColorPanel', () => {
         '사진 선택 지점 80%/50% 평균 RGB 139/128/88\n1: 2.5Y 5/3 (높음, 차이 0.0)',
       soilColorAssistStatus: 'reviewed',
       soilProfileActiveLayerNumber: 2,
-      soilProfileColorSwatches: '1: 10YR 4/3\n2: 2.5Y 5/3',
+      soilProfileColorSwatches:
+        '1: 10YR 4/3\n2: 2.5Y 5/3 RGB 139/128/88 @ 80%/50%',
     });
   });
 
@@ -324,7 +350,8 @@ describe('KoreanFieldworkSoilColorPanel', () => {
         '사진 선택 지점 80%/50% 평균 RGB 139/128/88\n1: 2.5Y 5/3 (높음, 차이 0.0)',
       soilColorAssistStatus: 'reviewed',
       soilProfileActiveLayerNumber: 2,
-      soilProfileColorSwatches: '1: 10YR 4/3\n2: 2.5Y 5/3',
+      soilProfileColorSwatches:
+        '1: 10YR 4/3\n2: 2.5Y 5/3 RGB 139/128/88 @ 80%/50%',
     });
   });
 
@@ -344,7 +371,8 @@ describe('KoreanFieldworkSoilColorPanel', () => {
         '사진 선택 지점 80%/50% 평균 RGB 139/128/88\n1: 2.5Y 5/3 (높음, 차이 0.0)',
       soilColorAssistStatus: 'reviewed',
       soilProfileActiveLayerNumber: 2,
-      soilProfileColorSwatches: '1: 10YR 4/3\n2: 2.5Y 5/3 회갈색 사질토',
+      soilProfileColorSwatches:
+        '1: 10YR 4/3\n2: 2.5Y 5/3 회갈색 사질토 RGB 139/128/88 @ 80%/50%',
     });
   });
 

@@ -68,6 +68,8 @@ const KOREAN_FIELDWORK_MANAGED_CATEGORY_NAMES = new Set<string>(
 );
 const KOREAN_FIELDWORK_PANEL_FIELD_NAMES = new Set([
   'description',
+  'drawingSketchStrokes',
+  'drawingSketchUpdatedAt',
   'featureChecklistNote',
   'featureGeometryEditStatus',
   'featureGeometryReferenceLayerId',
@@ -100,6 +102,7 @@ const KOREAN_FIELDWORK_PANEL_FIELD_NAMES = new Set([
   'pitDwellingFireEvidence',
   'pitDwellingFloorFacility',
   'pitFeatureFunctionAssessment',
+  'penMemoStrokes',
   'postholeGroupSurvey',
   'potteryKilnIdentification',
   'potteryKilnPartInvestigation',

@@ -93,53 +93,19 @@ describe('KoreanFieldworkDailyJournalCalendar', () => {
     expect(handleCreateDailyLog).toHaveBeenCalled();
   });
 
-  it('saves written daily journal memo text', async () => {
-    const handleUpdateDailyLog = jest.fn();
-    const { getByTestId } = render(
+  it('does not expose a duplicate text memo editor inside the journal panel', () => {
+    const { queryByTestId } = render(
       <KoreanFieldworkDailyJournalCalendar
         canEdit
         dailyLog={createDailyLog() as any}
         now={new Date('2026-06-30T09:00:00+09:00')}
         onCreateDailyLog={jest.fn()}
-        onUpdateDailyLog={handleUpdateDailyLog}
+        onUpdateDailyLog={jest.fn()}
       />
     );
 
-    fireEvent.changeText(
-      getByTestId('dailyJournalWorkMemoInput'),
-      '서쪽 구역 제토 중 원형 윤곽 확인.'
-    );
-    fireEvent.press(getByTestId('dailyJournalWorkMemoSave'));
-
-    await waitFor(() => {
-      expect(handleUpdateDailyLog).toHaveBeenCalledWith(expect.objectContaining({
-        [FIELD.workMemo]: '서쪽 구역 제토 중 원형 윤곽 확인.',
-      }));
-    });
-  });
-
-  it('saves a memo draft even before today daily log exists', async () => {
-    const handleUpdateDailyLog = jest.fn();
-    const { getByTestId } = render(
-      <KoreanFieldworkDailyJournalCalendar
-        canEdit
-        now={new Date('2026-06-30T09:00:00+09:00')}
-        onCreateDailyLog={jest.fn()}
-        onUpdateDailyLog={handleUpdateDailyLog}
-      />
-    );
-
-    fireEvent.changeText(
-      getByTestId('dailyJournalWorkMemoInput'),
-      'A-1 surface cleanup reached the access road.'
-    );
-    fireEvent.press(getByTestId('dailyJournalWorkMemoSave'));
-
-    await waitFor(() => {
-      expect(handleUpdateDailyLog).toHaveBeenCalledWith(expect.objectContaining({
-        [FIELD.workMemo]: 'A-1 surface cleanup reached the access road.',
-      }));
-    });
+    expect(queryByTestId('dailyJournalWorkMemoInput')).toBeNull();
+    expect(queryByTestId('dailyJournalWorkMemoSave')).toBeNull();
   });
 
   it('projects the journal boundary as a vertical plan without stretching axes independently', () => {
@@ -283,6 +249,37 @@ describe('KoreanFieldworkDailyJournalCalendar', () => {
     expect(getByText('저장됨')).toBeTruthy();
     expect(queryByText(/현재\s*\d+\uC810/)).toBeNull();
     expect(queryByText(/\d+\uC810/)).toBeNull();
+  });
+
+  it('renders saved boundary memo strokes with smoothed continuous preview segments', () => {
+    const { getAllByTestId } = render(
+      <KoreanFieldworkDailyJournalCalendar
+        canEdit
+        dailyLog={createDailyLog({
+          [FIELD.boundaryMemoStrokes]: JSON.stringify({
+            version: 1,
+            strokes: [
+              {
+                points: [
+                  { x: 1000, y: 1000 },
+                  { x: 5000, y: 2000 },
+                  { x: 9000, y: 8000 },
+                ],
+                width: 5,
+              },
+            ],
+          }),
+        }) as any}
+        now={new Date('2026-06-30T09:00:00+09:00')}
+        onCreateDailyLog={jest.fn()}
+        onUpdateDailyLog={jest.fn()}
+      />
+    );
+
+    expect(getAllByTestId('dailyJournalBoundaryStrokeSegment').length)
+      .toBeGreaterThan(2);
+    expect(getAllByTestId('dailyJournalBoundaryStrokeJoint').length)
+      .toBeGreaterThan(2);
   });
 });
 

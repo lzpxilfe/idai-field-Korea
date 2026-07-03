@@ -54,6 +54,20 @@ jest.mock('@/contexts/project-context', () => {
 });
 jest.mock('dateformat', () => jest.fn(() => '2026-01-01'));
 jest.mock('expo-barcode-scanner');
+jest.mock('react-native-webview', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  const MockWebView = React.forwardRef((props: Record<string, unknown>, ref: unknown) => {
+    React.useImperativeHandle(ref, () => ({
+      postMessage: jest.fn(),
+    }));
+
+    return <View {...props} />;
+  });
+  MockWebView.displayName = 'MockWebView';
+
+  return { WebView: MockWebView };
+});
 jest.mock('expo-router', () => ({
   router: { navigate: (...args: any[]) => mockNavigate(...args) },
   useGlobalSearchParams: () => mockUseGlobalSearchParams(),
@@ -228,7 +242,98 @@ describe('DocumentAdd', () => {
       params: { highlightedDocId },
     });
   });
+
+  it('adds a drawing sketch canvas to new drawing records', async () => {
+    cleanup();
+    mockUseGlobalSearchParams.mockReturnValue({
+      parentDocId: t2.resource.id,
+      categoryName: 'Drawing',
+    });
+    renderAPI = renderDocumentAddScreen(preferences, config, repository);
+
+    await waitFor(() => renderAPI.getByTestId('koreanFieldworkFreeDrawingPanel'));
+    drawStroke(renderAPI);
+    fireEvent.press(renderAPI.getByTestId('saveDocBtn'));
+
+    await waitFor(() => expect(repository.create).toHaveBeenCalledTimes(1));
+    expect(repository.create).toHaveBeenCalledWith({
+      resource: expect.objectContaining({
+        category: 'Drawing',
+        drawingSketchStrokes: expect.stringContaining('"strokes"'),
+        drawingSketchUpdatedAt: expect.any(String),
+      }),
+    } as NewDocument);
+  });
+
+  it('adds a sketch canvas to new pen memo records instead of exposing raw memo JSON', async () => {
+    cleanup();
+    mockUseGlobalSearchParams.mockReturnValue({
+      parentDocId: t2.resource.id,
+      categoryName: 'PenMemo',
+    });
+    renderAPI = renderDocumentAddScreen(
+      preferences,
+      createProjectConfiguration([createCategory('PenMemo')]),
+      repository
+    );
+
+    await waitFor(() => renderAPI.getByTestId('koreanFieldworkFreeDrawingPanel'));
+    expect(renderAPI.queryByTestId('groupSelect_koreanFieldwork')).toBeNull();
+    drawStroke(renderAPI);
+    fireEvent.press(renderAPI.getByTestId('saveDocBtn'));
+
+    await waitFor(() => expect(repository.create).toHaveBeenCalledTimes(1));
+    expect(repository.create).toHaveBeenCalledWith({
+      resource: expect.objectContaining({
+        category: 'PenMemo',
+        penMemoStrokes: expect.stringContaining('"strokes"'),
+      }),
+    } as NewDocument);
+  });
 });
+
+const renderDocumentAddScreen = (
+  preferences: Preferences,
+  config: ProjectConfiguration,
+  repository: DocumentRepository
+): RenderAPI => render(
+  <ToastProvider>
+    <PreferencesContext.Provider
+      value={{
+        preferences,
+        setCurrentProject,
+        setUsername,
+        setProjectSettings,
+        setLanguages,
+        removeProject,
+        setMapSettings,
+        getMapSettings,
+        setMapProviderSettings,
+      }}
+    >
+      <LabelsContext.Provider value={{ labels: new Labels(() => ['en']) }}>
+        <ConfigurationContext.Provider value={config}>
+          <ProjectContext.Provider value={{ repository } as any}>
+            <DocumentAdd />
+          </ProjectContext.Provider>
+        </ConfigurationContext.Provider>
+      </LabelsContext.Provider>
+    </PreferencesContext.Provider>
+  </ToastProvider>
+);
+
+const drawStroke = (renderAPI: RenderAPI) => {
+  const canvas = renderAPI.getByTestId('fieldworkFreeDrawingCanvas');
+  fireEvent(canvas, 'responderGrant', {
+    nativeEvent: { locationX: 32, locationY: 28 },
+  });
+  fireEvent(canvas, 'responderMove', {
+    nativeEvent: { locationX: 160, locationY: 140 },
+  });
+  fireEvent(canvas, 'responderRelease', {
+    nativeEvent: { locationX: 160, locationY: 140 },
+  });
+};
 
 const createProjectConfiguration = (
   forms: Forest<CategoryForm>

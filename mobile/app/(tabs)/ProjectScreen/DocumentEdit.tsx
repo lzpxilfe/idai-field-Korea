@@ -27,7 +27,7 @@ import KoreanFieldworkFeaturePitLinePanel
 import KoreanFieldworkFindSpotPanel
   from '@/components/Project/KoreanFieldworkFindSpotPanel';
 import KoreanFieldworkFreeDrawingPanel, {
-  KOREAN_FIELDWORK_FREE_DRAWING_FIELDS,
+  getKoreanFieldworkFreeDrawingConfig,
 } from '@/components/Project/KoreanFieldworkFreeDrawingPanel';
 import SoilProfileCameraButton, {
   FieldworkPhotoCaptureData,
@@ -208,6 +208,7 @@ const DocumentEdit: React.FC = () => {
 
   const effectiveDocument = { ...document, resource };
   const isFeatureRecord = resource.category === KOREAN_FIELDWORK_CATEGORIES.FEATURE;
+  const freeDrawingConfig = getKoreanFieldworkFreeDrawingConfig(resource.category);
 
   return (
     <DocumentForm
@@ -292,16 +293,21 @@ const DocumentEdit: React.FC = () => {
           />
         </View>
       }
-      formFooter={isFeatureRecord ? (
+      formFooter={freeDrawingConfig ? (
         <KoreanFieldworkFreeDrawingPanel
           initiallyFullscreen={shouldOpenFreeSketch}
           onDrawingActiveChange={setIsFreeDrawingActive}
-          strokesValue={resource[KOREAN_FIELDWORK_FREE_DRAWING_FIELDS.featureStrokes]}
-          onUpdateStrokes={(serializedStrokes) => applyResourceUpdates({
-            [KOREAN_FIELDWORK_FREE_DRAWING_FIELDS.featureStrokes]: serializedStrokes,
-            [KOREAN_FIELDWORK_FREE_DRAWING_FIELDS.featureUpdatedAt]:
-              new Date().toISOString(),
-          })}
+          strokesValue={resource[freeDrawingConfig.strokesField]}
+          title={freeDrawingConfig.title}
+          onUpdateStrokes={(serializedStrokes) => {
+            const updates: Record<string, unknown> = {
+              [freeDrawingConfig.strokesField]: serializedStrokes,
+            };
+            if (freeDrawingConfig.updatedAtField) {
+              updates[freeDrawingConfig.updatedAtField] = new Date().toISOString();
+            }
+            applyResourceUpdates(updates);
+          }}
         />
       ) : undefined}
       isScrollEnabled={!isFreeDrawingActive}

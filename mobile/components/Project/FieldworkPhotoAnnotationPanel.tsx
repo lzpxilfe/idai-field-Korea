@@ -1,4 +1,5 @@
 import { MaterialIcons } from '@expo/vector-icons';
+import * as FileSystem from 'expo-file-system';
 import React, {
   useCallback,
   useEffect,
@@ -93,7 +94,18 @@ const RELEASE_POINT_MIN_DISTANCE = 1;
 const TAP_OPEN_FULLSCREEN_DISTANCE = 35;
 const INTERPOLATED_POINT_SPACING = 90;
 const MAX_INTERPOLATED_POINTS_PER_MOVE = 18;
+const SAMPLE_PREVIEW_INTERVAL_MS = 140;
+const SAMPLE_PREVIEW_MIN_PIXEL_DISTANCE = 12;
 const PHOTO_ANNOTATION_WEBVIEW_BASE_URL = 'https://idai-field.local/photo-annotation/';
+const IMAGE_URI_MIME_TYPES: Record<string, string> = {
+  gif: 'image/gif',
+  heic: 'image/heic',
+  heif: 'image/heif',
+  jpeg: 'image/jpeg',
+  jpg: 'image/jpeg',
+  png: 'image/png',
+  webp: 'image/webp',
+};
 
 interface Rect {
   height: number;
@@ -127,13 +139,17 @@ const FieldworkPhotoAnnotationPanel: React.FC<FieldworkPhotoAnnotationPanelProps
   const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
   const [fullscreenHtml, setFullscreenHtml] = useState<string>();
   const [isSampleMode, setIsSampleMode] = useState(false);
+  const [pendingSamplePoint, setPendingSamplePoint] =
+    useState<FieldworkPhotoSamplePoint>();
   const [sampleStatus, setSampleStatus] = useState<string>();
+  const [webviewImageUri, setWebviewImageUri] = useState<string>();
   const activeStrokeRef = useRef<KoreanFieldworkHandwritingStroke>();
   const fullscreenWebViewRef = useRef<WebView>(null);
   const latestStrokesRef = useRef<KoreanFieldworkHandwritingStroke[]>(strokes);
   const touchStartPointRef = useRef<KoreanFieldworkHandwritingPoint>();
   const activeCanvasRef = useRef<'fullscreen' | 'preview'>();
   const handledSampleRequestKeyRef = useRef<number | string>();
+  const fullscreenImageUriRef = useRef<string>();
   const visibleStrokes = activeStroke ? strokes.concat(activeStroke) : strokes;
   const strokeCount = strokes.length;
   const imageFrame = useMemo(
@@ -150,28 +166,65 @@ const FieldworkPhotoAnnotationPanel: React.FC<FieldworkPhotoAnnotationPanelProps
   const openFullscreen = useCallback((nextSampleMode = false) => {
     if (!imageUri) return;
 
+    const nextImageUri = webviewImageUri ?? imageUri;
+    fullscreenImageUriRef.current = nextImageUri;
     setIsSampleMode(nextSampleMode);
+    setPendingSamplePoint(undefined);
     setFullscreenHtml(buildPhotoAnnotationFullscreenHtml({
       brushColor,
       brushWidth,
       drawingTool,
-      imageUri,
+      imageUri: nextImageUri,
       isSampleMode: nextSampleMode,
       munsellReferences: SOIL_COLOR_MUNSELL_REFERENCES,
       strokes: latestStrokesRef.current,
     }));
     setIsFullscreenOpen(true);
-  }, [brushColor, brushWidth, drawingTool, imageUri]);
+  }, [brushColor, brushWidth, drawingTool, imageUri, webviewImageUri]);
 
   const closeFullscreen = useCallback(() => {
     setIsFullscreenOpen(false);
     setIsSampleMode(false);
     setFullscreenHtml(undefined);
+    setPendingSamplePoint(undefined);
+    fullscreenImageUriRef.current = undefined;
   }, []);
 
   useEffect(() => {
     latestStrokesRef.current = strokes;
   }, [strokes]);
+
+  useEffect(() => {
+    if (!imageUri) {
+      setWebviewImageUri(undefined);
+      return;
+    }
+
+    let isActive = true;
+    setWebviewImageUri(imageUri);
+    if (!isLocalFileUri(imageUri)) {
+      return () => {
+        isActive = false;
+      };
+    }
+
+    FileSystem.readAsStringAsync(imageUri, {
+      encoding: FileSystem.EncodingType.Base64,
+    })
+      .then((base64) => {
+        if (!isActive || !base64) return;
+        setWebviewImageUri(
+          `data:${getImageMimeTypeFromUri(imageUri)};base64,${base64}`
+        );
+      })
+      .catch(() => {
+        if (isActive) setWebviewImageUri(imageUri);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [imageUri]);
 
   useEffect(() => {
     postFullscreenCommand({
@@ -220,6 +273,33 @@ const FieldworkPhotoAnnotationPanel: React.FC<FieldworkPhotoAnnotationPanelProps
 
   useEffect(() => {
     if (
+      !isFullscreenOpen
+      || !imageUri
+      || !webviewImageUri
+      || fullscreenImageUriRef.current === webviewImageUri
+    ) {
+      return;
+    }
+
+    fullscreenImageUriRef.current = webviewImageUri;
+    setFullscreenHtml(buildPhotoAnnotationFullscreenHtml({
+      brushColor,
+      brushWidth,
+      drawingTool,
+      imageUri: webviewImageUri ?? imageUri,
+      isSampleMode,
+      munsellReferences: SOIL_COLOR_MUNSELL_REFERENCES,
+      strokes: latestStrokesRef.current,
+    }));
+  }, [
+    imageUri,
+    isFullscreenOpen,
+    isSampleMode,
+    webviewImageUri,
+  ]);
+
+  useEffect(() => {
+    if (
       !imageUri
       || !onSamplePoint
       || sampleRequestKey === undefined
@@ -254,14 +334,8 @@ const FieldworkPhotoAnnotationPanel: React.FC<FieldworkPhotoAnnotationPanelProps
     if (!point) return;
 
     if (isSampleMode && onSamplePoint) {
-      setSampleStatus(getSampleReadingMessage(sampleRequestLabel));
-      setIsSampleMode(false);
-      Promise.resolve(onSamplePoint(point))
-        .then(() => {
-          setSampleStatus(getSampleSuccessMessage(sampleRequestLabel));
-          setIsFullscreenOpen(false);
-        })
-        .catch(() => setSampleStatus('선택 지점 토색을 읽지 못했습니다.'));
+      setSampleStatus(getSamplePrompt(sampleRequestLabel));
+      openFullscreen(true);
       return;
     }
 
@@ -370,6 +444,18 @@ const FieldworkPhotoAnnotationPanel: React.FC<FieldworkPhotoAnnotationPanelProps
     onUpdateStrokes(serializeKoreanFieldworkHandwriting(normalizedStrokes));
     postFullscreenCommand({ payload: normalizedStrokes, type: 'setStrokes' });
   };
+  const confirmPendingSamplePoint = () => {
+    if (!pendingSamplePoint || !onSamplePoint) return;
+
+    setSampleStatus(getSampleReadingMessage(sampleRequestLabel));
+    setIsSampleMode(false);
+    Promise.resolve(onSamplePoint(pendingSamplePoint))
+      .then(() => {
+        setSampleStatus(getSampleSuccessMessage(sampleRequestLabel));
+        closeFullscreen();
+      })
+      .catch(() => setSampleStatus('선택 지점의 토색을 읽지 못했습니다.'));
+  };
   const handleFullscreenMessage = (event: WebViewMessageEvent) => {
     const message = parsePhotoAnnotationFullscreenMessage(event.nativeEvent.data);
     if (!message) return;
@@ -380,6 +466,7 @@ const FieldworkPhotoAnnotationPanel: React.FC<FieldworkPhotoAnnotationPanelProps
     }
 
     if (message.type === 'samplePreview') {
+      setPendingSamplePoint(undefined);
       setSampleStatus(formatSamplePreviewStatus(
         message.payload,
         sampleRequestLabel
@@ -391,14 +478,8 @@ const FieldworkPhotoAnnotationPanel: React.FC<FieldworkPhotoAnnotationPanelProps
       const point = normalizeSamplePointPayload(message.payload);
       if (!point || !onSamplePoint) return;
 
-      setSampleStatus(getSampleReadingMessage(sampleRequestLabel));
-      setIsSampleMode(false);
-      Promise.resolve(onSamplePoint(point))
-        .then(() => {
-          setSampleStatus(getSampleSuccessMessage(sampleRequestLabel));
-          closeFullscreen();
-        })
-        .catch(() => setSampleStatus('선택 지점의 토색을 읽지 못했습니다.'));
+      setPendingSamplePoint(point);
+      setSampleStatus(getSampleConfirmationMessage(point, sampleRequestLabel));
     }
   };
 
@@ -518,6 +599,7 @@ const FieldworkPhotoAnnotationPanel: React.FC<FieldworkPhotoAnnotationPanelProps
                 onPress={() => setIsSampleMode((currentMode) => {
                   const nextMode = !currentMode;
                   if (nextMode) setSampleStatus(getSamplePrompt(sampleRequestLabel));
+                  if (!nextMode) setPendingSamplePoint(undefined);
 
                   return nextMode;
                 })}
@@ -535,6 +617,17 @@ const FieldworkPhotoAnnotationPanel: React.FC<FieldworkPhotoAnnotationPanelProps
                 <Text style={styles.fullscreenModeButtonText}>
                   {isSampleMode ? '스포이드' : '펜'}
                 </Text>
+              </TouchableOpacity>
+            )}
+            {!!pendingSamplePoint && isSampleMode && (
+              <TouchableOpacity
+                activeOpacity={0.86}
+                onPress={confirmPendingSamplePoint}
+                style={styles.fullscreenConfirmButton}
+                testID="fieldworkPhotoAnnotationSampleConfirm"
+              >
+                <MaterialIcons name="check" size={16} color="white" />
+                <Text style={styles.fullscreenModeButtonText}>확인</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity
@@ -797,6 +890,18 @@ const getSampleSuccessMessage = (sampleRequestLabel?: string): string =>
     ? `${sampleRequestLabel} 먼셀 값을 입력했습니다.`
     : '선택 지점 먼셀 값을 입력했습니다.';
 
+const getSampleConfirmationMessage = (
+  point: FieldworkPhotoSamplePoint,
+  sampleRequestLabel?: string
+): string => {
+  const label = sampleRequestLabel ? `${sampleRequestLabel} ` : '';
+  const colorText = point.munsell && point.rgb
+    ? `${point.munsell} · RGB ${point.rgb.red}/${point.rgb.green}/${point.rgb.blue}`
+    : '선택 지점';
+
+  return `${label}${colorText} - 확인을 누르면 기록합니다.`;
+};
+
 const normalizeCoordinate = (value: number): number =>
   Number.isFinite(value)
     ? Math.max(0, Math.min(MAX_COORDINATE, Math.round(value)))
@@ -963,6 +1068,16 @@ const toStrokeSegments = (
 const getStrokeWidth = (stroke: KoreanFieldworkHandwritingStroke): number =>
   clamp(stroke.width ?? 3, 1, 24);
 
+const isLocalFileUri = (uri: string): boolean =>
+  uri.startsWith('file://');
+
+const getImageMimeTypeFromUri = (uri: string): string => {
+  const [path] = uri.split(/[?#]/);
+  const extension = path.split('.').pop()?.toLowerCase() ?? '';
+
+  return IMAGE_URI_MIME_TYPES[extension] ?? 'image/jpeg';
+};
+
 const getPhotoAnnotationStrokeColor = (
   stroke: KoreanFieldworkHandwritingStroke
 ): string => stroke.color ?? DEFAULT_PHOTO_BRUSH_COLOR;
@@ -1024,6 +1139,8 @@ let drawingTool=state.drawingTool==='eraser'?'eraser':'pen';
 let mode=state.mode==='sample'?'sample':'draw';
 let activeStroke=null;
 let activeSample=null;
+let lastSamplePreviewAt=0;
+let lastSamplePreviewScreenPoint=null;
 let isDrawing=false;
 let renderQueued=false;
 let gesture=null;
@@ -1035,6 +1152,8 @@ const minPointDistance=${MIN_POINT_DISTANCE};
 const releasePointMinDistance=${RELEASE_POINT_MIN_DISTANCE};
 const interpolatedPointSpacing=${INTERPOLATED_POINT_SPACING};
 const maxInterpolatedPointsPerMove=${MAX_INTERPOLATED_POINTS_PER_MOVE};
+const samplePreviewIntervalMs=${SAMPLE_PREVIEW_INTERVAL_MS};
+const samplePreviewMinPixelDistance=${SAMPLE_PREVIEW_MIN_PIXEL_DISTANCE};
 function post(type,payload){
   if(window.ReactNativeWebView){
     window.ReactNativeWebView.postMessage(JSON.stringify({type,payload}));
@@ -1144,7 +1263,7 @@ function startTouch(event){
   const point=getEventPoint(event);
   if(!point) return;
   if(mode==='sample'){
-    updateSample(point);
+    updateSample(point,true);
     return;
   }
   const normalized=screenToNormalized(point);
@@ -1162,7 +1281,7 @@ function moveTouch(event){
   const point=getEventPoint(event);
   if(!point) return;
   if(mode==='sample'){
-    updateSample(point);
+    updateSample(point,false);
     return;
   }
   if(!isDrawing||!activeStroke) return;
@@ -1178,7 +1297,7 @@ function endTouch(event){
   }
   if(mode==='sample'){
     const point=getEventPoint(event);
-    const sample=point?updateSample(point):activeSample;
+    const sample=point?updateSample(point,true):activeSample&&activeSample.screenPoint?updateSample(activeSample.screenPoint,true):activeSample;
     if(sample&&sample.point) post('samplePoint',{
       x:sample.point.x,
       y:sample.point.y,
@@ -1222,36 +1341,75 @@ function interpolatePoints(start,end){
   }
   return points;
 }
-function updateSample(screenPoint){
+function updateSample(screenPoint,isFinal){
   const point=screenToNormalized(screenPoint);
   if(!point){
     activeSample=null;
     requestRender();
     return undefined;
   }
-  const rgb=readRgbAtNormalizedPoint(point);
-  const candidate=rgb?getNearestMunsell(rgb):undefined;
+  const shouldAnalyze=isFinal||shouldAnalyzeSamplePreview(screenPoint);
+  let rgb=activeSample&&activeSample.rgb;
+  let munsell=activeSample&&activeSample.munsell;
+  if(shouldAnalyze){
+    rgb=readRgbAtNormalizedPoint(point);
+    const candidate=rgb?getNearestMunsell(rgb):undefined;
+    munsell=candidate&&candidate.munsell;
+    lastSamplePreviewAt=Date.now();
+    lastSamplePreviewScreenPoint=screenPoint;
+  }
   activeSample={
-    munsell:candidate&&candidate.munsell,
+    munsell,
     point,
     rgb,
     screenPoint
   };
-  post('samplePreview',{
-    munsell:activeSample.munsell,
-    point,
-    rgb
-  });
+  if(shouldAnalyze){
+    post('samplePreview',{
+      munsell:activeSample.munsell,
+      point,
+      rgb
+    });
+  }
   requestRender();
   return activeSample;
+}
+function shouldAnalyzeSamplePreview(screenPoint){
+  if(!activeSample||!activeSample.rgb) return true;
+  const now=Date.now();
+  if(now-lastSamplePreviewAt<samplePreviewIntervalMs) return false;
+  if(lastSamplePreviewScreenPoint&&getPixelDistance(screenPoint,lastSamplePreviewScreenPoint)<samplePreviewMinPixelDistance){
+    return false;
+  }
+  return true;
 }
 function readRgbAtNormalizedPoint(point){
   if(!imageSamplingReady) return undefined;
   const x=clamp(Math.round((point.x/maxCoordinate)*(sampleCanvas.width-1)),0,sampleCanvas.width-1);
   const y=clamp(Math.round((point.y/maxCoordinate)*(sampleCanvas.height-1)),0,sampleCanvas.height-1);
+  const radius=Math.max(1,Math.round(Math.min(sampleCanvas.width,sampleCanvas.height)*0.015));
+  const startX=clamp(x-radius,0,sampleCanvas.width-1);
+  const endX=clamp(x+radius,0,sampleCanvas.width-1);
+  const startY=clamp(y-radius,0,sampleCanvas.height-1);
+  const endY=clamp(y+radius,0,sampleCanvas.height-1);
   try{
-    const data=sampleCtx.getImageData(x,y,1,1).data;
-    return {red:data[0],green:data[1],blue:data[2]};
+    const imageData=sampleCtx.getImageData(startX,startY,(endX-startX)+1,(endY-startY)+1).data;
+    let red=0;
+    let green=0;
+    let blue=0;
+    let count=0;
+    for(let index=0;index<imageData.length;index+=4){
+      red+=imageData[index];
+      green+=imageData[index+1];
+      blue+=imageData[index+2];
+      count+=1;
+    }
+    if(count===0) return undefined;
+    return {
+      red:Math.round(red/count),
+      green:Math.round(green/count),
+      blue:Math.round(blue/count)
+    };
   }catch{
     return undefined;
   }
@@ -1387,25 +1545,63 @@ function handleCommand(event){
   }
 }
 function getNearestMunsell(rgb){
-  const sampleLab=rgbToLab(rgb);
+  const sampleLab=rgbToMunsellLab(rgb);
   return references
     .map((reference)=>({
-      deltaE:deltaE(sampleLab,rgbToLab(reference.rgb)),
+      deltaE:deltaE2000(sampleLab,reference.labC||rgbToMunsellLab(reference.rgb)),
       munsell:reference.munsell
     }))
     .sort((left,right)=>left.deltaE-right.deltaE)[0];
 }
-function rgbToLab(rgb){
+function rgbToMunsellLab(rgb){
+  return xyzToLab(adaptD65ToC(rgbToXyzD65(rgb)),whitePointC);
+}
+function rgbToXyzD65(rgb){
   const red=srgbToLinear(rgb.red/255);
   const green=srgbToLinear(rgb.green/255);
   const blue=srgbToLinear(rgb.blue/255);
-  const x=((red*0.4124)+(green*0.3576)+(blue*0.1805))/0.95047;
-  const y=(red*0.2126)+(green*0.7152)+(blue*0.0722);
-  const z=((red*0.0193)+(green*0.1192)+(blue*0.9505))/1.08883;
-  const fx=labPivot(x);
-  const fy=labPivot(y);
-  const fz=labPivot(z);
+  return {
+    X:(0.4124564*red)+(0.3575761*green)+(0.1804375*blue),
+    Y:(0.2126729*red)+(0.7151522*green)+(0.072175*blue),
+    Z:(0.0193339*red)+(0.119192*green)+(0.9503041*blue)
+  };
+}
+const whitePointC={X:0.98074,Y:1,Z:1.18232};
+const whitePointD65={X:0.95047,Y:1,Z:1.08883};
+const mCat02=[
+  [0.7328,0.4296,-0.1624],
+  [-0.7036,1.6975,0.0061],
+  [0.003,0.0136,0.9834]
+];
+const mCat02Inv=[
+  [1.096124,-0.278869,0.182745],
+  [0.454369,0.473533,0.072098],
+  [-0.009628,-0.005698,1.015326]
+];
+function adaptD65ToC(xyz){
+  const sourceLms=multiplyMatrixVector(mCat02,[whitePointD65.X,whitePointD65.Y,whitePointD65.Z]);
+  const targetLms=multiplyMatrixVector(mCat02,[whitePointC.X,whitePointC.Y,whitePointC.Z]);
+  const inputLms=multiplyMatrixVector(mCat02,[xyz.X,xyz.Y,xyz.Z]);
+  const adaptedLms=[
+    inputLms[0]*(targetLms[0]/sourceLms[0]),
+    inputLms[1]*(targetLms[1]/sourceLms[1]),
+    inputLms[2]*(targetLms[2]/sourceLms[2])
+  ];
+  const adapted=multiplyMatrixVector(mCat02Inv,adaptedLms);
+  return {X:adapted[0],Y:adapted[1],Z:adapted[2]};
+}
+function xyzToLab(xyz,whitePoint){
+  const fx=labPivot(xyz.X/whitePoint.X);
+  const fy=labPivot(xyz.Y/whitePoint.Y);
+  const fz=labPivot(xyz.Z/whitePoint.Z);
   return {l:(116*fy)-16,a:500*(fx-fy),b:200*(fy-fz)};
+}
+function multiplyMatrixVector(matrix,vector){
+  return [
+    (matrix[0][0]*vector[0])+(matrix[0][1]*vector[1])+(matrix[0][2]*vector[2]),
+    (matrix[1][0]*vector[0])+(matrix[1][1]*vector[1])+(matrix[1][2]*vector[2]),
+    (matrix[2][0]*vector[0])+(matrix[2][1]*vector[1])+(matrix[2][2]*vector[2])
+  ];
 }
 function srgbToLinear(value){
   return value<=0.04045?value/12.92:Math.pow((value+0.055)/1.055,2.4);
@@ -1413,8 +1609,49 @@ function srgbToLinear(value){
 function labPivot(value){
   return value>0.008856?Math.cbrt(value):(7.787*value)+(16/116);
 }
-function deltaE(left,right){
-  return Math.sqrt(Math.pow(left.l-right.l,2)+Math.pow(left.a-right.a,2)+Math.pow(left.b-right.b,2));
+function degreesToRadians(degrees){
+  return degrees*Math.PI/180;
+}
+function deltaE2000(left,right){
+  const kL=1,kC=1,kH=1;
+  const c1=Math.sqrt(Math.pow(left.a,2)+Math.pow(left.b,2));
+  const c2=Math.sqrt(Math.pow(right.a,2)+Math.pow(right.b,2));
+  const cMean=(c1+c2)/2;
+  const cMean7=Math.pow(cMean,7);
+  const g=0.5*(1-Math.sqrt(cMean7/(cMean7+Math.pow(25,7))));
+  const a1Prime=left.a*(1+g);
+  const a2Prime=right.a*(1+g);
+  const c1Prime=Math.sqrt(Math.pow(a1Prime,2)+Math.pow(left.b,2));
+  const c2Prime=Math.sqrt(Math.pow(a2Prime,2)+Math.pow(right.b,2));
+  const h1Prime=((Math.atan2(left.b,a1Prime)*180)/Math.PI+360)%360;
+  const h2Prime=((Math.atan2(right.b,a2Prime)*180)/Math.PI+360)%360;
+  const deltaLPrime=right.l-left.l;
+  const deltaCPrime=c2Prime-c1Prime;
+  let deltaHPrime;
+  if(c1Prime*c2Prime===0) deltaHPrime=0;
+  else if(Math.abs(h2Prime-h1Prime)<=180) deltaHPrime=h2Prime-h1Prime;
+  else if(h2Prime-h1Prime>180) deltaHPrime=h2Prime-h1Prime-360;
+  else deltaHPrime=h2Prime-h1Prime+360;
+  const deltaH=2*Math.sqrt(c1Prime*c2Prime)*Math.sin(degreesToRadians(deltaHPrime/2));
+  const lPrimeMean=(left.l+right.l)/2;
+  const cPrimeMean=(c1Prime+c2Prime)/2;
+  let hPrimeMean;
+  if(c1Prime*c2Prime===0) hPrimeMean=h1Prime+h2Prime;
+  else if(Math.abs(h1Prime-h2Prime)<=180) hPrimeMean=(h1Prime+h2Prime)/2;
+  else if(h1Prime+h2Prime<360) hPrimeMean=(h1Prime+h2Prime+360)/2;
+  else hPrimeMean=(h1Prime+h2Prime-360)/2;
+  const t=1-(0.17*Math.cos(degreesToRadians(hPrimeMean-30)))+(0.24*Math.cos(degreesToRadians(2*hPrimeMean)))+(0.32*Math.cos(degreesToRadians((3*hPrimeMean)+6)))-(0.2*Math.cos(degreesToRadians((4*hPrimeMean)-63)));
+  const sL=1+(0.015*Math.pow(lPrimeMean-50,2))/Math.sqrt(20+Math.pow(lPrimeMean-50,2));
+  const sC=1+(0.045*cPrimeMean);
+  const sH=1+(0.015*cPrimeMean*t);
+  const cPrimeMean7=Math.pow(cPrimeMean,7);
+  const rT=-2*Math.sqrt(cPrimeMean7/(cPrimeMean7+Math.pow(25,7)))*Math.sin(degreesToRadians(60*Math.exp(-Math.pow((hPrimeMean-275)/25,2))));
+  return Math.sqrt(
+    Math.pow(deltaLPrime/(kL*sL),2)
+    +Math.pow(deltaCPrime/(kC*sC),2)
+    +Math.pow(deltaH/(kH*sH),2)
+    +rT*(deltaCPrime/(kC*sC))*(deltaH/(kH*sH))
+  );
 }
 function getMidpoint(a,b){
   return {x:(a.x+b.x)/2,y:(a.y+b.y)/2};
@@ -1573,6 +1810,15 @@ const styles = StyleSheet.create({
     height: 38,
     justifyContent: 'center',
     width: 38,
+  },
+  fullscreenConfirmButton: {
+    alignItems: 'center',
+    backgroundColor: '#027a48',
+    borderRadius: 6,
+    flexDirection: 'row',
+    minHeight: 38,
+    marginRight: 8,
+    paddingHorizontal: 10,
   },
   fullscreenContainer: {
     backgroundColor: '#111827',
