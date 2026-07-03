@@ -1299,6 +1299,8 @@ const DocumentsList: React.FC = () => {
               expandedDocumentIds={expandedRecordDocumentIds}
               onOpenDocument={(document) =>
                 selectWorkbenchDocument(document, { toggle: true })}
+              onOpenRelatedDocument={(document) =>
+                selectWorkbenchDocument(document, { expand: true })}
               onAddChild={openAddChildModal}
               onAddDocumentOfCategory={(parentDoc, categoryName) =>
                 navigateAddCategory(categoryName, parentDoc)}
@@ -1322,6 +1324,8 @@ const DocumentsList: React.FC = () => {
               expandedDocumentIds={expandedRecordDocumentIds}
               onOpenDocument={(document) =>
                 selectWorkbenchDocument(document, { toggle: true })}
+              onOpenRelatedDocument={(document) =>
+                selectWorkbenchDocument(document, { expand: true })}
               onAddChild={openAddChildModal}
               onAddDocumentOfCategory={(parentDoc, categoryName) =>
                 navigateAddCategory(categoryName, parentDoc)}
@@ -1639,6 +1643,7 @@ const RecordSection: React.FC<{
   removingDocumentIds: Set<string>;
   expandedDocumentIds: Set<string>;
   onOpenDocument: (document: Document) => void;
+  onOpenRelatedDocument: (document: Document) => void;
   onAddChild: (document: Document) => void;
   onAddDocumentOfCategory: (parentDoc: Document, categoryName: string) => void;
   onEditDocument: (document: Document) => void;
@@ -1654,6 +1659,7 @@ const RecordSection: React.FC<{
   removingDocumentIds,
   expandedDocumentIds,
   onOpenDocument,
+  onOpenRelatedDocument,
   onAddChild,
   onAddDocumentOfCategory,
   onEditDocument,
@@ -1685,7 +1691,7 @@ const RecordSection: React.FC<{
           selected={expandedDocumentIds.has(document.resource.id)}
           onOpen={() => onOpenDocument(document)}
           onAddChild={() => onAddChild(document)}
-          onOpenEvidence={onOpenDocument}
+          onOpenEvidence={onOpenRelatedDocument}
           onAddEvidence={onAddDocumentOfCategory}
           onEdit={() => onEditDocument(document)}
           onDelete={() => onDeleteDocument(document)}
