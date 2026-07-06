@@ -249,6 +249,15 @@
                 </button>
             </div>
         </div>
+        <button *ngIf="hasReportHandoffOverflow()"
+                type="button"
+                class="korean-fieldwork-report-handoff-overflow"
+                (click)="toggleReportHandoffItems($event)">
+            <span class="mdi"
+                  [class.mdi-chevron-up]="reportHandoffShowsAll"
+                  [class.mdi-chevron-down]="!reportHandoffShowsAll"></span>
+            <span>{{getReportHandoffOverflowActionLabel()}}</span>
+        </button>
         <div *ngIf="getReportHandoffPreviewItem() as previewItem"
              class="korean-fieldwork-report-handoff-preview">
             <div class="korean-fieldwork-report-handoff-preview-header">
@@ -279,10 +288,6 @@
                 </span>
             </div>
             <pre class="korean-fieldwork-report-handoff-copy-preview">{{previewItem.copyText}}</pre>
-        </div>
-        <div *ngIf="getReportHandoffHiddenCount() > 0"
-             class="korean-fieldwork-report-handoff-hidden">
-            +{{getReportHandoffHiddenCount()}} &#44592;&#47197;
         </div>
     </div>
 

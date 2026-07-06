@@ -3249,12 +3249,18 @@ function validateReportHandoffPreSaveValidation() {
       || !desktopPriorityStripTemplateText.includes('item.issueDetails')
       || !desktopPriorityStripTemplateText.includes('korean-fieldwork-report-handoff-preview')
       || !desktopPriorityStripTemplateText.includes('previewItem.copyText')
+      || !desktopPriorityStripTemplateText.includes('korean-fieldwork-report-handoff-overflow')
+      || !desktopPriorityStripText.includes('REPORT_HANDOFF_COLLAPSED_LIMIT')
+      || !desktopPriorityStripText.includes('hasReportHandoffOverflow')
+      || !desktopPriorityStripText.includes('toggleReportHandoffItems')
       || !desktopPriorityStripStyleText.includes('.korean-fieldwork-report-handoff-detail')
       || !desktopPriorityStripStyleText.includes('.korean-fieldwork-report-handoff-copy-preview')
+      || !desktopPriorityStripStyleText.includes('.korean-fieldwork-report-handoff-overflow')
       || !desktopPriorityStripSpecText.includes('featureItem.evidenceDetails')
       || !desktopPriorityStripSpecText.includes('featureItem.issueDetails')
-      || !desktopPriorityStripSpecText.includes('getReportHandoffPreviewItem')) {
-    findings.push('desktop report handoff panel must render and test evidence details, issue details, and visible HWP copy previews');
+      || !desktopPriorityStripSpecText.includes('getReportHandoffPreviewItem')
+      || !desktopPriorityStripSpecText.includes('expands report handoff lists')) {
+    findings.push('desktop report handoff panel must render and test evidence details, issue details, visible HWP copy previews, and expandable full record lists');
   }
 
   return findings;

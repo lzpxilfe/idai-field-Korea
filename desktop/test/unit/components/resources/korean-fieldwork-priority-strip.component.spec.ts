@@ -238,6 +238,58 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
     });
 
 
+    it('expands report handoff lists so tablet records are not left hidden', async () => {
+
+        const featureDocuments = Array.from({ length: 10 }, (_, index) => {
+            const number = String(index + 1).padStart(3, '0');
+
+            return createDocument(`feature-${number}`, 'Feature', {
+                identifier: `pit-${number}`,
+                shortDescription: `feature ${number}`,
+                featureRecordingStatus: 'confirmed',
+                featureInvestigationChecklist: []
+            });
+        });
+
+        const component = createComponent({
+            find: jest.fn().mockResolvedValue({
+                documents: [
+                    createDocument('project', 'Project'),
+                    ...featureDocuments
+                ]
+            }),
+            get: jest.fn()
+        });
+
+        await component.refresh();
+
+        expect(component.reportHandoffItems).toHaveLength(10);
+        expect(component.getReportHandoffItems()).toHaveLength(8);
+        expect(component.hasReportHandoffOverflow()).toBe(true);
+        expect(component.getReportHandoffHiddenCount()).toBe(2);
+        expect(component.getReportHandoffOverflowActionLabel()).toContain('2');
+
+        component.toggleReportHandoffItems();
+
+        expect(component.getReportHandoffItems()).toHaveLength(10);
+        expect(component.getReportHandoffHiddenCount()).toBe(0);
+        expect(component.getReportHandoffOverflowActionLabel()).toBe('\uc811\uae30');
+
+        const hiddenFeature = component.getReportHandoffItems()
+            .find(item => item.documentId === 'feature-010');
+        expect(hiddenFeature).toBeDefined();
+        component.selectReportHandoffItem(hiddenFeature!);
+        expect(component.getReportHandoffPreviewItem()?.documentId).toBe('feature-010');
+
+        component.toggleReportHandoffItems();
+
+        expect(component.getReportHandoffItems()).toHaveLength(8);
+        expect(component.getReportHandoffItems().some(item => item.documentId === 'feature-010')).toBe(false);
+        expect(component.getReportHandoffPreviewItem()?.documentId)
+            .toBe(component.getReportHandoffItems()[0].documentId);
+    });
+
+
     it('keeps tablet-hidden initial boundary records out of desktop status and workbench lists', async () => {
 
         const component = createComponent(

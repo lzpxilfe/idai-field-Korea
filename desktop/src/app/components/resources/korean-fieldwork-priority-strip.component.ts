@@ -166,6 +166,7 @@ interface KoreanFieldworkTodayQuickAction {
 
 const FEATURE_CATEGORY_NAME = 'Feature';
 const NOTEBOOK_RECORD_MEMO_CATEGORY = 'PenMemo';
+const REPORT_HANDOFF_COLLAPSED_LIMIT = 8;
 const NOTEBOOK_RECORD_MEMO_TARGET_CATEGORIES = new Set([
     'Operation',
     'Trench',
@@ -223,6 +224,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
     public reportHandoffCopyAllText: string = '';
     public reportCopiedDocumentId: string|undefined;
     public selectedReportHandoffDocumentId: string|undefined;
+    public reportHandoffShowsAll: boolean = false;
     public overviewChartData: KoreanFieldworkOverviewChartData|undefined;
     public isLoading: boolean = false;
     public activePanel: KoreanFieldworkPriorityPanelId = 'overview';
@@ -794,7 +796,12 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
     public hasReportHandoffItems = () => this.reportHandoffItems.length > 0;
 
     public getReportHandoffItems = () =>
-        this.reportHandoffItems.slice(0, 8);
+        this.reportHandoffShowsAll
+            ? this.reportHandoffItems
+            : this.reportHandoffItems.slice(0, REPORT_HANDOFF_COLLAPSED_LIMIT);
+
+    public hasReportHandoffOverflow = () =>
+        this.reportHandoffItems.length > REPORT_HANDOFF_COLLAPSED_LIMIT;
 
     public getReportHandoffHiddenCount = () =>
         Math.max(0, this.reportHandoffItems.length - this.getReportHandoffItems().length);
@@ -819,11 +826,29 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
     public getReportHandoffCopyActionLabel = (item: KoreanFieldworkReportHandoffItem) =>
         this.isReportHandoffItemCopied(item) ? '\ubcf5\uc0ac\ub428' : '\ubcf5\uc0ac';
 
+    public getReportHandoffOverflowActionLabel = () =>
+        this.reportHandoffShowsAll
+            ? '\uc811\uae30'
+            : `\uc804\uccb4 \ubcf4\uae30 \u00b7 ${this.getReportHandoffHiddenCount()} \uae30\ub85d`;
+
     public selectReportHandoffItem(item: KoreanFieldworkReportHandoffItem, event?: Event) {
 
         if (event) event.stopPropagation();
 
         this.selectedReportHandoffDocumentId = item.documentId;
+    }
+
+    public toggleReportHandoffItems(event?: Event) {
+
+        if (event) event.stopPropagation();
+        if (!this.hasReportHandoffOverflow()) return;
+
+        this.reportHandoffShowsAll = !this.reportHandoffShowsAll;
+
+        if (!this.reportHandoffShowsAll
+                && !this.getReportHandoffItems().some(item => item.documentId === this.selectedReportHandoffDocumentId)) {
+            this.selectedReportHandoffDocumentId = this.getReportHandoffItems()[0]?.documentId;
+        }
     }
 
     public async openReportHandoffItem(item: KoreanFieldworkReportHandoffItem, event?: Event) {
@@ -1449,6 +1474,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
                 this.reportHandoffItems = [];
                 this.reportHandoffCopyAllText = '';
                 this.selectedReportHandoffDocumentId = undefined;
+                this.reportHandoffShowsAll = false;
                 this.projectDocuments = [];
                 this.activePanel = 'workflow';
             }
@@ -1628,8 +1654,11 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
 
         if (this.reportHandoffItems.length === 0) {
             this.selectedReportHandoffDocumentId = undefined;
+            this.reportHandoffShowsAll = false;
             return;
         }
+
+        if (!this.hasReportHandoffOverflow()) this.reportHandoffShowsAll = false;
 
         if (!this.selectedReportHandoffDocumentId
                 || !this.reportHandoffItems.some(item => item.documentId === this.selectedReportHandoffDocumentId)) {
