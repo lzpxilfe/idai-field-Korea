@@ -1,23 +1,10 @@
 import {
   Document,
-  KOREAN_FIELDWORK_RECORD_CREATION_TIMING_DURING_FIELDWORK,
+  getKoreanFieldworkDraftFieldDefaults,
   NewResource,
   ProjectConfiguration,
   Resource,
 } from 'idai-field-core';
-import {
-  FEATURE_GEOMETRY_EDIT_STATUS_ROUGH_SKETCH,
-  FEATURE_GEOMETRY_REVISION_HISTORY_DEFAULT,
-  FEATURE_RECORDING_STATUS_CANDIDATE,
-  LAYER_SEQUENCE_MEANING_DEFAULT,
-  REFERENCE_BASEMAP_PROVIDER_DEFAULT,
-  SOIL_COLOR_ASSIST_STATUS_DEFAULT,
-  SOIL_PROFILE_PHOTO_QUALITY_DEFAULT,
-  SOIL_PROFILE_PHOTO_SIZE_HINT_KB_DEFAULT,
-  SURVEY_BOUNDARY_ACCURACY_DEFAULT,
-  SURVEY_BOUNDARY_SOURCE_DEFAULT,
-  SURVEY_BOUNDARY_TYPE_DEFAULT,
-} from './Map/korean-fieldwork-drafts';
 import { KOREAN_FIELDWORK_CATEGORIES } from './korean-fieldwork-categories';
 import {
   getKoreanFieldworkFeatureInterpretationTypeValue,
@@ -114,9 +101,10 @@ export const createKoreanFieldworkDraftResource = (
       ...(featureInterpretationTypeValue
         ? { featureInterpretationType: [featureInterpretationTypeValue] }
         : {}),
-      featureRecordingStatus: FEATURE_RECORDING_STATUS_CANDIDATE,
-      featureGeometryEditStatus: FEATURE_GEOMETRY_EDIT_STATUS_ROUGH_SKETCH,
-      featureGeometryRevisionHistory: FEATURE_GEOMETRY_REVISION_HISTORY_DEFAULT,
+      ...getKoreanFieldworkDraftFieldDefaults(categoryName, {
+        geometryConfidence: normalizedGeometryConfidence,
+        geometrySource: normalizedGeometrySource,
+      }),
       ...(normalizedGeometryConfidence
         ? { geometryConfidence: normalizedGeometryConfidence }
         : {}),
@@ -132,78 +120,55 @@ export const createKoreanFieldworkDraftResource = (
       ...(normalizedShortDescription
         ? { shortDescription: normalizedShortDescription }
         : {}),
-      featureInvestigationChecklist: [],
-      featureSoilProfilePhotoCount: 0,
     };
   }
 
   if (categoryName === C.TRENCH) {
     return {
       ...resource,
-      featureInvestigationChecklist: [],
-      recordCreationTiming: KOREAN_FIELDWORK_RECORD_CREATION_TIMING_DURING_FIELDWORK,
-      fieldRecordQuality: [],
+      ...getKoreanFieldworkDraftFieldDefaults(categoryName),
     };
   }
 
   if (categoryName === C.LAYER) {
     return {
       ...resource,
-      layerSequenceNumber: 1,
-      layerSequenceMeaning: LAYER_SEQUENCE_MEANING_DEFAULT,
-      soilColorAssistStatus: SOIL_COLOR_ASSIST_STATUS_DEFAULT,
+      ...getKoreanFieldworkDraftFieldDefaults(categoryName),
     };
   }
 
   if (categoryName === C.SOIL_PROFILE_PHOTO) {
     return {
       ...resource,
-      soilProfileAnnotationStrokes: '[]',
-      soilProfilePhotoAnnotationStrokes: '[]',
-      soilProfileLayerMarkers: '[]',
-      soilProfileLayerIds: '[]',
-      soilProfileColorSwatches: '',
-      soilColorAssistCandidates: '',
-      soilColorAssistStatus: SOIL_COLOR_ASSIST_STATUS_DEFAULT,
-      soilProfilePhotoSizeHintKb: SOIL_PROFILE_PHOTO_SIZE_HINT_KB_DEFAULT,
-      soilProfilePhotoQuality: SOIL_PROFILE_PHOTO_QUALITY_DEFAULT,
-      layerSequenceMeaning: LAYER_SEQUENCE_MEANING_DEFAULT,
+      ...getKoreanFieldworkDraftFieldDefaults(categoryName),
     };
   }
 
   if (categoryName === C.PHOTO) {
     return {
       ...resource,
-      fieldworkPhotoAnnotationStrokes: '[]',
-      fieldworkPhotoSizeHintKb: SOIL_PROFILE_PHOTO_SIZE_HINT_KB_DEFAULT,
-      fieldworkPhotoQuality: SOIL_PROFILE_PHOTO_QUALITY_DEFAULT,
-      mediaEvidenceRole: ['fieldResultRecord'],
+      ...getKoreanFieldworkDraftFieldDefaults(categoryName),
     };
   }
 
   if (categoryName === C.DRAWING) {
     return {
       ...resource,
-      drawingSketchStrokes: '[]',
-      mediaEvidenceRole: ['fieldResultRecord'],
+      ...getKoreanFieldworkDraftFieldDefaults(categoryName),
     };
   }
 
   if (categoryName === C.SURVEY_BOUNDARY) {
     return {
       ...resource,
-      surveyBoundaryType: SURVEY_BOUNDARY_TYPE_DEFAULT,
-      surveyBoundarySource: SURVEY_BOUNDARY_SOURCE_DEFAULT,
-      surveyBoundaryAccuracy: SURVEY_BOUNDARY_ACCURACY_DEFAULT,
-      referenceBasemapProvider: REFERENCE_BASEMAP_PROVIDER_DEFAULT,
+      ...getKoreanFieldworkDraftFieldDefaults(categoryName),
     };
   }
 
   if (categoryName === C.PEN_MEMO) {
     return {
       ...resource,
-      penMemoStrokes: '[]',
-      penMemoTranscriptionStatus: 'pending',
+      ...getKoreanFieldworkDraftFieldDefaults(categoryName),
     };
   }
 
@@ -350,6 +315,7 @@ const getLinkedPhotoSuffixNumber = (
 
 const isFeatureWorkflowCategory = (categoryName: string): boolean =>
   categoryName === C.FEATURE
+  || categoryName === C.FEATURE_GROUP
   || categoryName === C.FEATURE_SEGMENT;
 
 const parseFeatureGeometryOption = (

@@ -106,6 +106,7 @@ const featureRows = [
       'desktop/src/app/components/resources/map/map/editable-map.component.ts',
       'desktop/src/app/components/resources/map/map/editable-map.html',
       'desktop/src/app/components/resources/map/map/map.scss',
+      'core/src/tools/korean-fieldwork-draft-defaults.ts',
       'desktop/src/app/util/korean-fieldwork-feature-guidance.ts'
     ],
     tabletTests: [
@@ -372,6 +373,8 @@ const releaseCriticalPatterns = [
   /^core\/test\/tools\/korean-fieldwork-readiness\.spec\.ts$/,
   /^core\/src\/tools\/korean-fieldwork-record-contract\.ts$/,
   /^core\/test\/tools\/korean-fieldwork-record-contract\.spec\.ts$/,
+  /^core\/src\/tools\/korean-fieldwork-draft-defaults\.ts$/,
+  /^core\/test\/tools\/korean-fieldwork-draft-defaults\.spec\.ts$/,
   /^core\/src\/tools\/korean-fieldwork-report-handoff\.ts$/,
   /^core\/test\/tools\/korean-fieldwork-report-handoff\.spec\.ts$/,
   /^mobile\/app\/\(tabs\)\/ProjectScreen\/Document(Add|Edit)\.tsx$/,
@@ -1045,6 +1048,8 @@ function validateGuidedFeatureDraftDefaults() {
   const tabletMapBottomSheetText = readTextFile('mobile/components/Project/Map/MapBottomSheet.tsx');
   const desktopDraftText = readTextFile('desktop/src/app/util/korean-fieldwork-document-drafts.ts');
   const desktopDraftDefaultsText = readTextFile('desktop/src/app/util/korean-fieldwork-draft-defaults.ts');
+  const coreDraftDefaultsText = readTextFile('core/src/tools/korean-fieldwork-draft-defaults.ts');
+  const coreDraftDefaultsSpecText = readTextFile('core/test/tools/korean-fieldwork-draft-defaults.spec.ts');
   const desktopPlusButtonTemplateText = readTextFile('desktop/src/app/components/resources/plus-button.html');
   const desktopPlusButtonI18nText = [
     'de',
@@ -1108,6 +1113,27 @@ function validateGuidedFeatureDraftDefaults() {
   const desktopPriorityStripTemplateText = readTextFile(
     'desktop/src/app/components/resources/korean-fieldwork-priority-strip.html'
   );
+
+  if (!coreDraftDefaultsText.includes('getKoreanFieldworkDraftFieldDefaults')
+      || !coreDraftDefaultsText.includes('getKoreanFieldworkConfiguredDraftFieldDefaults')
+      || !coreDraftDefaultsText.includes('KOREAN_FIELDWORK_DESKTOP_FEATURE_TRACE_NOTE')
+      || !coreDraftDefaultsText.includes('C.FEATURE_GROUP')
+      || !coreDraftDefaultsSpecText.includes('Korean fieldwork draft defaults')) {
+    findings.push('core draft defaults must define shared tablet and desktop draft field defaults');
+  }
+  if (!tabletDraftText.includes('categoryName === C.FEATURE_GROUP')) {
+    findings.push('tablet document drafts must treat FeatureGroup as a shared feature workflow draft category');
+  }
+  for (const [label, text] of [
+    ['tablet map drafts', readTextFile('mobile/components/Project/Map/korean-fieldwork-drafts.ts')],
+    ['tablet document drafts', tabletDraftText],
+    ['desktop draft defaults', desktopDraftDefaultsText]
+  ]) {
+    if (!text.includes('getKoreanFieldworkDraftFieldDefaults')
+        && !text.includes('getKoreanFieldworkConfiguredDraftFieldDefaults')) {
+      findings.push(`${label} must reuse the shared core draft default contract`);
+    }
+  }
 
   for (const [label, text] of [
     ['tablet', tabletDraftText],
@@ -1206,8 +1232,11 @@ function validateGuidedFeatureDraftDefaults() {
       || !desktopEditableMapSpecText.includes('not a 3D overview')) {
     findings.push('desktop editable map must keep feature creation framed as flat survey-boundary placement');
   }
-  if (!desktopDraftDefaultsText.includes('위성지도나 평면도처럼 조사 경계 위에 유구 위치와 형태를 바로 얹으며 시작')
-      || desktopDraftDefaultsText.includes('조사 경계 위 평면지도에서 유구 위치와 형태를 그리며 시작')) {
+  if (!(desktopDraftDefaultsText.includes('위성지도나 평면도처럼 조사 경계 위에 유구 위치와 형태를 바로 얹으며 시작')
+          || coreDraftDefaultsText.includes('KOREAN_FIELDWORK_DESKTOP_FEATURE_TRACE_NOTE')
+          || coreDraftDefaultsSpecText.includes('KOREAN_FIELDWORK_DESKTOP_FEATURE_TRACE_NOTE'))
+      || desktopDraftDefaultsText.includes('조사 경계 위 평면지도에서 유구 위치와 형태를 그리며 시작')
+      || coreDraftDefaultsText.includes('조사 경계 위 평면지도에서 유구 위치와 형태를 그리며 시작')) {
     findings.push('desktop feature draft defaults must use the same map-first placement wording as the tablet add flow');
   }
   if (!desktopPlusButtonTemplateText.includes('위성지도나 평면도처럼 조사 경계 위에 유구 위치와 형태를 바로 얹습니다.')
@@ -2022,6 +2051,7 @@ function validateProjectInvestigationModeWording() {
   const desktopDraftDefaultsText = readTextFile(
     'desktop/src/app/util/korean-fieldwork-draft-defaults.ts'
   );
+  const coreDraftDefaultsText = readTextFile('core/src/tools/korean-fieldwork-draft-defaults.ts');
   const desktopDocumentDraftText = readTextFile(
     'desktop/src/app/util/korean-fieldwork-document-drafts.ts'
   );
@@ -2474,7 +2504,8 @@ function validateProjectInvestigationModeWording() {
       findings.push(`desktop document drafts must pass imported SurveyBoundary option: ${option}`);
     }
   }
-  if (!desktopDraftDefaultsText.includes('surveyBoundaryNote: boundarySummary')) {
+  if (!desktopDraftDefaultsText.includes('surveyBoundaryNote: boundarySummary')
+      && !coreDraftDefaultsText.includes('surveyBoundaryNote: boundarySummary')) {
     findings.push('desktop SurveyBoundary defaults must copy project boundary summaries into surveyBoundaryNote');
   }
   for (const option of [
@@ -2485,7 +2516,8 @@ function validateProjectInvestigationModeWording() {
     'options.boundarySource',
     'options.referenceBasemapProvider'
   ]) {
-    if (!desktopDraftDefaultsText.includes(option)) {
+    if (!desktopDraftDefaultsText.includes(option)
+        && !coreDraftDefaultsText.includes(option)) {
       findings.push(`desktop SurveyBoundary defaults must support imported boundary metadata: ${option}`);
     }
   }

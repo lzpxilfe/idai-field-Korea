@@ -83,6 +83,35 @@ describe('Korean fieldwork document drafts', () => {
     });
   });
 
+  it('keeps legacy FeatureGroup drafts on the same shared feature workflow defaults', () => {
+    const trenchDoc = createDoc('trench-1', C.TRENCH, {
+      isRecordedIn: ['operation-1'],
+    });
+    const config = allowRelations({
+      [`${C.FEATURE_GROUP}:${C.TRENCH}`]: ['liesWithin'],
+    });
+
+    const draft = createKoreanFieldworkDraftResource(
+      trenchDoc,
+      C.FEATURE_GROUP,
+      config
+    );
+
+    expect(draft).toMatchObject({
+      identifier: 'feature-group-1700000000000',
+      category: C.FEATURE_GROUP,
+      relations: {
+        isRecordedIn: ['operation-1'],
+        liesWithin: ['trench-1'],
+      },
+      featureRecordingStatus: FEATURE_RECORDING_STATUS_CANDIDATE,
+      featureGeometryEditStatus: FEATURE_GEOMETRY_EDIT_STATUS_ROUGH_SKETCH,
+      featureGeometryRevisionHistory: FEATURE_GEOMETRY_REVISION_HISTORY_DEFAULT,
+      featureInvestigationChecklist: [],
+      featureSoilProfilePhotoCount: 0,
+    });
+  });
+
   it('starts Feature drafts with the selected Korean feature type', () => {
     const trenchDoc = createDoc('trench-1', C.TRENCH, {
       isRecordedIn: ['operation-1'],

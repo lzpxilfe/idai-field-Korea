@@ -1,5 +1,6 @@
 import {
   Document,
+  getKoreanFieldworkDraftFieldDefaults,
   KOREAN_FIELDWORK_FEATURE_GEOMETRY_EDIT_STATUS_ROUGH_SKETCH,
   KOREAN_FIELDWORK_FEATURE_GEOMETRY_REVISION_HISTORY_DEFAULT,
   KOREAN_FIELDWORK_FEATURE_RECORDING_STATUS_CANDIDATE,
@@ -197,16 +198,7 @@ export const createSoilProfilePhotoDraft = (targetDoc: Document): NewDocument =>
     identifier: `soil-profile-photo-${Date.now()}`,
     category: KOREAN_FIELDWORK_CATEGORIES.SOIL_PROFILE_PHOTO,
     relations: createDepictsRelation(targetDoc),
-    soilProfileAnnotationStrokes: '[]',
-    soilProfilePhotoAnnotationStrokes: '[]',
-    soilProfileLayerMarkers: '[]',
-    soilProfileLayerIds: '[]',
-    soilProfileColorSwatches: '',
-    soilColorAssistCandidates: '',
-    soilColorAssistStatus: SOIL_COLOR_ASSIST_STATUS_DEFAULT,
-    soilProfilePhotoSizeHintKb: SOIL_PROFILE_PHOTO_SIZE_HINT_KB_DEFAULT,
-    soilProfilePhotoQuality: SOIL_PROFILE_PHOTO_QUALITY_DEFAULT,
-    layerSequenceMeaning: LAYER_SEQUENCE_MEANING_DEFAULT,
+    ...getKoreanFieldworkDraftFieldDefaults(KOREAN_FIELDWORK_CATEGORIES.SOIL_PROFILE_PHOTO),
   },
 });
 
@@ -218,9 +210,8 @@ export const createLayerDraft = (
     identifier: `layer-${Date.now()}-${sequenceNumber}`,
     category: KOREAN_FIELDWORK_CATEGORIES.LAYER,
     relations: createKoreanFieldworkChildRelations(parentDoc),
+    ...getKoreanFieldworkDraftFieldDefaults(KOREAN_FIELDWORK_CATEGORIES.LAYER),
     layerSequenceNumber: sequenceNumber,
-    layerSequenceMeaning: LAYER_SEQUENCE_MEANING_DEFAULT,
-    soilColorAssistStatus: SOIL_COLOR_ASSIST_STATUS_DEFAULT,
   },
 });
 
@@ -246,13 +237,10 @@ export const createFeatureCandidateDraft = (
       ...(featureInterpretationTypeValue
         ? { featureInterpretationType: [featureInterpretationTypeValue] }
         : {}),
-      featureRecordingStatus: FEATURE_RECORDING_STATUS_CANDIDATE,
-      geometrySource: GEOMETRY_SOURCE_GPS_APPROXIMATE,
-      geometryConfidence: GEOMETRY_CONFIDENCE_ROUGH,
-      featureGeometryEditStatus: FEATURE_GEOMETRY_EDIT_STATUS_ROUGH_SKETCH,
-      featureGeometryRevisionHistory: FEATURE_GEOMETRY_REVISION_HISTORY_DEFAULT,
-      featureInvestigationChecklist: [],
-      featureSoilProfilePhotoCount: 0,
+      ...getKoreanFieldworkDraftFieldDefaults(KOREAN_FIELDWORK_CATEGORIES.FEATURE, {
+        geometrySource: GEOMETRY_SOURCE_GPS_APPROXIMATE,
+        includeGeometryDefaults: true,
+      }),
     },
   };
 };
@@ -279,15 +267,17 @@ export const createSurveyBoundaryDraft = (
         shortDescription: normalizedBoundarySummary,
         surveyBoundaryNote: normalizedBoundarySummary,
       } : {}),
-      surveyBoundaryType: SURVEY_BOUNDARY_TYPE_DEFAULT,
-      surveyBoundarySource: options.boundarySource ?? (location
-        ? SURVEY_BOUNDARY_SOURCE_GPS_WALKOVER
-        : SURVEY_BOUNDARY_SOURCE_DEFAULT),
-      surveyBoundaryAccuracy: options.boundaryAccuracy ?? (location
-        ? SURVEY_BOUNDARY_ACCURACY_APPROXIMATE_GPS
-        : SURVEY_BOUNDARY_ACCURACY_DEFAULT),
-      referenceBasemapProvider: options.referenceBasemapProvider
-        ?? REFERENCE_BASEMAP_PROVIDER_DEFAULT,
+      ...getKoreanFieldworkDraftFieldDefaults(KOREAN_FIELDWORK_CATEGORIES.SURVEY_BOUNDARY, {
+        boundaryAccuracy: options.boundaryAccuracy ?? (location
+          ? SURVEY_BOUNDARY_ACCURACY_APPROXIMATE_GPS
+          : SURVEY_BOUNDARY_ACCURACY_DEFAULT),
+        boundarySource: options.boundarySource ?? (location
+          ? SURVEY_BOUNDARY_SOURCE_GPS_WALKOVER
+          : SURVEY_BOUNDARY_SOURCE_DEFAULT),
+        boundarySummary: normalizedBoundarySummary,
+        referenceBasemapProvider: options.referenceBasemapProvider
+          ?? REFERENCE_BASEMAP_PROVIDER_DEFAULT,
+      }),
     },
   };
 };
