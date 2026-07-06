@@ -85,6 +85,35 @@ function Stop-ProcessTree {
     }
 }
 
+function Ensure-DesktopDependencies {
+    param([string] $NodeDir)
+
+    $electronExe = Join-Path $appDir 'node_modules\electron\dist\electron.exe'
+    if (Test-Path -LiteralPath $electronExe) {
+        return
+    }
+
+    if ($CheckOnly) {
+        throw "Electron runtime was not found: $electronExe"
+    }
+
+    Write-Host 'Field Desktop dependencies are not installed yet.'
+    Write-Host 'Running npm run bootstrap. The first run can take several minutes.'
+
+    $previousPath = $env:Path
+    $env:Path = "$NodeDir;$env:Path"
+    Push-Location -LiteralPath $repoDir
+    try {
+        & npm.cmd run bootstrap
+        if ($LASTEXITCODE -ne 0) {
+            throw "npm run bootstrap failed with exit code $LASTEXITCODE."
+        }
+    } finally {
+        Pop-Location
+        $env:Path = $previousPath
+    }
+}
+
 $serverProcess = $null
 $startedServer = $false
 
@@ -94,6 +123,8 @@ try {
     if (-not (Test-Path -LiteralPath (Join-Path $appDir 'package.json'))) {
         throw "Desktop package was not found: $appDir"
     }
+
+    Ensure-DesktopDependencies -NodeDir $nodeDir
 
     $electronExe = Join-Path $appDir 'node_modules\electron\dist\electron.exe'
     if (-not (Test-Path -LiteralPath $electronExe)) {
