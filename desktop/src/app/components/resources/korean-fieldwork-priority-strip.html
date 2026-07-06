@@ -189,6 +189,58 @@
         </div>
     </div>
 
+    <div *ngIf="isPanelActive('report') && hasReportHandoffItems()"
+         class="korean-fieldwork-report-handoff-strip">
+        <div class="korean-fieldwork-report-handoff-header">
+            <span class="mdi mdi-file-document-edit-outline"></span>
+            <span>&#48372;&#44256;&#49436;/HWP &#48373;&#49324;</span>
+            <span class="korean-fieldwork-report-handoff-summary">{{getReportHandoffSummaryLabel()}}</span>
+            <button type="button"
+                    class="korean-fieldwork-report-handoff-copy-all"
+                    [disabled]="!reportHandoffCopyAllText"
+                    (click)="copyAllReportHandoffItems($event)">
+                <span class="mdi mdi-content-copy"></span>
+                <span>&#51204;&#52404; &#48373;&#49324;</span>
+            </button>
+        </div>
+        <div class="korean-fieldwork-report-handoff-list">
+            <div *ngFor="let item of getReportHandoffItems()"
+                 class="korean-fieldwork-report-handoff-card"
+                 [class.review]="item.tone === 'review'"
+                 [class.ready]="item.tone === 'ready'">
+                <button type="button"
+                        class="korean-fieldwork-report-handoff-open"
+                        [ngbTooltip]="item.copyText"
+                        container="body"
+                        placement="bottom"
+                        (click)="openReportHandoffItem(item, $event)">
+                    <span class="korean-fieldwork-report-handoff-topline">
+                        <span class="korean-fieldwork-report-handoff-category">{{item.categoryLabel}}</span>
+                        <span class="korean-fieldwork-report-handoff-identifier">{{item.identifier}}</span>
+                    </span>
+                    <span class="korean-fieldwork-report-handoff-text">{{item.summary}}</span>
+                    <span class="korean-fieldwork-report-handoff-metrics">
+                        <span>{{item.evidenceLabel}}</span>
+                        <span [class.warning]="item.issueCount > 0">{{item.issueLabel}}</span>
+                    </span>
+                </button>
+                <button type="button"
+                        class="korean-fieldwork-report-handoff-copy"
+                        [class.copied]="isReportHandoffItemCopied(item)"
+                        (click)="copyReportHandoffItem(item, $event)">
+                    <span class="mdi"
+                          [class.mdi-check]="isReportHandoffItemCopied(item)"
+                          [class.mdi-content-copy]="!isReportHandoffItemCopied(item)"></span>
+                    <span>{{getReportHandoffCopyActionLabel(item)}}</span>
+                </button>
+            </div>
+        </div>
+        <div *ngIf="getReportHandoffHiddenCount() > 0"
+             class="korean-fieldwork-report-handoff-hidden">
+            +{{getReportHandoffHiddenCount()}} &#44592;&#47197;
+        </div>
+    </div>
+
     <div *ngIf="isPanelActive('closeout') && hasCloseoutSummary()"
          class="korean-fieldwork-closeout-strip"
          [class.clear]="closeoutSummary?.status === 'clear'"

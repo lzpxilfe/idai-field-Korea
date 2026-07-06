@@ -169,6 +169,60 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
     });
 
 
+    it('exposes report handoff copy blocks for HWP drafting', async () => {
+
+        const writeText = jest.fn();
+        const testWindow = (global as any).window ?? ((global as any).window = {});
+        const previousRequire = testWindow.require;
+        testWindow.require = jest.fn().mockReturnValue({ clipboard: { writeText } });
+
+        try {
+            const component = createComponent({
+                find: jest.fn().mockResolvedValue({
+                    documents: [
+                        createDocument('project', 'Project'),
+                        createDocument('feature-1', 'Feature', {
+                            identifier: 'pit-001',
+                            shortDescription: 'round pit with dark fill',
+                            featureRecordingStatus: 'confirmed',
+                            featureInvestigationChecklist: []
+                        }),
+                        createDocument('photo-1', 'Photo', {
+                            fieldworkPhotoUri: 'file:///tablet/photos/pit-001.jpg',
+                            relations: { depicts: ['feature-1'] }
+                        })
+                    ]
+                }),
+                get: jest.fn()
+            });
+
+            await component.refresh();
+
+            expect(component.getPanelOptions().map(panel => panel.id)).toContain('report');
+            expect(component.hasReportHandoffItems()).toBe(true);
+            expect(component.getReportHandoffSummaryLabel()).toContain('2');
+
+            const [featureItem] = component.getReportHandoffItems();
+            expect(featureItem).toMatchObject({
+                documentId: 'feature-1',
+                identifier: 'pit-001',
+                summary: 'round pit with dark fill',
+                evidenceCount: 1,
+                tone: 'review'
+            });
+            expect(featureItem.copyText).toContain('pit-001');
+            expect(featureItem.copyText).toContain('round pit with dark fill');
+
+            await component.copyReportHandoffItem(featureItem);
+
+            expect(writeText).toHaveBeenCalledWith(featureItem.copyText);
+            expect(component.getReportHandoffCopyActionLabel(featureItem)).toBe('\ubcf5\uc0ac\ub428');
+        } finally {
+            testWindow.require = previousRequire;
+        }
+    });
+
+
     it('keeps tablet-hidden initial boundary records out of desktop status and workbench lists', async () => {
 
         const component = createComponent(
@@ -346,6 +400,7 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
             '오늘 할 일',
             '기록 작업',
             '야장',
+            '\ubcf4\uace0\uc11c',
             '마감'
         ]);
         expect(component.getPanelOptions().map(panel => panel.id)).toEqual([
@@ -354,6 +409,7 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
             'today',
             'records',
             'notebook',
+            'report',
             'closeout'
         ]);
         expect(component.hasOverviewChartData()).toBe(true);

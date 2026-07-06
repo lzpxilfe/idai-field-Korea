@@ -5,7 +5,9 @@ import {
     Datastore,
     Document,
     FieldDocument,
+    KoreanFieldworkReportHandoffItem,
     KoreanFieldworkReadinessIssue,
+    makeKoreanFieldworkReportHandoff,
     PouchdbDatastore,
     ProjectConfiguration
 } from 'idai-field-core';
@@ -119,7 +121,7 @@ import {
 } from '../../util/korean-fieldwork-feature-guidance';
 import { DoceditLauncher } from './service/docedit-launcher';
 
-type KoreanFieldworkPriorityPanelId = 'overview'|'workflow'|'today'|'records'|'notebook'|'closeout';
+type KoreanFieldworkPriorityPanelId = 'overview'|'workflow'|'today'|'records'|'notebook'|'report'|'closeout';
 
 interface KoreanFieldworkPriorityPanelOption {
     id: KoreanFieldworkPriorityPanelId;
@@ -217,6 +219,9 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
     public closeoutBatchUpdates: KoreanFieldworkCloseoutBatchUpdate[] = [];
     public notebookDigest: KoreanFieldworkDailyNotebookDigest|undefined;
     public notebookDailyLogParentDocumentId: string|undefined;
+    public reportHandoffItems: KoreanFieldworkReportHandoffItem[] = [];
+    public reportHandoffCopyAllText: string = '';
+    public reportCopiedDocumentId: string|undefined;
     public overviewChartData: KoreanFieldworkOverviewChartData|undefined;
     public isLoading: boolean = false;
     public activePanel: KoreanFieldworkPriorityPanelId = 'overview';
@@ -271,6 +276,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
             { id: 'today', label: '오늘 할 일', count: this.getTodayPanelCount() },
             { id: 'records', label: '기록 작업', count: this.getRecordsPanelCount() },
             { id: 'notebook', label: '야장', count: this.getNotebookPanelCount() },
+            { id: 'report', label: '\ubcf4\uace0\uc11c', count: this.getReportPanelCount() },
             { id: 'closeout', label: '마감', count: this.getCloseoutPanelCount() }
         ];
 
@@ -783,6 +789,63 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
             ? `${selectedLabel}에 현장 메모를 붙입니다.`
             : '지도나 기록 목록에서 선택한 기록에 현장 메모를 붙입니다.';
     };
+
+    public hasReportHandoffItems = () => this.reportHandoffItems.length > 0;
+
+    public getReportHandoffItems = () =>
+        this.reportHandoffItems.slice(0, 8);
+
+    public getReportHandoffHiddenCount = () =>
+        Math.max(0, this.reportHandoffItems.length - this.getReportHandoffItems().length);
+
+    public getReportHandoffSummaryLabel = () => {
+        const reviewCount = this.reportHandoffItems.filter(item => item.tone === 'review').length;
+        const readyCount = this.reportHandoffItems.length - reviewCount;
+
+        return `\ubcf5\uc0ac ${this.reportHandoffItems.length} \u00b7 \ubcf4\uc644 ${reviewCount} \u00b7 \ubc14\ub85c ${readyCount}`;
+    };
+
+    public isReportHandoffItemCopied = (item: KoreanFieldworkReportHandoffItem) =>
+        this.reportCopiedDocumentId === item.documentId;
+
+    public getReportHandoffCopyActionLabel = (item: KoreanFieldworkReportHandoffItem) =>
+        this.isReportHandoffItemCopied(item) ? '\ubcf5\uc0ac\ub428' : '\ubcf5\uc0ac';
+
+    public async openReportHandoffItem(item: KoreanFieldworkReportHandoffItem, event?: Event) {
+
+        if (event) event.stopPropagation();
+
+        try {
+            await this.openDocument(item.documentId);
+        } catch (errWithParams) {
+            this.messages.add(errWithParams);
+        }
+    }
+
+    public async copyReportHandoffItem(item: KoreanFieldworkReportHandoffItem, event?: Event) {
+
+        if (event) event.stopPropagation();
+
+        try {
+            await this.writeClipboardText(item.copyText);
+            this.markReportHandoffCopied(item.documentId);
+        } catch (errWithParams) {
+            this.messages.add(errWithParams);
+        }
+    }
+
+    public async copyAllReportHandoffItems(event?: Event) {
+
+        if (event) event.stopPropagation();
+        if (!this.reportHandoffCopyAllText) return;
+
+        try {
+            await this.writeClipboardText(this.reportHandoffCopyAllText);
+            this.markReportHandoffCopied('__all__');
+        } catch (errWithParams) {
+            this.messages.add(errWithParams);
+        }
+    }
 
     public canRunWorkflowStep = (step: KoreanFieldworkWorkflowStep) => !!step.action;
 
@@ -1324,6 +1387,9 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
             const notebookDailyLogParentDocumentId = stats
                 ? getNotebookDailyLogParentDocumentId(documents, this.projectConfiguration)
                 : undefined;
+            const reportHandoff = stats
+                ? makeKoreanFieldworkReportHandoff(documents)
+                : undefined;
 
             if (currentRefreshId === this.refreshId) {
                 this.stats = stats;
@@ -1341,6 +1407,8 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
                 this.closeoutBatchUpdates = closeoutBatchUpdates;
                 this.notebookDigest = notebookDigest;
                 this.notebookDailyLogParentDocumentId = notebookDailyLogParentDocumentId;
+                this.reportHandoffItems = reportHandoff?.items ?? [];
+                this.reportHandoffCopyAllText = reportHandoff?.copyAllText ?? '';
                 this.projectDocuments = documents;
                 this.keepActivePanelAvailable();
             }
@@ -1361,6 +1429,8 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
                 this.closeoutBatchUpdates = [];
                 this.notebookDigest = undefined;
                 this.notebookDailyLogParentDocumentId = undefined;
+                this.reportHandoffItems = [];
+                this.reportHandoffCopyAllText = '';
                 this.projectDocuments = [];
                 this.activePanel = 'workflow';
             }
@@ -1503,6 +1573,38 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
         await this.routing.jumpToResource(await this.datastore.get(documentId));
     }
 
+    private async writeClipboardText(text: string) {
+
+        const nodeRequire = typeof window !== 'undefined'
+            ? (window as any).require
+            : undefined;
+
+        try {
+            const electronClipboard = nodeRequire?.('electron')?.clipboard;
+            if (electronClipboard?.writeText) {
+                electronClipboard.writeText(text);
+                return;
+            }
+        } catch (_) {}
+
+        if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(text);
+            return;
+        }
+
+        throw new Error('Clipboard is not available.');
+    }
+
+    private markReportHandoffCopied(documentId: string) {
+
+        this.reportCopiedDocumentId = documentId;
+        setTimeout(() => {
+            if (this.reportCopiedDocumentId === documentId) {
+                this.reportCopiedDocumentId = undefined;
+            }
+        }, 1600);
+    }
+
 
     private isPanelAvailable(panelId: KoreanFieldworkPriorityPanelId): boolean {
 
@@ -1521,6 +1623,8 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
                     || this.hasWorkbenchItems();
             case 'notebook':
                 return this.hasNotebookPanel();
+            case 'report':
+                return this.hasReportHandoffItems();
             case 'closeout':
                 return this.hasCloseoutSummary();
         }
@@ -1694,6 +1798,10 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
         + this.getNotebookSelectedRecordEntries().length
         + (this.canRunNotebookDailyLogAction() ? 1 : 0)
         + (this.canRunNotebookRecordMemoAction() ? 1 : 0);
+
+
+    private getReportPanelCount = () =>
+        this.reportHandoffItems.length;
 
 
     private getCloseoutPanelCount = () =>

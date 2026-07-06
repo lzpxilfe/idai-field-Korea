@@ -314,6 +314,29 @@ const featureRows = [
     ]
   },
   {
+    id: 'report-handoff',
+    title: 'Report handoff: tablet evidence to desktop HWP copy blocks',
+    tablet: [
+      'mobile/components/Project/korean-fieldwork-document-drafts.ts',
+      'mobile/components/Project/korean-fieldwork-field-notes.ts',
+      'mobile/hooks/use-fieldwork-image-sync.ts'
+    ],
+    desktop: [
+      'core/src/tools/korean-fieldwork-report-handoff.ts',
+      'desktop/src/app/components/resources/korean-fieldwork-priority-strip.component.ts',
+      'desktop/src/app/components/resources/korean-fieldwork-priority-strip.html',
+      'desktop/src/app/components/resources/korean-fieldwork-priority-strip.scss'
+    ],
+    tabletTests: [
+      'mobile/components/Project/korean-fieldwork-document-drafts.spec.ts',
+      'mobile/components/Project/korean-fieldwork-field-notes.spec.ts',
+      'mobile/hooks/use-fieldwork-image-sync.spec.ts'
+    ],
+    desktopTests: [
+      'desktop/test/unit/components/resources/korean-fieldwork-priority-strip.component.spec.ts'
+    ]
+  },
+  {
     id: 'compat-raw-fields',
     title: 'Compatibility raw fields stay secondary',
     tablet: [
@@ -345,6 +368,8 @@ const releaseCriticalPatterns = [
   /^core\/test\/model\/image-document\.spec\.ts$/,
   /^core\/src\/tools\/korean-fieldwork-readiness\.ts$/,
   /^core\/test\/tools\/korean-fieldwork-readiness\.spec\.ts$/,
+  /^core\/src\/tools\/korean-fieldwork-report-handoff\.ts$/,
+  /^core\/test\/tools\/korean-fieldwork-report-handoff\.spec\.ts$/,
   /^mobile\/app\/\(tabs\)\/ProjectScreen\/Document(Add|Edit)\.tsx$/,
   /^mobile\/app\/\(tabs\)\/ProjectScreen\/index\.tsx$/,
   /^mobile\/app\/\(tabs\)\/SettingsScreen\.tsx$/,
