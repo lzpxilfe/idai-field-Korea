@@ -5,13 +5,17 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import sys
 
-from .app import BridgeDeskApp
-from .compatibility import compare_tablet_desktop
-from .field_data import DEFAULT_TABLET_INBOX_PATH, build_report_context, load_tablet_submissions
-from .layout_policy import LayoutPolicy
-from .paths import app_root
-from .report_export import render_report_text, write_report_package
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from compatdesk.app import BridgeDeskApp
+from compatdesk.compatibility import compare_tablet_desktop
+from compatdesk.field_data import DEFAULT_TABLET_INBOX_PATH, build_report_context, load_tablet_submissions
+from compatdesk.layout_policy import LayoutPolicy
+from compatdesk.paths import app_root
+from compatdesk.report_export import render_report_text, write_report_package
 
 
 def _parse_size(raw: str) -> tuple[int, int]:
