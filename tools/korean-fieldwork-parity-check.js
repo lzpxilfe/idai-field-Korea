@@ -182,6 +182,7 @@ const featureRows = [
       'desktop/src/app/components/resources/korean-fieldwork-priority-strip.component.ts',
       'desktop/src/app/util/korean-fieldwork-record-evidence.ts',
       'desktop/src/app/util/korean-fieldwork-workbench.ts',
+      'core/src/tools/korean-fieldwork-identifier-revision.ts',
       'desktop/src/app/util/korean-fieldwork-identifier-revision.ts'
     ],
     tabletTests: [
@@ -637,6 +638,7 @@ const projectInvestigationModeWordingFindings = validateProjectInvestigationMode
 const priorityTaskFindings = validatePriorityTaskIds();
 const rawFormFindings = validateRawFormFieldRules();
 const reportHandoffFindings = validateReportHandoffPreSaveValidation();
+const identifierRevisionFindings = validateIdentifierRevisionContract();
 const recordPanelOrderFindings = validateRecordPanelOrder();
 const connectedRecordWordingFindings = validateConnectedRecordWording();
 const scopeMetricWordingFindings = validateScopeMetricWording();
@@ -662,6 +664,7 @@ printReport(
   priorityTaskFindings,
   rawFormFindings,
   reportHandoffFindings,
+  identifierRevisionFindings,
   recordPanelOrderFindings,
   connectedRecordWordingFindings,
   scopeMetricWordingFindings,
@@ -690,6 +693,7 @@ if (
     || priorityTaskFindings.length > 0
     || rawFormFindings.length > 0
     || reportHandoffFindings.length > 0
+    || identifierRevisionFindings.length > 0
     || recordPanelOrderFindings.length > 0
     || connectedRecordWordingFindings.length > 0
     || scopeMetricWordingFindings.length > 0
@@ -3282,6 +3286,46 @@ function validateReportHandoffPreSaveValidation() {
   return findings;
 }
 
+function validateIdentifierRevisionContract() {
+  const findings = [];
+  const coreText = readTextFile('core/src/tools/korean-fieldwork-identifier-revision.ts');
+  const coreSpecText = readTextFile('core/test/tools/korean-fieldwork-identifier-revision.spec.ts');
+  const tabletText = readTextFile('mobile/components/Project/korean-fieldwork-identifier-revision.ts');
+  const tabletSpecText = readTextFile('mobile/components/Project/korean-fieldwork-identifier-revision.spec.ts');
+  const desktopText = readTextFile('desktop/src/app/util/korean-fieldwork-identifier-revision.ts');
+  const desktopSpecText = readTextFile('desktop/test/unit/util/korean-fieldwork-identifier-revision.spec.ts');
+
+  if (!coreText.includes('KOREAN_FIELDWORK_IDENTIFIER_REVISION_CATEGORIES')
+      || !coreText.includes('C.FEATURE_GROUP')
+      || !coreText.includes('C.FEATURE')
+      || !coreText.includes('C.FEATURE_SEGMENT')
+      || !coreText.includes('getKoreanFieldworkIdentifierRevisionUpdates')) {
+    findings.push('core identifier revision contract must own report renumbering categories and update logic');
+  }
+  if (!coreSpecText.includes('FeatureGroup')
+      || !coreSpecText.includes('keeps field and report identifiers distinct for HWP numbering')) {
+    findings.push('core identifier revision tests must prove FeatureGroup support and field/report identifier separation');
+  }
+  for (const [label, text] of [
+    ['tablet identifier revision wrapper', tabletText],
+    ['desktop identifier revision wrapper', desktopText]
+  ]) {
+    if (!text.includes("from 'idai-field-core'")
+        || !text.includes('getKoreanFieldworkIdentifierRevisionUpdates')
+        || text.includes('const IDENTIFIER_REVISION_CATEGORIES')) {
+      findings.push(`${label} must re-export the shared core identifier revision contract instead of duplicating it`);
+    }
+  }
+  if (!tabletSpecText.includes('C.FEATURE_GROUP')
+      || !tabletSpecText.includes(')).toBe(true)')
+      || !desktopSpecText.includes('FeatureGroup')
+      || !desktopSpecText.includes(')).toBe(true)')) {
+    findings.push('tablet and desktop identifier revision tests must agree that FeatureGroup is report-renumberable');
+  }
+
+  return findings;
+}
+
 function validateConnectedRecordWording() {
   const findings = [];
   const sources = [
@@ -4623,6 +4667,7 @@ function printReport(
   priorityTaskFindings,
   rawFormFindings,
   reportHandoffFindings,
+  identifierRevisionFindings,
   recordPanelOrderFindings,
   connectedRecordWordingFindings,
   scopeMetricWordingFindings,
@@ -4809,6 +4854,17 @@ function printReport(
 
   console.log('');
 
+  if (identifierRevisionFindings.length === 0) {
+    console.log('No identifier revision contract gaps were found.');
+  } else {
+    console.log('Identifier revision contract gaps:');
+    for (const finding of identifierRevisionFindings) {
+      console.log(`- ${finding}`);
+    }
+  }
+
+  console.log('');
+
   if (recordPanelOrderFindings.length === 0) {
     console.log('No record panel order gaps were found.');
   } else {
@@ -4922,6 +4978,7 @@ function printReport(
       || priorityTaskFindings.length > 0
       || rawFormFindings.length > 0
       || recordPanelOrderFindings.length > 0
+      || identifierRevisionFindings.length > 0
       || connectedRecordWordingFindings.length > 0
       || scopeMetricWordingFindings.length > 0
       || soilColorReviewFindings.length > 0
