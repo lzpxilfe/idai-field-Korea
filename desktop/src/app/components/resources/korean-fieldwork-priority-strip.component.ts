@@ -222,6 +222,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
     public reportHandoffItems: KoreanFieldworkReportHandoffItem[] = [];
     public reportHandoffCopyAllText: string = '';
     public reportCopiedDocumentId: string|undefined;
+    public selectedReportHandoffDocumentId: string|undefined;
     public overviewChartData: KoreanFieldworkOverviewChartData|undefined;
     public isLoading: boolean = false;
     public activePanel: KoreanFieldworkPriorityPanelId = 'overview';
@@ -808,8 +809,22 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
     public isReportHandoffItemCopied = (item: KoreanFieldworkReportHandoffItem) =>
         this.reportCopiedDocumentId === item.documentId;
 
+    public isReportHandoffItemSelected = (item: KoreanFieldworkReportHandoffItem) =>
+        this.getReportHandoffPreviewItem()?.documentId === item.documentId;
+
+    public getReportHandoffPreviewItem = () =>
+        this.reportHandoffItems.find(item => item.documentId === this.selectedReportHandoffDocumentId)
+        ?? this.reportHandoffItems[0];
+
     public getReportHandoffCopyActionLabel = (item: KoreanFieldworkReportHandoffItem) =>
         this.isReportHandoffItemCopied(item) ? '\ubcf5\uc0ac\ub428' : '\ubcf5\uc0ac';
+
+    public selectReportHandoffItem(item: KoreanFieldworkReportHandoffItem, event?: Event) {
+
+        if (event) event.stopPropagation();
+
+        this.selectedReportHandoffDocumentId = item.documentId;
+    }
 
     public async openReportHandoffItem(item: KoreanFieldworkReportHandoffItem, event?: Event) {
 
@@ -827,6 +842,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
         if (event) event.stopPropagation();
 
         try {
+            this.selectedReportHandoffDocumentId = item.documentId;
             await this.writeClipboardText(item.copyText);
             this.markReportHandoffCopied(item.documentId);
         } catch (errWithParams) {
@@ -1409,6 +1425,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
                 this.notebookDailyLogParentDocumentId = notebookDailyLogParentDocumentId;
                 this.reportHandoffItems = reportHandoff?.items ?? [];
                 this.reportHandoffCopyAllText = reportHandoff?.copyAllText ?? '';
+                this.ensureReportHandoffPreviewSelection();
                 this.projectDocuments = documents;
                 this.keepActivePanelAvailable();
             }
@@ -1431,6 +1448,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
                 this.notebookDailyLogParentDocumentId = undefined;
                 this.reportHandoffItems = [];
                 this.reportHandoffCopyAllText = '';
+                this.selectedReportHandoffDocumentId = undefined;
                 this.projectDocuments = [];
                 this.activePanel = 'workflow';
             }
@@ -1603,6 +1621,20 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
                 this.reportCopiedDocumentId = undefined;
             }
         }, 1600);
+    }
+
+
+    private ensureReportHandoffPreviewSelection() {
+
+        if (this.reportHandoffItems.length === 0) {
+            this.selectedReportHandoffDocumentId = undefined;
+            return;
+        }
+
+        if (!this.selectedReportHandoffDocumentId
+                || !this.reportHandoffItems.some(item => item.documentId === this.selectedReportHandoffDocumentId)) {
+            this.selectedReportHandoffDocumentId = this.reportHandoffItems[0].documentId;
+        }
     }
 
 

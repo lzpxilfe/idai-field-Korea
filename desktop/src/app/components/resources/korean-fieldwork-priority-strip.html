@@ -207,13 +207,14 @@
             <div *ngFor="let item of getReportHandoffItems()"
                  class="korean-fieldwork-report-handoff-card"
                  [class.review]="item.tone === 'review'"
-                 [class.ready]="item.tone === 'ready'">
+                 [class.ready]="item.tone === 'ready'"
+                 [class.selected]="isReportHandoffItemSelected(item)">
                 <button type="button"
                         class="korean-fieldwork-report-handoff-open"
                         [ngbTooltip]="item.copyText"
                         container="body"
                         placement="bottom"
-                        (click)="openReportHandoffItem(item, $event)">
+                        (click)="selectReportHandoffItem(item, $event)">
                     <span class="korean-fieldwork-report-handoff-topline">
                         <span class="korean-fieldwork-report-handoff-category">{{item.categoryLabel}}</span>
                         <span class="korean-fieldwork-report-handoff-identifier">{{item.identifier}}</span>
@@ -247,6 +248,37 @@
                     <span>{{getReportHandoffCopyActionLabel(item)}}</span>
                 </button>
             </div>
+        </div>
+        <div *ngIf="getReportHandoffPreviewItem() as previewItem"
+             class="korean-fieldwork-report-handoff-preview">
+            <div class="korean-fieldwork-report-handoff-preview-header">
+                <span class="korean-fieldwork-report-handoff-preview-title">
+                    <span class="korean-fieldwork-report-handoff-category">{{previewItem.categoryLabel}}</span>
+                    <span class="korean-fieldwork-report-handoff-identifier">{{previewItem.identifier}}</span>
+                </span>
+                <span class="korean-fieldwork-report-handoff-preview-metrics">
+                    <span>{{previewItem.evidenceLabel}}</span>
+                    <span [class.warning]="previewItem.issueCount > 0">{{previewItem.issueLabel}}</span>
+                </span>
+                <span class="korean-fieldwork-report-handoff-preview-actions">
+                    <button type="button"
+                            class="korean-fieldwork-report-handoff-preview-action secondary"
+                            (click)="openReportHandoffItem(previewItem, $event)">
+                        <span class="mdi mdi-open-in-new"></span>
+                        <span>&#50896;&#47928;</span>
+                    </button>
+                    <button type="button"
+                            class="korean-fieldwork-report-handoff-preview-action"
+                            [class.copied]="isReportHandoffItemCopied(previewItem)"
+                            (click)="copyReportHandoffItem(previewItem, $event)">
+                        <span class="mdi"
+                              [class.mdi-check]="isReportHandoffItemCopied(previewItem)"
+                              [class.mdi-content-copy]="!isReportHandoffItemCopied(previewItem)"></span>
+                        <span>{{getReportHandoffCopyActionLabel(previewItem)}}</span>
+                    </button>
+                </span>
+            </div>
+            <pre class="korean-fieldwork-report-handoff-copy-preview">{{previewItem.copyText}}</pre>
         </div>
         <div *ngIf="getReportHandoffHiddenCount() > 0"
              class="korean-fieldwork-report-handoff-hidden">

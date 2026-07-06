@@ -210,6 +210,8 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
                 evidenceCount: 1,
                 tone: 'review'
             });
+            expect(component.getReportHandoffPreviewItem()?.documentId).toBe('feature-1');
+            expect(component.isReportHandoffItemSelected(featureItem)).toBe(true);
             expect(featureItem.evidenceDetails.join('\n'))
                 .toContain('file:///tablet/photos/pit-001.jpg');
             expect(featureItem.issueDetails.join('\n'))
@@ -219,9 +221,16 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
             expect(featureItem.copyText).toContain('\uc790\ub8cc \uc0c1\uc138');
             expect(featureItem.copyText).toContain('\ud655\uc778 \uc0c1\uc138');
 
+            const photoItem = component.getReportHandoffItems()
+                .find(item => item.documentId === 'photo-1');
+            expect(photoItem).toBeDefined();
+            component.selectReportHandoffItem(photoItem!);
+            expect(component.getReportHandoffPreviewItem()?.documentId).toBe('photo-1');
+
             await component.copyReportHandoffItem(featureItem);
 
             expect(writeText).toHaveBeenCalledWith(featureItem.copyText);
+            expect(component.getReportHandoffPreviewItem()?.documentId).toBe('feature-1');
             expect(component.getReportHandoffCopyActionLabel(featureItem)).toBe('\ubcf5\uc0ac\ub428');
         } finally {
             testWindow.require = previousRequire;

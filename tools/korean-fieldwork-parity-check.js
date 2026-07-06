@@ -3247,10 +3247,14 @@ function validateReportHandoffPreSaveValidation() {
   if (!desktopPriorityStripTemplateText.includes('korean-fieldwork-report-handoff-details')
       || !desktopPriorityStripTemplateText.includes('item.evidenceDetails')
       || !desktopPriorityStripTemplateText.includes('item.issueDetails')
+      || !desktopPriorityStripTemplateText.includes('korean-fieldwork-report-handoff-preview')
+      || !desktopPriorityStripTemplateText.includes('previewItem.copyText')
       || !desktopPriorityStripStyleText.includes('.korean-fieldwork-report-handoff-detail')
+      || !desktopPriorityStripStyleText.includes('.korean-fieldwork-report-handoff-copy-preview')
       || !desktopPriorityStripSpecText.includes('featureItem.evidenceDetails')
-      || !desktopPriorityStripSpecText.includes('featureItem.issueDetails')) {
-    findings.push('desktop report handoff panel must render and test evidence and issue detail lines');
+      || !desktopPriorityStripSpecText.includes('featureItem.issueDetails')
+      || !desktopPriorityStripSpecText.includes('getReportHandoffPreviewItem')) {
+    findings.push('desktop report handoff panel must render and test evidence details, issue details, and visible HWP copy previews');
   }
 
   return findings;
