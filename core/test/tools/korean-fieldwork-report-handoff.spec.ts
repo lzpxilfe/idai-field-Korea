@@ -95,6 +95,47 @@ describe('Korean fieldwork report handoff', () => {
     });
 
 
+    it('carries linked record labels into desktop HWP copy blocks', () => {
+
+        const documents = [
+            makeDocument('operation-1', 'Operation', {
+                identifier: 'op-001',
+                shortDescription: 'north area excavation'
+            }),
+            makeDocument('trench-1', 'Trench', {
+                identifier: 'trench-001',
+                shortDescription: 'north trench',
+                relations: { isRecordedIn: ['operation-1'] }
+            }),
+            makeDocument('feature-1', 'Feature', {
+                identifier: 'pit-001',
+                shortDescription: 'round pit with dark fill',
+                featureRecordingStatus: 'candidate',
+                relations: { liesWithin: ['trench-1'], isRecordedIn: ['operation-1'] }
+            }),
+            makeDocument('photo-1', 'Photo', {
+                fieldworkPhotoUri: 'file:///tablet/photos/pit-001.jpg',
+                relations: { depicts: ['feature-1'] }
+            })
+        ];
+
+        const handoff = makeKoreanFieldworkReportHandoff(documents as any);
+        const featureItem = handoff.items.find(item => item.documentId === 'feature-1');
+        const photoItem = handoff.items.find(item => item.documentId === 'photo-1');
+
+        expect(featureItem?.relationDetails).toEqual([
+            '\uc0c1\uc704 \uae30\ub85d: [\ud2b8\ub80c\uce58] trench-001',
+            '\uc870\uc0ac \uae30\ub85d: [\uc870\uc0ac \uad6c\uc5ed \uae30\ub85d] op-001'
+        ]);
+        expect(photoItem?.relationDetails).toEqual([
+            '\ub300\uc0c1: [\uc720\uad6c] pit-001'
+        ]);
+        expect(featureItem?.copyText).toContain('\uc5f0\uacb0: \uc0c1\uc704 \uae30\ub85d: [\ud2b8\ub80c\uce58] trench-001');
+        expect(featureItem?.copyText).toContain('\uc870\uc0ac \uae30\ub85d: [\uc870\uc0ac \uad6c\uc5ed \uae30\ub85d] op-001');
+        expect(photoItem?.copyText).toContain('\uc5f0\uacb0: \ub300\uc0c1: [\uc720\uad6c] pit-001');
+    });
+
+
     it('keeps direct tablet media records copyable even before upload metadata is complete', () => {
 
         const documents = [

@@ -224,8 +224,13 @@
                         <span>{{item.evidenceLabel}}</span>
                         <span [class.warning]="item.issueCount > 0">{{item.issueLabel}}</span>
                     </span>
-                    <span *ngIf="item.evidenceDetails.length > 0 || item.issueDetails.length > 0"
+                    <span *ngIf="item.relationDetails.length > 0 || item.evidenceDetails.length > 0 || item.issueDetails.length > 0"
                           class="korean-fieldwork-report-handoff-details">
+                        <span *ngFor="let relation of item.relationDetails | slice:0:2"
+                              class="korean-fieldwork-report-handoff-detail relation">
+                            <span>&#50672;&#44208;</span>
+                            <span>{{relation}}</span>
+                        </span>
                         <span *ngFor="let detail of item.evidenceDetails | slice:0:2"
                               class="korean-fieldwork-report-handoff-detail evidence">
                             <span>&#51088;&#47308;</span>

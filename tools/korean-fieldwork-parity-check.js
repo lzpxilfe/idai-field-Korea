@@ -3216,10 +3216,12 @@ function validateReportHandoffPreSaveValidation() {
   }
   if (!coreReportHandoffText.includes('evidenceDetails')
       || !coreReportHandoffText.includes('issueDetails')
+      || !coreReportHandoffText.includes('relationDetails')
       || !coreReportHandoffText.includes('getEvidenceDetails')
       || !coreReportHandoffText.includes('getIssueDetails')
+      || !coreReportHandoffText.includes('getRelationDetails')
       || !coreReportHandoffText.includes('EVIDENCE_DETAILS')) {
-    findings.push('core report handoff copy blocks must include concrete evidence and issue details, not only counts');
+    findings.push('core report handoff copy blocks must include concrete relation, evidence, and issue details, not only counts');
   }
   if (!coreReportHandoffText.includes('buildEvidenceBundle')
       || !coreReadinessText.includes('getKoreanFieldworkCloseoutReviewIssues')
@@ -3234,10 +3236,11 @@ function validateReportHandoffPreSaveValidation() {
   }
   if (!coreReportHandoffSpecText.includes('evidenceDetails.join')
       || !coreReportHandoffSpecText.includes('issueDetails.join')
+      || !coreReportHandoffSpecText.includes('relationDetails')
       || !coreReportHandoffSpecText.includes('fieldwork-photo-upload-missing')
       || !coreReportHandoffSpecText.includes('fieldwork-photo-annotation-review')
       || !coreReportHandoffSpecText.includes('pen-memo-auto-transcript-review')) {
-    findings.push('core report handoff tests must prove evidence, readiness issues, and closeout issues are carried into HWP copy blocks');
+    findings.push('core report handoff tests must prove relation labels, evidence, readiness issues, and closeout issues are carried into HWP copy blocks');
   }
   for (const [label, text] of [
     ['tablet add screen', tabletAddText],
@@ -3255,6 +3258,7 @@ function validateReportHandoffPreSaveValidation() {
     findings.push('desktop report handoff panel must keep using the same core copy-block contract');
   }
   if (!desktopPriorityStripTemplateText.includes('korean-fieldwork-report-handoff-details')
+      || !desktopPriorityStripTemplateText.includes('item.relationDetails')
       || !desktopPriorityStripTemplateText.includes('item.evidenceDetails')
       || !desktopPriorityStripTemplateText.includes('item.issueDetails')
       || !desktopPriorityStripTemplateText.includes('korean-fieldwork-report-handoff-preview')
@@ -3264,13 +3268,15 @@ function validateReportHandoffPreSaveValidation() {
       || !desktopPriorityStripText.includes('hasReportHandoffOverflow')
       || !desktopPriorityStripText.includes('toggleReportHandoffItems')
       || !desktopPriorityStripStyleText.includes('.korean-fieldwork-report-handoff-detail')
+      || !desktopPriorityStripStyleText.includes('&.relation')
       || !desktopPriorityStripStyleText.includes('.korean-fieldwork-report-handoff-copy-preview')
       || !desktopPriorityStripStyleText.includes('.korean-fieldwork-report-handoff-overflow')
+      || !desktopPriorityStripSpecText.includes('photoItem!.relationDetails')
       || !desktopPriorityStripSpecText.includes('featureItem.evidenceDetails')
       || !desktopPriorityStripSpecText.includes('featureItem.issueDetails')
       || !desktopPriorityStripSpecText.includes('getReportHandoffPreviewItem')
       || !desktopPriorityStripSpecText.includes('expands report handoff lists')) {
-    findings.push('desktop report handoff panel must render and test evidence details, issue details, visible HWP copy previews, and expandable full record lists');
+    findings.push('desktop report handoff panel must render and test relation details, evidence details, issue details, visible HWP copy previews, and expandable full record lists');
   }
 
   return findings;

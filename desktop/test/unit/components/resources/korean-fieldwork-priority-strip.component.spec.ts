@@ -224,6 +224,10 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
             const photoItem = component.getReportHandoffItems()
                 .find(item => item.documentId === 'photo-1');
             expect(photoItem).toBeDefined();
+            expect(photoItem!.relationDetails.join('\n'))
+                .toContain('\ub300\uc0c1: [\uc720\uad6c] pit-001');
+            expect(photoItem!.copyText)
+                .toContain('\uc5f0\uacb0: \ub300\uc0c1: [\uc720\uad6c] pit-001');
             component.selectReportHandoffItem(photoItem!);
             expect(component.getReportHandoffPreviewItem()?.documentId).toBe('photo-1');
 

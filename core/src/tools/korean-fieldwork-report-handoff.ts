@@ -9,6 +9,7 @@ import {
 import {
     getKoreanFieldworkCategoryLabel,
     getKoreanFieldworkReportHandoffCategoryRank,
+    getKoreanFieldworkRelationLabel,
     isKoreanFieldworkReportHandoffCategory
 } from './korean-fieldwork-record-contract';
 
@@ -23,6 +24,7 @@ export interface KoreanFieldworkReportHandoffItem {
     title: string;
     summary: string;
     details: string[];
+    relationDetails: string[];
     evidenceLabel: string;
     evidenceDetails: string[];
     issueLabel: string;
@@ -84,6 +86,7 @@ const KO = {
     EVIDENCE_DETAILS: '\uc790\ub8cc \uc0c1\uc138',
     ISSUES: '\ud655\uc778',
     ISSUE_DETAILS: '\ud655\uc778 \uc0c1\uc138',
+    RELATIONS: '\uc5f0\uacb0',
     NO_DETAILS: '\uc138\ubd80 \uae30\ub85d \ubcf4\uac15 \ud544\uc694',
     NO_EVIDENCE: '\uc5f0\uacb0 \uc790\ub8cc \uc5c6\uc74c',
     NO_ISSUES: '\ud655\uc778 \uc0ac\ud56d \uc5c6\uc74c',
@@ -197,6 +200,17 @@ const PEN_MEMO_CONTENT_FIELDS = [
     'penMemoAutoTranscript',
     'penMemoReviewedTranscript',
     'penMemoStrokes'
+];
+
+const RELATION_DETAIL_ORDER = [
+    'liesWithin',
+    'depicts',
+    'isRecordedIn',
+    'isMapLayerOf',
+    'isDepictedIn',
+    'isPresentIn',
+    'isCarriedOutOn',
+    'resultsIn'
 ];
 
 const EVIDENCE_COUNTS: EvidenceCountDefinition[] = [
@@ -454,6 +468,7 @@ function makeReportHandoffItem(document: Document, documents: Document[]): Korea
     const identifier = getDocumentIdentifier(document);
     const summary = getSummary(document, categoryLabel);
     const details = getDetailLines(document);
+    const relationDetails = getRelationDetails(document, documents);
     const evidenceLabel = getEvidenceLabel(bundle);
     const evidenceDetails = getEvidenceDetails(bundle);
     const issues = getReportHandoffIssues(bundle);
@@ -473,6 +488,7 @@ function makeReportHandoffItem(document: Document, documents: Document[]): Korea
         title,
         summary,
         details,
+        relationDetails,
         evidenceLabel,
         evidenceDetails,
         issueLabel,
@@ -487,6 +503,7 @@ function makeReportHandoffItem(document: Document, documents: Document[]): Korea
             identifier,
             issueDetails,
             issueLabel,
+            relationDetails,
             summary
         }),
         tone
@@ -502,6 +519,7 @@ function makeCopyText({
     identifier,
     issueDetails,
     issueLabel,
+    relationDetails,
     summary
 }: {
     categoryLabel: string;
@@ -511,6 +529,7 @@ function makeCopyText({
     identifier: string;
     issueDetails: string[];
     issueLabel: string;
+    relationDetails: string[];
     summary: string;
 }): string {
 
@@ -518,6 +537,7 @@ function makeCopyText({
         `[${categoryLabel}] ${identifier}`,
         `${KO.SUMMARY}: ${summary}`,
         `${KO.DETAILS}: ${details.length > 0 ? details.join(' / ') : KO.NO_DETAILS}`,
+        ...(relationDetails.length > 0 ? [`${KO.RELATIONS}: ${relationDetails.join(' / ')}`] : []),
         `${KO.EVIDENCE}: ${evidenceLabel}`,
         ...(evidenceDetails.length > 0 ? [makeListBlock(KO.EVIDENCE_DETAILS, evidenceDetails)] : []),
         `${KO.ISSUES}: ${issueLabel}`,
@@ -562,6 +582,44 @@ function getDetailLine(document: Document, definition: DetailFieldDefinition): s
     if (values.length === 0) return undefined;
 
     return `${definition.label}: ${values.join(', ')}`;
+}
+
+
+function getRelationDetails(document: Document, documents: Document[]): string[] {
+
+    const documentsById = new Map(documents.map(candidate => [candidate.resource.id, candidate]));
+    const relations = document.resource.relations ?? {};
+
+    return Object.keys(relations)
+        .filter(relationName => Array.isArray(relations[relationName]) && relations[relationName].length > 0)
+        .sort(compareRelationNames)
+        .map(relationName => getRelationDetailLine(relationName, relations[relationName], documentsById))
+        .filter((line): line is string => line !== undefined);
+}
+
+
+function getRelationDetailLine(
+        relationName: string,
+        targetIds: string[],
+        documentsById: Map<string, Document>
+): string|undefined {
+
+    const targets = targetIds
+        .map(targetId => getRelatedDocumentLabel(targetId, documentsById))
+        .filter((target): target is string => !!target);
+
+    return targets.length > 0
+        ? `${getKoreanFieldworkRelationLabel(relationName)}: ${targets.join(', ')}`
+        : undefined;
+}
+
+
+function getRelatedDocumentLabel(targetId: string, documentsById: Map<string, Document>): string {
+
+    const targetDocument = documentsById.get(targetId);
+    if (!targetDocument) return targetId;
+
+    return `[${getCategoryLabel(targetDocument.resource.category)}] ${getDocumentIdentifier(targetDocument)}`;
 }
 
 
@@ -750,6 +808,21 @@ function compareReportHandoffItems(
     return rankA - rankB
         || itemA.identifier.localeCompare(itemB.identifier, 'ko')
         || itemA.documentId.localeCompare(itemB.documentId);
+}
+
+
+function compareRelationNames(relationNameA: string, relationNameB: string): number {
+
+    return getRelationRank(relationNameA) - getRelationRank(relationNameB)
+        || relationNameA.localeCompare(relationNameB, 'ko');
+}
+
+
+function getRelationRank(relationName: string): number {
+
+    const index = RELATION_DETAIL_ORDER.indexOf(relationName);
+
+    return index === -1 ? Number.MAX_SAFE_INTEGER : index;
 }
 
 

@@ -48,6 +48,18 @@ export const KOREAN_FIELDWORK_CATEGORY_LABELS: Readonly<Record<string, string>> 
     [KOREAN_FIELDWORK_CATEGORIES.TRENCH]: '\ud2b8\ub80c\uce58'
 };
 
+export const KOREAN_FIELDWORK_RELATION_LABELS: Readonly<Record<string, string>> = {
+    depicts: '\ub300\uc0c1',
+    isCarriedOutOn: '\uc870\uc0ac \ub300\uc0c1',
+    isChildOf: '\uc0c1\uc704 \uae30\ub85d',
+    isDepictedIn: '\uc5f0\uacb0 \uc790\ub8cc',
+    isMapLayerOf: '\uc9c0\ub3c4 \ub300\uc0c1',
+    isPresentIn: '\uc18c\uc7ac \uae30\ub85d',
+    isRecordedIn: '\uc870\uc0ac \uae30\ub85d',
+    liesWithin: '\uc0c1\uc704 \uae30\ub85d',
+    resultsIn: '\uc0dd\uc131 \uae30\ub85d'
+};
+
 export const KOREAN_FIELDWORK_CATEGORY_ORDER: readonly string[] = [
     KOREAN_FIELDWORK_CATEGORIES.OPERATION,
     KOREAN_FIELDWORK_CATEGORIES.TRENCH,
@@ -225,6 +237,12 @@ export const KOREAN_FIELDWORK_EVIDENCE_DEFINITIONS: readonly KoreanFieldworkEvid
 export function getKoreanFieldworkCategoryLabel(categoryName: string): string {
 
     return KOREAN_FIELDWORK_CATEGORY_LABELS[categoryName] ?? categoryName;
+}
+
+
+export function getKoreanFieldworkRelationLabel(relationName: string): string {
+
+    return KOREAN_FIELDWORK_RELATION_LABELS[relationName] ?? relationName;
 }
 
 

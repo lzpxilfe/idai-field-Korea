@@ -3,6 +3,7 @@ import {
     getKoreanFieldworkEvidenceChips,
     getKoreanFieldworkEvidenceDefinitionsForCategory,
     getKoreanFieldworkReportHandoffCategoryRank,
+    getKoreanFieldworkRelationLabel,
     isKoreanFieldworkReportHandoffCategory,
     KOREAN_FIELDWORK_CATEGORIES,
     KOREAN_FIELDWORK_CATEGORY_ORDER
@@ -28,6 +29,15 @@ describe('Korean fieldwork record contract', () => {
             KOREAN_FIELDWORK_CATEGORIES.FEATURE_SEGMENT,
             KOREAN_FIELDWORK_CATEGORIES.LAYER
         ]);
+    });
+
+
+    it('keeps Korean relation labels in the shared core contract', () => {
+
+        expect(getKoreanFieldworkRelationLabel('liesWithin')).toBe('\uc0c1\uc704 \uae30\ub85d');
+        expect(getKoreanFieldworkRelationLabel('depicts')).toBe('\ub300\uc0c1');
+        expect(getKoreanFieldworkRelationLabel('isRecordedIn')).toBe('\uc870\uc0ac \uae30\ub85d');
+        expect(getKoreanFieldworkRelationLabel('unknownRelation')).toBe('unknownRelation');
     });
 
 

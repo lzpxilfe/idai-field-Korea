@@ -2914,6 +2914,10 @@ korean-fieldwork-priority-strip {
       white-space: nowrap;
     }
 
+    &.relation > span:first-child {
+      background: #475467;
+    }
+
     &.evidence > span:first-child {
       background: #175cd3;
     }
