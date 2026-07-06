@@ -66,7 +66,7 @@ const PREFERRED_EVIDENCE_ACTION_IDS = [
 
 const OPEN_EVIDENCE_ACTION_IDS = [
   ...PREFERRED_EVIDENCE_ACTION_IDS,
-  'pits',
+  'featureSegments',
   'sketches',
 ];
 
@@ -282,7 +282,7 @@ const getSoilProfilePhotoGapChip = (
   const soilProfilePhotoChip = evidenceChips.find((chip) =>
     chip.id === 'soilProfilePhotos'
   );
-  const pitChip = evidenceChips.find((chip) => chip.id === 'pits');
+  const pitChip = evidenceChips.find((chip) => chip.id === 'featureSegments');
   if (
     soilProfilePhotoChip
     && pitChip

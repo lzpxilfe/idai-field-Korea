@@ -161,7 +161,7 @@ export const getEvidenceMetrics = (
 ): EvidenceMetric[] => {
   const metrics: EvidenceMetric[] = [
     {
-      id: 'pits',
+      id: 'featureSegments',
       label: '피트',
       icon: 'account-tree',
       documents: evidenceBundle.featureSegments,

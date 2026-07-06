@@ -1,69 +1,60 @@
-export const KOREAN_FIELDWORK_CATEGORIES = {
-  AERIAL_MAP_LAYER: 'AerialMapLayer',
-  DAILY_LOG: 'DailyLog',
-  DRAWING: 'Drawing',
-  FEATURE: 'Feature',
-  FEATURE_GROUP: 'FeatureGroup',
-  FEATURE_SEGMENT: 'FeatureSegment',
-  FIELD_RECORD_QUALITY_REVIEW: 'FieldRecordQualityReview',
-  FIND: 'Find',
-  FIND_COLLECTION: 'FindCollection',
-  LAYER: 'Layer',
-  OPERATION: 'Operation',
-  PEN_MEMO: 'PenMemo',
-  PHOTO: 'Photo',
-  PLACE: 'Place',
-  SAMPLE: 'Sample',
-  SOIL_PROFILE_PHOTO: 'SoilProfilePhoto',
-  SOURCE_EVIDENCE_INDEX: 'SourceEvidenceIndex',
-  SURVEY: 'Survey',
-  SURVEY_BOUNDARY: 'SurveyBoundary',
-  TRENCH: 'Trench',
-} as const;
+import {
+  getKoreanFieldworkCategoryLabel as getCoreKoreanFieldworkCategoryLabel,
+  KOREAN_FIELDWORK_CATEGORIES as CORE_KOREAN_FIELDWORK_CATEGORIES,
+  KOREAN_FIELDWORK_CATEGORY_LABELS as CORE_KOREAN_FIELDWORK_CATEGORY_LABELS,
+  KOREAN_FIELDWORK_CATEGORY_ORDER as CORE_KOREAN_FIELDWORK_CATEGORY_ORDER,
+  KOREAN_FIELDWORK_EVIDENCE_TARGET_CATEGORIES as CORE_KOREAN_FIELDWORK_EVIDENCE_TARGET_CATEGORIES,
+  KOREAN_FIELDWORK_FEATURE_WORKFLOW_CATEGORIES as CORE_KOREAN_FIELDWORK_FEATURE_WORKFLOW_CATEGORIES,
+  KOREAN_FIELDWORK_SOIL_PROFILE_PHOTO_TARGET_CATEGORIES as CORE_KOREAN_FIELDWORK_SOIL_PROFILE_PHOTO_TARGET_CATEGORIES,
+} from 'idai-field-core';
 
-export const KOREAN_FIELDWORK_CATEGORY_LABELS: Readonly<Record<string, string>> = {
-  [KOREAN_FIELDWORK_CATEGORIES.AERIAL_MAP_LAYER]: '항공사진 지도',
-  [KOREAN_FIELDWORK_CATEGORIES.DAILY_LOG]: '작업일지',
-  [KOREAN_FIELDWORK_CATEGORIES.DRAWING]: '도면',
-  [KOREAN_FIELDWORK_CATEGORIES.FEATURE]: '유구',
-  [KOREAN_FIELDWORK_CATEGORIES.FEATURE_GROUP]: '관련 유구',
-  [KOREAN_FIELDWORK_CATEGORIES.FEATURE_SEGMENT]: '피트',
-  [KOREAN_FIELDWORK_CATEGORIES.FIELD_RECORD_QUALITY_REVIEW]: '기록 보완 메모',
-  [KOREAN_FIELDWORK_CATEGORIES.FIND]: '유물',
-  [KOREAN_FIELDWORK_CATEGORIES.FIND_COLLECTION]: '유물 일괄',
-  [KOREAN_FIELDWORK_CATEGORIES.LAYER]: '토층',
-  [KOREAN_FIELDWORK_CATEGORIES.OPERATION]: '조사 구역 기록',
-  [KOREAN_FIELDWORK_CATEGORIES.PEN_MEMO]: '펜메모',
-  [KOREAN_FIELDWORK_CATEGORIES.PHOTO]: '사진',
-  [KOREAN_FIELDWORK_CATEGORIES.PLACE]: '유적/지점',
-  [KOREAN_FIELDWORK_CATEGORIES.SAMPLE]: '시료',
-  [KOREAN_FIELDWORK_CATEGORIES.SOIL_PROFILE_PHOTO]: '토층 단면 사진',
-  [KOREAN_FIELDWORK_CATEGORIES.SOURCE_EVIDENCE_INDEX]: '원문 근거 색인',
-  [KOREAN_FIELDWORK_CATEGORIES.SURVEY]: '지표조사',
-  [KOREAN_FIELDWORK_CATEGORIES.SURVEY_BOUNDARY]: '조사 경계',
-  [KOREAN_FIELDWORK_CATEGORIES.TRENCH]: '트렌치',
-};
+export const KOREAN_FIELDWORK_CATEGORIES = CORE_KOREAN_FIELDWORK_CATEGORIES;
+export const KOREAN_FIELDWORK_CATEGORY_LABELS = CORE_KOREAN_FIELDWORK_CATEGORY_LABELS;
+export const KOREAN_FIELDWORK_CATEGORY_ORDER = CORE_KOREAN_FIELDWORK_CATEGORY_ORDER;
+export const FEATURE_WORKFLOW_CATEGORIES = CORE_KOREAN_FIELDWORK_FEATURE_WORKFLOW_CATEGORIES;
+export const SOIL_PROFILE_PHOTO_TARGET_CATEGORIES =
+  CORE_KOREAN_FIELDWORK_SOIL_PROFILE_PHOTO_TARGET_CATEGORIES;
+export const EVIDENCE_TARGET_CATEGORIES = CORE_KOREAN_FIELDWORK_EVIDENCE_TARGET_CATEGORIES;
 
 export const KOREAN_FIELDWORK_CATEGORY_DESCRIPTIONS: Readonly<Record<string, string>> = {
-  [KOREAN_FIELDWORK_CATEGORIES.AERIAL_MAP_LAYER]: '드론 정사영상과 기준 배경지도를 현장 지도에 맞춥니다.',
-  [KOREAN_FIELDWORK_CATEGORIES.DAILY_LOG]: '오늘의 작업 범위, 담당자, 관찰 내용과 변경사항을 묶습니다.',
-  [KOREAN_FIELDWORK_CATEGORIES.DRAWING]: '실측도, 분포도, 보정 도면 등 도면 자료를 추가합니다.',
-  [KOREAN_FIELDWORK_CATEGORIES.FEATURE]: '수혈, 주거지, 목책, 구상유구처럼 개별 유구를 기록합니다.',
-  [KOREAN_FIELDWORK_CATEGORIES.FEATURE_GROUP]: '목책열, 수혈 여러 기, 건물지 여러 동처럼 함께 다루는 유구입니다.',
-  [KOREAN_FIELDWORK_CATEGORIES.FEATURE_SEGMENT]: '피트, 절개면, 내부 퇴적처럼 유구 안에서 따로 조사한 세부 단위입니다.',
-  [KOREAN_FIELDWORK_CATEGORIES.FIELD_RECORD_QUALITY_REVIEW]: '현장 기록, 해석, 보완 메모를 따로 남깁니다.',
-  [KOREAN_FIELDWORK_CATEGORIES.FIND]: '개별 유물의 출토 맥락, 수습 상태, 해석 근거를 기록합니다.',
-  [KOREAN_FIELDWORK_CATEGORIES.FIND_COLLECTION]: '동일 맥락의 유물 일괄 수습 또는 묶음 기록입니다.',
-  [KOREAN_FIELDWORK_CATEGORIES.LAYER]: '사진에 표시한 토층 번호별 토색과 필요한 메모를 남깁니다.',
-  [KOREAN_FIELDWORK_CATEGORIES.OPERATION]: '조사 경계 안에서 유구나 트렌치, 유물 기록을 이어 붙이는 구역 기록입니다.',
-  [KOREAN_FIELDWORK_CATEGORIES.PEN_MEMO]: '태블릿에서 바로 적는 손글씨 메모와 전사 상태를 남깁니다.',
-  [KOREAN_FIELDWORK_CATEGORIES.PHOTO]: '현장 사진, 유물 사진, 보고서용 사진 근거를 추가합니다.',
-  [KOREAN_FIELDWORK_CATEGORIES.SAMPLE]: '토양, 목탄, 유기물, 자연과학 분석용 시료를 기록합니다.',
-  [KOREAN_FIELDWORK_CATEGORIES.SOIL_PROFILE_PHOTO]: '토층 단면 사진과 토층 번호, 토색 기록을 남깁니다.',
-  [KOREAN_FIELDWORK_CATEGORIES.SOURCE_EVIDENCE_INDEX]: '보고서·문헌·원자료의 근거자료를 나중에 추적할 수 있게 색인합니다.',
-  [KOREAN_FIELDWORK_CATEGORIES.SURVEY]: '지표조사, 시굴 전 단계, 조사 방법과 관찰 조건을 기록합니다.',
-  [KOREAN_FIELDWORK_CATEGORIES.SURVEY_BOUNDARY]: '조사 범위, 구역선, 배경지도 출처와 정확도를 기록합니다.',
-  [KOREAN_FIELDWORK_CATEGORIES.TRENCH]: '시굴·표본 트렌치의 위치와 범위를 잡습니다.',
+  [KOREAN_FIELDWORK_CATEGORIES.AERIAL_MAP_LAYER]:
+    '\ub4dc\ub860 \uc815\uc0ac\uc601\uc0c1\uacfc \uae30\uc900 \ubc30\uacbd\uc9c0\ub3c4\ub97c \ud604\uc7a5 \uc9c0\ub3c4\uc5d0 \ub9de\ucda5\ub2c8\ub2e4.',
+  [KOREAN_FIELDWORK_CATEGORIES.DAILY_LOG]:
+    '\uc624\ub298\uc758 \uc791\uc5c5 \ubc94\uc704, \ub2f4\ub2f9\uc790, \uad00\ucc30 \ub0b4\uc6a9\uacfc \ubcc0\uacbd\uc0ac\ud56d\uc744 \ubb36\uc2b5\ub2c8\ub2e4.',
+  [KOREAN_FIELDWORK_CATEGORIES.DRAWING]:
+    '\uc2e4\uce21\ub3c4, \ubd84\ud3ec\ub3c4, \ubcf4\uc815 \ub3c4\uba74 \ub4f1 \ub3c4\uba74 \uc790\ub8cc\ub97c \ucd94\uac00\ud569\ub2c8\ub2e4.',
+  [KOREAN_FIELDWORK_CATEGORIES.FEATURE]:
+    '\uc218\ud608, \uc8fc\uac70\uc9c0, \ubaa9\ucc45, \uad6c\uc0c1\uc720\uad6c\ucc98\ub7fc \uac1c\ubcc4 \uc720\uad6c\ub97c \uae30\ub85d\ud569\ub2c8\ub2e4.',
+  [KOREAN_FIELDWORK_CATEGORIES.FEATURE_GROUP]:
+    '\ubaa9\ucc45\uc5f4, \uc218\ud608 \uc5ec\ub7ec \uae30, \uac74\ubb3c\uc9c0 \uc5ec\ub7ec \ub3d9\ucc98\ub7fc \ud568\uaed8 \ub2e4\ub8e8\ub294 \uc720\uad6c\uc785\ub2c8\ub2e4.',
+  [KOREAN_FIELDWORK_CATEGORIES.FEATURE_SEGMENT]:
+    '\ud53c\ud2b8, \uc808\uac1c\uba74, \ub0b4\ubd80 \ud1f4\uc801\ucc98\ub7fc \uc720\uad6c \uc548\uc5d0\uc11c \ub530\ub85c \uc870\uc0ac\ud55c \uc138\ubd80 \ub2e8\uc704\uc785\ub2c8\ub2e4.',
+  [KOREAN_FIELDWORK_CATEGORIES.FIELD_RECORD_QUALITY_REVIEW]:
+    '\ud604\uc7a5 \uae30\ub85d, \ud574\uc11d, \ubcf4\uc644 \uba54\ubaa8\ub97c \ub530\ub85c \ub0a8\uae41\ub2c8\ub2e4.',
+  [KOREAN_FIELDWORK_CATEGORIES.FIND]:
+    '\uac1c\ubcc4 \uc720\ubb3c\uc758 \ucd9c\ud1a0 \ub9e5\ub77d, \uc218\uc2b5 \uc0c1\ud0dc, \ud574\uc11d \uadfc\uac70\ub97c \uae30\ub85d\ud569\ub2c8\ub2e4.',
+  [KOREAN_FIELDWORK_CATEGORIES.FIND_COLLECTION]:
+    '\ub3d9\uc77c \ub9e5\ub77d\uc758 \uc720\ubb3c \uc77c\uad04 \uc218\uc2b5 \ub610\ub294 \ubb36\uc74c \uae30\ub85d\uc785\ub2c8\ub2e4.',
+  [KOREAN_FIELDWORK_CATEGORIES.LAYER]:
+    '\uc0ac\uc9c4\uc5d0 \ud45c\uc2dc\ud55c \ud1a0\uce35 \ubc88\ud638\ubcc4 \ud1a0\uc0c9\uacfc \ud544\uc694\ud55c \uba54\ubaa8\ub97c \ub0a8\uae41\ub2c8\ub2e4.',
+  [KOREAN_FIELDWORK_CATEGORIES.OPERATION]:
+    '\uc870\uc0ac \uacbd\uacc4 \uc548\uc5d0\uc11c \uc720\uad6c\ub098 \ud2b8\ub80c\uce58, \uc720\ubb3c \uae30\ub85d\uc744 \uc774\uc5b4 \ubd99\uc774\ub294 \uad6c\uc5ed \uae30\ub85d\uc785\ub2c8\ub2e4.',
+  [KOREAN_FIELDWORK_CATEGORIES.PEN_MEMO]:
+    '\ud0dc\ube14\ub9bf\uc5d0\uc11c \ubc14\ub85c \uc801\ub294 \uc190\uae00\uc528 \uba54\ubaa8\uc640 \uc804\uc0ac \uc0c1\ud0dc\ub97c \ub0a8\uae41\ub2c8\ub2e4.',
+  [KOREAN_FIELDWORK_CATEGORIES.PHOTO]:
+    '\ud604\uc7a5 \uc0ac\uc9c4, \uc720\ubb3c \uc0ac\uc9c4, \ubcf4\uace0\uc11c\uc6a9 \uc0ac\uc9c4 \uadfc\uac70\ub97c \ucd94\uac00\ud569\ub2c8\ub2e4.',
+  [KOREAN_FIELDWORK_CATEGORIES.SAMPLE]:
+    '\ud1a0\uc591, \ubaa9\ud0c4, \uc720\uae30\ubb3c, \uc790\uc5f0\uacfc\ud559 \ubd84\uc11d\uc6a9 \uc2dc\ub8cc\ub97c \uae30\ub85d\ud569\ub2c8\ub2e4.',
+  [KOREAN_FIELDWORK_CATEGORIES.SOIL_PROFILE_PHOTO]:
+    '\ud1a0\uce35 \ub2e8\uba74 \uc0ac\uc9c4\uacfc \ud1a0\uce35 \ubc88\ud638, \ud1a0\uc0c9 \uae30\ub85d\uc744 \ub0a8\uae41\ub2c8\ub2e4.',
+  [KOREAN_FIELDWORK_CATEGORIES.SOURCE_EVIDENCE_INDEX]:
+    '\ubcf4\uace0\uc11c\u00b7\ubb38\ud5cc\u00b7\uc6d0\uc790\ub8cc\uc758 \uadfc\uac70\uc790\ub8cc\ub97c \ub098\uc911\uc5d0 \ucd94\uc801\ud560 \uc218 \uc788\uac8c \uc0c9\uc778\ud569\ub2c8\ub2e4.',
+  [KOREAN_FIELDWORK_CATEGORIES.SURVEY]:
+    '\uc9c0\ud45c\uc870\uc0ac, \uc2dc\uad74 \uc804 \ub2e8\uacc4, \uc870\uc0ac \ubc29\ubc95\uacfc \uad00\ucc30 \uc870\uac74\uc744 \uae30\ub85d\ud569\ub2c8\ub2e4.',
+  [KOREAN_FIELDWORK_CATEGORIES.SURVEY_BOUNDARY]:
+    '\uc870\uc0ac \ubc94\uc704, \uad6c\uc5ed\uc120, \ubc30\uacbd\uc9c0\ub3c4 \ucd9c\ucc98\uc640 \uc815\ud655\ub3c4\ub97c \uae30\ub85d\ud569\ub2c8\ub2e4.',
+  [KOREAN_FIELDWORK_CATEGORIES.TRENCH]:
+    '\uc2dc\uad74\u00b7\ud45c\ubcf8 \ud2b8\ub80c\uce58\uc758 \uc704\uce58\uc640 \ubc94\uc704\ub97c \uc7a1\uc2b5\ub2c8\ub2e4.',
 };
 
 export const KOREAN_FIELDWORK_HIDDEN_ADD_CATEGORIES: readonly string[] = [
@@ -84,43 +75,9 @@ export const FEATURE_CANDIDATE_PARENT_CATEGORIES: readonly string[] = [
   KOREAN_FIELDWORK_CATEGORIES.TRENCH,
 ];
 
-export const FEATURE_WORKFLOW_CATEGORIES: readonly string[] = [
-  KOREAN_FIELDWORK_CATEGORIES.FEATURE,
-  KOREAN_FIELDWORK_CATEGORIES.FEATURE_SEGMENT,
-];
-
-export const SOIL_PROFILE_PHOTO_TARGET_CATEGORIES: readonly string[] = [
-  KOREAN_FIELDWORK_CATEGORIES.OPERATION,
-  KOREAN_FIELDWORK_CATEGORIES.TRENCH,
-  KOREAN_FIELDWORK_CATEGORIES.FEATURE,
-  KOREAN_FIELDWORK_CATEGORIES.FEATURE_SEGMENT,
-];
-
-export const KOREAN_FIELDWORK_CATEGORY_ORDER: readonly string[] = [
-  KOREAN_FIELDWORK_CATEGORIES.OPERATION,
-  KOREAN_FIELDWORK_CATEGORIES.TRENCH,
-  KOREAN_FIELDWORK_CATEGORIES.FEATURE,
-  KOREAN_FIELDWORK_CATEGORIES.FEATURE_SEGMENT,
-  KOREAN_FIELDWORK_CATEGORIES.LAYER,
-  KOREAN_FIELDWORK_CATEGORIES.SURVEY,
-  KOREAN_FIELDWORK_CATEGORIES.SURVEY_BOUNDARY,
-  KOREAN_FIELDWORK_CATEGORIES.FIND,
-  KOREAN_FIELDWORK_CATEGORIES.FIND_COLLECTION,
-  KOREAN_FIELDWORK_CATEGORIES.SAMPLE,
-  KOREAN_FIELDWORK_CATEGORIES.DRAWING,
-  KOREAN_FIELDWORK_CATEGORIES.PHOTO,
-  KOREAN_FIELDWORK_CATEGORIES.SOIL_PROFILE_PHOTO,
-  KOREAN_FIELDWORK_CATEGORIES.AERIAL_MAP_LAYER,
-  KOREAN_FIELDWORK_CATEGORIES.PEN_MEMO,
-  KOREAN_FIELDWORK_CATEGORIES.DAILY_LOG,
-  KOREAN_FIELDWORK_CATEGORIES.FIELD_RECORD_QUALITY_REVIEW,
-  KOREAN_FIELDWORK_CATEGORIES.SOURCE_EVIDENCE_INDEX,
-  KOREAN_FIELDWORK_CATEGORIES.PLACE,
-];
-
 export const getKoreanFieldworkCategoryLabel = (
   categoryName: string
-): string => KOREAN_FIELDWORK_CATEGORY_LABELS[categoryName] ?? categoryName;
+): string => getCoreKoreanFieldworkCategoryLabel(categoryName);
 
 export const getKoreanFieldworkDisplayIdentifier = (
   identifier?: string
@@ -129,10 +86,12 @@ export const getKoreanFieldworkDisplayIdentifier = (
   if (!value) return '';
 
   return value
-    .replace(/^현장단위-/, '조사구역-')
-    .replace(/^조사기준-/, '조사구역-');
+    .replace(/^\ud604\uc7a5\ub2e8\uc704-/, '\uc870\uc0ac\uad6c\uc5ed-')
+    .replace(/^\uc870\uc0ac\uae30\uc900-/, '\uc870\uc0ac\uad6c\uc5ed-');
 };
 
 export const getKoreanFieldworkCategoryDescription = (
   categoryName: string
-): string => KOREAN_FIELDWORK_CATEGORY_DESCRIPTIONS[categoryName] ?? '현장 기록에 필요한 세부 정보를 이어서 입력합니다.';
+): string =>
+  KOREAN_FIELDWORK_CATEGORY_DESCRIPTIONS[categoryName]
+  ?? '\ud604\uc7a5 \uae30\ub85d\uc5d0 \ud544\uc694\ud55c \ud575\uc2ec \uc815\ubcf4\ub97c \uc774\uc5b4\uc11c \uc785\ub825\ud569\ub2c8\ub2e4.';

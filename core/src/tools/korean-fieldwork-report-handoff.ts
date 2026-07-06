@@ -1,5 +1,10 @@
 import { Document } from '../model/document/document';
 import { buildEvidenceBundle, EvidenceBundle } from './korean-fieldwork-readiness';
+import {
+    getKoreanFieldworkCategoryLabel,
+    getKoreanFieldworkReportHandoffCategoryRank,
+    isKoreanFieldworkReportHandoffCategory
+} from './korean-fieldwork-record-contract';
 
 
 export type KoreanFieldworkReportHandoffTone = 'ready'|'review';
@@ -51,48 +56,6 @@ const KO = {
     REVIEW_NEEDED: '\ubcf4\uc644 \ud544\uc694',
     SUMMARY: '\uc694\uc57d'
 };
-
-const CATEGORY_LABELS: Readonly<Record<string, string>> = {
-    DailyLog: '\uc791\uc5c5\uc77c\uc9c0',
-    Drawing: '\ub3c4\uba74',
-    Feature: '\uc720\uad6c',
-    FeatureGroup: '\uad00\ub828 \uc720\uad6c',
-    FeatureSegment: '\ud53c\ud2b8',
-    FieldRecordQualityReview: '\uae30\ub85d \ubcf4\uc644 \uba54\ubaa8',
-    Find: '\uc720\ubb3c',
-    FindCollection: '\uc720\ubb3c \uc77c\uad04',
-    Layer: '\ud1a0\uce35',
-    Operation: '\uc870\uc0ac \uad6c\uc5ed',
-    PenMemo: '\ud604\uc7a5 \uba54\ubaa8',
-    Photo: '\uc0ac\uc9c4',
-    Sample: '\uc2dc\ub8cc',
-    SoilProfilePhoto: '\ud1a0\uce35\uc0ac\uc9c4',
-    Survey: '\uc9c0\ud45c\uc870\uc0ac',
-    SurveyBoundary: '\uc870\uc0ac \uacbd\uacc4',
-    Trench: '\ud2b8\ub80c\uce58'
-};
-
-const REPORT_HANDOFF_CATEGORY_RANK: Readonly<Record<string, number>> = {
-    Operation: 10,
-    Trench: 20,
-    FeatureGroup: 30,
-    Feature: 40,
-    FeatureSegment: 50,
-    Layer: 60,
-    FindCollection: 70,
-    Find: 80,
-    Sample: 90,
-    SoilProfilePhoto: 100,
-    Drawing: 110,
-    Photo: 120,
-    PenMemo: 130,
-    DailyLog: 140,
-    FieldRecordQualityReview: 150,
-    Survey: 160,
-    SurveyBoundary: 170
-};
-
-const REPORT_HANDOFF_CATEGORIES = new Set(Object.keys(REPORT_HANDOFF_CATEGORY_RANK));
 
 const DETAIL_FIELDS: DetailFieldDefinition[] = [
     {
@@ -292,7 +255,7 @@ function makeCopyText({
 function isReportHandoffDocument(document: Document): boolean {
 
     return !!document?.resource?.id
-        && REPORT_HANDOFF_CATEGORIES.has(document.resource.category);
+        && isKoreanFieldworkReportHandoffCategory(document.resource.category);
 }
 
 
@@ -358,7 +321,7 @@ function getDocumentIdentifier(document: Document): string {
 
 function getCategoryLabel(categoryName: string): string {
 
-    return CATEGORY_LABELS[categoryName] ?? categoryName ?? KO.CATEGORY;
+    return getKoreanFieldworkCategoryLabel(categoryName) ?? categoryName ?? KO.CATEGORY;
 }
 
 
@@ -391,8 +354,8 @@ function compareReportHandoffItems(
         itemB: KoreanFieldworkReportHandoffItem
 ): number {
 
-    const rankA = REPORT_HANDOFF_CATEGORY_RANK[itemA.category] ?? Number.MAX_SAFE_INTEGER;
-    const rankB = REPORT_HANDOFF_CATEGORY_RANK[itemB.category] ?? Number.MAX_SAFE_INTEGER;
+    const rankA = getKoreanFieldworkReportHandoffCategoryRank(itemA.category);
+    const rankB = getKoreanFieldworkReportHandoffCategoryRank(itemB.category);
 
     return rankA - rankB
         || itemA.identifier.localeCompare(itemB.identifier, 'ko')

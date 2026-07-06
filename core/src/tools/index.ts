@@ -19,4 +19,5 @@ export * from './in-place';
 export * from './validation-util';
 export * from './compare';
 export * from './korean-fieldwork-readiness';
+export * from './korean-fieldwork-record-contract';
 export * from './korean-fieldwork-report-handoff';

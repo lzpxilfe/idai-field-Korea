@@ -18,7 +18,8 @@ const featureRows = [
       'mobile/test/screens/SettingsScreen.spec.tsx',
       'mobile/hooks/use-korean-fieldwork-project-setup-defaults.ts',
       'mobile/hooks/use-korean-fieldwork-project-setup-defaults.spec.ts',
-      'mobile/components/Project/korean-fieldwork-investigation-mode.ts'
+      'mobile/components/Project/korean-fieldwork-investigation-mode.ts',
+      'mobile/components/Project/korean-fieldwork-project-start.ts'
     ],
     desktop: [
       'desktop/src/app/components/project/create-project-modal.component.ts',
@@ -322,6 +323,7 @@ const featureRows = [
       'mobile/hooks/use-fieldwork-image-sync.ts'
     ],
     desktop: [
+      'core/src/tools/korean-fieldwork-record-contract.ts',
       'core/src/tools/korean-fieldwork-report-handoff.ts',
       'desktop/src/app/components/resources/korean-fieldwork-priority-strip.component.ts',
       'desktop/src/app/components/resources/korean-fieldwork-priority-strip.html',
@@ -368,6 +370,8 @@ const releaseCriticalPatterns = [
   /^core\/test\/model\/image-document\.spec\.ts$/,
   /^core\/src\/tools\/korean-fieldwork-readiness\.ts$/,
   /^core\/test\/tools\/korean-fieldwork-readiness\.spec\.ts$/,
+  /^core\/src\/tools\/korean-fieldwork-record-contract\.ts$/,
+  /^core\/test\/tools\/korean-fieldwork-record-contract\.spec\.ts$/,
   /^core\/src\/tools\/korean-fieldwork-report-handoff\.ts$/,
   /^core\/test\/tools\/korean-fieldwork-report-handoff\.spec\.ts$/,
   /^mobile\/app\/\(tabs\)\/ProjectScreen\/Document(Add|Edit)\.tsx$/,
@@ -3799,6 +3803,10 @@ function validateRecordActionEvidencePriority() {
   const desktopRecordContextSpecText = readTextFile(desktopRecordContextSpec);
   const desktopRecordEvidenceText = readTextFile(desktopRecordEvidenceSource);
   const desktopRecordEvidenceSpecText = readTextFile(desktopRecordEvidenceSpec);
+  const coreRecordContractText = readTextFile('core/src/tools/korean-fieldwork-record-contract.ts');
+  const coreRecordContractSpecText = readTextFile(
+    'core/test/tools/korean-fieldwork-record-contract.spec.ts'
+  );
   const coreReadinessText = readTextFile('core/src/tools/korean-fieldwork-readiness.ts');
   const coreReadinessSpecText = readTextFile('core/test/tools/korean-fieldwork-readiness.spec.ts');
   const desktopRecordWorkFilterText = readTextFile(
@@ -3845,6 +3853,9 @@ function validateRecordActionEvidencePriority() {
   const mobileRecordActionSpecText = readTextFile(
     'mobile/components/Project/korean-fieldwork-record-actions.spec.ts'
   );
+  const mobileRecordContextText = readTextFile(
+    'mobile/components/Project/KoreanFieldworkRecordContextPanel.tsx'
+  );
   const desktopRecordActionText = readTextFile(desktopSource);
   const desktopRecordActionSpecText = readTextFile(
     'desktop/test/unit/util/korean-fieldwork-record-actions.spec.ts'
@@ -3861,6 +3872,37 @@ function validateRecordActionEvidencePriority() {
     '유물',
     '시료'
   ];
+
+  if (!coreRecordContractText.includes('KOREAN_FIELDWORK_CATEGORIES')
+      || !coreRecordContractText.includes('KOREAN_FIELDWORK_EVIDENCE_DEFINITIONS')
+      || !coreRecordContractText.includes("id: 'featureSegments'")
+      || !coreRecordContractText.includes("id: 'sketches'")
+      || !coreRecordContractText.includes('KOREAN_FIELDWORK_REPORT_HANDOFF_CATEGORY_RANK')
+      || !coreRecordContractSpecText.includes('Korean fieldwork record contract')) {
+    findings.push('core record contract must define shared categories, labels, report ranks, and evidence chips');
+  }
+  for (const [label, text] of [
+    ['tablet record evidence source', mobileRecordEvidenceText],
+    ['desktop record evidence source', desktopRecordEvidenceText]
+  ]) {
+    if (!text.includes("from 'idai-field-core'")
+        || !text.includes('getKoreanFieldworkEvidenceChips')
+        || !text.includes('KoreanFieldworkEvidenceChip')) {
+      findings.push(`${label} must re-export the shared core evidence-chip contract`);
+    }
+  }
+  for (const [label, text] of [
+    ['core record contract', coreRecordContractText],
+    ['core record contract test', coreRecordContractSpecText],
+    ['tablet record evidence test', mobileRecordEvidenceSpecText],
+    ['desktop record evidence test', desktopRecordEvidenceSpecText],
+    ['tablet record actions', mobileRecordActionText],
+    ['tablet record context panel', mobileRecordContextText]
+  ]) {
+    if (text.includes("'pits'") || text.includes('"pits"')) {
+      findings.push(`${label} must use featureSegments instead of the old tablet-only pits id`);
+    }
+  }
 
   if (desktopCategories.includes('PenMemo')) {
     findings.push('desktop missing-evidence priority must not treat PenMemo as evidence');
@@ -3962,7 +4004,10 @@ function validateRecordActionEvidencePriority() {
     findings.push('desktop record context panel must render evidence metric heading');
   }
   for (const label of evidenceMetricLabels) {
-    if (!desktopRecordContextText.includes(label) && !desktopRecordEvidenceText.includes(label)) {
+    if (!coreRecordContractText.includes(label)
+        && !desktopRecordContextText.includes(label)
+        && !desktopRecordEvidenceSpecText.includes(label)
+        && !desktopRecordContextSpecText.includes(label)) {
       findings.push(`desktop record context evidence metric missing label: ${label}`);
     }
   }
@@ -3970,11 +4015,10 @@ function validateRecordActionEvidencePriority() {
       || !desktopRecordEvidenceSpecText.includes('keeps non-structural evidence records compact')) {
     findings.push('desktop record evidence tests must mirror tablet evidence-chip coverage');
   }
-  if (!mobileRecordEvidenceText.includes('PHOTO_ATTACHMENT_TARGET_CATEGORIES')
-      || !mobileRecordEvidenceText.includes('C.FIND_COLLECTION')
-      || !desktopRecordEvidenceText.includes('PHOTO_ATTACHMENT_TARGET_CATEGORIES')
-      || !desktopRecordEvidenceText.includes('C.FIND_COLLECTION')) {
-    findings.push('tablet and desktop record evidence chips must expose direct photos on Find/FindCollection/Sample records');
+  if (!coreRecordContractText.includes('KOREAN_FIELDWORK_PHOTO_ATTACHMENT_TARGET_CATEGORIES')
+      || !coreRecordContractText.includes('FIND_COLLECTION')
+      || !coreRecordContractText.includes('SAMPLE')) {
+    findings.push('core record evidence chips must expose direct photos on Find/FindCollection/Sample records');
   }
   if (!mobileRecordEvidenceSpecText.includes('keeps direct tablet photos visible on find, find collection, and sample records')
       || !desktopRecordEvidenceSpecText.includes('keeps direct tablet photos visible on find, find collection, and sample records')
@@ -3995,15 +4039,10 @@ function validateRecordActionEvidencePriority() {
       || !desktopRecordEvidenceSpecText.includes("documentIds: ['find-collection-1']")) {
     findings.push('core, tablet, and desktop evidence bundles must count linked FindCollection records as find evidence');
   }
-  for (const [label, text] of [
-    ['tablet record evidence source', mobileRecordEvidenceText],
-    ['desktop record evidence source', desktopRecordEvidenceText]
-  ]) {
-    if (!text.includes("id: 'sketches'")
-        || !text.includes('약도·스케치')
-        || !text.includes('penMemos')) {
-      findings.push(`${label} must expose PenMemo as a visible sketch evidence chip`);
-    }
+  if (!coreRecordContractText.includes("id: 'sketches'")
+      || !coreRecordContractText.includes("bundleKey: 'penMemos'")
+      || !coreRecordContractText.includes('PEN_MEMO')) {
+    findings.push('core record contract must expose PenMemo as a visible sketch evidence chip');
   }
   for (const [label, text] of [
     ['tablet record evidence test', mobileRecordEvidenceSpecText],

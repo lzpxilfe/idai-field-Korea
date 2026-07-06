@@ -53,20 +53,12 @@ describe('Korean fieldwork record evidence', () => {
       documentIds: chip.documents.map((document) => document.resource.id),
     }))).toEqual([
       {
-        id: 'pits',
+        id: 'featureSegments',
         label: '피트',
         count: 1,
         tone: 'filled',
         createCategoryName: C.FEATURE_SEGMENT,
         documentIds: ['pit-1'],
-      },
-      {
-        id: 'soilProfilePhotos',
-        label: '토층사진',
-        count: 1,
-        tone: 'filled',
-        createCategoryName: C.SOIL_PROFILE_PHOTO,
-        documentIds: ['soil-profile-1'],
       },
       {
         id: 'layers',
@@ -83,6 +75,14 @@ describe('Korean fieldwork record evidence', () => {
         tone: 'filled',
         createCategoryName: C.PHOTO,
         documentIds: ['photo-1'],
+      },
+      {
+        id: 'soilProfilePhotos',
+        label: '토층사진',
+        count: 1,
+        tone: 'filled',
+        createCategoryName: C.SOIL_PROFILE_PHOTO,
+        documentIds: ['soil-profile-1'],
       },
       {
         id: 'drawings',
