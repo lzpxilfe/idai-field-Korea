@@ -19,7 +19,9 @@ export interface KoreanFieldworkReportHandoffItem {
     summary: string;
     details: string[];
     evidenceLabel: string;
+    evidenceDetails: string[];
     issueLabel: string;
+    issueDetails: string[];
     evidenceCount: number;
     issueCount: number;
     copyText: string;
@@ -62,13 +64,21 @@ interface EvidenceCountDefinition {
     getCount: (bundle: EvidenceBundle) => number;
 }
 
+interface EvidenceDetailDefinition {
+    label: string;
+    getDocuments: (bundle: EvidenceBundle) => Document[];
+    fields: string[];
+}
+
 const KO = {
     ALL_READY: '\ubc14\ub85c \uc778\uc6a9 \uac00\ub2a5',
     CATEGORY: '\uc720\ud615',
     CHECKED_FOR_DESKTOP: '\ub370\uc2a4\ud06c\ud1b1 \ubcf4\uace0\uc11c \ud0ed \uc804\ub2ec \ud655\uc778',
     DETAILS: '\uae30\ub85d',
     EVIDENCE: '\uc790\ub8cc',
+    EVIDENCE_DETAILS: '\uc790\ub8cc \uc0c1\uc138',
     ISSUES: '\ud655\uc778',
+    ISSUE_DETAILS: '\ud655\uc778 \uc0c1\uc138',
     NO_DETAILS: '\uc138\ubd80 \uae30\ub85d \ubcf4\uac15 \ud544\uc694',
     NO_EVIDENCE: '\uc5f0\uacb0 \uc790\ub8cc \uc5c6\uc74c',
     NO_ISSUES: '\ud655\uc778 \uc0ac\ud56d \uc5c6\uc74c',
@@ -216,6 +226,49 @@ const EVIDENCE_COUNTS: EvidenceCountDefinition[] = [
     {
         label: '\ud1a0\uce35',
         getCount: bundle => bundle.layers.length
+    }
+];
+
+const EVIDENCE_DETAILS: EvidenceDetailDefinition[] = [
+    {
+        label: '\uc0ac\uc9c4',
+        getDocuments: bundle => bundle.photos,
+        fields: ['fieldworkPhotoCaption', 'fieldworkPhotoUri', 'imageUri', 'fileUri', 'shortDescription']
+    },
+    {
+        label: '\ud1a0\uce35\uc0ac\uc9c4',
+        getDocuments: bundle => bundle.soilProfilePhotos,
+        fields: ['soilProfilePhotoUri', 'soilProfileColorNote', 'soilProfileCaptureNote', 'shortDescription']
+    },
+    {
+        label: '\ub3c4\uba74',
+        getDocuments: bundle => bundle.drawings,
+        fields: ['shortDescription', 'fileUri', 'imageUri', 'fieldworkPhotoUri']
+    },
+    {
+        label: '\ud604\uc7a5\uba54\ubaa8',
+        getDocuments: bundle => bundle.penMemos,
+        fields: ['penMemoReviewedTranscript', 'penMemoAutoTranscript', 'description', 'shortDescription']
+    },
+    {
+        label: '\uc720\ubb3c',
+        getDocuments: bundle => bundle.finds,
+        fields: ['shortDescription', 'description', 'findSpotDescription', 'artifactLabelRegisterLink']
+    },
+    {
+        label: '\uc2dc\ub8cc',
+        getDocuments: bundle => bundle.samples,
+        fields: ['shortDescription', 'description', 'samplePurpose']
+    },
+    {
+        label: '\ud53c\ud2b8',
+        getDocuments: bundle => bundle.featureSegments,
+        fields: ['shortDescription', 'description', 'featureGeometryRevisionNote']
+    },
+    {
+        label: '\ud1a0\uce35',
+        getDocuments: bundle => bundle.layers,
+        fields: ['shortDescription', 'description', 'soilColorMunsellManual', 'soilColorAssistCandidates']
     }
 ];
 
@@ -397,6 +450,8 @@ function makeReportHandoffItem(document: Document, documents: Document[]): Korea
     const summary = getSummary(document, categoryLabel);
     const details = getDetailLines(document);
     const evidenceLabel = getEvidenceLabel(bundle);
+    const evidenceDetails = getEvidenceDetails(bundle);
+    const issueDetails = getIssueDetails(bundle);
     const issueCount = bundle.issues.length;
     const issueLabel = issueCount > 0
         ? `${KO.REVIEW_NEEDED} ${issueCount}`
@@ -413,14 +468,18 @@ function makeReportHandoffItem(document: Document, documents: Document[]): Korea
         summary,
         details,
         evidenceLabel,
+        evidenceDetails,
         issueLabel,
+        issueDetails,
         evidenceCount: getEvidenceCount(bundle),
         issueCount,
         copyText: makeCopyText({
             categoryLabel,
             details,
+            evidenceDetails,
             evidenceLabel,
             identifier,
+            issueDetails,
             issueLabel,
             summary
         }),
@@ -432,15 +491,19 @@ function makeReportHandoffItem(document: Document, documents: Document[]): Korea
 function makeCopyText({
     categoryLabel,
     details,
+    evidenceDetails,
     evidenceLabel,
     identifier,
+    issueDetails,
     issueLabel,
     summary
 }: {
     categoryLabel: string;
     details: string[];
+    evidenceDetails: string[];
     evidenceLabel: string;
     identifier: string;
+    issueDetails: string[];
     issueLabel: string;
     summary: string;
 }): string {
@@ -450,7 +513,9 @@ function makeCopyText({
         `${KO.SUMMARY}: ${summary}`,
         `${KO.DETAILS}: ${details.length > 0 ? details.join(' / ') : KO.NO_DETAILS}`,
         `${KO.EVIDENCE}: ${evidenceLabel}`,
-        `${KO.ISSUES}: ${issueLabel}`
+        ...(evidenceDetails.length > 0 ? [makeListBlock(KO.EVIDENCE_DETAILS, evidenceDetails)] : []),
+        `${KO.ISSUES}: ${issueLabel}`,
+        ...(issueDetails.length > 0 ? [makeListBlock(KO.ISSUE_DETAILS, issueDetails)] : [])
     ].join('\n');
 }
 
@@ -504,6 +569,69 @@ function getEvidenceLabel(bundle: EvidenceBundle): string {
         .filter((label): label is string => label !== undefined);
 
     return labels.length > 0 ? labels.join(', ') : KO.NO_EVIDENCE;
+}
+
+
+function getEvidenceDetails(bundle: EvidenceBundle): string[] {
+
+    return EVIDENCE_DETAILS.flatMap(definition =>
+        definition.getDocuments(bundle)
+            .map(document => getEvidenceDetailLine(document, definition))
+    );
+}
+
+
+function getEvidenceDetailLine(document: Document, definition: EvidenceDetailDefinition): string {
+
+    const identifier = getDocumentIdentifier(document);
+    const summary = getEvidenceDetailSummary(document, definition.fields);
+
+    return summary
+        ? `${definition.label} ${identifier}: ${summary}`
+        : `${definition.label} ${identifier}`;
+}
+
+
+function getEvidenceDetailSummary(document: Document, fieldNames: string[]): string|undefined {
+
+    const value = fieldNames
+        .map(fieldName => getPrintableValue(document.resource[fieldName]))
+        .find(item => !!item && item !== '[]');
+
+    return value ? truncate(value, 140) : undefined;
+}
+
+
+function getIssueDetails(bundle: EvidenceBundle): string[] {
+
+    return bundle.issues.map(issue => [
+        getSeverityLabel(issue.severity),
+        getPrintableValue(issue.identifier) ?? issue.documentId,
+        `(${issue.ruleId})`,
+        '-',
+        issue.message,
+        '/',
+        issue.recommendedAction
+    ].join(' '));
+}
+
+
+function getSeverityLabel(severity: string): string {
+
+    switch (severity) {
+        case 'critical':
+            return '\ud544\uc218';
+        case 'warning':
+            return '\ubcf4\uc644';
+        default:
+            return '\ucc38\uace0';
+    }
+}
+
+
+function makeListBlock(label: string, items: string[]): string {
+
+    return `${label}:\n${items.map(item => `- ${item}`).join('\n')}`;
 }
 
 

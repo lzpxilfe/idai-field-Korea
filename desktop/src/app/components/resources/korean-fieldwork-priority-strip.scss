@@ -2869,6 +2869,7 @@ korean-fieldwork-priority-strip {
 
   .korean-fieldwork-report-handoff-text,
   .korean-fieldwork-report-handoff-metrics span,
+  .korean-fieldwork-report-handoff-detail,
   .korean-fieldwork-report-handoff-hidden {
     color: #667085;
     font-size: 11px;
@@ -2878,6 +2879,43 @@ korean-fieldwork-priority-strip {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .korean-fieldwork-report-handoff-details {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .korean-fieldwork-report-handoff-detail {
+    align-items: center;
+    display: grid;
+    gap: 5px;
+    grid-template-columns: auto minmax(0, 1fr);
+
+    > span:first-child {
+      border-radius: 3px;
+      color: #ffffff;
+      font-size: 9px;
+      font-weight: 900;
+      line-height: 1;
+      padding: 2px 3px;
+    }
+
+    > span:last-child {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    &.evidence > span:first-child {
+      background: #175cd3;
+    }
+
+    &.issue > span:first-child {
+      background: #b54708;
+    }
   }
 
   .korean-fieldwork-report-handoff-metrics span.warning {

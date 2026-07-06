@@ -43,9 +43,17 @@ describe('Korean fieldwork report handoff', () => {
         expect(featureItem?.evidenceLabel).toContain('\uc0ac\uc9c4 1');
         expect(featureItem?.evidenceLabel).toContain('\ud1a0\uce35\uc0ac\uc9c4 1');
         expect(featureItem?.evidenceLabel).toContain('\ud604\uc7a5\uba54\ubaa8 1');
+        expect(featureItem?.evidenceDetails.join('\n')).toContain('file:///tablet/photos/photo-1.jpg');
+        expect(featureItem?.evidenceDetails.join('\n')).toContain('fill continues under east edge');
+        expect(featureItem?.issueDetails.join('\n')).toContain('feature-complete-photo');
+        expect(featureItem?.issueDetails.join('\n')).toContain('fieldwork-photo-upload-missing');
         expect(featureItem?.copyText).toContain('[\uc720\uad6c] pit-001');
         expect(featureItem?.copyText).toContain('\uc694\uc57d: round pit with dark fill');
+        expect(featureItem?.copyText).toContain('\uc790\ub8cc \uc0c1\uc138');
+        expect(featureItem?.copyText).toContain('file:///tablet/photos/photo-1.jpg');
         expect(featureItem?.copyText).toContain('\ud655\uc778: \ubcf4\uc644 \ud544\uc694 3');
+        expect(featureItem?.copyText).toContain('\ud655\uc778 \uc0c1\uc138');
+        expect(featureItem?.copyText).toContain('fieldwork-photo-upload-missing');
         expect(handoff.reviewCount).toBeGreaterThan(0);
         expect(handoff.copyAllText).toContain(featureItem!.copyText);
     });

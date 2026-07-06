@@ -210,8 +210,14 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
                 evidenceCount: 1,
                 tone: 'review'
             });
+            expect(featureItem.evidenceDetails.join('\n'))
+                .toContain('file:///tablet/photos/pit-001.jpg');
+            expect(featureItem.issueDetails.join('\n'))
+                .toContain('fieldwork-photo-upload-missing');
             expect(featureItem.copyText).toContain('pit-001');
             expect(featureItem.copyText).toContain('round pit with dark fill');
+            expect(featureItem.copyText).toContain('\uc790\ub8cc \uc0c1\uc138');
+            expect(featureItem.copyText).toContain('\ud655\uc778 \uc0c1\uc138');
 
             await component.copyReportHandoffItem(featureItem);
 

@@ -3197,6 +3197,15 @@ function validateReportHandoffPreSaveValidation() {
   const desktopPriorityStripText = readTextFile(
     'desktop/src/app/components/resources/korean-fieldwork-priority-strip.component.ts'
   );
+  const desktopPriorityStripTemplateText = readTextFile(
+    'desktop/src/app/components/resources/korean-fieldwork-priority-strip.html'
+  );
+  const desktopPriorityStripStyleText = readTextFile(
+    'desktop/src/app/components/resources/korean-fieldwork-priority-strip.scss'
+  );
+  const desktopPriorityStripSpecText = readTextFile(
+    'desktop/test/unit/components/resources/korean-fieldwork-priority-strip.component.spec.ts'
+  );
 
   if (!coreReportHandoffText.includes('validateKoreanFieldworkReportHandoffCandidate')
       || !coreReportHandoffText.includes('KoreanFieldworkReportHandoffValidation')
@@ -3204,9 +3213,21 @@ function validateReportHandoffPreSaveValidation() {
       || !coreReportHandoffText.includes('MEDIA_URI_FIELDS')) {
     findings.push('core report handoff must expose reusable pre-save validation for tablet and desktop report copy readiness');
   }
+  if (!coreReportHandoffText.includes('evidenceDetails')
+      || !coreReportHandoffText.includes('issueDetails')
+      || !coreReportHandoffText.includes('getEvidenceDetails')
+      || !coreReportHandoffText.includes('getIssueDetails')
+      || !coreReportHandoffText.includes('EVIDENCE_DETAILS')) {
+    findings.push('core report handoff copy blocks must include concrete evidence and issue details, not only counts');
+  }
   if (!coreReportHandoffSpecText.includes('validates a tablet draft before saving it for desktop report handoff')
       || !coreReportHandoffSpecText.includes('reports pre-save handoff gaps')) {
     findings.push('core report handoff tests must prove tablet draft pre-save validation and HWP gap detection');
+  }
+  if (!coreReportHandoffSpecText.includes('evidenceDetails.join')
+      || !coreReportHandoffSpecText.includes('issueDetails.join')
+      || !coreReportHandoffSpecText.includes('fieldwork-photo-upload-missing')) {
+    findings.push('core report handoff tests must prove evidence and issue details are carried into HWP copy blocks');
   }
   for (const [label, text] of [
     ['tablet add screen', tabletAddText],
@@ -3222,6 +3243,14 @@ function validateReportHandoffPreSaveValidation() {
       || !desktopPriorityStripText.includes('copyReportHandoffItem')
       || !desktopPriorityStripText.includes('reportHandoffCopyAllText')) {
     findings.push('desktop report handoff panel must keep using the same core copy-block contract');
+  }
+  if (!desktopPriorityStripTemplateText.includes('korean-fieldwork-report-handoff-details')
+      || !desktopPriorityStripTemplateText.includes('item.evidenceDetails')
+      || !desktopPriorityStripTemplateText.includes('item.issueDetails')
+      || !desktopPriorityStripStyleText.includes('.korean-fieldwork-report-handoff-detail')
+      || !desktopPriorityStripSpecText.includes('featureItem.evidenceDetails')
+      || !desktopPriorityStripSpecText.includes('featureItem.issueDetails')) {
+    findings.push('desktop report handoff panel must render and test evidence and issue detail lines');
   }
 
   return findings;
