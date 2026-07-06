@@ -10,6 +10,8 @@ BridgeDesk는 태블릿 발굴 현장기록을 데스크톱에서 검수하고 H
 - `START_BRIDGEDESK_TABLET_SERVER.cmd`: 태블릿 입력 화면 서버 실행
 - `EXPORT_BRIDGEDESK_HWP_REPORT.cmd`: HWP 보고서 작성용 TXT/HTML/CSV/JSON 생성
 
+데스크톱 화면에서는 HWP 옆에 BridgeDesk를 띄워두고 `초안 복사`, `표 복사`, `기록 복사`, `표 행 복사` 버튼으로 필요한 내용을 바로 붙여넣을 수 있습니다.
+
 자세한 안내는 `tools/bridgedesk/README.md`와 `tools/bridgedesk/docs/INSTALL_DESKTOP.md`, `tools/bridgedesk/docs/INSTALL_TABLET.md`를 확인합니다.
 
 ## 태블릿 자료 흐름

@@ -6,7 +6,14 @@ from pathlib import Path
 import shutil
 
 from compatdesk.field_data import DEFAULT_TABLET_DATA_PATH, build_report_context, load_tablet_submissions
-from compatdesk.report_export import render_report_html, render_report_text, write_report_package
+from compatdesk.report_export import (
+    render_finding_clipboard_text,
+    render_finding_table_row,
+    render_findings_table_text,
+    render_report_html,
+    render_report_text,
+    write_report_package,
+)
 
 
 class FieldDataTests(unittest.TestCase):
@@ -33,6 +40,22 @@ class FieldDataTests(unittest.TestCase):
 
         self.assertIn("<table>", html)
         self.assertIn("수혈 유구 SK-03", html)
+
+    def test_selected_finding_clipboard_text_is_hwp_ready(self) -> None:
+        context = build_report_context(load_tablet_submissions(DEFAULT_TABLET_DATA_PATH))
+        snippet = render_finding_clipboard_text(context.findings[0], index=1)
+
+        self.assertIn("1) 3트렌치 북벽 - 토층 / 북벽 3층 경계", snippet)
+        self.assertIn("보고서 반영 메모", snippet)
+        self.assertIn("P-001, P-002, D-001", snippet)
+
+    def test_finding_table_text_uses_tabs_for_hwp_paste(self) -> None:
+        context = build_report_context(load_tablet_submissions(DEFAULT_TABLET_DATA_PATH))
+        table = render_findings_table_text(context)
+        row = render_finding_table_row(context.findings[0])
+
+        self.assertIn("출처\t조사 구역\t구분", table)
+        self.assertIn("ARCH-2026-0706-001/E-001\t3트렌치 북벽\t토층", row)
 
     def test_report_package_exports_copy_ready_assets(self) -> None:
         context = build_report_context(load_tablet_submissions(DEFAULT_TABLET_DATA_PATH))

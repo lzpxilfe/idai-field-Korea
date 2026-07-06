@@ -60,6 +60,8 @@ def make_desktop_screenshot() -> None:
 
     draw_card(draw, (276, 242, 1218, 412))
     draw.text((300, 262), "HWP 보고서 초안", fill="#172033", font=font(20, bold=True))
+    draw_button(draw, (1026, 258, 1112, 294), "초안 복사")
+    draw_button(draw, (1122, 258, 1194, 294), "표 복사")
     preview_lines = [
         "월성 북편 발굴조사 현장기록 보고서 초안",
         "1. 조사 개요",
@@ -81,6 +83,8 @@ def make_desktop_screenshot() -> None:
 
     draw_card(draw, (866, 444, 1218, 742))
     draw.text((890, 464), "선택 기록", fill="#172033", font=font(20, bold=True))
+    draw_button(draw, (1030, 460, 1112, 496), "기록 복사")
+    draw_button(draw, (1122, 460, 1194, 496), "표 행")
     detail = [
         ("조사 구역", "3트렌치 북벽"),
         ("상태", "기록완료"),
@@ -89,9 +93,12 @@ def make_desktop_screenshot() -> None:
         ("자료 번호", "P-001, P-002, D-001"),
     ]
     for index, (key, value) in enumerate(detail):
-        y = 510 + index * 38
+        y = 516 + index * 32
         draw.text((890, y), key, fill="#637083", font=font(15, bold=True))
         draw.text((994, y), value, fill="#172033", font=font(15))
+
+    draw.text((890, 684), "HWP 붙여넣기 미리보기", fill="#637083", font=font(14, bold=True))
+    draw.text((890, 708), "3트렌치 북벽 - 토층 / 북벽 3층 경계", fill="#172033", font=font(13))
 
     image.save(out_dir / "desktop-report.png")
 
@@ -154,6 +161,11 @@ def make_tablet_screenshot() -> None:
 
 def draw_card(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int]) -> None:
     draw.rounded_rectangle(box, radius=8, fill="#ffffff", outline="#cbd5e1", width=2)
+
+
+def draw_button(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int], label: str) -> None:
+    draw.rounded_rectangle(box, radius=8, fill="#24445a")
+    draw.text((box[0] + 12, box[1] + 9), label, fill="#ffffff", font=font(12, bold=True))
 
 
 def draw_table(

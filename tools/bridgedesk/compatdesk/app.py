@@ -9,7 +9,12 @@ from pathlib import Path
 from .field_data import DEFAULT_TABLET_INBOX_PATH, ReportFinding, build_report_context, load_tablet_submissions
 from .layout_policy import LayoutPolicy, LayoutProfile, NavigationPattern
 from .models import DETAIL_FIELDS, NAV_ACTIONS, field_meta
-from .report_export import render_report_text
+from .report_export import (
+    render_finding_clipboard_text,
+    render_finding_table_row,
+    render_findings_table_text,
+    render_report_text,
+)
 from .theme import Theme, apply_theme
 
 
@@ -53,7 +58,12 @@ class BridgeDeskApp(tk.Tk):
         self.list_title: ttk.Label
         self.detail_title: ttk.Label
         self.report_title: ttk.Label
+        self.report_header: ttk.Frame
         self.report_text: tk.Text
+        self.detail_header: ttk.Frame
+        self.copy_title: ttk.Label
+        self.copy_text: tk.Text
+        self.clipboard_label: ttk.Label
         self.tree_scroll_x: ttk.Scrollbar
         self.tree = self._build_list_panel()
         self._build_header()
@@ -75,7 +85,7 @@ class BridgeDeskApp(tk.Tk):
             text="태블릿 발굴 기록을 HWP 보고서 초안으로 정리",
             style="Subtle.TLabel",
         ).grid(row=1, column=0, sticky="w", pady=(4, 0))
-        ttk.Button(self.header, text="Sync", style="Accent.TButton", command=self._sync_detail).grid(row=0, column=1, rowspan=2, sticky="e")
+        ttk.Button(self.header, text="새로고침", style="Accent.TButton", command=self._sync_detail).grid(row=0, column=1, rowspan=2, sticky="e")
         configure_grid_weight(self.header, row=0, column=0)
 
     def _build_metrics(self) -> None:
@@ -93,8 +103,13 @@ class BridgeDeskApp(tk.Tk):
             self.metrics.grid_columnconfigure(index, weight=1, uniform="metrics")
 
     def _build_report_panel(self) -> None:
-        self.report_title = ttk.Label(self.report_panel, text="HWP 보고서 초안", style="Surface.TLabel")
+        self.report_header = ttk.Frame(self.report_panel, style="Surface.TFrame")
+        self.report_header.grid(row=0, column=0, sticky="ew")
+        self.report_title = ttk.Label(self.report_header, text="HWP 보고서 초안", style="Surface.TLabel")
         self.report_title.grid(row=0, column=0, sticky="w")
+        ttk.Button(self.report_header, text="초안 복사", command=self._copy_report).grid(row=0, column=1, sticky="e", padx=(8, 0))
+        ttk.Button(self.report_header, text="표 복사", command=self._copy_all_table).grid(row=0, column=2, sticky="e", padx=(8, 0))
+        self.report_header.grid_columnconfigure(0, weight=1)
         self.report_text = tk.Text(
             self.report_panel,
             height=7,
@@ -123,8 +138,13 @@ class BridgeDeskApp(tk.Tk):
         return tree
 
     def _build_detail_panel(self) -> None:
-        self.detail_title = ttk.Label(self.detail_panel, text="선택 기록", style="Surface.TLabel")
+        self.detail_header = ttk.Frame(self.detail_panel, style="Surface.TFrame")
+        self.detail_header.grid(row=0, column=0, columnspan=2, sticky="ew")
+        self.detail_title = ttk.Label(self.detail_header, text="선택 기록", style="Surface.TLabel")
         self.detail_title.grid(row=0, column=0, sticky="w")
+        ttk.Button(self.detail_header, text="기록 복사", command=self._copy_selected_finding).grid(row=0, column=1, sticky="e", padx=(8, 0))
+        ttk.Button(self.detail_header, text="표 행 복사", command=self._copy_selected_table_row).grid(row=0, column=2, sticky="e", padx=(8, 0))
+        self.detail_header.grid_columnconfigure(0, weight=1)
         for index, field in enumerate(DETAIL_FIELDS, start=1):
             caption = ttk.Label(self.detail_panel, text=field_meta(field).label, style="Muted.Surface.TLabel")
             value = ttk.Label(self.detail_panel, text="", style="Surface.TLabel", wraplength=320)
@@ -132,11 +152,27 @@ class BridgeDeskApp(tk.Tk):
             value.grid(row=index, column=1, sticky="nw")
             self.detail_captions[field] = caption
             self.detail_labels[field] = value
+        self.copy_title = ttk.Label(self.detail_panel, text="HWP 붙여넣기 미리보기", style="Muted.Surface.TLabel")
+        self.copy_text = tk.Text(
+            self.detail_panel,
+            height=7,
+            wrap="word",
+            borderwidth=0,
+            highlightthickness=1,
+            relief="flat",
+            font=("Malgun Gothic", 9),
+            foreground=self.theme.text,
+            background=self.theme.surface,
+            highlightbackground=self.theme.border,
+        )
         self.detail_panel.grid_columnconfigure(1, weight=1)
 
     def _build_status(self) -> None:
         self.profile_label = ttk.Label(self.status, text="", style="Subtle.TLabel")
         self.profile_label.grid(row=0, column=0, sticky="w")
+        self.clipboard_label = ttk.Label(self.status, text="복사 대기", style="Subtle.TLabel")
+        self.clipboard_label.grid(row=0, column=1, sticky="e")
+        self.status.grid_columnconfigure(0, weight=1)
 
     def _handle_resize(self, event: tk.Event[object]) -> None:
         if event.widget is not self:
@@ -246,12 +282,12 @@ class BridgeDeskApp(tk.Tk):
 
     def _layout_panels(self, profile: LayoutProfile) -> None:
         inset = profile.padding
-        self.report_title.grid_configure(padx=inset, pady=(inset, profile.gap // 2))
+        self.report_header.grid_configure(padx=inset, pady=(inset, profile.gap // 2))
         self.report_text.grid_configure(padx=inset, pady=(0, inset))
         self.list_title.grid_configure(padx=inset, pady=(inset, profile.gap // 2))
         self.tree.grid_configure(padx=inset, pady=(0, inset))
         self.tree_scroll_x.grid_configure(padx=inset, pady=(0, inset))
-        self.detail_title.grid_configure(padx=inset, pady=(inset, profile.gap // 2))
+        self.detail_header.grid_configure(padx=inset, pady=(inset, profile.gap // 2))
         ttk.Style(self).configure("Treeview", rowheight=profile.touch_target)
 
     def _layout_detail(self, profile: LayoutProfile) -> None:
@@ -263,6 +299,9 @@ class BridgeDeskApp(tk.Tk):
                 caption.grid(row=index * 2 - 1, column=0, sticky="nw", padx=inset, pady=(profile.gap // 2, 0))
                 label.grid(row=index * 2, column=0, sticky="new", padx=inset, pady=(2, profile.gap // 3))
                 label.configure(wraplength=max(260, profile.width - profile.navigation_size - 80))
+            copy_row = len(fields) * 2 + 1
+            self.copy_title.grid(row=copy_row, column=0, sticky="w", padx=inset, pady=(profile.gap, 2))
+            self.copy_text.grid(row=copy_row + 1, column=0, sticky="nsew", padx=inset, pady=(0, inset))
             self.detail_panel.grid_columnconfigure(0, weight=1)
             self.detail_panel.grid_columnconfigure(1, weight=0)
             return
@@ -272,6 +311,9 @@ class BridgeDeskApp(tk.Tk):
             caption.grid(row=index, column=0, sticky="nw", padx=inset, pady=(profile.gap // 3, 0))
             label.grid(row=index, column=1, sticky="new", padx=inset, pady=(profile.gap // 3, 0))
             label.configure(wraplength=360)
+        copy_row = len(fields) + 1
+        self.copy_title.grid(row=copy_row, column=0, columnspan=2, sticky="w", padx=inset, pady=(profile.gap, 2))
+        self.copy_text.grid(row=copy_row + 1, column=0, columnspan=2, sticky="nsew", padx=inset, pady=(0, inset))
         self.detail_panel.grid_columnconfigure(0, weight=0)
         self.detail_panel.grid_columnconfigure(1, weight=1)
 
@@ -303,6 +345,10 @@ class BridgeDeskApp(tk.Tk):
         finding = self.finding_by_id[self.selected_finding_id.get()]
         for field, label in self.detail_labels.items():
             label.configure(text=_finding_value(finding, field))
+        self.copy_text.configure(state="normal")
+        self.copy_text.delete("1.0", "end")
+        self.copy_text.insert("1.0", render_finding_clipboard_text(finding, self._selected_finding_index() + 1))
+        self.copy_text.configure(state="disabled")
 
     def _sync_report_preview(self) -> None:
         self.report_text.configure(state="normal")
@@ -317,6 +363,33 @@ class BridgeDeskApp(tk.Tk):
                 f"{profile.width}x{profile.height} | action:{self.active_action_id.get()}"
             )
         )
+
+    def _copy_report(self) -> None:
+        self._copy_to_clipboard(render_report_text(self.report_context), "전체 초안을 복사했습니다")
+
+    def _copy_all_table(self) -> None:
+        self._copy_to_clipboard(render_findings_table_text(self.report_context), "전체 표를 복사했습니다")
+
+    def _copy_selected_finding(self) -> None:
+        finding = self.finding_by_id[self.selected_finding_id.get()]
+        self._copy_to_clipboard(render_finding_clipboard_text(finding, self._selected_finding_index() + 1), "선택 기록을 복사했습니다")
+
+    def _copy_selected_table_row(self) -> None:
+        finding = self.finding_by_id[self.selected_finding_id.get()]
+        self._copy_to_clipboard(render_finding_table_row(finding), "선택 표 행을 복사했습니다")
+
+    def _copy_to_clipboard(self, text: str, message: str) -> None:
+        self.clipboard_clear()
+        self.clipboard_append(text)
+        self.update()
+        self.clipboard_label.configure(text=message)
+
+    def _selected_finding_index(self) -> int:
+        selected_id = self.selected_finding_id.get()
+        for index, finding in enumerate(self.findings):
+            if finding.source_ref == selected_id:
+                return index
+        return 0
 
 
 def configure_grid_weight(widget: tk.Misc, row: int, column: int) -> None:

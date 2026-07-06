@@ -13,7 +13,8 @@
 1. 받은 폴더를 원하는 위치에 압축 해제합니다.
 2. `START_DESKTOP.cmd`를 더블클릭합니다.
 3. 바탕화면 바로가기가 필요하면 `INSTALL_DESKTOP_SHORTCUTS.cmd`를 더블클릭합니다.
-4. HWP 보고서용 파일을 만들려면 `EXPORT_HWP_REPORT.cmd`를 더블클릭합니다.
+4. HWP를 열어두고 BridgeDesk에서 필요한 기록의 `기록 복사`, `표 행 복사`, `초안 복사` 버튼을 눌러 붙여넣습니다.
+5. 파일로 한 번에 내보내려면 `EXPORT_HWP_REPORT.cmd`를 더블클릭합니다.
 
 `dist\BridgeDesk\BridgeDesk.exe`가 있으면 `START_DESKTOP.cmd`는 그 실행 파일을 먼저 엽니다. 실행 파일이 아직 없으면 설치된 Python으로 프로그램을 실행합니다.
 
@@ -42,6 +43,17 @@
 - `INSTALL_DESKTOP_SHORTCUTS.cmd`: 바탕화면 바로가기 생성
 - `BUILD_DESKTOP_EXE.cmd`: 독립 실행형 `BridgeDesk.exe`와 `BridgeDeskTabletServer.exe` 생성
 - `BUILD_USER_PACKAGE.cmd`: 사용자 배포용 zip 생성
+
+## HWP에 복사해서 쓰기
+
+데스크톱 프로그램은 HWP 옆에 띄워두고 쓰는 클립보드 패널처럼 동작합니다.
+
+- `초안 복사`: 전체 보고서 초안을 복사
+- `표 복사`: 전체 현장 기록을 탭 구분 표로 복사
+- `기록 복사`: 선택한 기록 하나를 문단 형태로 복사
+- `표 행 복사`: 선택한 기록 하나를 HWP 표에 붙여넣기 쉬운 한 줄로 복사
+
+선택 기록 아래의 `HWP 붙여넣기 미리보기` 영역에서 실제 복사될 문장을 먼저 확인할 수 있습니다.
 
 ## 보고서 파일 위치
 

@@ -39,6 +39,42 @@ def render_report_text(context: ReportContext) -> str:
     return "\n".join(lines).strip() + "\n"
 
 
+def render_finding_clipboard_text(finding: ReportFinding, index: int | None = None) -> str:
+    prefix = f"{index}) " if index is not None else ""
+    lines = [
+        f"{prefix}{finding.site_name} - {finding.section} / {finding.item}",
+        f"- 상태: {finding.status}",
+        f"- 기준고/관찰값: {finding.measured_value or '-'}",
+        f"- 현장 기록: {finding.memo or '-'}",
+        f"- 보고서 반영 메모: {finding.recommendation or '-'}",
+        f"- 사진/도면/유물: {finding.photo_text}",
+        f"- 출처: {finding.source_ref}, 기록자 {finding.inspector}, 단말 {finding.device_id}",
+    ]
+    return "\n".join(lines).strip() + "\n"
+
+
+def render_finding_table_row(finding: ReportFinding) -> str:
+    return "\t".join(
+        (
+            finding.source_ref,
+            finding.site_name,
+            finding.section,
+            finding.item,
+            finding.status,
+            finding.measured_value,
+            finding.memo,
+            finding.recommendation,
+            finding.photo_text,
+        )
+    )
+
+
+def render_findings_table_text(context: ReportContext) -> str:
+    header = "\t".join(("출처", "조사 구역", "구분", "항목", "상태", "기준고/관찰값", "현장 기록", "보고서 반영 메모", "사진/도면/유물"))
+    rows = [render_finding_table_row(finding) for finding in context.findings]
+    return "\n".join((header, *rows)).strip() + "\n"
+
+
 def render_report_html(context: ReportContext) -> str:
     rows = "\n".join(_finding_row(finding) for finding in context.findings)
     return f"""<!doctype html>
@@ -106,16 +142,7 @@ def write_report_package(context: ReportContext, output_dir: Path) -> tuple[Path
 
 
 def _finding_text(index: int, finding: ReportFinding) -> list[str]:
-    return [
-        "",
-        f"{index}) {finding.site_name} - {finding.section} / {finding.item}",
-        f"- 상태: {finding.status}",
-        f"- 기준고/관찰값: {finding.measured_value or '-'}",
-        f"- 현장 기록: {finding.memo or '-'}",
-        f"- 보고서 반영 메모: {finding.recommendation or '-'}",
-        f"- 사진/도면/유물: {finding.photo_text}",
-        f"- 출처: {finding.source_ref}, 기록자 {finding.inspector}, 단말 {finding.device_id}",
-    ]
+    return ["", *render_finding_clipboard_text(finding, index).strip().splitlines()]
 
 
 def _finding_row(finding: ReportFinding) -> str:
