@@ -1,6 +1,8 @@
 import {
     CategoryForm,
     Document,
+    getKoreanFieldworkFeatureIdentifierPrefix,
+    getKoreanFieldworkFeatureInterpretationTypeValue,
     NewResource,
     ProjectConfiguration,
     Resource
@@ -72,19 +74,6 @@ const DRAFT_IDENTIFIER_PREFIXES: Readonly<Record<string, string>> = {
     [CATEGORIES.SURVEY]: 'survey',
     [CATEGORIES.SURVEY_BOUNDARY]: 'survey-boundary',
     [CATEGORIES.TRENCH]: 'trench'
-};
-
-const FEATURE_TYPE_IDENTIFIER_PREFIXES: Readonly<Record<string, string>> = {
-    burial: '토광묘',
-    building: '건물지',
-    ditch: '구상유구',
-    dwelling: '주거지',
-    fence: '목책열',
-    kiln: '가마',
-    pit: '수혈',
-    posthole: '주혈',
-    production: '생산유구',
-    unknown: '유구'
 };
 
 const CONTINUATION_CATEGORIES = new Set<string>([
@@ -285,7 +274,7 @@ export function createDraftIdentifier(
     if (normalizedPreferredIdentifier) return normalizedPreferredIdentifier;
 
     const prefix = categoryName === CATEGORIES.FEATURE && featureType
-        ? FEATURE_TYPE_IDENTIFIER_PREFIXES[featureType] ?? DRAFT_IDENTIFIER_PREFIXES[categoryName]
+        ? getKoreanFieldworkFeatureIdentifierPrefix(featureType)
         : DRAFT_IDENTIFIER_PREFIXES[categoryName] ?? toKebabCase(categoryName);
 
     return `${prefix}-${Date.now()}`;
@@ -359,10 +348,13 @@ function getFeatureGuidanceDraftValues(
 
     if (!category || !preset) return {};
 
+    const interpretationValue = getKoreanFieldworkFeatureInterpretationTypeValue(preset.featureType)
+        ?? preset.interpretationValue;
+
     return {
         ...(CategoryForm.getField(category, 'featureType') ? { featureType: preset.featureType } : {}),
-        ...(preset.interpretationValue && CategoryForm.getField(category, 'featureInterpretationType')
-            ? { featureInterpretationType: [preset.interpretationValue] }
+        ...(interpretationValue && CategoryForm.getField(category, 'featureInterpretationType')
+            ? { featureInterpretationType: [interpretationValue] }
             : {})
     };
 }
@@ -409,8 +401,7 @@ function makeFieldNoteSectionLine(label: string, value: string|undefined): strin
 
 function getFeatureIdentifierPrefix(featureType: string|undefined): string {
 
-    return FEATURE_TYPE_IDENTIFIER_PREFIXES[featureType ?? 'unknown']
-        ?? FEATURE_TYPE_IDENTIFIER_PREFIXES.unknown;
+    return getKoreanFieldworkFeatureIdentifierPrefix(featureType ?? 'unknown');
 }
 
 

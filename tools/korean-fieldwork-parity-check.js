@@ -106,6 +106,7 @@ const featureRows = [
       'desktop/src/app/components/resources/map/map/editable-map.component.ts',
       'desktop/src/app/components/resources/map/map/editable-map.html',
       'desktop/src/app/components/resources/map/map/map.scss',
+      'core/src/tools/korean-fieldwork-feature-types.ts',
       'core/src/tools/korean-fieldwork-draft-defaults.ts',
       'desktop/src/app/util/korean-fieldwork-feature-guidance.ts'
     ],
@@ -924,8 +925,8 @@ function extractInvestigationModeOptions(filePath, arrayName, idPropertyName) {
 }
 
 function compareGuidedFeatureTypes() {
-  const tabletTypes = extractFeatureTypeOptions(
-    'mobile/components/Project/korean-fieldwork-feature-types.ts',
+  const coreTypes = extractFeatureTypeOptions(
+    'core/src/tools/korean-fieldwork-feature-types.ts',
     'KOREAN_FIELDWORK_FEATURE_TYPE_OPTIONS',
     'featureInterpretationTypeValue'
   );
@@ -935,32 +936,45 @@ function compareGuidedFeatureTypes() {
     'interpretationValue'
   );
   const allTypes = sortUnique([
-    ...Object.keys(tabletTypes),
+    ...Object.keys(coreTypes),
     ...Object.keys(desktopTypes)
   ]);
   const findings = [];
+  const tabletWrapperText = readTextFile('mobile/components/Project/korean-fieldwork-feature-types.ts');
+  const desktopDraftText = readTextFile('desktop/src/app/util/korean-fieldwork-document-drafts.ts');
+
+  if (!tabletWrapperText.includes("from 'idai-field-core'")
+      || !tabletWrapperText.includes('KOREAN_FIELDWORK_FEATURE_TYPE_OPTIONS')
+      || tabletWrapperText.includes('identifierPrefix:')) {
+    findings.push('tablet feature type options must re-export the shared core feature type contract');
+  }
+  if (!desktopDraftText.includes('getKoreanFieldworkFeatureIdentifierPrefix')
+      || !desktopDraftText.includes('getKoreanFieldworkFeatureInterpretationTypeValue')
+      || desktopDraftText.includes('FEATURE_TYPE_IDENTIFIER_PREFIXES')) {
+    findings.push('desktop feature drafts must use core feature type prefixes and interpretation values');
+  }
 
   for (const featureType of allTypes) {
-    if (!tabletTypes[featureType]) {
+    if (!coreTypes[featureType]) {
       findings.push(
-        `tablet feature type missing for desktop preset: ${featureType}`
+        `core feature type missing for desktop preset: ${featureType}`
       );
       continue;
     }
     if (!desktopTypes[featureType]) {
       findings.push(
-        `desktop feature preset missing for tablet type: ${featureType}`
+        `desktop feature preset missing for core feature type: ${featureType}`
       );
       continue;
     }
 
-    const tabletInterpretation = tabletTypes[featureType].interpretationValue;
+    const coreInterpretation = coreTypes[featureType].interpretationValue;
     const desktopInterpretation = desktopTypes[featureType].interpretationValue;
-    if (tabletInterpretation !== desktopInterpretation) {
+    if (coreInterpretation !== desktopInterpretation) {
       findings.push(
         [
           `guided interpretation mismatch for ${featureType}:`,
-          `tablet=${tabletInterpretation || '(none)'}`,
+          `core=${coreInterpretation || '(none)'}`,
           `desktop=${desktopInterpretation || '(none)'}`
         ].join(' ')
       );
