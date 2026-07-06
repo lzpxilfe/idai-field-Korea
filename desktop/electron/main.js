@@ -361,10 +361,11 @@ const createWindow = () => {
         minWidth: 1220,
         minHeight: 600,
         webPreferences: {
-            nodeIntegration: false,
-            nodeIntegrationInWorker: false,
+            // The electron-renderer bundle still loads desktop-only CommonJS modules at runtime.
+            nodeIntegration: true,
+            nodeIntegrationInWorker: true,
             enableRemoteModule: false,
-            contextIsolation: true,
+            contextIsolation: false,
             preload: path.join(electron.app.getAppPath(), 'electron/preload.js'),
             sandbox: false,
             webSecurity: global.mode === 'production',
@@ -387,9 +388,20 @@ const createWindow = () => {
         mainWindow.setIcon(electron.nativeImage.createFromPath(iconPath));
     }
 
-    setTimeout(() => {
-        mainWindow.loadURL(global.distUrl + 'index.html');
-    }, 100);
+    let loadRetries = 0;
+    const loadAppUrl = () => mainWindow.loadURL(global.distUrl + 'index.html');
+
+    mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL, isMainFrame) => {
+        if (global.mode !== 'development' || !isMainFrame || errorCode === -3 || loadRetries >= 10) return;
+
+        loadRetries += 1;
+        log.warn(`Retrying development app load after ${errorCode}: ${errorDescription} (${validatedURL})`);
+        setTimeout(() => {
+            if (mainWindow && !mainWindow.isDestroyed()) loadAppUrl();
+        }, 1000);
+    });
+
+    setTimeout(loadAppUrl, 100);
 
     let closed = false;
     

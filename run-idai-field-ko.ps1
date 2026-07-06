@@ -6,20 +6,25 @@ $ErrorActionPreference = 'Stop'
 
 $repoDir = $PSScriptRoot
 $appDir = Join-Path $repoDir 'desktop'
+$runtimeDir = if ($env:IDAI_FIELD_RUNTIME_DIR) {
+    $env:IDAI_FIELD_RUNTIME_DIR
+} else {
+    Join-Path $repoDir '.runtime'
+}
+$tempDir = Join-Path $runtimeDir 'tmp'
+$npmCacheDir = Join-Path $runtimeDir 'npm-cache'
+
+New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
+New-Item -ItemType Directory -Path $npmCacheDir -Force | Out-Null
+$env:TEMP = $tempDir
+$env:TMP = $tempDir
+$env:npm_config_cache = $npmCacheDir
+
 $serverUrl = 'http://localhost:4200/dist/'
-$serverLog = Join-Path $env:TEMP 'idai-field-ng-serve-ko.log'
+$serverLog = Join-Path $tempDir 'idai-field-ng-serve-ko.log'
 
 function Resolve-NodeDir {
     $candidateDirs = @()
-
-    if ($env:LOCALAPPDATA) {
-        $codexRuntimeRoot = Join-Path $env:LOCALAPPDATA 'OpenAI\Codex\runtimes'
-        if (Test-Path -LiteralPath $codexRuntimeRoot) {
-            $candidateDirs += Get-ChildItem -LiteralPath $codexRuntimeRoot -Recurse -Filter npm.cmd -ErrorAction SilentlyContinue |
-                Sort-Object LastWriteTime -Descending |
-                ForEach-Object { $_.DirectoryName }
-        }
-    }
 
     $npmCommand = Get-Command npm.cmd -ErrorAction SilentlyContinue
     if (-not $npmCommand) {
@@ -29,7 +34,37 @@ function Resolve-NodeDir {
         $candidateDirs += Split-Path -Parent $npmCommand.Source
     }
 
-    foreach ($candidateDir in $candidateDirs) {
+    if ($env:LOCALAPPDATA) {
+        $codexRuntimeRoot = Join-Path $env:LOCALAPPDATA 'OpenAI\Codex\runtimes'
+        if (Test-Path -LiteralPath $codexRuntimeRoot) {
+            $runtimeBins = @()
+            foreach ($runtimeRoot in (Get-ChildItem -LiteralPath $codexRuntimeRoot -Directory -ErrorAction SilentlyContinue)) {
+                $directBin = Join-Path $runtimeRoot.FullName 'bin'
+                if (Test-Path -LiteralPath (Join-Path $directBin 'npm.cmd')) {
+                    $runtimeBins += [pscustomobject]@{
+                        DirectoryName = $directBin
+                        LastWriteTime = (Get-Item -LiteralPath (Join-Path $directBin 'npm.cmd')).LastWriteTime
+                    }
+                }
+
+                foreach ($runtimeVersion in (Get-ChildItem -LiteralPath $runtimeRoot.FullName -Directory -ErrorAction SilentlyContinue)) {
+                    $nestedBin = Join-Path $runtimeVersion.FullName 'bin'
+                    if (Test-Path -LiteralPath (Join-Path $nestedBin 'npm.cmd')) {
+                        $runtimeBins += [pscustomobject]@{
+                            DirectoryName = $nestedBin
+                            LastWriteTime = (Get-Item -LiteralPath (Join-Path $nestedBin 'npm.cmd')).LastWriteTime
+                        }
+                    }
+                }
+            }
+
+            $candidateDirs += $runtimeBins |
+                Sort-Object LastWriteTime -Descending |
+                ForEach-Object { $_.DirectoryName }
+        }
+    }
+
+    foreach ($candidateDir in ($candidateDirs | Select-Object -Unique)) {
         if ($candidateDir -and
             (Test-Path -LiteralPath (Join-Path $candidateDir 'node.exe')) -and
             (Test-Path -LiteralPath (Join-Path $candidateDir 'npm.cmd'))) {

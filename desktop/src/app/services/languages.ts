@@ -3,10 +3,46 @@ import { I18N, Document } from 'idai-field-core';
 import { Settings } from './settings/settings';
 
 import { electronRemote as remote } from 'src/app/electron/electron';
-import cldr from 'cldr';
 
 
 const CONFIGURED_LANGUAGES: string[] = remote ? remote.getGlobal('config').languages : ['de'];
+const FALLBACK_LANGUAGE_CODES = [
+    'ar', 'bg', 'ca', 'cs', 'da', 'de', 'el', 'en', 'es', 'et', 'fi', 'fr', 'he', 'hi', 'hr', 'hu', 'id',
+    'it', 'ja', 'ko', 'lt', 'lv', 'nl', 'no', 'pl', 'pt', 'ro', 'ru', 'sk', 'sl', 'sr', 'sv', 'th', 'tr',
+    'uk', 'vi', 'zh'
+];
+
+function getLanguageDisplayNames(locale: string): { [languageCode: string]: string } {
+
+    const cldr = getCldr();
+    if (cldr?.extractLanguageDisplayNames) return cldr.extractLanguageDisplayNames(locale);
+
+    return getIntlLanguageDisplayNames(locale);
+}
+
+function getCldr(): any {
+
+    const nodeRequire = typeof window !== 'undefined' ? (window as any).require : undefined;
+    if (!nodeRequire) return undefined;
+
+    try {
+        return nodeRequire('cldr');
+    } catch (_) {
+        return undefined;
+    }
+}
+
+function getIntlLanguageDisplayNames(locale: string): { [languageCode: string]: string } {
+
+    const displayNames = typeof Intl !== 'undefined' && (Intl as any).DisplayNames
+        ? new (Intl as any).DisplayNames([locale], { type: 'language' })
+        : undefined;
+
+    return set(CONFIGURED_LANGUAGES.concat(FALLBACK_LANGUAGE_CODES)).reduce((result, languageCode) => {
+        result[languageCode] = displayNames?.of(languageCode) ?? languageCode;
+        return result;
+    }, {});
+}
 
 
 /**
@@ -36,7 +72,7 @@ export namespace Languages {
 
     export function getAvailableLanguages(): { [languageCode: string]: Language } {
 
-        const languages = cldr.extractLanguageDisplayNames(Settings.getLocale());
+        const languages = getLanguageDisplayNames(Settings.getLocale());
         const mainLanguages: string[] = remote.getGlobal('getMainLanguages')();
 
         return Object.keys(languages).reduce((result, languageCode) => {

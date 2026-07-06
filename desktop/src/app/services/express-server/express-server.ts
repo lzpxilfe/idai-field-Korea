@@ -15,17 +15,9 @@ import { ImageUploader } from '../../components/image/upload/image-uploader';
 import { UploadStatus } from '../../components/image/upload/upload-status';
 import { exportFile } from './endpoints/exportFile';
 import { electronCrypto as crypto } from 'src/app/electron/electron';
-
-import * as expressModule from 'express';
 import { electronRemote as remote } from 'src/app/electron/electron';
-import * as expressPouchDBModule from 'express-pouchdb';
-import * as expressBasicAuthModule from 'express-basic-auth';
-import * as bodyParser from 'body-parser';
 import * as PouchDBBaseModule from 'pouchdb-browser';
 
-const express = getCommonJsDefaultExport<any>(expressModule);
-const expressPouchDB = getCommonJsDefaultExport<any>(expressPouchDBModule);
-const expressBasicAuth = getCommonJsDefaultExport<any>(expressBasicAuthModule);
 const PouchDBBase = getCommonJsDefaultExport<any>(PouchDBBaseModule);
 
 let PouchDB = PouchDBBase;
@@ -35,8 +27,33 @@ function getCommonJsDefaultExport<T>(module: T): T {
     return (module as any).default ?? module;
 }
 
+function loadExpressDependencies(): ExpressDependencies {
+
+    const nodeRequire = typeof window !== 'undefined' ? (window as any).require : undefined;
+    if (!nodeRequire) throw new Error('Node require is not available in the Field Desktop renderer.');
+
+    const expressModule = nodeRequire('express');
+    const expressPouchDBModule = nodeRequire('express-pouchdb');
+    const expressBasicAuthModule = nodeRequire('express-basic-auth');
+    const bodyParserModule = nodeRequire('body-parser');
+
+    return {
+        express: getCommonJsDefaultExport<any>(expressModule),
+        expressPouchDB: getCommonJsDefaultExport<any>(expressPouchDBModule),
+        expressBasicAuth: getCommonJsDefaultExport<any>(expressBasicAuthModule),
+        bodyParser: getCommonJsDefaultExport<any>(bodyParserModule)
+    };
+}
+
 
 export type ApiState = 'none'|'import'|'fileImport'|'export';
+
+interface ExpressDependencies {
+    express: any;
+    expressPouchDB: any;
+    expressBasicAuth: any;
+    bodyParser: any;
+}
 
 
 @Injectable()
@@ -44,9 +61,6 @@ export class ExpressServer {
 
     private password: string;
     private allowLargeFileUploads: boolean;
-    private binaryBodyParser = bodyParser.raw({ type: '*/*', limit: '1gb' });
-    private textBodyParser = bodyParser.text({ type: '*/*', limit: '1gb' });
-    private jsonBodyParser = bodyParser.json({ type: '*/*', limit: '1gb' });
     private datastore: Datastore;
     private relationsManager: RelationsManager;
     private projectConfiguration: ProjectConfiguration;
@@ -94,8 +108,12 @@ export class ExpressServer {
      */
     public async setupServer(pouchDirectory?: string) {
 
+        const { express, expressPouchDB, expressBasicAuth, bodyParser } = await loadExpressDependencies();
         const self = this;
         const app = express();
+        const binaryBodyParser = bodyParser.raw({ type: '*/*', limit: '1gb' });
+        const textBodyParser = bodyParser.text({ type: '*/*', limit: '1gb' });
+        const jsonBodyParser = bodyParser.json({ type: '*/*', limit: '1gb' });
 
         if (pouchDirectory) PouchDB = PouchDB.defaults({ prefix: pouchDirectory });
 
@@ -162,7 +180,7 @@ export class ExpressServer {
             }
         });
 
-        app.put('/files/:project/:uuid', this.binaryBodyParser, async (req: any, res: any) => {
+        app.put('/files/:project/:uuid', binaryBodyParser, async (req: any, res: any) => {
 
             try {
                 if (req.query.type === undefined) {
@@ -219,7 +237,7 @@ export class ExpressServer {
             this.notifyObservers('none');
         });
 
-        app.post('/import/:format', this.textBodyParser, async (request: any, response: any) => {
+        app.post('/import/:format', textBodyParser, async (request: any, response: any) => {
 
             this.notifyObservers('import');
             await AngularUtility.refresh();
@@ -235,7 +253,7 @@ export class ExpressServer {
                 this.messagesDictionary);
         });
 
-        app.post('/fileImport', this.jsonBodyParser, async (request: any, response: any) => {
+        app.post('/fileImport', jsonBodyParser, async (request: any, response: any) => {
 
             ObserverUtil.notify(this.apiObservers, 'fileImport');
             await AngularUtility.refresh();

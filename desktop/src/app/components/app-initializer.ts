@@ -140,6 +140,7 @@ const setupServer = async (expressServer: ExpressServer, progress: Initializatio
     try {
         await expressServer.setupServer();
     } catch (err) {
+        console.error(err);
         progress.setError('alreadyOpenError');
         return Promise.reject('Application is already open');
     }

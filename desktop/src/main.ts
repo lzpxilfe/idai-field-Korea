@@ -29,7 +29,28 @@ async function start() {
 
 async function isAlreadyOpen(): Promise<boolean> {
 
+    const nodeRequire = typeof window !== 'undefined' ? (window as any).require : undefined;
+    if (nodeRequire) {
+        try {
+            return !(await canListenOnPort(nodeRequire('net'), 3000));
+        } catch (_) {}
+    }
+
     return await detect(3000) !== 3000;
+}
+
+
+function canListenOnPort(net: any, port: number): Promise<boolean> {
+
+    return new Promise(resolve => {
+        const server = net.createServer();
+
+        server.once('error', () => resolve(false));
+        server.once('listening', () => {
+            server.close(() => resolve(true));
+        });
+        server.listen(port, '127.0.0.1');
+    });
 }
 
 
