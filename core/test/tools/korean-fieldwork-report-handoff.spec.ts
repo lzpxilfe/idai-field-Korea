@@ -37,7 +37,7 @@ describe('Korean fieldwork report handoff', () => {
             identifier: 'pit-001',
             summary: 'round pit with dark fill',
             evidenceCount: 3,
-            issueCount: 3,
+            issueCount: 6,
             tone: 'review'
         }));
         expect(featureItem?.evidenceLabel).toContain('\uc0ac\uc9c4 1');
@@ -47,15 +47,51 @@ describe('Korean fieldwork report handoff', () => {
         expect(featureItem?.evidenceDetails.join('\n')).toContain('fill continues under east edge');
         expect(featureItem?.issueDetails.join('\n')).toContain('feature-complete-photo');
         expect(featureItem?.issueDetails.join('\n')).toContain('fieldwork-photo-upload-missing');
+        expect(featureItem?.issueDetails.join('\n')).toContain('fieldwork-photo-report-metadata-missing');
+        expect(featureItem?.issueDetails.join('\n')).toContain('soil-profile-color-swatches-missing');
         expect(featureItem?.copyText).toContain('[\uc720\uad6c] pit-001');
         expect(featureItem?.copyText).toContain('\uc694\uc57d: round pit with dark fill');
         expect(featureItem?.copyText).toContain('\uc790\ub8cc \uc0c1\uc138');
         expect(featureItem?.copyText).toContain('file:///tablet/photos/photo-1.jpg');
-        expect(featureItem?.copyText).toContain('\ud655\uc778: \ubcf4\uc644 \ud544\uc694 3');
+        expect(featureItem?.copyText).toContain('\ud655\uc778: \ubcf4\uc644 \ud544\uc694 6');
         expect(featureItem?.copyText).toContain('\ud655\uc778 \uc0c1\uc138');
         expect(featureItem?.copyText).toContain('fieldwork-photo-upload-missing');
         expect(handoff.reviewCount).toBeGreaterThan(0);
         expect(handoff.copyAllText).toContain(featureItem!.copyText);
+    });
+
+
+    it('carries tablet closeout review issues into desktop HWP copy blocks', () => {
+
+        const documents = [
+            makeDocument('feature-1', 'Feature', {
+                identifier: 'pit-001',
+                shortDescription: 'round pit with dark fill',
+                featureRecordingStatus: 'candidate'
+            }),
+            makeDocument('photo-annotated', 'Photo', {
+                originalFilename: 'photo-annotated.jpg',
+                fieldworkPhotoCapturedAt: '2026-06-23T01:02:03.000Z',
+                width: 4032,
+                height: 3024,
+                fieldworkPhotoAnnotationStrokes: '{"version":1,"strokes":[{"points":[{"x":1,"y":2}]}]}',
+                relations: { depicts: ['feature-1'] }
+            }),
+            makeDocument('memo-auto', 'PenMemo', {
+                penMemoAutoTranscript: 'possible ash lens near base',
+                relations: { depicts: ['feature-1'] }
+            })
+        ];
+
+        const handoff = makeKoreanFieldworkReportHandoff(documents as any);
+        const featureItem = handoff.items.find(item => item.documentId === 'feature-1');
+        const issueDetails = featureItem?.issueDetails.join('\n') ?? '';
+
+        expect(issueDetails).toContain('fieldwork-photo-annotation-review');
+        expect(issueDetails).toContain('pen-memo-auto-transcript-review');
+        expect(featureItem?.copyText).toContain('\ud655\uc778 \uc0c1\uc138');
+        expect(featureItem?.copyText).toContain('fieldwork-photo-annotation-review');
+        expect(featureItem?.copyText).toContain('pen-memo-auto-transcript-review');
     });
 
 

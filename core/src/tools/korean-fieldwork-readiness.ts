@@ -64,6 +64,10 @@ const CHECKLIST = {
 
 const REPORT_REVIEW_CATEGORIES = ['ReportPreparationReview', 'ReportEditorialCrossCheck'];
 const FEATURE_CATEGORIES = ['Feature', 'FeatureSegment'];
+const PHOTO_CATEGORY = 'Photo';
+const DRAWING_CATEGORY = 'Drawing';
+const PEN_MEMO_CATEGORY = 'PenMemo';
+const SOIL_PROFILE_PHOTO_CATEGORY = 'SoilProfilePhoto';
 const MEDIA_RELATIONS = ['depicts', 'isDepictedIn', 'isSubjectOf', 'isResultOf'];
 const CONTAINMENT_RELATIONS = ['liesWithin', 'isRecordedInFeature'];
 const FIELDWORK_IMAGE_UPLOAD_RELATED_FIELDS = [
@@ -95,6 +99,11 @@ const DIRECT_FIELDWORK_PHOTO_CATEGORIES = [
     'Trench'
 ];
 const DIRECT_FIELDWORK_PHOTO_URI_FIELDS = ['fieldworkPhotoUri', 'imageUri', 'fileUri'];
+const FIELDWORK_PHOTO_ANNOTATION_FIELDS = ['fieldworkPhotoAnnotationStrokes'];
+const SOIL_PROFILE_PHOTO_ANNOTATION_FIELDS = [
+    'soilProfilePhotoAnnotationStrokes',
+    'soilProfileAnnotationStrokes'
+];
 const FIELDWORK_IMAGE_UPLOAD_RULES = [
     {
         categories: ['Photo'],
@@ -346,6 +355,29 @@ export function buildEvidenceBundle(rootDocument: Document, documents: Document[
     };
 }
 
+export function getKoreanFieldworkCloseoutReviewIssues(documents: Document[]): KoreanFieldworkReadinessIssue[] {
+
+    return documents.flatMap(document => {
+        if (document.resource.category === PHOTO_CATEGORY) {
+            return getFieldworkPhotoCloseoutIssues(document);
+        }
+        if (document.resource.category === SOIL_PROFILE_PHOTO_CATEGORY) {
+            return getSoilProfilePhotoCloseoutIssues(document);
+        }
+        if (document.resource.category === DRAWING_CATEGORY) {
+            return getDrawingCloseoutIssues(document);
+        }
+        if (document.resource.category === PEN_MEMO_CATEGORY) {
+            return getPenMemoCloseoutIssues(document);
+        }
+        if (DIRECT_FIELDWORK_PHOTO_CATEGORIES.includes(document.resource.category)) {
+            return getDirectFieldworkPhotoCloseoutIssues(document);
+        }
+
+        return [];
+    });
+}
+
 export function getKoreanFieldworkTodaySummary(documents: Document[]): KoreanFieldworkTodaySummary {
 
     const openIssues = getKoreanFieldworkReadinessIssues(documents);
@@ -487,6 +519,225 @@ function uniqueDocuments(documents: Document[]): Document[] {
     });
 }
 
+function getFieldworkPhotoCloseoutIssues(document: Document): KoreanFieldworkReadinessIssue[] {
+
+    return [
+        ...getPhotoReportMetadataCloseoutIssues(
+            document,
+            'fieldwork-photo-report-metadata-missing',
+            '\ud604\uc7a5\uc0ac\uc9c4\uc758 \ubcf4\uace0\uc11c\uc6a9 \uc6d0\ubcf8 \uc815\ubcf4\uac00 \ubd80\uc871\ud569\ub2c8\ub2e4.',
+            'fieldworkPhotoCapturedAt'
+        ),
+        ...getPhotoUploadCloseoutIssues(
+            document,
+            ['fieldworkPhotoUri', 'imageUri', 'fileUri'],
+            'fieldwork-photo-upload-missing',
+            '\ud604\uc7a5\uc0ac\uc9c4 \uc6d0\ubcf8 \ubcf4\uc874 \uc0c1\ud0dc\uac00 \uc544\uc9c1 \ud655\uc778\ub418\uc9c0 \uc54a\uc558\uc2b5\ub2c8\ub2e4.'
+        ),
+        ...getPhotoAnnotationCloseoutIssues(
+            document,
+            FIELDWORK_PHOTO_ANNOTATION_FIELDS,
+            'fieldwork-photo-annotation-review',
+            '\uc0ac\uc9c4 \uc704 \ud45c\uc2dc\uac00 \ubcf4\uace0\uc11c\uc6a9 \uc124\uba85\uc73c\ub85c \uc815\ub9ac\ub418\uc9c0 \uc54a\uc558\uc2b5\ub2c8\ub2e4.'
+        )
+    ];
+}
+
+
+function getDrawingCloseoutIssues(document: Document): KoreanFieldworkReadinessIssue[] {
+
+    return getPhotoUploadCloseoutIssues(
+        document,
+        ['fieldworkPhotoUri', 'imageUri', 'fileUri'],
+        'fieldwork-drawing-upload-missing',
+        '\ub3c4\uba74 \uc6d0\ubcf8 \ubcf4\uc874 \uc0c1\ud0dc\uac00 \uc544\uc9c1 \ud655\uc778\ub418\uc9c0 \uc54a\uc558\uc2b5\ub2c8\ub2e4.'
+    );
+}
+
+
+function getDirectFieldworkPhotoCloseoutIssues(document: Document): KoreanFieldworkReadinessIssue[] {
+
+    return getPhotoUploadCloseoutIssues(
+        document,
+        DIRECT_FIELDWORK_PHOTO_URI_FIELDS,
+        'fieldwork-attached-photo-upload-missing',
+        '\uae30\ub85d\uc5d0 \uc9c1\uc811 \ubd99\uc740 \ud604\uc7a5\uc0ac\uc9c4 \uc6d0\ubcf8 \ubcf4\uc874 \uc0c1\ud0dc\uac00 \uc544\uc9c1 \ud655\uc778\ub418\uc9c0 \uc54a\uc558\uc2b5\ub2c8\ub2e4.'
+    );
+}
+
+
+function getSoilProfilePhotoCloseoutIssues(document: Document): KoreanFieldworkReadinessIssue[] {
+
+    const issues: KoreanFieldworkReadinessIssue[] = [
+        ...getPhotoReportMetadataCloseoutIssues(
+            document,
+            'soil-profile-photo-report-metadata-missing',
+            '\ud1a0\uce35\uc0ac\uc9c4\uc758 \ubcf4\uace0\uc11c\uc6a9 \uc6d0\ubcf8 \uc815\ubcf4\uac00 \ubd80\uc871\ud569\ub2c8\ub2e4.',
+            'soilProfilePhotoCapturedAt'
+        ),
+        ...getPhotoUploadCloseoutIssues(
+            document,
+            ['soilProfilePhotoUri', 'imageUri', 'fieldworkPhotoUri'],
+            'soil-profile-photo-upload-missing',
+            '\ud1a0\uce35\uc0ac\uc9c4 \uc6d0\ubcf8 \ubcf4\uc874 \uc0c1\ud0dc\uac00 \uc544\uc9c1 \ud655\uc778\ub418\uc9c0 \uc54a\uc558\uc2b5\ub2c8\ub2e4.'
+        ),
+        ...getPhotoAnnotationCloseoutIssues(
+            document,
+            SOIL_PROFILE_PHOTO_ANNOTATION_FIELDS,
+            'soil-profile-photo-annotation-review',
+            '\ud1a0\uce35\uc0ac\uc9c4 \uc704 \ud45c\uc2dc\uac00 \uce35\uc704 \uc124\uba85\uc73c\ub85c \uc815\ub9ac\ub418\uc9c0 \uc54a\uc558\uc2b5\ub2c8\ub2e4.'
+        )
+    ];
+
+    if (document.resource.soilColorAssistStatus === 'candidatesAvailable') {
+        issues.push(createCloseoutReviewIssue(
+            document,
+            'soil-color-candidates-review',
+            '\uc0ac\uc9c4\uc5d0\uc11c \uc77d\uc740 \uba3c\uc140 \ud6c4\ubcf4\ub97c \uac80\ud1a0\ud574\uc57c \ud569\ub2c8\ub2e4.',
+            '\uc0ac\uc9c4 \ud6c4\ubcf4 \uc911 \uc2e4\uc81c \ud1a0\uc0c9\uc744 \uc120\ud0dd\ud558\uac70\ub098 \uc9c1\uc811 \uba3c\uc140\uac12\uc744 \ud655\uc778\ud558\uc138\uc694.',
+            ['soilColorAssistCandidates', 'soilColorAssistStatus', 'soilProfileColorSwatches']
+        ));
+    } else if (document.resource.soilColorAssistStatus === 'lowConfidence') {
+        issues.push(createCloseoutReviewIssue(
+            document,
+            'soil-color-low-confidence',
+            '\uc0ac\uc9c4 \ud1a0\uc0c9 \ud6c4\ubcf4\uc758 \uc2e0\ub8b0\ub3c4\uac00 \ub0ae\uc2b5\ub2c8\ub2e4.',
+            '\ud604\uc7a5\uc5d0\uc11c \uba3c\uc140\uac12\uc744 \uc9c1\uc811 \ud655\uc778\ud558\uace0 \ud1a0\uc0c9 \uba54\ubaa8\ub97c \ubcf4\uac15\ud558\uc138\uc694.',
+            ['soilColorAssistCandidates', 'soilColorAssistStatus', 'soilProfileColorSwatches']
+        ));
+    }
+
+    if (!hasEvidenceValue(document.resource.soilProfileColorSwatches)) {
+        issues.push(createCloseoutReviewIssue(
+            document,
+            'soil-profile-color-swatches-missing',
+            '\ud1a0\uce35\uc0ac\uc9c4\uc758 \ubc88\ud638\ubcc4 \ud1a0\uc0c9\uc774 \uc544\uc9c1 \uae30\ub85d\ub418\uc9c0 \uc54a\uc558\uc2b5\ub2c8\ub2e4.',
+            '\uc0ac\uc9c4 \uc704 \ud45c\uc2dc \ubc88\ud638\uc640 \ub300\uc751\ub418\ub294 \uba3c\uc140\uac12 \ub610\ub294 \ud1a0\uc0c9 \uba54\ubaa8\ub97c \uc801\uc73c\uc138\uc694.',
+            ['soilProfileColorSwatches']
+        ));
+    }
+
+    return issues;
+}
+
+
+function getPenMemoCloseoutIssues(document: Document): KoreanFieldworkReadinessIssue[] {
+
+    if (hasTextValue(document.resource.penMemoReviewedTranscript)) return [];
+
+    if (hasTextValue(document.resource.penMemoAutoTranscript)) {
+        return [createCloseoutReviewIssue(
+            document,
+            'pen-memo-auto-transcript-review',
+            '\uc790\ub3d9 \ud544\uc0ac\ub41c \ud604\uc7a5\uba54\ubaa8\uac00 \uc544\uc9c1 \uac80\ud1a0\ub418\uc9c0 \uc54a\uc558\uc2b5\ub2c8\ub2e4.',
+            '\uc790\ub3d9 \ud544\uc0ac\ubb38\uc744 \uc6d0\ubcf8 \ud544\uae30\uc640 \ub300\uc870\ud558\uace0 \uac80\ud1a0 \ud544\uc0ac\ubb38\uc73c\ub85c \ud655\uc815\ud558\uc138\uc694.',
+            ['penMemoAutoTranscript', 'penMemoReviewedTranscript', 'penMemoTranscriptionStatus']
+        )];
+    }
+
+    if (hasEvidenceValue(document.resource.penMemoStrokes)) {
+        return [createCloseoutReviewIssue(
+            document,
+            'pen-memo-handwriting-transcription',
+            '\ud0dc\ube14\ub9bf \ud544\uae30 \ud604\uc7a5\uba54\ubaa8\uac00 \uc544\uc9c1 \ud544\uc0ac\ub418\uc9c0 \uc54a\uc558\uc2b5\ub2c8\ub2e4.',
+            '\ud544\uae30 \uc790\ub8cc\ub97c \uc77d\uc5b4 \uac80\ud1a0 \ud544\uc0ac\ubb38\uc73c\ub85c \uc62e\uae30\uc138\uc694.',
+            ['penMemoStrokes', 'penMemoReviewedTranscript', 'penMemoTranscriptionStatus']
+        )];
+    }
+
+    return [];
+}
+
+
+function getPhotoAnnotationCloseoutIssues(
+        document: Document,
+        strokeFields: string[],
+        ruleId: string,
+        message: string
+): KoreanFieldworkReadinessIssue[] {
+
+    const annotatedField = strokeFields.find(fieldName => hasEvidenceValue(document.resource[fieldName]));
+    if (!annotatedField || hasPhotoAnnotationExplanation(document.resource)) return [];
+
+    return [createCloseoutReviewIssue(
+        document,
+        ruleId,
+        message,
+        '\ud45c\uc2dc \uc704\uce58\uc640 \uc758\ubbf8\ub97c \uc124\uba85 \ub610\ub294 \uc694\uc57d\uc5d0 \uc62e\uaca8 HWP \ubcf4\uace0\uc11c \uc791\uc131 \ub54c \ub193\uce58\uc9c0 \uc54a\uac8c \ud558\uc138\uc694.',
+        [annotatedField, 'description', 'shortDescription']
+    )];
+}
+
+
+function getPhotoUploadCloseoutIssues(
+        document: Document,
+        uriFields: string[],
+        ruleId: string,
+        message: string
+): KoreanFieldworkReadinessIssue[] {
+
+    const localUploadSource = uriFields
+        .map(fieldName => getTextValue(document.resource[fieldName]))
+        .find(isUploadableLocalUri);
+
+    if (!localUploadSource
+            || hasConfirmedKoreanFieldworkImageUpload(document.resource, localUploadSource)) return [];
+
+    return [createCloseoutReviewIssue(
+        document,
+        ruleId,
+        message,
+        '\ud0dc\ube14\ub9bf \ub610\ub294 \ud504\ub85c\uc81d\ud2b8 \ubc31\uc5c5 \uc704\uce58\uc5d0 \uc6d0\ubcf8 \ud30c\uc77c\uc774 \ub0a8\uc544 \uc788\ub294\uc9c0 \ud655\uc778\ud558\uace0 \ubcf4\uc874 \uc704\uce58\ub97c \uae30\ub85d\ud558\uc138\uc694.',
+        FIELDWORK_IMAGE_UPLOAD_RELATED_FIELDS
+    )];
+}
+
+
+function getPhotoReportMetadataCloseoutIssues(
+        document: Document,
+        ruleId: string,
+        message: string,
+        capturedAtField: string
+): KoreanFieldworkReadinessIssue[] {
+
+    const missingFields = getMissingPhotoReportMetadataFields(document.resource, capturedAtField);
+    if (missingFields.length === 0) return [];
+
+    return [createCloseoutReviewIssue(
+        document,
+        ruleId,
+        message,
+        `${getMissingPhotoReportMetadataLabel(missingFields)}\uc744/\ub97c \ud655\uc778\ud574 \uc6d0\ubcf8 \ud30c\uc77c\uacfc \ubcf4\uace0\uc11c \uc0ac\uc9c4\uc744 \ub300\uc870\ud560 \uc218 \uc788\uac8c \ud558\uc138\uc694.`,
+        missingFields
+    )];
+}
+
+
+function getMissingPhotoReportMetadataFields(resource: Record<string, any>, capturedAtField: string): string[] {
+
+    const missingFields: string[] = [];
+
+    if (!hasTextValue(resource.originalFilename)) missingFields.push('originalFilename');
+    if (!hasTextValue(resource[capturedAtField])) missingFields.push(capturedAtField);
+    if (getNumberValue(resource.width) === undefined) missingFields.push('width');
+    if (getNumberValue(resource.height) === undefined) missingFields.push('height');
+
+    return missingFields;
+}
+
+
+function getMissingPhotoReportMetadataLabel(fields: string[]): string {
+
+    return fields.join(', ');
+}
+
+
+function hasPhotoAnnotationExplanation(resource: Record<string, any>): boolean {
+
+    return hasTextValue(resource.description) || hasTextValue(resource.shortDescription);
+}
+
+
 function isFeatureLike(document: Document): boolean {
 
     return FEATURE_CATEGORIES.includes(document.resource.category);
@@ -504,6 +755,25 @@ function hasValue(value: any): boolean {
         ? value.length > 0
         : value !== undefined && value !== null && value !== '';
 }
+
+function hasEvidenceValue(value: any): boolean {
+
+    if (Array.isArray(value)) return value.length > 0;
+    if (value === undefined || value === null) return false;
+
+    if (typeof value === 'object') return Object.keys(value).length > 0;
+
+    const text = String(value).trim();
+
+    return !!text && text !== '[]' && text !== '{}';
+}
+
+
+function hasTextValue(value: unknown): value is string {
+
+    return typeof value === 'string' && value.trim().length > 0;
+}
+
 
 function getTextValue(value: unknown): string|undefined {
 
@@ -612,6 +882,28 @@ function hasConfirmedDigitalSourcePreservation(resource: Record<string, any>): b
 
     return requiredValues.every(value => resource.digitalSourcePreservation.includes(value));
 }
+
+function createCloseoutReviewIssue(
+        document: Document,
+        ruleId: string,
+        message: string,
+        recommendedAction: string,
+        relatedFields: string[]
+): KoreanFieldworkReadinessIssue {
+
+    return {
+        ruleId,
+        documentId: document.resource.id,
+        identifier: document.resource.identifier || document.resource.id,
+        category: document.resource.category,
+        severity: 'warning',
+        message,
+        relatedFields,
+        recommendedAction,
+        blocksSave: false
+    };
+}
+
 
 function makeIssue(
     document: Document,

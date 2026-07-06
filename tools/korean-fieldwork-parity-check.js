@@ -3192,6 +3192,7 @@ function validateReportHandoffPreSaveValidation() {
   const findings = [];
   const coreReportHandoffText = readTextFile('core/src/tools/korean-fieldwork-report-handoff.ts');
   const coreReportHandoffSpecText = readTextFile('core/test/tools/korean-fieldwork-report-handoff.spec.ts');
+  const coreReadinessText = readTextFile('core/src/tools/korean-fieldwork-readiness.ts');
   const tabletAddText = readTextFile('mobile/app/(tabs)/ProjectScreen/DocumentAdd.tsx');
   const tabletEditText = readTextFile('mobile/app/(tabs)/ProjectScreen/DocumentEdit.tsx');
   const desktopPriorityStripText = readTextFile(
@@ -3220,14 +3221,23 @@ function validateReportHandoffPreSaveValidation() {
       || !coreReportHandoffText.includes('EVIDENCE_DETAILS')) {
     findings.push('core report handoff copy blocks must include concrete evidence and issue details, not only counts');
   }
+  if (!coreReportHandoffText.includes('buildEvidenceBundle')
+      || !coreReadinessText.includes('getKoreanFieldworkCloseoutReviewIssues')
+      || !coreReadinessText.includes('fieldwork-photo-annotation-review')
+      || !coreReadinessText.includes('pen-memo-auto-transcript-review')
+      || !coreReadinessText.includes('soil-profile-color-swatches-missing')) {
+    findings.push('core report handoff evidence bundles must carry tablet closeout review issues into HWP copy blocks');
+  }
   if (!coreReportHandoffSpecText.includes('validates a tablet draft before saving it for desktop report handoff')
       || !coreReportHandoffSpecText.includes('reports pre-save handoff gaps')) {
     findings.push('core report handoff tests must prove tablet draft pre-save validation and HWP gap detection');
   }
   if (!coreReportHandoffSpecText.includes('evidenceDetails.join')
       || !coreReportHandoffSpecText.includes('issueDetails.join')
-      || !coreReportHandoffSpecText.includes('fieldwork-photo-upload-missing')) {
-    findings.push('core report handoff tests must prove evidence and issue details are carried into HWP copy blocks');
+      || !coreReportHandoffSpecText.includes('fieldwork-photo-upload-missing')
+      || !coreReportHandoffSpecText.includes('fieldwork-photo-annotation-review')
+      || !coreReportHandoffSpecText.includes('pen-memo-auto-transcript-review')) {
+    findings.push('core report handoff tests must prove evidence, readiness issues, and closeout issues are carried into HWP copy blocks');
   }
   for (const [label, text] of [
     ['tablet add screen', tabletAddText],

@@ -1,6 +1,11 @@
 import { Document } from '../model/document/document';
 import { NewResource } from '../model/document/resource';
-import { buildEvidenceBundle, EvidenceBundle } from './korean-fieldwork-readiness';
+import {
+    buildEvidenceBundle,
+    EvidenceBundle,
+    getKoreanFieldworkCloseoutReviewIssues,
+    KoreanFieldworkReadinessIssue
+} from './korean-fieldwork-readiness';
 import {
     getKoreanFieldworkCategoryLabel,
     getKoreanFieldworkReportHandoffCategoryRank,
@@ -451,8 +456,9 @@ function makeReportHandoffItem(document: Document, documents: Document[]): Korea
     const details = getDetailLines(document);
     const evidenceLabel = getEvidenceLabel(bundle);
     const evidenceDetails = getEvidenceDetails(bundle);
-    const issueDetails = getIssueDetails(bundle);
-    const issueCount = bundle.issues.length;
+    const issues = getReportHandoffIssues(bundle);
+    const issueDetails = getIssueDetails(issues);
+    const issueCount = issues.length;
     const issueLabel = issueCount > 0
         ? `${KO.REVIEW_NEEDED} ${issueCount}`
         : KO.NO_ISSUES;
@@ -602,9 +608,35 @@ function getEvidenceDetailSummary(document: Document, fieldNames: string[]): str
 }
 
 
-function getIssueDetails(bundle: EvidenceBundle): string[] {
+function getReportHandoffIssues(bundle: EvidenceBundle): KoreanFieldworkReadinessIssue[] {
 
-    return bundle.issues.map(issue => [
+    return dedupeIssues(bundle.issues.concat(
+        getKoreanFieldworkCloseoutReviewIssues(getReportHandoffIssueDocuments(bundle))
+    ));
+}
+
+
+function getReportHandoffIssueDocuments(bundle: EvidenceBundle): Document[] {
+
+    return uniqueDocuments([
+        bundle.rootDocument,
+        ...bundle.featureSegments,
+        ...bundle.layers,
+        ...bundle.photos,
+        ...bundle.soilProfilePhotos,
+        ...bundle.drawings,
+        ...bundle.penMemos,
+        ...bundle.finds,
+        ...bundle.samples,
+        ...bundle.reportPreparationReviews,
+        ...bundle.reportEditorialCrossChecks
+    ]);
+}
+
+
+function getIssueDetails(issues: KoreanFieldworkReadinessIssue[]): string[] {
+
+    return issues.map(issue => [
         getSeverityLabel(issue.severity),
         getPrintableValue(issue.identifier) ?? issue.documentId,
         `(${issue.ruleId})`,
@@ -632,6 +664,33 @@ function getSeverityLabel(severity: string): string {
 function makeListBlock(label: string, items: string[]): string {
 
     return `${label}:\n${items.map(item => `- ${item}`).join('\n')}`;
+}
+
+
+function dedupeIssues(issues: KoreanFieldworkReadinessIssue[]): KoreanFieldworkReadinessIssue[] {
+
+    const seen = new Set<string>();
+
+    return issues.filter(issue => {
+        const key = `${issue.documentId}\u001f${issue.ruleId}`;
+        if (seen.has(key)) return false;
+
+        seen.add(key);
+        return true;
+    });
+}
+
+
+function uniqueDocuments(documents: Document[]): Document[] {
+
+    const seen = new Set<string>();
+
+    return documents.filter(document => {
+        if (seen.has(document.resource.id)) return false;
+
+        seen.add(document.resource.id);
+        return true;
+    });
 }
 
 
