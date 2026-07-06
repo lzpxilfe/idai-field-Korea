@@ -636,6 +636,7 @@ const projectSettingsFindings = validateProjectSettingsCompleteness();
 const projectInvestigationModeWordingFindings = validateProjectInvestigationModeWording();
 const priorityTaskFindings = validatePriorityTaskIds();
 const rawFormFindings = validateRawFormFieldRules();
+const reportHandoffFindings = validateReportHandoffPreSaveValidation();
 const recordPanelOrderFindings = validateRecordPanelOrder();
 const connectedRecordWordingFindings = validateConnectedRecordWording();
 const scopeMetricWordingFindings = validateScopeMetricWording();
@@ -660,6 +661,7 @@ printReport(
   projectInvestigationModeWordingFindings,
   priorityTaskFindings,
   rawFormFindings,
+  reportHandoffFindings,
   recordPanelOrderFindings,
   connectedRecordWordingFindings,
   scopeMetricWordingFindings,
@@ -687,6 +689,7 @@ if (
     || projectInvestigationModeWordingFindings.length > 0
     || priorityTaskFindings.length > 0
     || rawFormFindings.length > 0
+    || reportHandoffFindings.length > 0
     || recordPanelOrderFindings.length > 0
     || connectedRecordWordingFindings.length > 0
     || scopeMetricWordingFindings.length > 0
@@ -3185,6 +3188,45 @@ function assertSourceOrder(findings, label, text, markers) {
   }
 }
 
+function validateReportHandoffPreSaveValidation() {
+  const findings = [];
+  const coreReportHandoffText = readTextFile('core/src/tools/korean-fieldwork-report-handoff.ts');
+  const coreReportHandoffSpecText = readTextFile('core/test/tools/korean-fieldwork-report-handoff.spec.ts');
+  const tabletAddText = readTextFile('mobile/app/(tabs)/ProjectScreen/DocumentAdd.tsx');
+  const tabletEditText = readTextFile('mobile/app/(tabs)/ProjectScreen/DocumentEdit.tsx');
+  const desktopPriorityStripText = readTextFile(
+    'desktop/src/app/components/resources/korean-fieldwork-priority-strip.component.ts'
+  );
+
+  if (!coreReportHandoffText.includes('validateKoreanFieldworkReportHandoffCandidate')
+      || !coreReportHandoffText.includes('KoreanFieldworkReportHandoffValidation')
+      || !coreReportHandoffText.includes('RELATION_REQUIRED_CATEGORIES')
+      || !coreReportHandoffText.includes('MEDIA_URI_FIELDS')) {
+    findings.push('core report handoff must expose reusable pre-save validation for tablet and desktop report copy readiness');
+  }
+  if (!coreReportHandoffSpecText.includes('validates a tablet draft before saving it for desktop report handoff')
+      || !coreReportHandoffSpecText.includes('reports pre-save handoff gaps')) {
+    findings.push('core report handoff tests must prove tablet draft pre-save validation and HWP gap detection');
+  }
+  for (const [label, text] of [
+    ['tablet add screen', tabletAddText],
+    ['tablet edit screen', tabletEditText]
+  ]) {
+    if (!text.includes('validateKoreanFieldworkReportHandoffCandidate')
+        || !text.includes('getReportHandoffSaveMessage')
+        || !text.includes("reportHandoffValidation.status === 'review' ? 5000 : 3000")) {
+      findings.push(`${label} must validate desktop report handoff before saving tablet records`);
+    }
+  }
+  if (!desktopPriorityStripText.includes('makeKoreanFieldworkReportHandoff')
+      || !desktopPriorityStripText.includes('copyReportHandoffItem')
+      || !desktopPriorityStripText.includes('reportHandoffCopyAllText')) {
+    findings.push('desktop report handoff panel must keep using the same core copy-block contract');
+  }
+
+  return findings;
+}
+
 function validateConnectedRecordWording() {
   const findings = [];
   const sources = [
@@ -4525,6 +4567,7 @@ function printReport(
   projectInvestigationModeWordingFindings,
   priorityTaskFindings,
   rawFormFindings,
+  reportHandoffFindings,
   recordPanelOrderFindings,
   connectedRecordWordingFindings,
   scopeMetricWordingFindings,
@@ -4694,6 +4737,17 @@ function printReport(
   } else {
     console.log('Raw-form hiding rule gaps:');
     for (const finding of rawFormFindings) {
+      console.log(`- ${finding}`);
+    }
+  }
+
+  console.log('');
+
+  if (reportHandoffFindings.length === 0) {
+    console.log('No report handoff pre-save validation gaps were found.');
+  } else {
+    console.log('Report handoff pre-save validation gaps:');
+    for (const finding of reportHandoffFindings) {
       console.log(`- ${finding}`);
     }
   }

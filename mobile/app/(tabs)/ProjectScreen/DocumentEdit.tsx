@@ -4,6 +4,8 @@ import {
   CategoryForm,
   Document,
   Resource,
+  type KoreanFieldworkReportHandoffValidation,
+  validateKoreanFieldworkReportHandoffCandidate,
 } from 'idai-field-core';
 import React, { useContext, useEffect, useMemo, useState } from 'react';
 import { Keyboard, StyleSheet, Text, View } from 'react-native';
@@ -121,10 +123,21 @@ const DocumentEdit: React.FC = () => {
 
   const editDocument = () => {
     if (document && resource) {
+      const reportHandoffValidation = validateKoreanFieldworkReportHandoffCandidate(
+        resource,
+        documents ?? []
+      );
       repository
         ?.update({ ...document, resource })
         .then((doc) => {
-          showToast(ToastType.Success, `${doc.resource.identifier} 기록을 저장했습니다.`);
+          showToast(
+            ToastType.Success,
+            getReportHandoffSaveMessage(
+              `${doc.resource.identifier} 기록을 저장했습니다.`,
+              reportHandoffValidation
+            ),
+            reportHandoffValidation.status === 'review' ? 5000 : 3000
+          );
           navigateToKoreanFieldworkReturnTarget(returnTarget, doc.resource.id);
         })
         .catch((err) => {
@@ -407,6 +420,14 @@ const getStringValue = (value: unknown): string | undefined =>
   typeof value === 'string' && value.trim().length > 0
     ? value
     : undefined;
+
+const getReportHandoffSaveMessage = (
+  baseMessage: string,
+  validation: KoreanFieldworkReportHandoffValidation
+): string =>
+  validation.status === 'not-applicable'
+    ? baseMessage
+    : `${baseMessage} ${validation.message}`;
 
 const sampleSoilProfileColor = async (
   imageUri: string | undefined,

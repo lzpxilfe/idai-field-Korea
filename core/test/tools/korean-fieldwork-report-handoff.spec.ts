@@ -1,4 +1,7 @@
-import { makeKoreanFieldworkReportHandoff } from '../../src/tools/korean-fieldwork-report-handoff';
+import {
+    makeKoreanFieldworkReportHandoff,
+    validateKoreanFieldworkReportHandoffCandidate
+} from '../../src/tools/korean-fieldwork-report-handoff';
 
 
 describe('Korean fieldwork report handoff', () => {
@@ -91,6 +94,68 @@ describe('Korean fieldwork report handoff', () => {
             'layer-1',
             'photo-1'
         ]);
+    });
+
+
+    it('validates a tablet draft before saving it for desktop report handoff', () => {
+
+        const validation = validateKoreanFieldworkReportHandoffCandidate({
+            identifier: 'pit-001',
+            category: 'Feature',
+            relations: { liesWithin: ['trench-1'], isRecordedIn: ['operation-1'] },
+            shortDescription: 'round pit with dark fill',
+            featureRecordingStatus: 'candidate'
+        } as any, [
+            makeDocument('trench-1', 'Trench')
+        ] as any);
+
+        expect(validation).toEqual(jasmine.objectContaining({
+            status: 'ready',
+            category: 'Feature',
+            categoryLabel: '\uc720\uad6c',
+            identifier: 'pit-001',
+            isReportHandoffCategory: true,
+            isCopyable: true,
+            issueCount: 0
+        }));
+        expect(validation.message).toContain('\ub370\uc2a4\ud06c\ud1b1 \ubcf4\uace0\uc11c \ud0ed \uc804\ub2ec \ud655\uc778');
+        expect(validation.copyText).toContain('[\uc720\uad6c] pit-001');
+    });
+
+
+    it('reports pre-save handoff gaps that would weaken HWP copy blocks', () => {
+
+        const validation = validateKoreanFieldworkReportHandoffCandidate({
+            identifier: 'photo-001',
+            category: 'Photo',
+            relations: {}
+        } as any);
+
+        expect(validation.status).toBe('review');
+        expect(validation.isCopyable).toBe(true);
+        expect(validation.messages.length).toBeGreaterThan(1);
+        expect(validation.messages.join('\n')).toContain('HWP');
+        expect(validation.messages.join('\n')).toContain('\uc0ac\uc9c4/\ub3c4\uba74');
+        expect(validation.relatedFields).toContain('fieldworkPhotoUri');
+        expect(validation.relatedFields).toContain('relations');
+    });
+
+
+    it('ignores records that are not part of the desktop report handoff contract', () => {
+
+        const validation = validateKoreanFieldworkReportHandoffCandidate({
+            identifier: 'term-001',
+            category: 'TermAuthority',
+            relations: {}
+        } as any);
+
+        expect(validation).toEqual(jasmine.objectContaining({
+            status: 'not-applicable',
+            isReportHandoffCategory: false,
+            isCopyable: false,
+            evidenceCount: 0,
+            issueCount: 0
+        }));
     });
 });
 

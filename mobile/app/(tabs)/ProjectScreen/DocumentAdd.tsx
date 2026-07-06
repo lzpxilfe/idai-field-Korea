@@ -4,6 +4,8 @@ import {
   CategoryForm,
   NewDocument,
   NewResource,
+  type KoreanFieldworkReportHandoffValidation,
+  validateKoreanFieldworkReportHandoffCandidate,
 } from 'idai-field-core';
 import React, { useCallback, useContext, useEffect, useState } from 'react';
 import { Keyboard, StyleSheet, Text, View } from 'react-native';
@@ -183,13 +185,24 @@ const DocumentAdd: React.FC = () => {
 
   const saveButtonHandler = () => {
     if (newResource) {
+      const reportHandoffValidation = validateKoreanFieldworkReportHandoffCandidate(
+        newResource,
+        documents ?? []
+      );
       const newDocument: NewDocument = {
         resource: newResource,
       };
       repository
         ?.create(newDocument)
         .then((doc) => {
-          showToast(ToastType.Success, `${doc.resource.identifier} 기록을 만들었습니다.`);
+          showToast(
+            ToastType.Success,
+            getReportHandoffSaveMessage(
+              `${doc.resource.identifier} 기록을 만들었습니다.`,
+              reportHandoffValidation
+            ),
+            reportHandoffValidation.status === 'review' ? 5000 : 3000
+          );
           setResourceToDefault();
           navigateToKoreanFieldworkReturnTarget(returnTarget, doc.resource.id);
         })
@@ -402,6 +415,14 @@ const getStringValue = (value: unknown): string | undefined =>
   typeof value === 'string' && value.trim().length > 0
     ? value
     : undefined;
+
+const getReportHandoffSaveMessage = (
+  baseMessage: string,
+  validation: KoreanFieldworkReportHandoffValidation
+): string =>
+  validation.status === 'not-applicable'
+    ? baseMessage
+    : `${baseMessage} ${validation.message}`;
 
 const sampleSoilProfileColor = async (
   imageUri: string | undefined,

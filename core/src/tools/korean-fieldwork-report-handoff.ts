@@ -1,4 +1,5 @@
 import { Document } from '../model/document/document';
+import { NewResource } from '../model/document/resource';
 import { buildEvidenceBundle, EvidenceBundle } from './korean-fieldwork-readiness';
 import {
     getKoreanFieldworkCategoryLabel,
@@ -33,6 +34,24 @@ export interface KoreanFieldworkReportHandoff {
     copyAllText: string;
 }
 
+export type KoreanFieldworkReportHandoffValidationStatus = 'not-applicable'|'ready'|'review';
+
+export interface KoreanFieldworkReportHandoffValidation {
+    status: KoreanFieldworkReportHandoffValidationStatus;
+    documentId?: string;
+    category?: string;
+    categoryLabel?: string;
+    identifier?: string;
+    isReportHandoffCategory: boolean;
+    isCopyable: boolean;
+    message: string;
+    messages: string[];
+    relatedFields: string[];
+    evidenceCount: number;
+    issueCount: number;
+    copyText?: string;
+}
+
 interface DetailFieldDefinition {
     label: string;
     fields: string[];
@@ -46,13 +65,16 @@ interface EvidenceCountDefinition {
 const KO = {
     ALL_READY: '\ubc14\ub85c \uc778\uc6a9 \uac00\ub2a5',
     CATEGORY: '\uc720\ud615',
+    CHECKED_FOR_DESKTOP: '\ub370\uc2a4\ud06c\ud1b1 \ubcf4\uace0\uc11c \ud0ed \uc804\ub2ec \ud655\uc778',
     DETAILS: '\uae30\ub85d',
     EVIDENCE: '\uc790\ub8cc',
     ISSUES: '\ud655\uc778',
     NO_DETAILS: '\uc138\ubd80 \uae30\ub85d \ubcf4\uac15 \ud544\uc694',
     NO_EVIDENCE: '\uc5f0\uacb0 \uc790\ub8cc \uc5c6\uc74c',
     NO_ISSUES: '\ud655\uc778 \uc0ac\ud56d \uc5c6\uc74c',
+    NOT_REPORT_HANDOFF: '\ub370\uc2a4\ud06c\ud1b1 \ubcf4\uace0\uc11c \ubcf5\uc0ac \ub300\uc0c1 \uae30\ub85d\uc774 \uc544\ub2d9\ub2c8\ub2e4',
     RECORD: '\uae30\ub85d',
+    REPORT_HANDOFF_READY: '\ub370\uc2a4\ud06c\ud1b1 HWP \ubcf5\uc0ac \ube14\ub85d \uc900\ube44\ub428',
     REVIEW_NEEDED: '\ubcf4\uc644 \ud544\uc694',
     SUMMARY: '\uc694\uc57d'
 };
@@ -133,6 +155,35 @@ const SUMMARY_FIELDS = [
     'reportEditorialIssueText'
 ];
 
+const RELATION_REQUIRED_CATEGORIES = [
+    'Drawing',
+    'Feature',
+    'FeatureGroup',
+    'FeatureSegment',
+    'FieldRecordQualityReview',
+    'Find',
+    'FindCollection',
+    'Layer',
+    'PenMemo',
+    'Photo',
+    'Sample',
+    'SoilProfilePhoto',
+    'Trench'
+];
+
+const MEDIA_URI_FIELDS: Readonly<Record<string, string[]>> = {
+    Drawing: ['fileUri', 'imageUri', 'fieldworkPhotoUri', 'drawingSketchStrokes'],
+    Photo: ['fieldworkPhotoUri', 'imageUri', 'fileUri'],
+    SoilProfilePhoto: ['soilProfilePhotoUri', 'imageUri', 'fieldworkPhotoUri']
+};
+
+const PEN_MEMO_CONTENT_FIELDS = [
+    'description',
+    'penMemoAutoTranscript',
+    'penMemoReviewedTranscript',
+    'penMemoStrokes'
+];
+
 const EVIDENCE_COUNTS: EvidenceCountDefinition[] = [
     {
         label: '\uc0ac\uc9c4',
@@ -169,6 +220,59 @@ const EVIDENCE_COUNTS: EvidenceCountDefinition[] = [
 ];
 
 
+export function validateKoreanFieldworkReportHandoffCandidate(
+        resource: NewResource|undefined,
+        documents: Document[] = []
+): KoreanFieldworkReportHandoffValidation {
+
+    const category = getPrintableValue(resource?.category);
+    if (!resource || !category || !isKoreanFieldworkReportHandoffCategory(category)) {
+        return {
+            status: 'not-applicable',
+            category,
+            categoryLabel: category ? getCategoryLabel(category) : undefined,
+            isReportHandoffCategory: false,
+            isCopyable: false,
+            message: KO.NOT_REPORT_HANDOFF,
+            messages: [],
+            relatedFields: [],
+            evidenceCount: 0,
+            issueCount: 0
+        };
+    }
+
+    const document = makeDraftDocument(resource);
+    const reportDocuments = documents
+        .filter(candidate => candidate.resource.id !== document.resource.id)
+        .concat(document);
+    const item = makeKoreanFieldworkReportHandoff(reportDocuments)
+        .items.find(candidate => candidate.documentId === document.resource.id);
+    const messages = getValidationMessages(resource, item);
+    const relatedFields = getValidationRelatedFields(resource, messages);
+    const status = !item
+        ? 'review'
+        : messages.length > 0 || item.issueCount > 0
+            ? 'review'
+            : 'ready';
+
+    return {
+        status,
+        documentId: document.resource.id,
+        category,
+        categoryLabel: getCategoryLabel(category),
+        identifier: getDocumentIdentifier(document),
+        isReportHandoffCategory: true,
+        isCopyable: !!item,
+        message: getValidationMessage(status, item, messages),
+        messages,
+        relatedFields,
+        evidenceCount: item?.evidenceCount ?? 0,
+        issueCount: (item?.issueCount ?? 0) + messages.length,
+        copyText: item?.copyText
+    };
+}
+
+
 export function makeKoreanFieldworkReportHandoff(documents: Document[]): KoreanFieldworkReportHandoff {
 
     const items = documents
@@ -183,6 +287,105 @@ export function makeKoreanFieldworkReportHandoff(documents: Document[]): KoreanF
         issueCount: items.reduce((count, item) => count + item.issueCount, 0),
         copyAllText: items.map(item => item.copyText).join('\n\n')
     };
+}
+
+
+function makeDraftDocument(resource: NewResource): Document {
+
+    const resourceId = getPrintableValue(resource.id)
+        ?? `__korean-fieldwork-draft-${getPrintableValue(resource.category) ?? 'record'}__`;
+
+    return {
+        _id: resourceId,
+        resource: {
+            ...resource,
+            id: resourceId,
+            relations: resource.relations ?? {}
+        },
+        created: {} as any,
+        modified: []
+    };
+}
+
+
+function getValidationMessages(
+        resource: NewResource,
+        item: KoreanFieldworkReportHandoffItem|undefined
+): string[] {
+
+    const messages: string[] = [];
+    const category = getPrintableValue(resource.category);
+
+    if (!item) {
+        messages.push('\ub370\uc2a4\ud06c\ud1b1 \ubcf4\uace0\uc11c \ud0ed\uc5d0\uc11c \ubcf5\uc0ac \ube14\ub85d\uc744 \ub9cc\ub4e4 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4.');
+    }
+    if (!getPrintableValue(resource.identifier) && !getPrintableValue(resource.reportIdentifier)) {
+        messages.push('\ubcf4\uace0\uc11c\uc5d0\uc11c \uad6c\ubd84\ud560 \uae30\ub85d \ubc88\ud638/\uc774\ub984\uc774 \ube44\uc5b4 \uc788\uc2b5\ub2c8\ub2e4.');
+    }
+    if (!hasPrintableField(resource, SUMMARY_FIELDS)) {
+        messages.push('HWP \ubcf5\uc0ac \ubb38\uc7a5\uc5d0 \ub4e4\uc5b4\uac08 \uc694\uc57d \uae30\ub85d\uc774 \ube44\uc5b4 \uc788\uc2b5\ub2c8\ub2e4.');
+    }
+    if (category && RELATION_REQUIRED_CATEGORIES.includes(category) && !hasAnyRelation(resource)) {
+        messages.push('\uc0c1\uc704 \uc870\uc0ac\uad6c\uc5ed/\uc720\uad6c\ub098 \uadfc\uac70 \ub300\uc0c1\uacfc\uc758 \uad00\uacc4\uac00 \uc5c6\uc5b4 \ub370\uc2a4\ud06c\ud1b1\uc5d0\uc11c \ubb36\uc74c\uc73c\ub85c \ubcf4\uae30 \uc5b4\ub835\uc2b5\ub2c8\ub2e4.');
+    }
+    if (category && MEDIA_URI_FIELDS[category] && !hasPrintableField(resource, MEDIA_URI_FIELDS[category])) {
+        messages.push('\uc0ac\uc9c4/\ub3c4\uba74 \uc6d0\ubcf8 \uacbd\ub85c\ub098 \uc2a4\ucf00\uce58 \ub370\uc774\ud130\uac00 \ube44\uc5b4 \uc788\uc2b5\ub2c8\ub2e4.');
+    }
+    if (category === 'PenMemo' && !hasPrintableField(resource, PEN_MEMO_CONTENT_FIELDS)) {
+        messages.push('\ud604\uc7a5\uba54\ubaa8 \ub0b4\uc6a9\uc774\ub098 \ud544\uae30 \uc2a4\ud2b8\ub85c\ud06c\uac00 \ube44\uc5b4 \uc788\uc2b5\ub2c8\ub2e4.');
+    }
+
+    return messages;
+}
+
+
+function getValidationRelatedFields(resource: NewResource, messages: string[]): string[] {
+
+    if (messages.length === 0) return [];
+
+    const category = getPrintableValue(resource.category);
+    const fields = [
+        'identifier',
+        'reportIdentifier',
+        'relations',
+        ...SUMMARY_FIELDS
+    ];
+
+    if (category && MEDIA_URI_FIELDS[category]) fields.push(...MEDIA_URI_FIELDS[category]);
+    if (category === 'PenMemo') fields.push(...PEN_MEMO_CONTENT_FIELDS);
+
+    return Array.from(new Set(fields));
+}
+
+
+function getValidationMessage(
+        status: KoreanFieldworkReportHandoffValidationStatus,
+        item: KoreanFieldworkReportHandoffItem|undefined,
+        messages: string[]
+): string {
+
+    if (status === 'not-applicable') return KO.NOT_REPORT_HANDOFF;
+    if (status === 'ready') return `${KO.CHECKED_FOR_DESKTOP}: ${KO.REPORT_HANDOFF_READY}`;
+
+    const issueCount = (item?.issueCount ?? 0) + messages.length;
+
+    return `${KO.CHECKED_FOR_DESKTOP}: ${KO.REVIEW_NEEDED} ${issueCount}`;
+}
+
+
+function hasPrintableField(resource: NewResource, fieldNames: string[]): boolean {
+
+    return fieldNames.some(fieldName => {
+        const value = getPrintableValue(resource[fieldName]);
+        return !!value && value !== '[]';
+    });
+}
+
+
+function hasAnyRelation(resource: NewResource): boolean {
+
+    return Object.values(resource.relations ?? {})
+        .some(relationTargets => Array.isArray(relationTargets) && relationTargets.length > 0);
 }
 
 
