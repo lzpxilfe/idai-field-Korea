@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 
-$root = Resolve-Path (Join-Path $PSScriptRoot "..\..")
+$root = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $desktop = [Environment]::GetFolderPath("Desktop")
 $shell = New-Object -ComObject WScript.Shell
 

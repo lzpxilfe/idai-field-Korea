@@ -1,21 +1,51 @@
 # 현장 기록
 
-한국 고고학 현장에서 태블릿과 데스크톱을 함께 쓰기 위한 디지털 야장입니다. 현장에서는 조사 경계를 잡고, 트렌치와 유구를 빠르게 만들고, 사진·스케치·손글씨 메모·약측값을 바로 붙입니다. 사무실에서는 같은 프로젝트를 데스크톱에서 열어 위치, 사진, 도면, 토층, 유물, 시료, 보완 항목, 보고서 인계 자료를 정리합니다.
+한국 고고학 발굴 현장에서 태블릿으로 남긴 기록을 데스크톱 검수와 HWP 보고서 작성까지 이어 주기 위한 iDAI.field 기반 작업 저장소입니다. 현장에서는 트렌치, 유구, 토층, 사진, 스케치, 유물, 보완 메모를 빠르게 남기고, 사무실에서는 같은 자료를 큰 화면에서 검토한 뒤 보고서 문장과 표로 옮깁니다.
 
-원본은 독일고고학연구소(DAI)와 GBV가 개발한 [iDAI.field](https://github.com/dainst/idai-field)입니다. 이 저장소는 Apache-2.0 라이선스를 따르는 독립 포크이며, 한국 매장문화재 조사 현장에 맞춘 별도 버전으로 운영합니다.
+원본은 독일고고학연구소(DAI)와 GBV가 개발한 [iDAI.field](https://github.com/dainst/idai-field)입니다. 이 저장소는 Apache-2.0 라이선스를 따르는 독립 포크이며, 한국 매장문화재 조사 업무에 맞춘 별도 버전으로 운영합니다.
 
-## 빠른 시작
+| 데스크톱 보고서 보조 | 태블릿 현장 입력 |
+| --- | --- |
+| ![BridgeDesk 데스크톱 보고서 화면](tools/bridgedesk/docs/screenshots/desktop-report.png) | ![BridgeDesk 태블릿 현장 입력 화면](tools/bridgedesk/docs/screenshots/tablet-input.png) |
 
-### 태블릿에 바로 설치
+## 바로 들어가기
 
-일반 사용자는 Android APK를 내려받아 태블릿에 직접 설치합니다. Google Play 배포를 전제로 하지 않습니다.
+Windows에서 저장소를 받은 뒤, 루트 폴더에서 아래 파일을 더블클릭합니다.
 
-1. GitHub Releases 또는 Actions 산출물에서 `idai-field-mobile-release.apk`를 받습니다.
-2. APK를 태블릿으로 옮깁니다.
-3. Android가 "알 수 없는 앱 설치" 권한을 묻는 경우, APK를 여는 앱에 한해 허용합니다.
-4. 앱 목록에서 `현장 기록`을 실행합니다.
+| 하고 싶은 일 | 실행 파일 | 결과 |
+| --- | --- | --- |
+| HWP 옆에 띄워 놓고 기록을 복사 | `START_BRIDGEDESK_DESKTOP.cmd` | BridgeDesk 데스크톱 검수 화면 실행 |
+| 태블릿 입력 화면 열기 | `START_BRIDGEDESK_TABLET_SERVER.cmd` | 같은 Wi-Fi에서 접속할 수 있는 입력 페이지 실행 |
+| 보고서 초안 파일 만들기 | `EXPORT_BRIDGEDESK_HWP_REPORT.cmd` | TXT, HTML, CSV, JSON 내보내기 |
+| 전체 iDAI.field 데스크톱 앱 실행 | `run-idai-field-ko.ps1` | 한국어 Electron 데스크톱 앱 실행 |
 
-Windows PC에서 USB로 설치할 수도 있습니다.
+바탕화면 바로가기가 필요하면 `tools\bridgedesk\INSTALL_DESKTOP_SHORTCUTS.cmd`를 실행합니다. `BridgeDesk`, `BridgeDesk Tablet Server`, `BridgeDesk HWP Export` 바로가기가 만들어집니다.
+
+## BridgeDesk
+
+BridgeDesk는 Git이나 명령어를 모르는 사용자도 쓸 수 있도록 따로 묶은 작은 데스크톱 프로그램입니다. 태블릿에서 내보낸 JSON을 읽고, HWP에 바로 붙여넣기 쉬운 문장과 표를 보여 줍니다.
+
+- `초안 복사`: 전체 보고서 초안을 클립보드에 복사
+- `표 복사`: 전체 현장 기록을 탭 구분 표로 복사
+- `기록 복사`: 선택한 기록 하나를 문단 형태로 복사
+- `표 행 복사`: 선택한 기록 하나를 HWP 표에 붙여넣기 쉬운 한 줄로 복사
+
+자세한 설치 안내는 [BridgeDesk 설치와 실행 입구](docs/korean-fieldwork/bridgedesk-installation.md), [데스크톱 설치 문서](tools/bridgedesk/docs/INSTALL_DESKTOP.md), [태블릿 설치 문서](tools/bridgedesk/docs/INSTALL_TABLET.md)에 정리되어 있습니다.
+
+## 자료 흐름
+
+1. 현장에서 태블릿으로 트렌치, 유구, 토층, 사진 번호, 도면 번호, 유물 번호, 보완 메모를 입력합니다.
+2. 태블릿 입력 화면에서 JSON을 내보냅니다.
+3. JSON 파일을 `tools\bridgedesk\data\inbox` 폴더에 넣습니다.
+4. 데스크톱에서 BridgeDesk를 열어 누락과 표현을 검토합니다.
+5. 필요한 문장이나 표를 HWP에 복사해 붙여넣습니다.
+6. 보관용 산출물이 필요하면 `EXPORT_BRIDGEDESK_HWP_REPORT.cmd`로 보고서 패키지를 만듭니다.
+
+`data\inbox`가 비어 있으면 BridgeDesk는 발굴 현장 예시 데이터인 `tools\bridgedesk\data\tablet_submissions.json`을 읽어 화면과 보고서 흐름을 먼저 확인할 수 있습니다.
+
+## 태블릿 설치
+
+Android 태블릿 앱은 APK로 설치합니다. Google Play 배포를 전제로 하지 않습니다.
 
 ```powershell
 .\install-idai-field-android-apk.ps1 -ApkPath .\dist\android\idai-field-mobile-release.apk -DownloadPlatformTools
@@ -27,99 +57,30 @@ Windows PC에서 USB로 설치할 수도 있습니다.
 .\install-idai-field-android-apk.ps1 -ApkPath .\dist\android\idai-field-mobile-release.apk -DeviceSerial R83Y70CADYP
 ```
 
-자세한 태블릿 설치 절차는 [Android 태블릿 설치 안내](docs/korean-fieldwork/android-tablet-install.ko.md)에 있습니다.
-
-### 데스크톱에서 실행
-
-Windows 개발/현장 PC에서 한국어 데스크톱 앱을 바로 띄우려면 저장소 루트에서 실행합니다.
-
-```powershell
-.\run-idai-field-ko.ps1
-```
-
-이 스크립트는 한국어 Angular 개발 서버를 준비하고 Electron 앱 창을 엽니다. 처음 실행할 때는 의존성 설치와 번들 생성 때문에 시간이 걸릴 수 있습니다.
-
-생산용 데스크톱 빌드를 만들려면 다음 흐름을 사용합니다.
-
-```powershell
-npm run bootstrap
-npm --prefix core run build
-npm --prefix desktop run build
-npm --prefix desktop run package:win
-```
-
-Windows 패키지는 `desktop/release` 아래에 만들어집니다. 인증서나 Windows 권한 설정에 따라 NSIS 설치 파일 생성이 실패할 수 있으며, 그 경우 `desktop/release/win-unpacked/Field Desktop.exe`를 직접 실행할 수 있습니다.
+자세한 절차는 [Android 태블릿 설치 안내](docs/korean-fieldwork/android-tablet-install.ko.md)를 확인합니다.
 
 ## 주요 기능
 
-### 태블릿 현장 기록
-
-- 프로젝트 생성 시 조사 방식, 조사 경계 상태, 좌표계, 현장 메모를 함께 잡습니다.
-- 표본조사·시굴조사·발굴조사 흐름에 맞춰 트렌치와 유구 기록을 시작합니다.
-- 지도 화면에서 현재 GPS 위치를 기준으로 조사 경계 초안을 만들 수 있습니다.
-- 카카오 JavaScript 키가 있으면 위성지도를 보며 경계 위치를 찍을 수 있습니다.
-- 지도에서 유구를 추가하고 바로 기록 입력 화면으로 이어갈 수 있습니다.
-- 조사 전·중·완료 사진, 토층 사진, 유물 노출 사진, 약측, 장축 방위, 손글씨 메모, 스케치를 한 기록에 묶습니다.
-- 오늘 작업판, 우선순위, 누락 항목, 전체 유구 현황을 태블릿에서 확인합니다.
-- Munsell(먼셀) 토색 후보와 토층 사진 보조 기록을 남길 수 있습니다.
-
-### 데스크톱 정리와 보고서 인계
-
-- 태블릿에서 만든 프로젝트를 열어 위치, 경계, 기록 관계를 큰 화면에서 검토합니다.
-- 전체 유구 현황, 작업 패널, 보완 목록, 기록 근거 연결을 한꺼번에 확인합니다.
-- SHP/DXF/GeoJSON 같은 기존 경계·도면 자료를 가져와 현장 기록과 맞춥니다.
-- 이미지 내보내기 시 사진 파일뿐 아니라 `fieldwork-image-export-manifest.json`, `fieldwork-image-export-manifest.csv`, `fieldwork-image-export-readme.txt`를 함께 만듭니다.
-- 이미지 manifest에는 프로젝트 맥락, 관련 유구/트렌치, 태블릿 원본 URI, 서버 저장 크기, MD5/SHA-256, 내보낸 파일 해시, 데스크톱 앱 버전이 들어갑니다.
-- CSV manifest는 스프레드시트 수식 실행을 막도록 값이 중립화되어 보고서 인계용으로 열기 쉽습니다.
-
-### 동기화와 원본 보존
-
-- 태블릿과 데스크톱은 같은 프로젝트 문서와 이미지 기록을 공유하도록 설계되어 있습니다.
-- 태블릿에서 촬영한 원본 이미지는 `original_image`로 업로드하고, 서버 응답의 `size_bytes`, `md5`, `sha256` 값을 기록에 남깁니다.
-- 이전에 서버 저장 메타데이터가 빠졌던 이미지도 동기화 과정에서 보강할 수 있게 했습니다.
-- 완료 점검은 단순히 이미지 문서가 있다는 것만 보지 않고, 태블릿 업로드와 서버 저장 메타데이터가 남아 있는지도 확인합니다.
-- 1년 뒤 보고서 작성자가 사진 파일과 원기록의 연결을 다시 확인할 수 있도록, 내보낸 이미지와 manifest에 증거 흐름을 남깁니다.
-
-## 현장 사용 흐름
-
-새 프로젝트를 만들 때는 먼저 조사 방식과 조사 경계를 정합니다. 경계는 태블릿에서 GPS와 지도를 보며 찍거나, 데스크톱에서 기존 공간 자료를 가져와 정리할 수 있습니다.
-
-| 조사 성격 | 주로 남기는 기록 |
-| --- | --- |
-| 표본조사 | 조사구역, 트렌치, 토층 정리 여부, 유구 확인 여부, 피트, 사진 |
-| 시굴조사 | 조사구역, 트렌치 번호, 기준 토층, 유구 사진, 피트 토층, 트렌치 완료 사진 |
-| 발굴조사 | 제토 중 확인된 유구, 조사 전/중/완료 사진, 토층, 유물 수습, 실측, 보완 메모 |
-
-표본조사와 시굴조사는 트렌치 단위로 시작합니다. 트렌치를 판 순서대로 번호를 붙이고, 토층 정리 여부, 유구 확인 여부, 피트 조사 여부, 피트 토층 기록 여부, 정방향·사선·기준 토층·유구 사진을 남깁니다.
-
-발굴조사는 유구 단위로 기록합니다. 제토 중 확인된 유구의 위치를 먼저 찍고, 조사 전 사진을 남긴 뒤 조사 중 사진, 토층 사진, 유물 노출 사진, 유물 수습, 완료 사진, 실측 여부를 이어서 기록합니다. 처음에는 `미상`이나 `추정`으로 두었다가 조사하면서 유구 성격과 시기를 고쳐 갈 수 있습니다.
-
-## 지도 API와 토큰
-
-지도 키와 토큰은 코드에 직접 넣지 않고 설정이나 로컬 환경변수로 지정합니다.
-
-- 카카오 JavaScript 키: 태블릿 위성지도와 경계 위치 선택에 사용합니다.
-- 카카오 REST API 키: 지도 표시용이 아니라 로컬 API 연동용으로 구분합니다.
-- 카카오 Native App 키: 네이티브 지도 연동을 위해 별도로 보관합니다.
-- Mapbox 토큰: 필요한 경우 로컬 환경변수로만 지정합니다.
-
-```powershell
-$env:REACT_APP_MAPBOX_ACCESS_TOKEN = "your-token"
-$env:REACT_APP_MAPBOX_STYLE_ID = "user/style-id"
-```
-
-토큰과 키는 저장소에 커밋하지 않습니다. 공개 이력에 노출된 값은 지도 서비스 콘솔에서 폐기하고 새로 발급해야 합니다.
+- 프로젝트 생성 시 조사 방식, 조사 경계 상태, 좌표계, 현장 메모를 함께 기록합니다.
+- 표본조사, 시굴조사, 발굴조사 흐름에 맞춰 트렌치와 유구 기록을 시작합니다.
+- 지도 화면에서 현재 위치나 위성지도를 보며 조사 경계와 유구 위치를 잡습니다.
+- 조사 전, 조사 중, 완료 사진과 토층 사진, 유물 노출 사진, 스케치, 손글씨 메모를 한 기록에 묶습니다.
+- 전체 유구 현황, 우선순위, 누락 항목, 보완 메모를 태블릿과 데스크톱에서 확인합니다.
+- 사진 내보내기 시 파일뿐 아니라 원기록 연결, 해시, 서버 저장 메타데이터를 manifest로 남깁니다.
+- 보고서 작성자는 BridgeDesk에서 검수한 문장과 표를 HWP로 옮겨 쓸 수 있습니다.
 
 ## 개발 환경
 
 이 저장소는 iDAI.field의 monorepo 구조를 유지합니다.
 
-- [core](core): 공통 TypeScript 모델, 설정, 동기화 보조 로직
-- [desktop](desktop): Angular/Electron 기반 데스크톱 앱
-- [mobile](mobile): React Native/Expo 기반 Android 태블릿 앱
-- [server](server): Field Hub 동기화 서버
-- [publication](publication): 공개/출판 플랫폼 관련 코드
-- [web](web): 웹 관련 코드
+| 경로 | 역할 |
+| --- | --- |
+| `core` | 공통 TypeScript 모델, 설정, 동기화 보조 로직 |
+| `desktop` | Angular/Electron 기반 데스크톱 앱 |
+| `mobile` | React Native/Expo 기반 Android 태블릿 앱 |
+| `server` | Field Hub 동기화 서버 |
+| `publication` | 공개와 출판 플랫폼 관련 코드 |
+| `tools\bridgedesk` | HWP 보고서 보조용 BridgeDesk 도구 |
 
 처음 개발 환경을 준비할 때는 의존성을 설치합니다.
 
@@ -140,28 +101,34 @@ Android APK를 직접 만들려면 Node.js 20 이상, JDK 17 이상, Android SDK
 .\run-idai-field-tablet-ko.ps1
 ```
 
-Expo Go는 사용하지 않습니다. 이 앱은 저장소, 파일, 지도, 이미지 처리, 암호화 같은 네이티브 모듈을 쓰므로 개발 빌드나 APK로 실행해야 합니다.
+Expo Go는 사용하지 않습니다. 저장소, 파일, 지도, 이미지 처리, 암호화 같은 네이티브 모듈을 쓰므로 개발 빌드나 APK로 실행해야 합니다.
 
 ## 검증
 
-한국형 현장 기록 흐름을 한 번에 점검하는 루트 스크립트가 있습니다.
+한국형 현장 기록 흐름을 한 번에 점검합니다.
 
 ```bash
 npm run check:korean-fieldwork
 ```
 
-데스크톱 빌드까지 포함해 더 넓게 확인하려면 다음 명령을 사용합니다.
+데스크톱 빌드까지 포함해 넓게 확인하려면 다음 명령을 사용합니다.
 
 ```bash
 npm run check:korean-fieldwork:full
 ```
 
-서버 테스트는 Elixir/Mix/Erlang이 설치된 환경에서 별도로 실행해야 합니다.
+BridgeDesk만 확인할 때는 아래 명령을 사용합니다.
+
+```powershell
+cd tools\bridgedesk
+python -m unittest discover -s tests
+```
 
 ## 문서
 
-- [현장 적용 연구 노트](docs/korean-fieldwork/README.md)
+- [BridgeDesk 설치와 실행 입구](docs/korean-fieldwork/bridgedesk-installation.md)
 - [Android 태블릿 설치 안내](docs/korean-fieldwork/android-tablet-install.ko.md)
+- [현장 적용 연구 노트](docs/korean-fieldwork/README.md)
 - [한국형 야장 구현 요구사항](docs/korean-fieldwork/field-notebook-requirements.md)
 - [한국형 야장 기록 워크플로](docs/korean-fieldwork/field-recording-workflows.md)
 - [iDAI.field wiki 한국어 번역](docs/wiki/README.md)
@@ -171,7 +138,7 @@ npm run check:korean-fieldwork:full
 
 이 저장소는 iDAI.field 원본에 병합 요청을 보내는 것을 전제로 하지 않는 독립 포크입니다. 원작자가 이 포크의 변경을 Pull Request로 받을 수 없다고 밝힌 상황을 존중하며, 원본 프로젝트와 원작자에게 리뷰, 병합, 한국형 기능 검토, 사용자 지원 부담을 넘기지 않습니다.
 
-필요한 변경은 이 저장소 안에서 이슈, 커밋, 릴리스로 처리합니다. 원본 프로젝트에는 출처와 라이선스 고지, 공개 문서 링크, 참고한 upstream 변경 기록만 남기며, 사전 합의 없는 PR·멘션·지원 요청은 보내지 않는 것을 이 포크의 운영 헌장으로 삼습니다. 자세한 기준은 [CONTRIBUTING.md](CONTRIBUTING.md)에 둡니다.
+필요한 변경은 이 저장소 안에서 이슈, 커밋, 릴리스로 처리합니다. 원본 프로젝트에는 출처와 라이선스 고지, 공개 문서 링크, 참고한 upstream 변경 기록만 남기며, 사전 합의 없는 PR, 멘션, 지원 요청은 보내지 않는 것을 이 포크의 운영 기준으로 삼습니다.
 
 ## 출처와 라이선스
 
@@ -202,10 +169,6 @@ Using Field, archaeologists can:
 - locate all of their records on a map
 - manage types and inventories
 - sync and publish their excavation data
-
-## Information for users and interested projects
-
-The original project invites users to join the [Field users mailing list](https://lists.fu-berlin.de/listinfo/idaifield2-user) and the [GitHub Discussions](https://github.com/dainst/idai-field/discussions).
 
 ## Development
 

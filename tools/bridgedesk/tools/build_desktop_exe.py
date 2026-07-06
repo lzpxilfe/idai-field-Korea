@@ -10,13 +10,38 @@ import sys
 ROOT = Path(__file__).resolve().parent.parent
 
 
+def find_pyinstaller_python() -> list[str]:
+    candidates = [
+        [sys.executable],
+        ["python"],
+        ["py", "-3.12"],
+        ["py", "-3.11"],
+        ["py", "-3"],
+    ]
+
+    for candidate in candidates:
+        probe = subprocess.run(
+            [*candidate, "-c", "import PyInstaller"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        if probe.returncode == 0:
+            return candidate
+
+    raise SystemExit(
+        "PyInstaller is required to build BridgeDesk.exe. "
+        "Install it with: python -m pip install pyinstaller"
+    )
+
+
 def main() -> None:
     icon_path = ROOT / "assets" / "icons" / "bridgedesk.ico"
     if not icon_path.exists():
         subprocess.run([sys.executable, str(ROOT / "tools" / "make_visual_assets.py")], check=True)
 
+    pyinstaller_python = find_pyinstaller_python()
     desktop_command = [
-        sys.executable,
+        *pyinstaller_python,
         "-m",
         "PyInstaller",
         "--noconfirm",
@@ -41,7 +66,7 @@ def main() -> None:
     subprocess.run(desktop_command, check=True)
 
     tablet_server_command = [
-        sys.executable,
+        *pyinstaller_python,
         "-m",
         "PyInstaller",
         "--noconfirm",
