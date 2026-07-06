@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#24445a">
+  <title>BridgeDesk Archaeology Field</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <h1>BridgeDesk Archaeology Field</h1>
+      <p id="syncStatus">저장 대기</p>
+    </div>
+    <button id="exportButton" type="button">JSON 내보내기</button>
+  </header>
+
+  <main class="app-shell">
+    <section class="panel">
+      <h2>조사 정보</h2>
+      <div class="field-grid">
+        <label>
+          조사명
+          <input id="projectName" autocomplete="off" value="월성 북편 발굴조사">
+        </label>
+        <label>
+          구역
+          <input id="siteName" autocomplete="off" value="3트렌치 북벽">
+        </label>
+        <label>
+          기록자
+          <input id="inspector" autocomplete="off" value="김조사">
+        </label>
+        <label>
+          조사 환경
+          <input id="weather" autocomplete="off" value="흐림, 약한 바람">
+        </label>
+        <label class="wide">
+          위치 메모
+          <input id="address" autocomplete="off" value="경주시 인왕동 발굴조사 구역">
+        </label>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="section-title">
+        <h2>현장 항목</h2>
+        <button id="addEntryButton" type="button">항목 추가</button>
+      </div>
+      <div id="entries" class="entries"></div>
+    </section>
+  </main>
+
+  <nav class="bottom-actions">
+    <button id="saveButton" type="button">임시저장</button>
+    <button id="resetButton" type="button">새 조사</button>
+  </nav>
+
+  <template id="entryTemplate">
+    <article class="entry">
+      <div class="entry-head">
+        <strong class="entry-number">항목</strong>
+        <button class="remove-entry" type="button">삭제</button>
+      </div>
+      <div class="field-grid">
+        <label>
+          구분
+          <input data-field="section" autocomplete="off" value="토층">
+        </label>
+        <label>
+          항목
+          <input data-field="item" autocomplete="off" value="북벽 3층 경계">
+        </label>
+        <label>
+          상태
+          <select data-field="status">
+            <option>기록대기</option>
+            <option selected>기록완료</option>
+            <option>추가확인</option>
+            <option>수습완료</option>
+            <option>보존주의</option>
+          </select>
+        </label>
+        <label>
+          기준고/관찰값
+          <input data-field="measured_value" autocomplete="off" value="GL-42cm, 암갈색 사질점토층">
+        </label>
+        <label class="wide">
+          현장 기록
+          <textarea data-field="memo">2층 하부에서 암갈색 사질점토층이 완만하게 동쪽으로 낮아지며 이어짐. 숯립과 소토립이 소량 포함됨.</textarea>
+        </label>
+        <label class="wide">
+          보고서 반영 메모
+          <textarea data-field="recommendation">북벽 단면도에 3층 경계를 별도 선으로 표기하고, 동쪽 확장 구간에서 연속 여부를 확인한다.</textarea>
+        </label>
+        <label class="wide">
+          사진/도면/유물 번호
+          <input data-field="photo_ids" autocomplete="off" value="P-001, P-002, D-001">
+        </label>
+      </div>
+    </article>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+[project]
+name = "bridgedesk"
+version = "0.1.0"
+description = "A responsive Tkinter desktop app that shares tablet and desktop layout logic."
+requires-python = ">=3.11"
+
+[tool.pyright]
+include = ["compatdesk", "tests"]

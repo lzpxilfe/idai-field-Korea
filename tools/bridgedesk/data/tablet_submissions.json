@@ -1,0 +1,74 @@
+[
+  {
+    "submission_id": "ARCH-2026-0706-001",
+    "project_name": "월성 북편 발굴조사",
+    "site_name": "3트렌치 북벽",
+    "submitted_at": "2026-07-06T09:42:00+09:00",
+    "inspector": "김조사",
+    "device_id": "TAB-ARCH-03",
+    "weather": "흐림, 약한 바람",
+    "location": {
+      "address": "경주시 인왕동 발굴조사 구역",
+      "lat": 35.8342,
+      "lon": 129.2247
+    },
+    "entries": [
+      {
+        "entry_id": "E-001",
+        "section": "토층",
+        "item": "북벽 3층 경계",
+        "status": "기록완료",
+        "measured_value": "GL-42cm, 암갈색 사질점토층",
+        "memo": "2층 하부에서 암갈색 사질점토층이 완만하게 동쪽으로 낮아지며 이어짐. 숯립과 소토립이 소량 포함됨.",
+        "recommendation": "북벽 단면도에 3층 경계를 별도 선으로 표기하고, 동쪽 확장 구간에서 연속 여부를 확인한다.",
+        "photo_ids": ["P-001", "P-002", "D-001"]
+      },
+      {
+        "entry_id": "E-002",
+        "section": "유구",
+        "item": "수혈 유구 SK-03",
+        "status": "추가확인",
+        "measured_value": "평면 지름 약 78cm",
+        "memo": "원형에 가까운 수혈 윤곽이 확인되나 남서쪽 경계가 교란토와 겹쳐 불명확함.",
+        "recommendation": "남서쪽 경계를 5cm 단위로 정리하며 평면 사진과 실측도를 추가 확보한다.",
+        "photo_ids": ["P-003", "D-002"]
+      }
+    ]
+  },
+  {
+    "submission_id": "ARCH-2026-0706-002",
+    "project_name": "월성 북편 발굴조사",
+    "site_name": "4트렌치 동측 확장부",
+    "submitted_at": "2026-07-06T11:18:00+09:00",
+    "inspector": "이기록",
+    "device_id": "TAB-ARCH-07",
+    "weather": "맑음",
+    "location": {
+      "address": "경주시 인왕동 발굴조사 구역",
+      "lat": 35.8345,
+      "lon": 129.2251
+    },
+    "entries": [
+      {
+        "entry_id": "E-003",
+        "section": "유물",
+        "item": "토기편 출토",
+        "status": "수습완료",
+        "measured_value": "4점, 회청색 경질 토기편",
+        "memo": "동측 확장부 2층 하부에서 토기편 4점이 산포 상태로 확인됨. 문양은 확인되지 않음.",
+        "recommendation": "출토 위치를 좌표로 기록하고 유물 봉투 번호 A-2026-014와 연결한다.",
+        "photo_ids": ["P-011", "F-014"]
+      },
+      {
+        "entry_id": "E-004",
+        "section": "보존",
+        "item": "토층 단면 건조",
+        "status": "보존주의",
+        "measured_value": "동벽 상단부 약 1.4m 구간",
+        "memo": "직사광으로 동벽 상단부가 빠르게 건조되며 미세 균열이 발생하기 시작함.",
+        "recommendation": "촬영 후 차광막을 설치하고 단면 정리 전 분무량을 최소화하여 상태를 유지한다.",
+        "photo_ids": ["P-012", "P-013"]
+      }
+    ]
+  }
+]

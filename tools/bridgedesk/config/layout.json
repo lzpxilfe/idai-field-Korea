@@ -1,0 +1,42 @@
+{
+  "breakpoints": {
+    "tablet": 720,
+    "desktop": 1100,
+    "wide": 1440
+  },
+  "spacing": {
+    "compact": 12,
+    "tablet": 16,
+    "desktop": 20,
+    "wide": 24
+  },
+  "navigation": {
+    "topHeight": 56,
+    "tabletRailWidth": 104,
+    "desktopSidebarWidth": 236
+  },
+  "window": {
+    "defaultWidth": 1180,
+    "defaultHeight": 760,
+    "minWidth": 600,
+    "minHeight": 520
+  },
+  "contentColumns": {
+    "compact": 1,
+    "tablet": 1,
+    "desktop": 2,
+    "wide": 2
+  },
+  "formColumns": {
+    "compact": 1,
+    "tablet": 1,
+    "desktop": 2,
+    "wide": 2
+  },
+  "tableFields": {
+    "compact": ["source_ref", "site_name", "item", "status"],
+    "tablet": ["source_ref", "site_name", "section", "item", "status", "inspector", "submitted_at"],
+    "desktop": ["source_ref", "site_name", "section", "item", "status", "inspector", "submitted_at"],
+    "wide": ["source_ref", "site_name", "section", "item", "status", "inspector", "submitted_at"]
+  }
+}
