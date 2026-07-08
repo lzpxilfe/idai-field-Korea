@@ -328,6 +328,7 @@ const featureRows = [
     ],
     desktop: [
       'core/src/tools/korean-fieldwork-document-drafts.ts',
+      'core/src/tools/korean-fieldwork-field-note.ts',
       'core/src/tools/korean-fieldwork-record-contract.ts',
       'core/src/tools/korean-fieldwork-report-handoff.ts',
       'desktop/src/app/components/docedit/core/korean-fieldwork-record-context-panel.component.ts',
@@ -390,6 +391,8 @@ const releaseCriticalPatterns = [
   /^core\/test\/tools\/korean-fieldwork-record-contract\.spec\.ts$/,
   /^core\/src\/tools\/korean-fieldwork-draft-defaults\.ts$/,
   /^core\/test\/tools\/korean-fieldwork-draft-defaults\.spec\.ts$/,
+  /^core\/src\/tools\/korean-fieldwork-field-note\.ts$/,
+  /^core\/test\/tools\/korean-fieldwork-field-note\.spec\.ts$/,
   /^core\/src\/tools\/korean-fieldwork-report-handoff\.ts$/,
   /^core\/test\/tools\/korean-fieldwork-report-handoff\.spec\.ts$/,
   /^core\/src\/tools\/korean-fieldwork-soil-color\.ts$/,
@@ -484,6 +487,7 @@ const classifiedSupportSourceGroups = [
     reason: 'release verification tooling that keeps tablet and desktop fieldwork flows aligned',
     files: [
       'core/test/tools/korean-fieldwork-soil-color.spec.ts',
+      'core/test/tools/korean-fieldwork-field-note.spec.ts',
       'tools/korean-fieldwork-media-contract-check.js',
       'tools/korean-fieldwork-parity-check.js',
       'tools/korean-fieldwork-verify.js'
@@ -2163,6 +2167,9 @@ function validateProjectInvestigationModeWording() {
   const desktopNotebookDigestText = readTextFile(
     'desktop/src/app/util/korean-fieldwork-notebook-digest.ts'
   );
+  const coreFieldNoteText = readTextFile(
+    'core/src/tools/korean-fieldwork-field-note.ts'
+  );
   const koreanValuelistKoText = readTextFile(
     'core/config/Library/Valuelists/Language.projects.ko.json'
   );
@@ -2265,15 +2272,27 @@ function validateProjectInvestigationModeWording() {
       findings.push(`tablet feature observation placeholders must bind descriptions to sketch/measurement evidence: ${requiredAnchor}`);
     }
   }
+  if (![
+    '사진·도면·스케치·유물·시료 번호',
+    '\\uc0ac\\uc9c4\\u00b7\\ub3c4\\uba74\\u00b7\\uc2a4\\ucf00\\uce58\\u00b7\\uc720\\ubb3c\\u00b7\\uc2dc\\ub8cc \\ubc88\\ud638'
+  ].some(token => coreFieldNoteText.includes(token))) {
+    findings.push('shared field-note contract must include sketch numbers in field-note evidence numbering');
+  }
+  if (![
+    '사진·도면·유물·시료 번호',
+    '\\uc0ac\\uc9c4\\u00b7\\ub3c4\\uba74\\u00b7\\uc720\\ubb3c\\u00b7\\uc2dc\\ub8cc \\ubc88\\ud638'
+  ].some(token => coreFieldNoteText.includes(token))) {
+    findings.push('shared field-note contract must keep the previous evidence-number label as a parsing alias');
+  }
   for (const [label, text] of [
     ['tablet field notes', tabletFieldNotesText],
     ['desktop notebook digest', desktopNotebookDigestText]
   ]) {
-    if (!text.includes('사진·도면·스케치·유물·시료 번호')) {
-      findings.push(`${label} must include sketch numbers in field-note evidence numbering`);
-    }
-    if (!text.includes('사진·도면·유물·시료 번호')) {
-      findings.push(`${label} must keep the previous evidence-number label as a parsing alias`);
+    if (
+      !text.includes('extractSharedKoreanFieldworkFieldNoteInput')
+      && !text.includes('extractKoreanFieldworkFieldNoteInput as extractSharedKoreanFieldworkFieldNoteInput')
+    ) {
+      findings.push(`${label} must parse field-note sections through the shared core contract`);
     }
   }
   if (!koreanValuelistKoText.includes('"label": "조사 중 기록"')) {
@@ -2899,6 +2918,9 @@ function validateRecordPanelOrder() {
   const tabletFieldNotesText = readTextFile(
     'mobile/components/Project/korean-fieldwork-field-notes.ts'
   );
+  const coreFieldNoteText = readTextFile(
+    'core/src/tools/korean-fieldwork-field-note.ts'
+  );
   const tabletFieldNotesSpecText = readTextFile(
     'mobile/components/Project/korean-fieldwork-field-notes.spec.ts'
   );
@@ -3216,10 +3238,18 @@ function validateRecordPanelOrder() {
         findings.push(check.finding);
       }
     }
-    if (!text.includes('FIELD_NOTE_SECTION_ALIASES')
-        || !text.includes('근거 번호')
-        || !text.includes('스케치·약측/근거 번호')) {
-      findings.push(`${label} must accept old and sketch/measurement evidence-number section labels`);
+    const usesSharedFieldNoteContract = text.includes('extractSharedKoreanFieldworkFieldNoteInput')
+      || text.includes('hasMeaningfulKoreanFieldworkFieldNoteText');
+    const sharedContractHasAliases = [
+      '근거 번호',
+      '\\uadfc\\uac70 \\ubc88\\ud638'
+    ].some(token => coreFieldNoteText.includes(token))
+      && [
+        '스케치·약측/근거 번호',
+        '\\uc2a4\\ucf00\\uce58\\u00b7\\uc57d\\uce21/\\uadfc\\uac70 \\ubc88\\ud638'
+      ].some(token => coreFieldNoteText.includes(token));
+    if (!usesSharedFieldNoteContract || !sharedContractHasAliases) {
+      findings.push(`${label} must accept old and sketch/measurement evidence-number section labels through the shared core contract`);
     }
     if (!text.includes('hasMeaningfulFieldNoteText')) {
       findings.push(`${label} must ignore field-note section templates without content`);

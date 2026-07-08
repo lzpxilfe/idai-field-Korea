@@ -1,16 +1,18 @@
-import { Document } from 'idai-field-core';
+import {
+    Document,
+    extractKoreanFieldworkFieldNoteInput as extractSharedKoreanFieldworkFieldNoteInput,
+    hasMeaningfulKoreanFieldworkFieldNoteText,
+    KoreanFieldworkFieldNoteInput as CoreKoreanFieldworkFieldNoteInput,
+    normalizeKoreanFieldworkFieldNoteText as normalizeSharedKoreanFieldworkFieldNoteText,
+    trimKoreanFieldworkFieldNoteInput
+} from 'idai-field-core';
 import {
     getPenMemoSketchPreview,
     KoreanFieldworkPenMemoSketchPreview
 } from './korean-fieldwork-evidence-review';
 
 
-export interface KoreanFieldworkFieldNoteInput {
-    observation?: string;
-    interpretation?: string;
-    nextWork?: string;
-    evidenceNumbers?: string;
-}
+export type KoreanFieldworkFieldNoteInput = CoreKoreanFieldworkFieldNoteInput;
 
 export interface KoreanFieldworkNotebookEntry {
     id: string;
@@ -179,20 +181,11 @@ const CATEGORY_LABELS: { [categoryName: string]: string } = {
     Trench: '트렌치'
 };
 
-const FIELD_NOTE_SECTION_DEFINITIONS: {
-    id: keyof KoreanFieldworkFieldNoteInput;
-    label: string;
-}[] = [
-    { id: 'observation', label: '관찰 내용' },
-    { id: 'interpretation', label: '해석' },
-    { id: 'nextWork', label: '다음 작업' },
-    { id: 'evidenceNumbers', label: '사진·도면·스케치·유물·시료 번호' }
-];
-const FIELD_NOTE_SECTION_ALIASES: { [label: string]: keyof KoreanFieldworkFieldNoteInput } = {
-    '스케치·약측/근거 번호': 'evidenceNumbers',
-    '근거 번호': 'evidenceNumbers',
-    '사진·도면·유물·시료 번호': 'evidenceNumbers'
-};
+export const normalizeKoreanFieldworkFieldNoteText = normalizeSharedKoreanFieldworkFieldNoteText;
+export const extractKoreanFieldworkFieldNoteInput = extractSharedKoreanFieldworkFieldNoteInput;
+
+const hasMeaningfulFieldNoteText = hasMeaningfulKoreanFieldworkFieldNoteText;
+const trimFieldNoteInput = trimKoreanFieldworkFieldNoteInput;
 
 
 export function makeKoreanFieldworkDailyNotebookDigest(
@@ -279,40 +272,6 @@ export function getKoreanFieldworkNotebookEntriesForDocument(
     return getKoreanFieldworkNotebookEntries(documents, Number.MAX_SAFE_INTEGER)
         .filter(entry => isNotebookEntryRelatedToDocument(entry, document))
         .slice(0, limit);
-}
-
-
-export const normalizeKoreanFieldworkFieldNoteText = (text: string): string =>
-    text.replace(/\r\n/g, '\n').trim();
-
-
-export function extractKoreanFieldworkFieldNoteInput(text: string): KoreanFieldworkFieldNoteInput {
-
-    const input: KoreanFieldworkFieldNoteInput = {};
-    let currentField: keyof KoreanFieldworkFieldNoteInput|undefined;
-
-    normalizeKoreanFieldworkFieldNoteText(text).split('\n').forEach(rawLine => {
-        const line = stripDailyLogEntryPrefix(rawLine.trim());
-        const match = line.match(/^\[([^\]]+)\]\s*(.*)$/);
-        const field = match ? getFieldNoteSectionId(match[1]) : undefined;
-
-        if (field) {
-            currentField = field;
-            appendFieldNoteInputLine(input, field, match?.[2] ?? '');
-            return;
-        }
-
-        if (match) {
-            currentField = undefined;
-            return;
-        }
-
-        if (currentField && line.length > 0) {
-            appendFieldNoteInputLine(input, currentField, line);
-        }
-    });
-
-    return trimFieldNoteInput(input);
 }
 
 
@@ -454,31 +413,6 @@ function getNotebookEntryDetail(
     return [detail, handwritingSummaryLabel]
         .filter(value => value.length > 0)
         .join(' · ');
-}
-
-
-function hasMeaningfulFieldNoteText(text: string): boolean {
-
-    const noteText = normalizeKoreanFieldworkFieldNoteText(text);
-    if (!noteText) return false;
-
-    const input = extractKoreanFieldworkFieldNoteInput(noteText);
-    if (FIELD_NOTE_SECTION_DEFINITIONS.some(section =>
-        normalizeKoreanFieldworkFieldNoteText(input[section.id] ?? '').length > 0
-    )) return true;
-
-    return noteText.split('\n').some(rawLine => {
-        const line = stripDailyLogEntryPrefix(rawLine.trim());
-        return line.length > 0 && !isFieldNoteSectionHeadingOnly(line);
-    });
-}
-
-
-function isFieldNoteSectionHeadingOnly(line: string): boolean {
-
-    const match = line.match(/^\[([^\]]+)\]\s*$/);
-
-    return !!match && !!getFieldNoteSectionId(match[1]);
 }
 
 
@@ -704,39 +638,6 @@ function isDocumentDate(document: Document, dateLabel: string): boolean {
 
     const timestamp = getTimestamp(document);
     return timestamp > 0 && formatDate(new Date(timestamp)) === dateLabel;
-}
-
-
-function getFieldNoteSectionId(label: string): keyof KoreanFieldworkFieldNoteInput|undefined {
-
-    return FIELD_NOTE_SECTION_DEFINITIONS.find(section => section.label === label)?.id
-        ?? FIELD_NOTE_SECTION_ALIASES[label];
-}
-
-
-function appendFieldNoteInputLine(
-        input: KoreanFieldworkFieldNoteInput,
-        field: keyof KoreanFieldworkFieldNoteInput,
-        line: string
-) {
-
-    const text = line.trim();
-    if (!text) return;
-
-    input[field] = [input[field], text]
-        .filter((value): value is string => !!value && value.length > 0)
-        .join('\n');
-}
-
-
-function trimFieldNoteInput(input: KoreanFieldworkFieldNoteInput): KoreanFieldworkFieldNoteInput {
-
-    return {
-        observation: normalizeKoreanFieldworkFieldNoteText(input.observation ?? ''),
-        interpretation: normalizeKoreanFieldworkFieldNoteText(input.interpretation ?? ''),
-        nextWork: normalizeKoreanFieldworkFieldNoteText(input.nextWork ?? ''),
-        evidenceNumbers: normalizeKoreanFieldworkFieldNoteText(input.evidenceNumbers ?? '')
-    };
 }
 
 

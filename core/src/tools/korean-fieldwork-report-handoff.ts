@@ -21,6 +21,12 @@ import {
     isKoreanFieldworkRecordValuelistField,
     isKoreanFieldworkReportHandoffCategory
 } from './korean-fieldwork-record-contract';
+import {
+    KOREAN_FIELDWORK_FIELD_NOTE_HANDWRITING_SUMMARY_LABEL,
+    KOREAN_FIELDWORK_FIELD_NOTE_SUMMARY_LABELS,
+    KoreanFieldworkFieldNoteSectionId,
+    parseKoreanFieldworkFieldNote
+} from './korean-fieldwork-field-note';
 
 
 export type KoreanFieldworkReportHandoffTone = 'ready'|'review';
@@ -484,30 +490,8 @@ const DAILY_LOG_REVIEW_LABELS: Readonly<Record<string, string>> = {
     pendingDecision: '\ucd94\uac00 \ud655\uc778'
 };
 
-type FieldNoteSectionId = 'observation'|'interpretation'|'nextWork'|'evidenceNumbers';
-
-const FIELD_NOTE_SECTION_LABELS: Readonly<Record<FieldNoteSectionId, string>> = {
-    observation: '\uad00\ucc30',
-    interpretation: '\ud574\uc11d',
-    nextWork: '\ub2e4\uc74c \uc791\uc5c5',
-    evidenceNumbers: '\uadfc\uac70 \ubc88\ud638'
-};
-
-const FIELD_NOTE_SECTION_IDS: Readonly<Record<string, FieldNoteSectionId>> = {
-    '\uad00\ucc30 \ub0b4\uc6a9': 'observation',
-    '\ud574\uc11d': 'interpretation',
-    '\ub2e4\uc74c \uc791\uc5c5': 'nextWork',
-    '\uc0ac\uc9c4\u00b7\ub3c4\uba74\u00b7\uc2a4\ucf00\uce58\u00b7\uc720\ubb3c\u00b7\uc2dc\ub8cc \ubc88\ud638': 'evidenceNumbers',
-    '\uc0ac\uc9c4\u00b7\ub3c4\uba74\u00b7\uc720\ubb3c\u00b7\uc2dc\ub8cc \ubc88\ud638': 'evidenceNumbers',
-    '\uc2a4\ucf00\uce58\u00b7\uc57d\uce21/\uadfc\uac70 \ubc88\ud638': 'evidenceNumbers',
-    '\uadfc\uac70 \ubc88\ud638': 'evidenceNumbers'
-};
-
-const FIELD_NOTE_HANDWRITING_SUMMARY_LABEL = '\uc190\uadf8\ub9bc \uba54\ubaa8';
-const FIELD_NOTE_HANDWRITING_COORDINATE_LABELS = new Set([
-    '\uc190\uadf8\ub9bc \uc88c\ud45c',
-    '\uc190\uadf8\ub9bc \uba54\ubaa8 \uc88c\ud45c'
-]);
+const FIELD_NOTE_SECTION_LABELS = KOREAN_FIELDWORK_FIELD_NOTE_SUMMARY_LABELS;
+const FIELD_NOTE_HANDWRITING_SUMMARY_LABEL = KOREAN_FIELDWORK_FIELD_NOTE_HANDWRITING_SUMMARY_LABEL;
 
 const RELATION_DETAIL_ORDER = [
     'liesWithin',
@@ -1456,7 +1440,7 @@ function getFieldNoteSummaryParts(value: any): string[] {
         'interpretation',
         'nextWork',
         'evidenceNumbers'
-    ] as FieldNoteSectionId[])
+    ] as KoreanFieldworkFieldNoteSectionId[])
         .map(sectionId => getLabeledEvidenceValue(
             FIELD_NOTE_SECTION_LABELS[sectionId],
             getPrintableValue(parsed.sections[sectionId])
@@ -1479,79 +1463,10 @@ function parseFieldNote(value: any): {
     fallbackLines: string[];
     hasHandwritingEvidence: boolean;
     handwritingSummary?: string;
-    sections: Record<FieldNoteSectionId, string>;
+    sections: Record<KoreanFieldworkFieldNoteSectionId, string>;
 } {
 
-    const result = {
-        fallbackLines: [] as string[],
-        hasHandwritingEvidence: false,
-        handwritingSummary: undefined as string|undefined,
-        sections: {
-            observation: '',
-            interpretation: '',
-            nextWork: '',
-            evidenceNumbers: ''
-        } as Record<FieldNoteSectionId, string>
-    };
-    let currentSection: FieldNoteSectionId|undefined;
-
-    getTextLines(value).forEach(rawLine => {
-        const line = rawLine.trim();
-        if (!line) return;
-
-        const headingMatch = line.match(/^\[([^\]]+)\]\s*(.*)$/);
-        if (headingMatch) {
-            const heading = headingMatch[1].trim();
-            const text = headingMatch[2].trim();
-            const sectionId = FIELD_NOTE_SECTION_IDS[heading];
-
-            currentSection = sectionId;
-            if (sectionId) {
-                appendFieldNoteSectionLine(result.sections, sectionId, text);
-            } else {
-                handleFieldNoteSpecialLine(result, heading, text);
-            }
-            return;
-        }
-
-        if (currentSection) {
-            appendFieldNoteSectionLine(result.sections, currentSection, line);
-        } else if (!isLikelyJsonText(line)) {
-            result.fallbackLines.push(line);
-        }
-    });
-
-    return result;
-}
-
-
-function appendFieldNoteSectionLine(sections: Record<FieldNoteSectionId, string>,
-                                    sectionId: FieldNoteSectionId,
-                                    value: string) {
-
-    if (!value || isLikelyJsonText(value)) return;
-
-    sections[sectionId] = sections[sectionId]
-        ? `${sections[sectionId]}\n${value}`
-        : value;
-}
-
-
-function handleFieldNoteSpecialLine(result: ReturnType<typeof parseFieldNote>,
-                                    heading: string,
-                                    text: string) {
-
-    if (heading === FIELD_NOTE_HANDWRITING_SUMMARY_LABEL) {
-        result.handwritingSummary = text || result.handwritingSummary;
-        return;
-    }
-
-    if (FIELD_NOTE_HANDWRITING_COORDINATE_LABELS.has(heading)) {
-        result.hasHandwritingEvidence = hasStrokeEvidence(text);
-        return;
-    }
-
-    if (text && !isLikelyJsonText(text)) result.fallbackLines.push(`${heading}: ${text}`);
+    return parseKoreanFieldworkFieldNote(value, { omitJsonLines: true });
 }
 
 

@@ -1,9 +1,18 @@
 import {
+  buildKoreanFieldworkFieldNoteText as buildSharedKoreanFieldworkFieldNoteText,
   buildEvidenceBundle,
   Document,
+  extractKoreanFieldworkFieldNoteInput as extractSharedKoreanFieldworkFieldNoteInput,
+  hasAnyKoreanFieldworkFieldNoteInput,
+  hasMeaningfulKoreanFieldworkFieldNoteText,
+  KOREAN_FIELDWORK_FIELD_NOTE_SECTION_DEFINITIONS,
+  KoreanFieldworkFieldNoteInput as CoreKoreanFieldworkFieldNoteInput,
   KoreanFieldworkReadinessIssue,
   NewDocument,
+  normalizeKoreanFieldworkFieldNoteText,
   ProjectConfiguration,
+  removeEmptyKoreanFieldworkFieldNoteInputValues,
+  trimKoreanFieldworkFieldNoteInput,
 } from 'idai-field-core';
 import { createKoreanFieldworkDraftResource } from './korean-fieldwork-document-drafts';
 import {
@@ -27,12 +36,7 @@ const FEATURE_PROGRESS_CATEGORIES = new Set<string>([
 
 export type KoreanFieldworkFieldNoteMode = 'recordMemo'|'dailyLog'|'both';
 
-export interface KoreanFieldworkFieldNoteInput {
-  observation?: string;
-  interpretation?: string;
-  nextWork?: string;
-  evidenceNumbers?: string;
-}
+export type KoreanFieldworkFieldNoteInput = CoreKoreanFieldworkFieldNoteInput;
 
 export interface KoreanFieldworkFieldNoteSummary {
   document: Document;
@@ -157,21 +161,16 @@ interface KoreanFieldworkNotebookEntryWithSortKey
   sortKey: number;
 }
 
-const FIELD_NOTE_SECTION_DEFINITIONS: {
-  id: keyof KoreanFieldworkFieldNoteInput;
-  label: string;
-}[] = [
-  { id: 'observation', label: '관찰 내용' },
-  { id: 'interpretation', label: '해석' },
-  { id: 'nextWork', label: '다음 작업' },
-  { id: 'evidenceNumbers', label: '사진·도면·스케치·유물·시료 번호' },
-];
-const FIELD_NOTE_SECTION_ALIASES: Record<string, keyof KoreanFieldworkFieldNoteInput> = {
-  '스케치·약측/근거 번호': 'evidenceNumbers',
-  '근거 번호': 'evidenceNumbers',
-  '사진·도면·유물·시료 번호': 'evidenceNumbers',
-};
+const FIELD_NOTE_SECTION_DEFINITIONS = KOREAN_FIELDWORK_FIELD_NOTE_SECTION_DEFINITIONS;
+const hasAnyFieldNoteInput = hasAnyKoreanFieldworkFieldNoteInput;
+const hasMeaningfulFieldNoteText = hasMeaningfulKoreanFieldworkFieldNoteText;
+const removeEmptyFieldNoteInputValues = removeEmptyKoreanFieldworkFieldNoteInputValues;
+const trimFieldNoteInput = trimKoreanFieldworkFieldNoteInput;
 const RECORD_FIELD_NOTE_SOURCE_LABEL = '기록 메모';
+
+export const normalizeFieldNoteText = normalizeKoreanFieldworkFieldNoteText;
+export const buildKoreanFieldworkFieldNoteText = buildSharedKoreanFieldworkFieldNoteText;
+export const extractKoreanFieldworkFieldNoteInput = extractSharedKoreanFieldworkFieldNoteInput;
 
 export const createKoreanFieldworkRecordMemoDraft = (
   document: Document,
@@ -424,46 +423,6 @@ export const getKoreanFieldworkDailyNotebookDigest = (
       entry.needsEvidenceNumbers
     ),
   };
-};
-
-export const normalizeFieldNoteText = (text: string): string =>
-  text.replace(/\r\n/g, '\n').trim();
-
-export const buildKoreanFieldworkFieldNoteText = (
-  input: KoreanFieldworkFieldNoteInput
-): string => FIELD_NOTE_SECTION_DEFINITIONS
-  .map((section) => formatFieldNoteSection(section.label, input[section.id]))
-  .filter((section): section is string => !!section)
-  .join('\n');
-
-export const extractKoreanFieldworkFieldNoteInput = (
-  text: string
-): KoreanFieldworkFieldNoteInput => {
-  const input: KoreanFieldworkFieldNoteInput = {};
-  let currentField: keyof KoreanFieldworkFieldNoteInput | undefined;
-
-  normalizeFieldNoteText(text).split('\n').forEach((rawLine) => {
-    const line = stripDailyLogEntryPrefix(rawLine.trim());
-    const match = line.match(/^\[([^\]]+)\]\s*(.*)$/);
-    const field = match ? getFieldNoteSectionId(match[1]) : undefined;
-
-    if (field) {
-      currentField = field;
-      appendFieldNoteInputLine(input, field, match?.[2] ?? '');
-      return;
-    }
-
-    if (match) {
-      currentField = undefined;
-      return;
-    }
-
-    if (currentField && line.length > 0) {
-      appendFieldNoteInputLine(input, currentField, line);
-    }
-  });
-
-  return trimFieldNoteInput(input);
 };
 
 export const getKoreanFieldworkFieldNoteChecklist = (
@@ -1155,15 +1114,6 @@ const inferDailyLogContent = (
   return Array.from(content);
 };
 
-const formatFieldNoteSection = (
-  label: string,
-  value: string | undefined
-): string | undefined => {
-  const text = normalizeFieldNoteText(value ?? '');
-
-  return text.length > 0 ? `[${label}] ${text}` : undefined;
-};
-
 const hasText = (value: string | undefined): boolean =>
   normalizeFieldNoteText(value ?? '').length > 0;
 
@@ -1751,67 +1701,6 @@ const isDocumentDate = (
 
   const timestamp = getTimestamp(document);
   return timestamp > 0 && formatDate(new Date(timestamp)) === dateLabel;
-};
-
-const getFieldNoteSectionId = (
-  label: string
-): keyof KoreanFieldworkFieldNoteInput | undefined =>
-  FIELD_NOTE_SECTION_DEFINITIONS.find((section) =>
-    section.label === label
-  )?.id ?? FIELD_NOTE_SECTION_ALIASES[label];
-
-const appendFieldNoteInputLine = (
-  input: KoreanFieldworkFieldNoteInput,
-  field: keyof KoreanFieldworkFieldNoteInput,
-  line: string
-) => {
-  const text = line.trim();
-  if (!text) return;
-
-  input[field] = [input[field], text]
-    .filter((value): value is string => !!value && value.length > 0)
-    .join('\n');
-};
-
-const trimFieldNoteInput = (
-  input: KoreanFieldworkFieldNoteInput
-): KoreanFieldworkFieldNoteInput => ({
-  observation: normalizeFieldNoteText(input.observation ?? ''),
-  interpretation: normalizeFieldNoteText(input.interpretation ?? ''),
-  nextWork: normalizeFieldNoteText(input.nextWork ?? ''),
-  evidenceNumbers: normalizeFieldNoteText(input.evidenceNumbers ?? ''),
-});
-
-const removeEmptyFieldNoteInputValues = (
-  input: KoreanFieldworkFieldNoteInput
-): KoreanFieldworkFieldNoteInput => Object.fromEntries(
-  Object.entries(input).filter(([, value]) =>
-    typeof value === 'string' && value.length > 0
-  )
-) as KoreanFieldworkFieldNoteInput;
-
-const hasAnyFieldNoteInput = (
-  input: KoreanFieldworkFieldNoteInput
-): boolean => FIELD_NOTE_SECTION_DEFINITIONS.some((section) =>
-  hasText(input[section.id])
-);
-
-const hasMeaningfulFieldNoteText = (text: string): boolean => {
-  const noteText = normalizeFieldNoteText(text);
-  if (!noteText) return false;
-
-  const input = extractKoreanFieldworkFieldNoteInput(noteText);
-  if (hasAnyFieldNoteInput(input)) return true;
-
-  return noteText.split('\n').some((rawLine) => {
-    const line = stripDailyLogEntryPrefix(rawLine.trim());
-    return line.length > 0 && !isFieldNoteSectionHeadingOnly(line);
-  });
-};
-
-const isFieldNoteSectionHeadingOnly = (line: string): boolean => {
-  const match = line.match(/^\[([^\]]+)\]\s*$/);
-  return !!match && !!getFieldNoteSectionId(match[1]);
 };
 
 const stripDailyLogEntryPrefix = (line: string): string =>
