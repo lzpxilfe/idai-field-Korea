@@ -10,6 +10,7 @@ import {
     getKoreanFieldworkFeatureTypeLabel,
     getKoreanFieldworkFeatureTypeLabelFromInterpretationType
 } from './korean-fieldwork-feature-types';
+import { parseSoilProfileColorSwatchRows } from './korean-fieldwork-soil-color';
 import {
     getKoreanFieldworkCategoryLabel,
     getKoreanFieldworkFeaturePeriodSummary,
@@ -1880,6 +1881,11 @@ function getSoilColorSampleSourceLabel(value: any, swatchValue?: any): string|un
 
 
 function getSoilColorSampleLocationFromSwatches(value: any): string|undefined {
+
+    const sharedLocations = parseSoilProfileColorSwatchRows(value)
+        .map(row => row.sample ? `${row.number}\uce35: ${row.sample.label}` : undefined)
+        .filter((location): location is string => !!location);
+    if (sharedLocations.length > 0) return sharedLocations.join(', ');
 
     const locations = getTextLines(value)
         .map(line => line.trim())

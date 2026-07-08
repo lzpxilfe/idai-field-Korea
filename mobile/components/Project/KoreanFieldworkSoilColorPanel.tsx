@@ -1,7 +1,15 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import {
   CategoryForm,
+  appendEmptySoilProfileColorSwatchRow,
   NewResource,
+  parseSoilProfileColorSwatchRows,
+  renameSoilProfileColorSwatchRowNumber,
+  SoilProfileColorSamplePoint,
+  SoilProfileColorSwatchRow,
+  updateSoilProfileColorSwatchMunsellValue,
+  updateSoilProfileColorSwatchNoteValue,
+  updateSoilProfileColorSwatchSampleValue,
 } from 'idai-field-core';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
@@ -38,27 +46,9 @@ interface SoilColorOption {
   label: string;
 }
 
-interface SoilColorLayerRow {
-  munsell: string;
-  note: string;
-  number: number;
-  sample?: SoilColorSampleSummary;
-  value: string;
-}
+type SoilColorLayerRow = SoilProfileColorSwatchRow;
 
-interface SoilColorSampleSummary {
-  blue: number;
-  green: number;
-  label: string;
-  point?: SoilColorSamplePointSummary;
-  pointLabel?: string;
-  red: number;
-}
-
-export interface SoilColorSamplePointSummary {
-  xPercent: number;
-  yPercent: number;
-}
+export interface SoilColorSamplePointSummary extends SoilProfileColorSamplePoint {}
 
 const C = KOREAN_FIELDWORK_CATEGORIES;
 
@@ -103,12 +93,6 @@ const MUNSELL_HUE_OPTIONS: {
 
 const MUNSELL_HUE_NUMBER_OPTIONS = MUNSELL_HUE_OPTIONS.numbers;
 const MUNSELL_HUE_FAMILY_OPTIONS = MUNSELL_HUE_OPTIONS.families;
-const MUNSELL_VALUE_PATTERN =
-  /^(GLEY\s*[12]\s*\d(?:\.\d)?\/N|(?:10|7\.5|5|2\.5)(?:R|YR|Y|GY|G|BG|B|PB|P|RP)\s+\d(?:\.\d)?\/\d+(?:\.\d)?|N\s*\d(?:\.\d)?\/0)\s*(.*)$/i;
-const RGB_SAMPLE_PATTERN = /\bRGB\s+(\d{1,3})\/(\d{1,3})\/(\d{1,3})\b/i;
-const RGB_SAMPLE_NOTE_PATTERN =
-  /\s*\bRGB\s+\d{1,3}\/\d{1,3}\/\d{1,3}(?:\s*@\s*\d{1,3}%\/\d{1,3}%)?/gi;
-const SAMPLE_POINT_PATTERN = /(\d{1,3})%\/(\d{1,3})%/;
 
 const MUNSELL_VALUE_OPTIONS: readonly SoilColorOption[] =
   ['1', '2', '2.5', '3', '4', '5', '6', '7', '8', '9'].map((value) => ({
@@ -159,7 +143,9 @@ const KoreanFieldworkSoilColorPanel: React.FC<KoreanFieldworkSoilColorPanelProps
     assistCandidateText
   ).map((value) => ({ value, label: value }));
   const soilColorRows = useMemo(
-    () => getSoilColorRows(getTextValue(resource, SOIL_COLOR_FIELDS.profileColorSwatches)),
+    () => parseSoilProfileColorSwatchRows(
+      getTextValue(resource, SOIL_COLOR_FIELDS.profileColorSwatches)
+    ),
     [resource]
   );
   const soilProfilePhotoUri = canRecordPhotoSwatches
@@ -224,7 +210,7 @@ const KoreanFieldworkSoilColorPanel: React.FC<KoreanFieldworkSoilColorPanelProps
     const nextRowNumber = Number.parseInt(rowNumberInput.trim(), 10);
     if (!Number.isFinite(nextRowNumber) || nextRowNumber < 1) return;
 
-    const nextValue = renameSoilColorRowNumber(
+    const nextValue = renameSoilProfileColorSwatchRowNumber(
       getTextValue(resource, SOIL_COLOR_FIELDS.profileColorSwatches),
       editingRowNumber,
       nextRowNumber
@@ -246,7 +232,7 @@ const KoreanFieldworkSoilColorPanel: React.FC<KoreanFieldworkSoilColorPanelProps
 
     if (canRecordPhotoSwatches) {
       updateFields({
-        [SOIL_COLOR_FIELDS.profileColorSwatches]: updateSoilColorRowMunsellValue(
+        [SOIL_COLOR_FIELDS.profileColorSwatches]: updateSoilProfileColorSwatchMunsellValue(
           getTextValue(resource, SOIL_COLOR_FIELDS.profileColorSwatches),
           activeRowNumber,
           value
@@ -259,7 +245,7 @@ const KoreanFieldworkSoilColorPanel: React.FC<KoreanFieldworkSoilColorPanelProps
   const updateLayerMunsellValue = (rowNumber: number, value: string) => {
     setSelectedRowNumber(rowNumber);
     updateFields({
-      [SOIL_COLOR_FIELDS.profileColorSwatches]: updateSoilColorRowMunsellValue(
+      [SOIL_COLOR_FIELDS.profileColorSwatches]: updateSoilProfileColorSwatchMunsellValue(
         getTextValue(resource, SOIL_COLOR_FIELDS.profileColorSwatches),
         rowNumber,
         value
@@ -271,7 +257,7 @@ const KoreanFieldworkSoilColorPanel: React.FC<KoreanFieldworkSoilColorPanelProps
   const updateLayerNoteValue = (rowNumber: number, value: string) => {
     setSelectedRowNumber(rowNumber);
     updateFields({
-      [SOIL_COLOR_FIELDS.profileColorSwatches]: updateSoilColorRowNoteValue(
+      [SOIL_COLOR_FIELDS.profileColorSwatches]: updateSoilProfileColorSwatchNoteValue(
         getTextValue(resource, SOIL_COLOR_FIELDS.profileColorSwatches),
         rowNumber,
         value
@@ -310,7 +296,7 @@ const KoreanFieldworkSoilColorPanel: React.FC<KoreanFieldworkSoilColorPanelProps
 
     if (canRecordPhotoSwatches) {
       updateFields({
-        [SOIL_COLOR_FIELDS.profileColorSwatches]: updateSoilColorRowMunsellValue(
+        [SOIL_COLOR_FIELDS.profileColorSwatches]: updateSoilProfileColorSwatchMunsellValue(
           getTextValue(resource, SOIL_COLOR_FIELDS.profileColorSwatches),
           activeRowNumber,
           value
@@ -466,10 +452,10 @@ const KoreanFieldworkSoilColorPanel: React.FC<KoreanFieldworkSoilColorPanelProps
           <TouchableOpacity
             activeOpacity={0.84}
             onPress={() => {
-              const nextValue = appendEmptySoilColorRow(
+              const nextValue = appendEmptySoilProfileColorSwatchRow(
                 getTextValue(resource, SOIL_COLOR_FIELDS.profileColorSwatches)
               );
-              const nextRows = getSoilColorRows(nextValue);
+              const nextRows = parseSoilProfileColorSwatchRows(nextValue);
               const nextRowNumber = nextRows[nextRows.length - 1]?.number ?? 1;
               setSelectedRowNumber(nextRowNumber);
               updateFields({
@@ -882,106 +868,6 @@ const formatMunsell = (
   return `${hueNumber}${hueFamily} ${value}/${chroma}`;
 };
 
-const getSoilColorRows = (currentValue: string): SoilColorLayerRow[] => {
-  const lines = currentValue
-    .split(/\r?\n/)
-    .map((line) => line.trimEnd())
-    .filter((line) => line.trim().length > 0);
-
-  if (lines.length === 0) return [createSoilColorLayerRow(1, '')];
-
-  return lines.map((line, index) => {
-    const match = line.match(/^\s*(\d+)\s*:?\s*(.*)$/);
-
-    if (!match) return createSoilColorLayerRow(index + 1, line.trim());
-
-    return createSoilColorLayerRow(
-      Number.parseInt(match[1], 10),
-      match[2] ?? ''
-    );
-  });
-};
-
-const createSoilColorLayerRow = (
-  number: number,
-  value: string
-): SoilColorLayerRow => {
-  const { munsell, note: rawNote } = splitSoilColorRowValue(value);
-  const sample = getSoilColorSampleSummary(rawNote);
-  const note = removeSoilColorSampleSummary(rawNote);
-
-  return {
-    munsell,
-    note,
-    number,
-    sample,
-    value: formatSoilColorRowValue(munsell, note, sample?.label),
-  };
-};
-
-const splitSoilColorRowValue = (value: string): {
-  munsell: string;
-  note: string;
-} => {
-  const normalizedValue = value.trim();
-  const match = normalizedValue.match(MUNSELL_VALUE_PATTERN);
-  if (!match) {
-    return {
-      munsell: '',
-      note: normalizedValue,
-    };
-  }
-
-  return {
-    munsell: normalizeMunsellText(match[1]),
-    note: (match[2] ?? '').trim(),
-  };
-};
-
-const normalizeMunsellText = (value: string): string =>
-  value.toUpperCase().replace(/\s+/g, ' ').trim();
-
-const getSoilColorSampleSummary = (
-  value: string
-): SoilColorSampleSummary | undefined => {
-  const rgbMatch = value.match(RGB_SAMPLE_PATTERN);
-  if (!rgbMatch) return undefined;
-
-  const red = Number.parseInt(rgbMatch[1], 10);
-  const green = Number.parseInt(rgbMatch[2], 10);
-  const blue = Number.parseInt(rgbMatch[3], 10);
-  if (![red, green, blue].every(isValidRgbChannel)) return undefined;
-
-  const pointMatch = value.match(SAMPLE_POINT_PATTERN);
-  const point = pointMatch
-    ? {
-      xPercent: clampSamplePercent(Number.parseInt(pointMatch[1], 10)),
-      yPercent: clampSamplePercent(Number.parseInt(pointMatch[2], 10)),
-    }
-    : undefined;
-  const pointLabel = point
-    ? `${point.xPercent}%/${point.yPercent}%`
-    : undefined;
-
-  return {
-    blue,
-    green,
-    label: formatSoilColorSampleLabel(red, green, blue, pointLabel),
-    point,
-    pointLabel,
-    red,
-  };
-};
-
-const removeSoilColorSampleSummary = (value: string): string =>
-  value
-    .replace(RGB_SAMPLE_NOTE_PATTERN, ' ')
-    .replace(/\s{2,}/g, ' ')
-    .trim();
-
-const isValidRgbChannel = (value: number): boolean =>
-  Number.isFinite(value) && value >= 0 && value <= 255;
-
 const clampSamplePercent = (value: number): number =>
   Number.isFinite(value)
     ? Math.max(0, Math.min(100, Math.round(value)))
@@ -1015,121 +901,6 @@ export const getSoilColorPhotoMarkerStyle = (
   };
 };
 
-const formatSoilColorSampleLabel = (
-  red: number,
-  green: number,
-  blue: number,
-  pointLabel?: string
-): string =>
-  [`RGB ${red}/${green}/${blue}`, pointLabel ? `@ ${pointLabel}` : '']
-    .filter(Boolean)
-    .join(' ');
-
-const formatSoilColorRowValue = (
-  munsell: string,
-  note: string,
-  sampleLabel?: string
-): string =>
-  [munsell.trim(), note.trim(), sampleLabel?.trim() ?? '']
-    .filter(Boolean)
-    .join(' ');
-
-const appendEmptySoilColorRow = (currentValue: string): string => {
-  const rows = getSoilColorRows(currentValue);
-  const nextNumber = Math.max(0, ...rows.map((row) => row.number)) + 1;
-
-  return serializeSoilColorRows(rows.concat(createSoilColorLayerRow(nextNumber, '')));
-};
-
-const renameSoilColorRowNumber = (
-  currentValue: string,
-  currentRowNumber: number,
-  nextRowNumber: number
-): string => {
-  const rows = getSoilColorRows(currentValue);
-  if (rows.some((row) =>
-    row.number === nextRowNumber && row.number !== currentRowNumber
-  )) {
-    return currentValue;
-  }
-
-  return serializeSoilColorRows(rows.map((row) =>
-    row.number === currentRowNumber
-      ? { ...row, number: nextRowNumber }
-      : row
-  ));
-};
-
-const updateSoilColorRowMunsellValue = (
-  currentValue: string,
-  rowNumber: number,
-  nextMunsell: string
-): string => {
-  const rows = getSoilColorRows(currentValue);
-  const rowIndex = rows.findIndex((row) => row.number === rowNumber);
-  const nextRows = rowIndex < 0
-    ? rows.concat(createSoilColorLayerRow(rowNumber, nextMunsell))
-    : rows.map((row, index) =>
-      index === rowIndex
-        ? createSoilColorLayerRow(
-          row.number,
-          formatSoilColorRowValue(nextMunsell, row.note, row.sample?.label)
-        )
-        : row
-    );
-
-  return serializeSoilColorRows(nextRows);
-};
-
-const updateSoilColorRowNoteValue = (
-  currentValue: string,
-  rowNumber: number,
-  nextNote: string
-): string => {
-  const rows = getSoilColorRows(currentValue);
-  const rowIndex = rows.findIndex((row) => row.number === rowNumber);
-  const nextRows = rowIndex < 0
-    ? rows.concat(createSoilColorLayerRow(rowNumber, nextNote))
-    : rows.map((row, index) =>
-      index === rowIndex
-        ? createSoilColorLayerRow(
-          row.number,
-          formatSoilColorRowValue(row.munsell, nextNote, row.sample?.label)
-        )
-        : row
-    );
-
-  return serializeSoilColorRows(nextRows);
-};
-
-const updateSoilColorRowSampleValue = (
-  currentValue: string,
-  rowNumber: number,
-  nextMunsell: string,
-  assistCandidateText: string
-): string => {
-  const rows = getSoilColorRows(currentValue);
-  const rowIndex = rows.findIndex((row) => row.number === rowNumber);
-  const sample = getSoilColorSampleSummary(assistCandidateText);
-  const formatSampledValue = (note = '') =>
-    formatSoilColorRowValue(nextMunsell, note, sample?.label);
-  const nextRows = rowIndex < 0
-    ? rows.concat(createSoilColorLayerRow(rowNumber, formatSampledValue()))
-    : rows.map((row, index) =>
-      index === rowIndex
-        ? createSoilColorLayerRow(row.number, formatSampledValue(row.note))
-        : row
-    );
-
-  return serializeSoilColorRows(nextRows);
-};
-
-const serializeSoilColorRows = (rows: SoilColorLayerRow[]): string =>
-  rows
-    .sort((left, right) => left.number - right.number)
-    .map((row) => `${row.number}: ${row.value}`)
-    .join('\n');
-
 const getActiveLayerNumber = (resource: NewResource): number | undefined => {
   const rawValue = resource[SOIL_COLOR_FIELDS.activeLayerNumber];
   const numericValue = typeof rawValue === 'number'
@@ -1159,7 +930,7 @@ export const getSoilProfileColorSampleUpdates = (
 
   const activeRowNumber = normalizeLayerNumber(targetLayerNumber)
     ?? getActiveLayerNumber(resource)
-    ?? getSoilColorRows(getTextValue(
+    ?? parseSoilProfileColorSwatchRows(getTextValue(
       resource,
       SOIL_COLOR_FIELDS.profileColorSwatches
     ))[0]?.number
@@ -1167,7 +938,7 @@ export const getSoilProfileColorSampleUpdates = (
 
   return {
     ...assistUpdates,
-    [SOIL_COLOR_FIELDS.profileColorSwatches]: updateSoilColorRowSampleValue(
+    [SOIL_COLOR_FIELDS.profileColorSwatches]: updateSoilProfileColorSwatchSampleValue(
       getTextValue(resource, SOIL_COLOR_FIELDS.profileColorSwatches),
       activeRowNumber,
       sampledMunsell,

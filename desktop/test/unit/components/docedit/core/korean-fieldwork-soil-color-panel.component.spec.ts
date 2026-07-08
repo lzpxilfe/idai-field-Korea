@@ -370,6 +370,30 @@ describe('KoreanFieldworkSoilColorPanelComponent', () => {
     });
 
 
+    it('keeps tablet layer notes when desktop reviewers adjust sampled Munsell rows', () => {
+
+        component.document = {
+            resource: {
+                category: 'SoilProfilePhoto',
+                soilProfileColorSwatches: '1: 10YR 4/3 dark fill RGB 111/87/61 @ 20%/50%'
+            }
+        } as any;
+        component.fieldDefinitions = [
+            { name: 'soilProfileColorSwatches', editable: true }
+        ] as any;
+
+        component.applyMunsellPreset('7.5YR 4/4');
+
+        expect(component.document.resource.soilProfileColorSwatches)
+            .toBe('1: 7.5YR 4/4 dark fill RGB 111/87/61 @ 20%/50%');
+        expect(component.getSoilColorRows()[0]).toMatchObject({
+            note: 'dark fill',
+            sampleRgbLabel: 'RGB 111/87/61',
+            value: '7.5YR 4/4 dark fill RGB 111/87/61 @ 20%/50%'
+        });
+    });
+
+
     it('shows accepted eyedropper locations as numbered markers over the desktop soil profile photo', () => {
 
         component.document = {

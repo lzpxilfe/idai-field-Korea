@@ -32,6 +32,28 @@ export interface MunsellReference {
   rgb: RgbSample;
 }
 
+export interface SoilProfileColorSamplePoint {
+  xPercent: number;
+  yPercent: number;
+}
+
+export interface SoilProfileColorSampleSummary {
+  blue: number;
+  green: number;
+  label: string;
+  point?: SoilProfileColorSamplePoint;
+  pointLabel?: string;
+  red: number;
+}
+
+export interface SoilProfileColorSwatchRow {
+  munsell: string;
+  note: string;
+  number: number;
+  sample?: SoilProfileColorSampleSummary;
+  value: string;
+}
+
 interface XyzColor {
   X: number;
   Y: number;
@@ -41,6 +63,12 @@ interface XyzColor {
 const HIGH_CONFIDENCE_DELTA_E = 3.5;
 const LOW_CONFIDENCE_DELTA_E = 8;
 const CANDIDATE_COUNT = 5;
+const MUNSELL_VALUE_PATTERN =
+  /^(GLEY\s*[12]\s*\d(?:\.\d)?\/N|(?:10|7\.5|5|2\.5)(?:R|YR|Y|GY|G|BG|B|PB|P|RP)\s+\d(?:\.\d)?\/\d+(?:\.\d)?|N\s*\d(?:\.\d)?\/0)\s*(.*)$/i;
+const RGB_SAMPLE_PATTERN = /\bRGB\s+(\d{1,3})\/(\d{1,3})\/(\d{1,3})\b/i;
+const RGB_SAMPLE_NOTE_PATTERN =
+  /\s*\bRGB\s+\d{1,3}\/\d{1,3}\/\d{1,3}(?:\s*@\s*\d{1,3}%\/\d{1,3}%)?/gi;
+const SAMPLE_POINT_PATTERN = /(\d{1,3})%\/(\d{1,3})%/;
 
 const WHITE_POINT_C: XyzColor = { X: 0.98074, Y: 1, Z: 1.18232 };
 const WHITE_POINT_D65: XyzColor = { X: 0.95047, Y: 1, Z: 1.08883 };
@@ -337,6 +365,250 @@ export const extractMunsellCandidateOptions = (text: unknown): string[] => {
 
 export const hasMunsellCandidateOptions = (text: unknown): boolean =>
   extractMunsellCandidateOptions(text).length > 0;
+
+export const parseSoilProfileColorSwatchRows = (
+  currentValue: unknown
+): SoilProfileColorSwatchRow[] => {
+  const lines = getSoilProfileColorTextLines(currentValue)
+    .map((line) => line.trimEnd())
+    .filter((line) => line.trim().length > 0);
+
+  if (lines.length === 0) return [createSoilProfileColorSwatchRow(1, '')];
+
+  return lines.map((line, index) => {
+    const match = line.match(/^\s*(\d+)\s*:?\s*(.*)$/);
+
+    if (!match) return createSoilProfileColorSwatchRow(index + 1, line.trim());
+
+    return createSoilProfileColorSwatchRow(
+      Number.parseInt(match[1], 10),
+      match[2] ?? ''
+    );
+  });
+};
+
+export const createSoilProfileColorSwatchRow = (
+  number: number,
+  value: string
+): SoilProfileColorSwatchRow => {
+  const { munsell, note: rawNote } = splitSoilProfileColorSwatchValue(value);
+  const sample = getSoilProfileColorSampleSummary(rawNote);
+  const note = removeSoilProfileColorSampleSummary(rawNote);
+
+  return {
+    munsell,
+    note,
+    number,
+    ...(sample ? { sample } : {}),
+    value: formatSoilProfileColorSwatchValue(munsell, note, sample?.label),
+  };
+};
+
+export const splitSoilProfileColorSwatchValue = (value: string): {
+  munsell: string;
+  note: string;
+} => {
+  const normalizedValue = value.trim();
+  const match = normalizedValue.match(MUNSELL_VALUE_PATTERN);
+  if (!match) {
+    return {
+      munsell: '',
+      note: normalizedValue,
+    };
+  }
+
+  return {
+    munsell: normalizeSoilProfileColorMunsellText(match[1]),
+    note: (match[2] ?? '').trim(),
+  };
+};
+
+export const normalizeSoilProfileColorMunsellText = (value: string): string =>
+  value.toUpperCase().replace(/\s+/g, ' ').trim();
+
+export const getSoilProfileColorSampleSummary = (
+  value: string
+): SoilProfileColorSampleSummary | undefined => {
+  const rgbMatch = value.match(RGB_SAMPLE_PATTERN);
+  if (!rgbMatch) return undefined;
+
+  const red = Number.parseInt(rgbMatch[1], 10);
+  const green = Number.parseInt(rgbMatch[2], 10);
+  const blue = Number.parseInt(rgbMatch[3], 10);
+  if (![red, green, blue].every(isValidRgbChannel)) return undefined;
+
+  const pointMatch = value.match(SAMPLE_POINT_PATTERN);
+  const point = pointMatch
+    ? {
+      xPercent: clampSamplePercent(Number.parseInt(pointMatch[1], 10)),
+      yPercent: clampSamplePercent(Number.parseInt(pointMatch[2], 10)),
+    }
+    : undefined;
+  const pointLabel = point
+    ? `${point.xPercent}%/${point.yPercent}%`
+    : undefined;
+
+  return {
+    blue,
+    green,
+    label: formatSoilProfileColorSampleLabel(red, green, blue, pointLabel),
+    point,
+    pointLabel,
+    red,
+  };
+};
+
+export const removeSoilProfileColorSampleSummary = (value: string): string =>
+  value
+    .replace(RGB_SAMPLE_NOTE_PATTERN, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+
+export const formatSoilProfileColorSampleLabel = (
+  red: number,
+  green: number,
+  blue: number,
+  pointLabel?: string
+): string =>
+  [`RGB ${red}/${green}/${blue}`, pointLabel ? `@ ${pointLabel}` : '']
+    .filter(Boolean)
+    .join(' ');
+
+export const formatSoilProfileColorSwatchValue = (
+  munsell: string,
+  note: string,
+  sampleLabel?: string
+): string =>
+  [munsell.trim(), note.trim(), sampleLabel?.trim() ?? '']
+    .filter(Boolean)
+    .join(' ');
+
+export const appendEmptySoilProfileColorSwatchRow = (currentValue: unknown): string => {
+  const rows = parseSoilProfileColorSwatchRows(currentValue);
+  const nextNumber = Math.max(0, ...rows.map((row) => row.number)) + 1;
+
+  return serializeSoilProfileColorSwatchRows(
+    rows.concat(createSoilProfileColorSwatchRow(nextNumber, ''))
+  );
+};
+
+export const renameSoilProfileColorSwatchRowNumber = (
+  currentValue: unknown,
+  currentRowNumber: number,
+  nextRowNumber: number
+): string => {
+  const rows = parseSoilProfileColorSwatchRows(currentValue);
+  if (rows.some((row) =>
+    row.number === nextRowNumber && row.number !== currentRowNumber
+  )) {
+    return serializeSoilProfileColorSwatchRows(rows);
+  }
+
+  return serializeSoilProfileColorSwatchRows(rows.map((row) =>
+    row.number === currentRowNumber
+      ? { ...row, number: nextRowNumber }
+      : row
+  ));
+};
+
+export const updateSoilProfileColorSwatchMunsellValue = (
+  currentValue: unknown,
+  rowNumber: number,
+  nextMunsell: string
+): string => {
+  const rows = parseSoilProfileColorSwatchRows(currentValue);
+  const rowIndex = rows.findIndex((row) => row.number === rowNumber);
+  const nextRows = rowIndex < 0
+    ? rows.concat(createSoilProfileColorSwatchRow(rowNumber, nextMunsell))
+    : rows.map((row, index) =>
+      index === rowIndex
+        ? createSoilProfileColorSwatchRow(
+          row.number,
+          formatSoilProfileColorSwatchValue(nextMunsell, row.note, row.sample?.label)
+        )
+        : row
+    );
+
+  return serializeSoilProfileColorSwatchRows(nextRows);
+};
+
+export const updateSoilProfileColorSwatchNoteValue = (
+  currentValue: unknown,
+  rowNumber: number,
+  nextNote: string
+): string => {
+  const rows = parseSoilProfileColorSwatchRows(currentValue);
+  const rowIndex = rows.findIndex((row) => row.number === rowNumber);
+  const nextRows = rowIndex < 0
+    ? rows.concat(createSoilProfileColorSwatchRow(rowNumber, nextNote))
+    : rows.map((row, index) =>
+      index === rowIndex
+        ? createSoilProfileColorSwatchRow(
+          row.number,
+          formatSoilProfileColorSwatchValue(row.munsell, nextNote, row.sample?.label)
+        )
+        : row
+    );
+
+  return serializeSoilProfileColorSwatchRows(nextRows);
+};
+
+export const updateSoilProfileColorSwatchSampleValue = (
+  currentValue: unknown,
+  rowNumber: number,
+  nextMunsell: string,
+  assistCandidateText: unknown
+): string => {
+  const rows = parseSoilProfileColorSwatchRows(currentValue);
+  const rowIndex = rows.findIndex((row) => row.number === rowNumber);
+  const sample = getSoilProfileColorSampleSummary(
+    getSoilProfileColorTextLines(assistCandidateText).join('\n')
+  );
+  const formatSampledValue = (note = '') =>
+    formatSoilProfileColorSwatchValue(nextMunsell, note, sample?.label);
+  const nextRows = rowIndex < 0
+    ? rows.concat(createSoilProfileColorSwatchRow(rowNumber, formatSampledValue()))
+    : rows.map((row, index) =>
+      index === rowIndex
+        ? createSoilProfileColorSwatchRow(row.number, formatSampledValue(row.note))
+        : row
+    );
+
+  return serializeSoilProfileColorSwatchRows(nextRows);
+};
+
+export const serializeSoilProfileColorSwatchRows = (
+  rows: SoilProfileColorSwatchRow[]
+): string =>
+  rows
+    .sort((left, right) => left.number - right.number)
+    .map((row) => `${row.number}: ${row.value}`)
+    .join('\n');
+
+export const getSoilProfileColorTextLines = (value: unknown): string[] => {
+  if (value === undefined || value === null) return [];
+  if (Array.isArray(value)) return value.flatMap(getSoilProfileColorTextLines);
+
+  if (typeof value === 'object') {
+    const record = value as { inputValue?: unknown; value?: unknown };
+    if (record.inputValue !== undefined) return getSoilProfileColorTextLines(record.inputValue);
+    if (record.value !== undefined) return getSoilProfileColorTextLines(record.value);
+    return [];
+  }
+
+  const text = String(value);
+  if (text.trim() === '[]') return [];
+
+  return text.split(/\r?\n/);
+};
+
+const isValidRgbChannel = (value: number): boolean =>
+  Number.isFinite(value) && value >= 0 && value <= 255;
+
+const clampSamplePercent = (value: number): number =>
+  Number.isFinite(value)
+    ? Math.max(0, Math.min(100, Math.round(value)))
+    : 0;
 
 function hexToRgb(hex: string): RgbSample {
   return {

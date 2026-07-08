@@ -4042,7 +4042,8 @@ function validateSoilColorReviewWorkflow() {
       findings.push(`${source.label} must store reviewed numbered Munsell swatches`);
     }
     if (!text.includes('appendEmptyNumberedSoilColorRow')
-        && !text.includes('appendEmptySoilColorRow')) {
+        && !text.includes('appendEmptySoilColorRow')
+        && !text.includes('appendEmptySoilProfileColorSwatchRow')) {
       findings.push(`${source.label} must support adding an empty numbered soil color row`);
     }
   }
@@ -4083,7 +4084,7 @@ function validateSoilColorReviewWorkflow() {
   if (!tabletSoilColorPanelText.includes('soilColorLayerInput_')) {
     findings.push('tablet soil color panel must render one editable input per soil layer');
   }
-  if (!tabletSoilColorPanelText.includes('renameSoilColorRowNumber')
+  if (!tabletSoilColorPanelText.includes('renameSoilProfileColorSwatchRowNumber')
       || !tabletSoilColorPanelText.includes('soilColorLayerNumberEdit_')
       || !tabletSoilColorPanelSpecText.includes('edits a soil layer number through a numeric modal')) {
     findings.push('tablet soil color panel must let fieldworkers rename layer numbers');
@@ -4108,7 +4109,7 @@ function validateSoilColorReviewWorkflow() {
       || !desktopSoilColorPanelSpecText.includes("not.toContain('촬영 조건')")) {
     findings.push('desktop soil color panel must keep photo capture-condition fields out of the fast soil color UI');
   }
-  if (!desktopSoilColorPanelText.includes('renameSoilColorRowNumber')
+  if (!desktopSoilColorPanelText.includes('renameSoilProfileColorSwatchRowNumber')
       || !desktopSoilColorPanelText.includes('applyActiveSoilColorRowNumber')
       || !desktopSoilColorPanelTemplateText.includes('korean-fieldwork-soil-color-row-number-editor')
       || !desktopSoilColorPanelSpecText.includes('renames the selected numbered Munsell swatch row')
@@ -4159,11 +4160,12 @@ function validateSoilColorReviewWorkflow() {
       || !desktopSoilColorPanelSpecText.includes('tablet eyedropper sample locations')) {
     findings.push('desktop soil color panel must show tablet eyedropper sample locations next to candidates');
   }
-  if (!desktopSoilColorPanelText.includes('getAcceptedAssistCandidateRowValue')
-      || !desktopSoilColorPanelText.includes('getSoilColorSampleSuffixFromAssistSource')
+  if (!desktopSoilColorPanelText.includes('updateSoilProfileColorSwatchSampleValue')
+      || !desktopSoilColorPanelText.includes('updateSoilProfileColorSwatchMunsellValue')
       || !desktopSoilColorPanelTemplateText.includes('korean-fieldwork-soil-color-layer-sample-source')
       || !desktopSoilColorPanelSpecText.includes('accepted desktop layer rows')
-      || !desktopSoilColorPanelSpecText.includes('keeps accepted eyedropper sample locations')) {
+      || !desktopSoilColorPanelSpecText.includes('keeps accepted eyedropper sample locations')
+      || !desktopSoilColorPanelSpecText.includes('keeps tablet layer notes')) {
     findings.push('desktop soil color panel must carry tablet eyedropper locations into accepted layer rows and preserve them during review edits');
   }
   if (!desktopSoilColorPanelText.includes('getSoilColorPhotoSampleRows')
@@ -4244,7 +4246,8 @@ function validateSoilColorReviewWorkflow() {
   }
   if (!desktopCandidateText.includes('extractMunsellCandidateOptions')
       || !desktopCandidateText.includes("from 'idai-field-core'")
-      || !desktopCandidateText.includes('먼셀 후보')
+      || (!desktopCandidateText.includes('먼셀 후보')
+        && !desktopCandidateText.includes('\\uba3c\\uc140 \\ud6c4\\ubcf4'))
       || !desktopCandidateSpecText.includes('GLEY 1 5/N')
       || !desktopCandidateSpecText.includes('2.5GY 2.5/10')) {
     findings.push('desktop Munsell candidate parser must mirror tablet candidate extraction for review surfaces');
