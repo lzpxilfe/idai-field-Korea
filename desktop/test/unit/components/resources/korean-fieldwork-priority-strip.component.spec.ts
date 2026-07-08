@@ -611,8 +611,8 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
             await component.copyReportHandoffItem(featureItem);
 
             expect(clear).toHaveBeenCalledTimes(1);
-            expect(write).toHaveBeenCalledWith({ text: featureItem.copyText, html: '', rtf: '' });
-            expect(writeText).not.toHaveBeenCalled();
+            expect(writeText).toHaveBeenCalledWith(featureItem.copyText);
+            expect(write).not.toHaveBeenCalled();
             expect(component.getReportHandoffPreviewItem()?.documentId).toBe('feature-1');
             expect(component.getReportHandoffCopyActionLabel(featureItem)).toBe('\ubcf5\uc0ac\ub428');
 
@@ -620,8 +620,8 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
             await component.copyReportHandoffSection(featureItem, evidenceSection);
 
             expect(clear).toHaveBeenCalledTimes(2);
-            expect(write).toHaveBeenLastCalledWith({ text: evidenceSection.copyText, html: '', rtf: '' });
-            expect(writeText).not.toHaveBeenCalled();
+            expect(writeText).toHaveBeenLastCalledWith(evidenceSection.copyText);
+            expect(write).not.toHaveBeenCalled();
             expect(component.getReportHandoffPreviewItem()?.documentId).toBe('feature-1');
             expect(component.getReportHandoffSectionCopyActionLabel(featureItem, evidenceSection))
                 .toBe('\ubcf5\uc0ac\ub428');
@@ -629,12 +629,8 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
             await component.copyAllReportHandoffItems();
 
             expect(clear).toHaveBeenCalledTimes(3);
-            expect(write).toHaveBeenLastCalledWith({
-                text: component.reportHandoffCopyAllText,
-                html: '',
-                rtf: ''
-            });
-            expect(writeText).not.toHaveBeenCalled();
+            expect(writeText).toHaveBeenLastCalledWith(component.reportHandoffCopyAllText);
+            expect(write).not.toHaveBeenCalled();
             expect(component.reportHandoffCopyAllText).toContain(featureItem.copyText);
             expect(component.isReportHandoffCopyAllCopied()).toBe(true);
             expect(component.getReportHandoffCopyAllActionLabel()).toBe('\ubcf5\uc0ac\ub428');
@@ -1479,14 +1475,12 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
             await component.copyNotebookEntry(entry);
 
             expect(clear).toHaveBeenCalledTimes(1);
-            expect(write).toHaveBeenCalledWith({
-                text: expect.stringContaining('[야장] 유구 feature-1'),
-                html: '',
-                rtf: ''
-            });
-            expect(write.mock.calls[0][0].text).toContain('[출처] 메모');
-            expect(write.mock.calls[0][0].text).toContain('[다음 작업] 사진 보강 후 단면 정리.');
-            expect(writeText).not.toHaveBeenCalled();
+            expect(writeText).toHaveBeenCalledWith(
+                expect.stringContaining('[야장] 유구 feature-1')
+            );
+            expect(writeText.mock.calls[0][0]).toContain('[출처] 메모');
+            expect(writeText.mock.calls[0][0]).toContain('[다음 작업] 사진 보강 후 단면 정리.');
+            expect(write).not.toHaveBeenCalled();
             expect(component.isNotebookEntryCopied(entry)).toBe(true);
             expect(component.getNotebookEntryCopyActionLabel(entry)).toBe('\ubcf5\uc0ac\ub428');
         } finally {

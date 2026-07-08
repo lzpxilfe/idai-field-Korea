@@ -203,16 +203,16 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
 
             const item = component.getReportHandoffItem()!;
             expect(clear).toHaveBeenCalledTimes(1);
-            expect(write).toHaveBeenCalledWith({ text: item.copyText, html: '', rtf: '' });
-            expect(writeText).not.toHaveBeenCalled();
+            expect(writeText).toHaveBeenCalledWith(item.copyText);
+            expect(write).not.toHaveBeenCalled();
             expect(component.getReportHandoffCopyActionLabel()).toBe('\ubcf5\uc0ac\ub428');
 
             const evidenceSection = item.copySections.find(section => section.id === 'evidence')!;
             await component.copyReportHandoffSection(evidenceSection);
 
             expect(clear).toHaveBeenCalledTimes(2);
-            expect(write).toHaveBeenLastCalledWith({ text: evidenceSection.copyText, html: '', rtf: '' });
-            expect(writeText).not.toHaveBeenCalled();
+            expect(writeText).toHaveBeenLastCalledWith(evidenceSection.copyText);
+            expect(write).not.toHaveBeenCalled();
             expect(component.getReportHandoffSectionCopyActionLabel(evidenceSection))
                 .toBe('\ubcf5\uc0ac\ub428');
         } finally {

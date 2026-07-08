@@ -43,14 +43,12 @@ describe('korean-fieldwork-hwp-clipboard', () => {
                 '\uc694\uc57d: dark fill',
                 '',
                 '\uc138\ubd80: soil layer'
-            ].join('\r\n'),
-            html: '',
-            rtf: ''
+            ].join('\r\n')
         });
     });
 
 
-    it('uses Electron clipboard write with text only payload for HWP-safe paste', async () => {
+    it('uses Electron clipboard writeText with normalized text for HWP-safe paste', async () => {
 
         const write = jest.fn();
         const writeText = jest.fn();
@@ -60,32 +58,24 @@ describe('korean-fieldwork-hwp-clipboard', () => {
         await writeKoreanFieldworkHwpClipboardText('A\tB\nC');
 
         expect(clear).toHaveBeenCalledTimes(1);
-        expect(write).toHaveBeenCalledWith({
-            text: 'A B\r\nC',
-            html: '',
-            rtf: ''
-        });
-        expect(writeText).not.toHaveBeenCalled();
+        expect(writeText).toHaveBeenCalledWith('A B\r\nC');
+        expect(write).not.toHaveBeenCalled();
     });
 
 
-    it('falls back to Electron writeText when rich clipboard write fails', async () => {
+    it('falls back to Electron write when writeText fails', async () => {
 
-        const write = jest.fn(() => {
+        const write = jest.fn();
+        const writeText = jest.fn(() => {
             throw new Error('clipboard write failed');
         });
-        const writeText = jest.fn();
         const clear = jest.fn();
         setWindowRequire(jest.fn().mockReturnValue({ clipboard: { clear, write, writeText } }));
 
         await writeKoreanFieldworkHwpClipboardText('A\tB\nC');
 
-        expect(write).toHaveBeenCalledWith({
-            text: 'A B\r\nC',
-            html: '',
-            rtf: ''
-        });
         expect(writeText).toHaveBeenCalledWith('A B\r\nC');
+        expect(write).toHaveBeenCalledWith({ text: 'A B\r\nC' });
         expect(clear).toHaveBeenCalledTimes(2);
     });
 

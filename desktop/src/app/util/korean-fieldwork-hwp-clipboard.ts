@@ -3,17 +3,13 @@ import { normalizeKoreanFieldworkHwpPlainText } from 'idai-field-core';
 
 export interface KoreanFieldworkHwpClipboardPayload {
     text: string;
-    html: '';
-    rtf: '';
 }
 
 
 export function makeKoreanFieldworkHwpClipboardPayload(text: string): KoreanFieldworkHwpClipboardPayload {
 
     return {
-        text: normalizeKoreanFieldworkHwpPlainText(text),
-        html: '',
-        rtf: ''
+        text: normalizeKoreanFieldworkHwpPlainText(text)
     };
 }
 
@@ -26,8 +22,8 @@ export async function writeKoreanFieldworkHwpClipboardText(text: string): Promis
         : undefined;
     const electronClipboard = getElectronClipboard(nodeRequire);
 
-    if (electronClipboard?.write && tryElectronClipboardWrite(electronClipboard, payload)) return;
     if (electronClipboard?.writeText && tryElectronClipboardWriteText(electronClipboard, payload.text)) return;
+    if (electronClipboard?.write && tryElectronClipboardWrite(electronClipboard, payload)) return;
 
     if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(payload.text);

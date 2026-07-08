@@ -3334,6 +3334,7 @@ function validateReportHandoffPreSaveValidation() {
     'desktop/test/unit/components/docedit/core/korean-fieldwork-record-context-panel.component.spec.ts'
   );
   const desktopHwpClipboardText = readTextFile('desktop/src/app/util/korean-fieldwork-hwp-clipboard.ts');
+  const desktopHwpClipboardSpecText = readTextFile('desktop/test/unit/util/korean-fieldwork-hwp-clipboard.spec.ts');
 
   if (!coreReportHandoffText.includes('validateKoreanFieldworkReportHandoffCandidate')
       || !coreReportHandoffText.includes('KoreanFieldworkReportHandoffValidation')
@@ -3568,12 +3569,13 @@ function validateReportHandoffPreSaveValidation() {
   if (!desktopHwpClipboardText.includes('normalizeKoreanFieldworkHwpPlainText')
       || !desktopHwpClipboardText.includes('electronClipboard.clear?.()')
       || !desktopHwpClipboardText.includes('makeKoreanFieldworkHwpClipboardPayload')
-      || !desktopHwpClipboardText.includes("html: ''")
-      || !desktopHwpClipboardText.includes("rtf: ''")
+      || !desktopHwpClipboardText.includes('electronClipboard?.writeText')
+      || !desktopHwpClipboardSpecText.includes('uses Electron clipboard writeText with normalized text for HWP-safe paste')
+      || !desktopHwpClipboardSpecText.includes("expect(write).not.toHaveBeenCalled()")
       || !desktopPriorityStripText.includes('writeKoreanFieldworkHwpClipboardText')
       || !desktopPriorityStripText.includes('isReportHandoffCopyAllCopied')
       || !desktopPriorityStripTemplateText.includes('getReportHandoffCopyAllActionLabel()')
-      || !desktopPriorityStripSpecText.includes("write).toHaveBeenCalledWith({ text: featureItem.copyText, html: '', rtf: '' })")
+      || !desktopPriorityStripSpecText.includes('writeText).toHaveBeenCalledWith(featureItem.copyText)')
       || !desktopPriorityStripSpecText.includes('copyAllReportHandoffItems')
       || !desktopPriorityStripSpecText.includes('reportHandoffCopyAllText')
       || !desktopPriorityStripSpecText.includes('isReportHandoffCopyAllCopied')) {
