@@ -8,7 +8,9 @@ on:
       - "README.md"
       - "docs/korean-fieldwork/**"
       - "INSTALL_LATEST_TABLET_APK.cmd"
+      - "INSTALL_LATEST_TABLET_APK_TO_OTHER_DRIVE.cmd"
       - "DOWNLOAD_LATEST_TABLET_APK.cmd"
+      - "DOWNLOAD_LATEST_TABLET_APK_TO_OTHER_DRIVE.cmd"
       - ".github/workflows/desktop.yml"
   pull_request:
     paths:
@@ -18,7 +20,9 @@ on:
       - "README.md"
       - "docs/korean-fieldwork/**"
       - "INSTALL_LATEST_TABLET_APK.cmd"
+      - "INSTALL_LATEST_TABLET_APK_TO_OTHER_DRIVE.cmd"
       - "DOWNLOAD_LATEST_TABLET_APK.cmd"
+      - "DOWNLOAD_LATEST_TABLET_APK_TO_OTHER_DRIVE.cmd"
       - ".github/workflows/desktop.yml"
 jobs:
   Tests:

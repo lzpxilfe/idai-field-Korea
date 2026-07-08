@@ -59,12 +59,26 @@ GitHub Actions가 만든 최신 APK를 받아 곧바로 USB 연결 태블릿에 
 .\install-idai-field-android-apk.ps1 -FromLatestArtifact -DownloadPlatformTools
 ```
 
+C드라이브 용량을 아끼려면 APK와 Android 도구를 둘 작업 폴더를 다른 드라이브로 지정합니다. 이 경우 APK는 `G:\idai-field-android\apk`, Android platform-tools는 `G:\idai-field-android\platform-tools` 아래에 저장됩니다.
+
+```powershell
+.\install-idai-field-android-apk.ps1 -FromLatestArtifact -DownloadPlatformTools -WorkDirectory G:\idai-field-android
+```
+
+더블클릭으로 처리하려면 `INSTALL_LATEST_TABLET_APK_TO_OTHER_DRIVE.cmd`를 사용하거나, `IDAI_FIELD_ANDROID_WORKDIR` 환경변수를 지정한 뒤 기존 `INSTALL_LATEST_TABLET_APK.cmd`를 실행합니다.
+
 APK만 내려받아 USB, 메신저, 클라우드 드라이브로 직접 옮기려면 다음처럼 받습니다.
 
 명령어 대신 `DOWNLOAD_LATEST_TABLET_APK.cmd`를 더블클릭해도 됩니다.
 
 ```powershell
 .\install-idai-field-android-apk.ps1 -FromLatestArtifact -DownloadOnly
+```
+
+APK 파일만 다른 드라이브에 받으려면 `DOWNLOAD_LATEST_TABLET_APK_TO_OTHER_DRIVE.cmd`를 더블클릭하거나 다음처럼 실행합니다.
+
+```powershell
+.\install-idai-field-android-apk.ps1 -FromLatestArtifact -DownloadOnly -WorkDirectory G:\idai-field-android
 ```
 
 이미 APK 파일을 받아 둔 경우에는 경로를 직접 지정합니다.

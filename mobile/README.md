@@ -48,6 +48,14 @@ Double-click `INSTALL_LATEST_TABLET_APK.cmd` from the repository root, or run:
 .\install-idai-field-android-apk.ps1 -FromLatestArtifact -DownloadPlatformTools
 ```
 
+To keep APK downloads and Android platform-tools off the C drive, choose a work directory on another drive. The APK is stored under `G:\idai-field-android\apk`, and platform-tools are stored under `G:\idai-field-android\platform-tools`.
+
+```powershell
+.\install-idai-field-android-apk.ps1 -FromLatestArtifact -DownloadPlatformTools -WorkDirectory G:\idai-field-android
+```
+
+Double-click `INSTALL_LATEST_TABLET_APK_TO_OTHER_DRIVE.cmd` for the same flow, or set `IDAI_FIELD_ANDROID_WORKDIR` before using the regular shortcut.
+
 To only download that APK for manual transfer to a tablet:
 
 Double-click `DOWNLOAD_LATEST_TABLET_APK.cmd` from the repository root, or run:
@@ -55,6 +63,14 @@ Double-click `DOWNLOAD_LATEST_TABLET_APK.cmd` from the repository root, or run:
 ```powershell
 .\install-idai-field-android-apk.ps1 -FromLatestArtifact -DownloadOnly
 ```
+
+To only download to another drive:
+
+```powershell
+.\install-idai-field-android-apk.ps1 -FromLatestArtifact -DownloadOnly -WorkDirectory G:\idai-field-android
+```
+
+You can also double-click `DOWNLOAD_LATEST_TABLET_APK_TO_OTHER_DRIVE.cmd`.
 
 For USB development on an installed development build:
 

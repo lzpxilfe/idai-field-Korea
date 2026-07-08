@@ -4,7 +4,8 @@ param(
     [switch]$FromLatestArtifact,
     [string]$Repo = 'lzpxilfe/idai-field',
     [string]$ArtifactName = 'idai-field-mobile-android-apk',
-    [string]$DownloadDirectory = '.\dist\android',
+    [string]$DownloadDirectory,
+    [string]$WorkDirectory = $env:IDAI_FIELD_ANDROID_WORKDIR,
     [switch]$DownloadOnly,
     [switch]$DownloadPlatformTools,
     [switch]$NoLaunch,
@@ -25,11 +26,13 @@ function Show-Usage {
     Write-Host '  .\install-idai-field-android-apk.ps1 -ApkPath .\dist\android\idai-field-mobile-release.apk'
     Write-Host '  .\install-idai-field-android-apk.ps1 -ApkPath .\idai-field-mobile-release.apk -DownloadPlatformTools'
     Write-Host '  .\install-idai-field-android-apk.ps1 -FromLatestArtifact -DownloadPlatformTools'
+    Write-Host '  .\install-idai-field-android-apk.ps1 -FromLatestArtifact -DownloadPlatformTools -WorkDirectory G:\idai-field-android'
     Write-Host '  .\install-idai-field-android-apk.ps1 -FromLatestArtifact -DownloadOnly'
     Write-Host '  .\install-idai-field-android-apk.ps1 -DeviceSerial R83Y70CADYP'
     Write-Host ''
     Write-Host 'Enable Developer options and USB debugging on the tablet, then approve the USB debugging prompt.'
     Write-Host 'Use -FromLatestArtifact to download the newest APK artifact from GitHub Actions before installing.'
+    Write-Host 'Use -WorkDirectory or IDAI_FIELD_ANDROID_WORKDIR to keep APK and Android tool downloads off the repository drive.'
 }
 
 function Resolve-FullPath {
@@ -40,6 +43,36 @@ function Resolve-FullPath {
     }
 
     return [System.IO.Path]::GetFullPath((Join-Path $repoDir $Path))
+}
+
+function Resolve-AndroidWorkDirectory {
+    if ([string]::IsNullOrWhiteSpace($WorkDirectory)) {
+        return $null
+    }
+
+    return Resolve-FullPath -Path $WorkDirectory
+}
+
+function Resolve-ApkDownloadDirectory {
+    if (-not [string]::IsNullOrWhiteSpace($DownloadDirectory)) {
+        return Resolve-FullPath -Path $DownloadDirectory
+    }
+
+    $workDir = Resolve-AndroidWorkDirectory
+    if ($workDir) {
+        return Join-Path $workDir 'apk'
+    }
+
+    return Resolve-FullPath -Path '.\dist\android'
+}
+
+function Resolve-PlatformToolsCacheDirectory {
+    $workDir = Resolve-AndroidWorkDirectory
+    if ($workDir) {
+        return $workDir
+    }
+
+    return Join-Path $repoDir '.tools\android'
 }
 
 function Assert-ChildPath {
@@ -57,14 +90,14 @@ function Assert-ChildPath {
 }
 
 function Install-PlatformTools {
-    $toolsDir = Join-Path $repoDir '.tools\android'
+    $toolsDir = Resolve-PlatformToolsCacheDirectory
     New-Item -ItemType Directory -Force -Path $toolsDir | Out-Null
 
     $zipPath = Join-Path $toolsDir 'platform-tools-latest-windows.zip'
     $platformToolsDir = Join-Path $toolsDir 'platform-tools'
     $downloadUrl = 'https://dl.google.com/android/repository/platform-tools-latest-windows.zip'
 
-    Write-Host 'Downloading Android platform-tools.'
+    Write-Host "Downloading Android platform-tools to: $toolsDir"
     Invoke-WebRequest -Uri $downloadUrl -OutFile $zipPath -UseBasicParsing
 
     if (Test-Path -LiteralPath $platformToolsDir) {
@@ -82,7 +115,7 @@ function Resolve-Adb {
     if ($env:ANDROID_HOME) { $candidateFiles += Join-Path $env:ANDROID_HOME 'platform-tools\adb.exe' }
     if ($env:ANDROID_SDK_ROOT) { $candidateFiles += Join-Path $env:ANDROID_SDK_ROOT 'platform-tools\adb.exe' }
     if ($env:LOCALAPPDATA) { $candidateFiles += Join-Path $env:LOCALAPPDATA 'Android\Sdk\platform-tools\adb.exe' }
-    $candidateFiles += Join-Path $repoDir '.tools\android\platform-tools\adb.exe'
+    $candidateFiles += Join-Path (Resolve-PlatformToolsCacheDirectory) 'platform-tools\adb.exe'
 
     $adbCommand = Get-Command adb.exe -ErrorAction SilentlyContinue
     if (-not $adbCommand) {
@@ -158,8 +191,13 @@ function Get-ApkFromLatestArtifact {
     )
 
     $gh = Resolve-GitHubCli
-    $downloadDir = Resolve-FullPath -Path $TargetDirectory
+    $downloadDir = if ([string]::IsNullOrWhiteSpace($TargetDirectory)) {
+        Resolve-ApkDownloadDirectory
+    } else {
+        Resolve-FullPath -Path $TargetDirectory
+    }
     New-Item -ItemType Directory -Force -Path $downloadDir | Out-Null
+    Write-Host "Using APK download directory: $downloadDir"
 
     $artifactRun = Get-LatestArtifactRun `
         -Gh $gh `

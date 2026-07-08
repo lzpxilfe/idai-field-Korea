@@ -3545,7 +3545,9 @@ function validateTabletInstallGuide() {
   const tabletInstallDocText = readTextFile('docs/korean-fieldwork/android-tablet-install.ko.md');
   const tabletInstallScriptText = readTextFile('install-idai-field-android-apk.ps1');
   const tabletInstallShortcutText = readTextFile('INSTALL_LATEST_TABLET_APK.cmd');
+  const tabletInstallOtherDriveShortcutText = readTextFile('INSTALL_LATEST_TABLET_APK_TO_OTHER_DRIVE.cmd');
   const tabletDownloadShortcutText = readTextFile('DOWNLOAD_LATEST_TABLET_APK.cmd');
+  const tabletDownloadOtherDriveShortcutText = readTextFile('DOWNLOAD_LATEST_TABLET_APK_TO_OTHER_DRIVE.cmd');
   const tabletReadmeText = readTextFile('mobile/README.md');
   const desktopWorkflowText = readTextFile('.github/workflows/desktop.yml');
   const tabletWorkflowText = readTextFile('.github/workflows/mobile.yml');
@@ -3556,14 +3558,28 @@ function validateTabletInstallGuide() {
   if (!tabletInstallScriptText.includes('[switch]$FromLatestArtifact')
       || !tabletInstallScriptText.includes('[switch]$DownloadOnly')
       || !tabletInstallScriptText.includes('gh run download')
-      || !tabletInstallScriptText.includes('run-$($artifactRun.Run.databaseId)')) {
+      || !tabletInstallScriptText.includes('run-$($artifactRun.Run.databaseId)')
+      || !tabletInstallScriptText.includes('[string]$WorkDirectory')
+      || !tabletInstallScriptText.includes('IDAI_FIELD_ANDROID_WORKDIR')
+      || !tabletInstallScriptText.includes('Resolve-ApkDownloadDirectory')
+      || !tabletInstallScriptText.includes('Resolve-PlatformToolsCacheDirectory')) {
     findings.push('tablet APK installer must install or download the newest Mobile GitHub Actions APK artifact for post-change tablet checks');
   }
   if (!tabletInstallShortcutText.includes('-FromLatestArtifact -DownloadPlatformTools')
+      || !tabletInstallShortcutText.includes('IDAI_FIELD_ANDROID_WORKDIR')
       || !tabletInstallShortcutText.includes('install-idai-field-android-apk.ps1')
       || !tabletDownloadShortcutText.includes('-FromLatestArtifact -DownloadOnly')
+      || !tabletDownloadShortcutText.includes('IDAI_FIELD_ANDROID_WORKDIR')
       || !tabletDownloadShortcutText.includes('install-idai-field-android-apk.ps1')) {
     findings.push('root tablet APK shortcuts must provide double-click install and download-only entry points');
+  }
+  if (!tabletInstallOtherDriveShortcutText.includes('DEFAULT_WORKDIR=G:\\idai-field-android')
+      || !tabletInstallOtherDriveShortcutText.includes('-WorkDirectory "%WORKDIR%"')
+      || !tabletInstallOtherDriveShortcutText.includes('-FromLatestArtifact -DownloadPlatformTools')
+      || !tabletDownloadOtherDriveShortcutText.includes('DEFAULT_WORKDIR=G:\\idai-field-android')
+      || !tabletDownloadOtherDriveShortcutText.includes('-WorkDirectory "%WORKDIR%"')
+      || !tabletDownloadOtherDriveShortcutText.includes('-FromLatestArtifact -DownloadOnly')) {
+    findings.push('root tablet APK shortcuts must include prompted other-drive entry points for low-C-drive Windows users');
   }
   for (const [label, text] of [
     ['root README', rootReadmeText],
@@ -3573,7 +3589,9 @@ function validateTabletInstallGuide() {
     if (!text.includes('-FromLatestArtifact -DownloadPlatformTools')
         || !text.includes('-FromLatestArtifact -DownloadOnly')
         || !text.includes('INSTALL_LATEST_TABLET_APK.cmd')
-        || !text.includes('DOWNLOAD_LATEST_TABLET_APK.cmd')) {
+        || !text.includes('DOWNLOAD_LATEST_TABLET_APK.cmd')
+        || !text.includes('-WorkDirectory G:\\idai-field-android')
+        || !text.includes('IDAI_FIELD_ANDROID_WORKDIR')) {
       findings.push(`${label} must document both direct latest APK install and download-only tablet handoff commands`);
     }
   }
@@ -3586,7 +3604,9 @@ function validateTabletInstallGuide() {
       || !desktopWorkflowText.includes('docs/korean-fieldwork/**')
       || !desktopWorkflowText.includes('README.md')
       || !desktopWorkflowText.includes('INSTALL_LATEST_TABLET_APK.cmd')
-      || !desktopWorkflowText.includes('DOWNLOAD_LATEST_TABLET_APK.cmd')) {
+      || !desktopWorkflowText.includes('INSTALL_LATEST_TABLET_APK_TO_OTHER_DRIVE.cmd')
+      || !desktopWorkflowText.includes('DOWNLOAD_LATEST_TABLET_APK.cmd')
+      || !desktopWorkflowText.includes('DOWNLOAD_LATEST_TABLET_APK_TO_OTHER_DRIVE.cmd')) {
     findings.push('desktop workflow must run parity checks when Korean fieldwork install guides or verifier scripts change');
   }
 

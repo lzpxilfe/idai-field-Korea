@@ -30,6 +30,14 @@ USB로 연결된 태블릿에 바로 설치:
 .\install-idai-field-android-apk.ps1 -FromLatestArtifact -DownloadPlatformTools
 ```
 
+C드라이브 용량이 부족하면 APK와 Android 도구를 저장할 작업 폴더를 다른 드라이브로 지정한다. 아래 예시는 APK를 `G:\idai-field-android\apk`, platform-tools를 `G:\idai-field-android\platform-tools` 아래에 둔다.
+
+```powershell
+.\install-idai-field-android-apk.ps1 -FromLatestArtifact -DownloadPlatformTools -WorkDirectory G:\idai-field-android
+```
+
+명령어 대신 `INSTALL_LATEST_TABLET_APK_TO_OTHER_DRIVE.cmd`를 더블클릭하면 작업 폴더를 입력한 뒤 같은 설치 흐름을 실행한다. 항상 같은 위치를 쓰려면 `IDAI_FIELD_ANDROID_WORKDIR` 환경변수를 지정해 둔 뒤 기존 `INSTALL_LATEST_TABLET_APK.cmd`를 실행해도 된다.
+
 APK 파일만 내려받아 태블릿으로 직접 옮기기:
 
 명령어 대신 `DOWNLOAD_LATEST_TABLET_APK.cmd`를 더블클릭해도 된다.
@@ -38,7 +46,13 @@ APK 파일만 내려받아 태블릿으로 직접 옮기기:
 .\install-idai-field-android-apk.ps1 -FromLatestArtifact -DownloadOnly
 ```
 
-이 명령은 `idai-field-mobile-android-apk` 산출물을 찾아 `dist/android/run-<Actions 실행 번호>` 아래에 내려받는다.
+APK 파일만 다른 드라이브에 받으려면 `DOWNLOAD_LATEST_TABLET_APK_TO_OTHER_DRIVE.cmd`를 더블클릭하거나 다음처럼 실행한다.
+
+```powershell
+.\install-idai-field-android-apk.ps1 -FromLatestArtifact -DownloadOnly -WorkDirectory G:\idai-field-android
+```
+
+이 명령은 `idai-field-mobile-android-apk` 산출물을 찾는다. 작업 폴더를 지정하지 않으면 `dist/android/run-<Actions 실행 번호>` 아래에 내려받고, `-WorkDirectory`를 지정하면 `<작업 폴더>/apk/run-<Actions 실행 번호>` 아래에 내려받는다.
 
 ## Windows에서 USB로 설치
 
