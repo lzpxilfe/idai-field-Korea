@@ -503,6 +503,49 @@ describe('Korean fieldwork report handoff', () => {
     });
 
 
+    it('uses tablet media metadata as direct HWP copy summaries', () => {
+
+        const documents = [
+            makeDocument('photo-1', 'Photo', {
+                fieldworkPhotoCaption: 'pit before cleaning',
+                fieldworkPhotoUri: 'file:///tablet/photos/pit-before.jpg',
+                originalFilename: 'pit-before.jpg',
+                fieldworkPhotoCapturedAt: '2026-06-23T01:02:03.000Z',
+                width: 4032,
+                height: 3024
+            }),
+            makeDocument('soil-photo-1', 'SoilProfilePhoto', {
+                soilProfilePhotoUri: 'file:///tablet/photos/profile.jpg',
+                originalFilename: 'profile.jpg',
+                soilProfilePhotoCapturedAt: '2026-06-23T02:03:04.000Z',
+                width: 3000,
+                height: 2000,
+                soilProfileColorSwatches: '1: 10YR 4/3 RGB 111/87/61 @ 20%/50%'
+            }),
+            makeDocument('drawing-1', 'Drawing', {
+                fileUri: 'file:///tablet/drawings/pit-plan.png',
+                drawingSketchStrokes: '{"version":1,"strokes":[{"points":[{"x":10,"y":20},{"x":50,"y":60}]}]}'
+            })
+        ];
+
+        const handoff = makeKoreanFieldworkReportHandoff(documents as any);
+        const photoItem = handoff.items.find(item => item.documentId === 'photo-1');
+        const soilPhotoItem = handoff.items.find(item => item.documentId === 'soil-photo-1');
+        const drawingItem = handoff.items.find(item => item.documentId === 'drawing-1');
+
+        expect(photoItem?.summary).toContain('\uc124\uba85: pit before cleaning');
+        expect(photoItem?.summary).toContain('\uc6d0\ubcf8 \ud30c\uc77c: pit-before.jpg');
+        expect(photoItem?.copyText).toContain('\ucd2c\uc601: 2026-06-23 01:02');
+        expect(photoItem?.copyText).toContain('\ud06c\uae30: 4032x3024');
+        expect(soilPhotoItem?.summary).toContain('\uc6d0\ubcf8 \ud30c\uc77c: profile.jpg');
+        expect(soilPhotoItem?.copyText).toContain('\uce35\ubcc4 \ud1a0\uc0c9: 1: 10YR 4/3 RGB 111/87/61 @ 20%/50%');
+        expect(soilPhotoItem?.copyText).toContain('\uc2a4\ud3ec\uc774\ub4dc \uc704\uce58: 1\uce35: RGB 111/87/61 @ 20%/50%');
+        expect(drawingItem?.summary).toContain('\uc6d0\ubcf8: file:///tablet/drawings/pit-plan.png');
+        expect(drawingItem?.copyText).toContain('\ud0dc\ube14\ub9bf \uc2a4\ucf00\uce58: \uc788\uc74c');
+        expect(drawingItem?.copyText).not.toContain('"strokes"');
+    });
+
+
     it('summarizes tablet drawing sketches without dumping stroke JSON into HWP copy blocks', () => {
 
         const documents = [

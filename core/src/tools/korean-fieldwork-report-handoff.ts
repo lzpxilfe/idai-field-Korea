@@ -262,12 +262,19 @@ const DETAIL_FIELDS: DetailFieldDefinition[] = [
     },
     {
         label: '\uc0ac\uc9c4/\uc790\ub8cc',
+        getSummary: getMediaDetailSummary,
         fields: [
             'fieldworkPhotoCaption',
             'fieldworkPhotoUri',
             'soilProfilePhotoUri',
             'imageUri',
             'fileUri',
+            'originalFilename',
+            'fieldworkPhotoCapturedAt',
+            'soilProfilePhotoCapturedAt',
+            'width',
+            'height',
+            'drawingSketchStrokes',
             'fieldworkPhotoQuality',
             'soilProfilePhotoQuality',
             'mediaEvidenceRole',
@@ -862,6 +869,9 @@ function isReportHandoffDocument(document: Document): boolean {
 
 function getSummary(document: Document, categoryLabel: string): string {
 
+    const mediaSummary = getMediaRecordSummary(document);
+    if (mediaSummary) return truncate(mediaSummary, 180);
+
     for (const fieldName of SUMMARY_FIELDS) {
         const value = getSummaryFieldValue(document, fieldName);
         if (value) return truncate(value, 180);
@@ -929,6 +939,27 @@ function getDetailLine(document: Document, definition: DetailFieldDefinition): s
     if (values.length === 0) return undefined;
 
     return `${definition.label}: ${values.join(', ')}`;
+}
+
+
+function getMediaRecordSummary(document: Document): string|undefined {
+
+    switch (document.resource.category) {
+        case 'Photo':
+            return getFieldworkPhotoEvidenceSummary(document);
+        case 'SoilProfilePhoto':
+            return getSoilProfilePhotoEvidenceSummary(document);
+        case 'Drawing':
+            return getDrawingEvidenceSummary(document);
+        default:
+            return undefined;
+    }
+}
+
+
+function getMediaDetailSummary(document: Document): string|undefined {
+
+    return getMediaRecordSummary(document);
 }
 
 

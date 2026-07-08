@@ -466,12 +466,30 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
             const photoItem = component.getReportHandoffItems()
                 .find(item => item.documentId === 'photo-1');
             expect(photoItem).toBeDefined();
+            expect(photoItem!.summary)
+                .toContain('\uc6d0\ubcf8 \ud30c\uc77c: pit-001.jpg');
+            expect(photoItem!.details.join('\n'))
+                .toContain('\ucd2c\uc601: 2026-06-23 01:02');
             expect(photoItem!.relationDetails.join('\n'))
                 .toContain('\ub300\uc0c1: [\uc720\uad6c] pit-001');
             expect(photoItem!.copyText)
                 .toContain('\uc5f0\uacb0: \ub300\uc0c1: [\uc720\uad6c] pit-001');
             component.selectReportHandoffItem(photoItem!);
             expect(component.getReportHandoffPreviewItem()?.documentId).toBe('photo-1');
+
+            const soilPhotoItem = component.getReportHandoffItems()
+                .find(item => item.documentId === 'soil-photo-1');
+            expect(soilPhotoItem).toBeDefined();
+            expect(soilPhotoItem!.summary)
+                .toContain('\uc6d0\ubcf8 \ud30c\uc77c: soil-photo-1.jpg');
+            expect(soilPhotoItem!.copyText)
+                .toContain('\uc2a4\ud3ec\uc774\ub4dc \uc704\uce58: 1\uce35: RGB 111/87/61 @ 20%/50%');
+
+            const drawingItem = component.getReportHandoffItems()
+                .find(item => item.documentId === 'drawing-1');
+            expect(drawingItem).toBeDefined();
+            expect(drawingItem!.summary)
+                .toContain('\ud0dc\ube14\ub9bf \uc2a4\ucf00\uce58: \uc788\uc74c');
 
             const dailyLogItem = component.getReportHandoffItems()
                 .find(item => item.documentId === 'daily-log-1');
