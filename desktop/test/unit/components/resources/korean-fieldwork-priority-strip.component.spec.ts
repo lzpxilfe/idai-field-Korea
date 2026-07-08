@@ -1439,6 +1439,61 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
         });
     });
 
+    it('copies tablet notebook entries as plain HWP-safe text from the desktop panel', async () => {
+
+        const write = jest.fn();
+        const writeText = jest.fn();
+        const clear = jest.fn();
+        const testWindow = (global as any).window ?? ((global as any).window = {});
+        const previousRequire = testWindow.require;
+        testWindow.require = jest.fn().mockReturnValue({ clipboard: { clear, write, writeText } });
+
+        try {
+            const component = createComponent({
+                find: jest.fn().mockResolvedValue({
+                    documents: [
+                        createDocument('project', 'Project'),
+                        createDocument('feature-1', 'Feature'),
+                        createDocument('memo-1', 'PenMemo', {
+                            date: getTodayLabel(),
+                            penMemoReviewedTranscript: [
+                                '[관찰 내용] 북쪽 경계에서 소토 확인.',
+                                '[해석] 배수로 가능성.',
+                                '[다음 작업] 사진 보강 후 단면 정리.'
+                            ].join('\n'),
+                            relations: { depicts: ['feature-1'] }
+                        })
+                    ]
+                }),
+                get: jest.fn()
+            });
+
+            await component.refresh();
+
+            const [entry] = component.getNotebookNextWorkEntries();
+            expect(component.getNotebookEntryCopyActionLabel(entry)).toBe('\ubcf5\uc0ac');
+            expect(component.getNotebookEntryCopyTooltip(entry)).toContain('[관찰 내용] 북쪽 경계에서 소토 확인.');
+            expect(component.getNotebookEntryCopyTooltip(entry))
+                .toContain('[사진·도면·스케치·유물·시료 번호] 확인 필요');
+
+            await component.copyNotebookEntry(entry);
+
+            expect(clear).toHaveBeenCalledTimes(1);
+            expect(write).toHaveBeenCalledWith({
+                text: expect.stringContaining('[야장] 유구 feature-1'),
+                html: '',
+                rtf: ''
+            });
+            expect(write.mock.calls[0][0].text).toContain('[출처] 메모');
+            expect(write.mock.calls[0][0].text).toContain('[다음 작업] 사진 보강 후 단면 정리.');
+            expect(writeText).not.toHaveBeenCalled();
+            expect(component.isNotebookEntryCopied(entry)).toBe(true);
+            expect(component.getNotebookEntryCopyActionLabel(entry)).toBe('\ubcf5\uc0ac\ub428');
+        } finally {
+            testWindow.require = previousRequire;
+        }
+    });
+
     it('shows selected record notebook history in the desktop notebook panel', async () => {
 
         const feature = createDocument('feature-1', 'Feature');

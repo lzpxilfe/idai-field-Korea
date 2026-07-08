@@ -1702,21 +1702,49 @@ korean-fieldwork-priority-strip {
     min-width: 0;
   }
 
+  .korean-fieldwork-notebook-strip-copy,
   .korean-fieldwork-notebook-strip-continue {
     align-items: center;
     align-self: end;
-    background: #ecfdf3;
-    border: 1px solid #abefc6;
     border-radius: 4px;
-    color: #027a48;
     cursor: pointer;
     display: flex;
     font-size: 11px;
     font-weight: 800;
+    gap: 4px;
     justify-content: center;
     line-height: 1;
     margin-top: 4px;
+    min-height: 26px;
     padding: 5px 6px;
+
+    span:last-child {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  .korean-fieldwork-notebook-strip-copy {
+    background: #f8fafc;
+    border: 1px solid #d0d5dd;
+    color: #344054;
+
+    &:hover {
+      background: #eef2f6;
+    }
+
+    &.copied {
+      background: #eff8ff;
+      border-color: #84caff;
+      color: #175cd3;
+    }
+  }
+
+  .korean-fieldwork-notebook-strip-continue {
+    background: #ecfdf3;
+    border: 1px solid #abefc6;
+    color: #027a48;
 
     &.warning {
       background: #fffaeb;

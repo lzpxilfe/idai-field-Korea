@@ -3,7 +3,8 @@ import {
     getKoreanFieldworkNotebookEntries,
     getKoreanFieldworkNotebookContinuationSeed,
     getKoreanFieldworkNotebookEntriesForDocument,
-    makeKoreanFieldworkDailyNotebookDigest
+    makeKoreanFieldworkDailyNotebookDigest,
+    makeKoreanFieldworkNotebookEntryCopyText
 } from '../../../src/app/util/korean-fieldwork-notebook-digest';
 
 
@@ -247,6 +248,31 @@ describe('korean-fieldwork-notebook-digest', () => {
                 observation: '바닥면에서 원형 윤곽 확인.\n손그림 메모 1획/2점.'
             }
         });
+    });
+
+
+    it('builds HWP-safe copy text for tablet notebook entries', () => {
+
+        const feature = createDoc('feature-1', 'Feature', 'F-1', {
+            fieldNote: [
+                '[관찰 내용] 바닥면에서 원형 윤곽 확인.',
+                '[해석] 주공 가능성.',
+                '[다음 작업] 사진 보강 후 단면 정리.',
+                '[손그림 좌표] {"version":1,"strokes":[{"points":[{"x":10,"y":20},{"x":40,"y":50}]}]}'
+            ].join('\n')
+        });
+
+        const [entry] = getKoreanFieldworkNotebookEntries([feature] as any);
+
+        expect(makeKoreanFieldworkNotebookEntryCopyText(entry)).toBe([
+            '[야장] 유구 F-1',
+            '[출처] 기록 메모 · 2026-06-24',
+            '[관찰 내용] 바닥면에서 원형 윤곽 확인.',
+            '[해석] 주공 가능성.',
+            '[다음 작업] 사진 보강 후 단면 정리.',
+            '[사진·도면·스케치·유물·시료 번호] 확인 필요',
+            '[손그림 메모] 손그림 메모 1획/2점.'
+        ].join('\n'));
     });
 
 

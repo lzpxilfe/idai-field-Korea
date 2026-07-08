@@ -1,7 +1,10 @@
 import {
     Document,
     extractKoreanFieldworkFieldNoteInput as extractSharedKoreanFieldworkFieldNoteInput,
+    formatKoreanFieldworkFieldNoteSection,
     hasMeaningfulKoreanFieldworkFieldNoteText,
+    KOREAN_FIELDWORK_FIELD_NOTE_HANDWRITING_SUMMARY_LABEL,
+    KOREAN_FIELDWORK_FIELD_NOTE_SECTION_LABELS,
     KoreanFieldworkFieldNoteInput as CoreKoreanFieldworkFieldNoteInput,
     normalizeKoreanFieldworkFieldNoteText as normalizeSharedKoreanFieldworkFieldNoteText,
     trimKoreanFieldworkFieldNoteInput
@@ -261,6 +264,48 @@ export function getKoreanFieldworkNotebookContinuationSeed(
 }
 
 
+export function makeKoreanFieldworkNotebookEntryCopyText(entry: KoreanFieldworkNotebookEntry): string {
+
+    const input = trimKoreanFieldworkFieldNoteInput(entry.input);
+    const evidenceNumbers = input.evidenceNumbers
+        || (entry.needsEvidenceNumbers ? '확인 필요' : '');
+    const lines = [
+        formatKoreanFieldworkFieldNoteSection(
+            '야장',
+            [entry.targetCategoryLabel, entry.targetLabel].filter(Boolean).join(' ')
+        ),
+        formatKoreanFieldworkFieldNoteSection(
+            '출처',
+            [entry.sourceLabel, entry.dateLabel].filter(Boolean).join(' · ')
+        ),
+        formatKoreanFieldworkFieldNoteSection(
+            KOREAN_FIELDWORK_FIELD_NOTE_SECTION_LABELS.observation,
+            input.observation || getNotebookEntryCopyFallbackObservation(entry)
+        ),
+        formatKoreanFieldworkFieldNoteSection(
+            KOREAN_FIELDWORK_FIELD_NOTE_SECTION_LABELS.interpretation,
+            input.interpretation
+        ),
+        formatKoreanFieldworkFieldNoteSection(
+            KOREAN_FIELDWORK_FIELD_NOTE_SECTION_LABELS.nextWork,
+            input.nextWork || entry.nextWork
+        ),
+        formatKoreanFieldworkFieldNoteSection(
+            KOREAN_FIELDWORK_FIELD_NOTE_SECTION_LABELS.evidenceNumbers,
+            evidenceNumbers
+        ),
+        formatKoreanFieldworkFieldNoteSection(
+            KOREAN_FIELDWORK_FIELD_NOTE_HANDWRITING_SUMMARY_LABEL,
+            entry.handwritingSummaryLabel
+        )
+    ];
+
+    return normalizeKoreanFieldworkFieldNoteText(
+        lines.filter((line): line is string => !!line).join('\n')
+    );
+}
+
+
 export function getKoreanFieldworkNotebookEntriesForDocument(
         document: Document|undefined,
         documents: Document[],
@@ -431,6 +476,20 @@ function isNotebookEntryRelatedToDocument(
             && !entry.targetDocument
             && entry.targetLabel === identifier
         );
+}
+
+
+function getNotebookEntryCopyFallbackObservation(entry: KoreanFieldworkNotebookEntry): string {
+
+    const detail = normalizeKoreanFieldworkFieldNoteText(entry.detail);
+    const handwritingSummary = normalizeKoreanFieldworkFieldNoteText(entry.handwritingSummaryLabel);
+    if (!detail || detail === handwritingSummary) return '';
+
+    const handwritingSuffix = ` · ${handwritingSummary}`;
+
+    return handwritingSummary && detail.endsWith(handwritingSuffix)
+        ? detail.slice(0, -handwritingSuffix.length).trim()
+        : detail;
 }
 
 

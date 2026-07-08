@@ -59,6 +59,7 @@ import {
     KoreanFieldworkNotebookContinuationFocus,
     getKoreanFieldworkNotebookContinuationSeed,
     getKoreanFieldworkNotebookEntriesForDocument,
+    makeKoreanFieldworkNotebookEntryCopyText,
     makeKoreanFieldworkDailyNotebookDigest
 } from '../../util/korean-fieldwork-notebook-digest';
 import {
@@ -225,6 +226,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
     public reportHandoffItems: KoreanFieldworkReportHandoffItem[] = [];
     public reportHandoffCopyAllText: string = '';
     public reportCopiedDocumentId: string|undefined;
+    public notebookCopiedEntryId: string|undefined;
     public selectedReportHandoffDocumentId: string|undefined;
     public reportHandoffShowsAll: boolean = false;
     public overviewChartData: KoreanFieldworkOverviewChartData|undefined;
@@ -729,6 +731,27 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
     public getNotebookEntryActionLabel(entry: KoreanFieldworkNotebookEntry): string {
 
         return entry.targetDocument ? '대상 열기' : `${entry.sourceLabel} 열기`;
+    }
+
+    public isNotebookEntryCopied = (entry: KoreanFieldworkNotebookEntry) =>
+        this.notebookCopiedEntryId === entry.id;
+
+    public getNotebookEntryCopyActionLabel = (entry: KoreanFieldworkNotebookEntry) =>
+        this.isNotebookEntryCopied(entry) ? '\ubcf5\uc0ac\ub428' : '\ubcf5\uc0ac';
+
+    public getNotebookEntryCopyTooltip = (entry: KoreanFieldworkNotebookEntry) =>
+        makeKoreanFieldworkNotebookEntryCopyText(entry);
+
+    public async copyNotebookEntry(entry: KoreanFieldworkNotebookEntry, event?: Event) {
+
+        if (event) event.stopPropagation();
+
+        try {
+            await writeKoreanFieldworkHwpClipboardText(makeKoreanFieldworkNotebookEntryCopyText(entry));
+            this.markNotebookEntryCopied(entry.id);
+        } catch (errWithParams) {
+            this.messages.add(errWithParams);
+        }
     }
 
     public getNotebookContinuationFocus(
@@ -1659,6 +1682,16 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
         setTimeout(() => {
             if (this.reportCopiedDocumentId === documentId) {
                 this.reportCopiedDocumentId = undefined;
+            }
+        }, 1600);
+    }
+
+    private markNotebookEntryCopied(entryId: string) {
+
+        this.notebookCopiedEntryId = entryId;
+        setTimeout(() => {
+            if (this.notebookCopiedEntryId === entryId) {
+                this.notebookCopiedEntryId = undefined;
             }
         }, 1600);
     }

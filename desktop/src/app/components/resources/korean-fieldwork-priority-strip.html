@@ -761,6 +761,18 @@
                         <span class="mdi mdi-open-in-new"></span>
                     </span>
                 </button>
+                <button type="button"
+                        class="korean-fieldwork-notebook-strip-copy"
+                        [class.copied]="isNotebookEntryCopied(entry)"
+                        [ngbTooltip]="getNotebookEntryCopyTooltip(entry)"
+                        container="body"
+                        placement="bottom"
+                        (click)="copyNotebookEntry(entry, $event)">
+                    <span class="mdi"
+                          [class.mdi-check]="isNotebookEntryCopied(entry)"
+                          [class.mdi-content-copy]="!isNotebookEntryCopied(entry)"></span>
+                    <span>{{getNotebookEntryCopyActionLabel(entry)}}</span>
+                </button>
                 <button *ngIf="canContinueNotebookEntry(entry)"
                         type="button"
                         class="korean-fieldwork-notebook-strip-continue"
@@ -787,6 +799,18 @@
                         {{getNotebookEntryActionLabel(entry)}}
                         <span class="mdi mdi-open-in-new"></span>
                     </span>
+                </button>
+                <button type="button"
+                        class="korean-fieldwork-notebook-strip-copy"
+                        [class.copied]="isNotebookEntryCopied(entry)"
+                        [ngbTooltip]="getNotebookEntryCopyTooltip(entry)"
+                        container="body"
+                        placement="bottom"
+                        (click)="copyNotebookEntry(entry, $event)">
+                    <span class="mdi"
+                          [class.mdi-check]="isNotebookEntryCopied(entry)"
+                          [class.mdi-content-copy]="!isNotebookEntryCopied(entry)"></span>
+                    <span>{{getNotebookEntryCopyActionLabel(entry)}}</span>
                 </button>
                 <button *ngIf="canContinueNotebookEntry(entry)"
                         type="button"
@@ -817,6 +841,18 @@
                         <span class="mdi mdi-open-in-new"></span>
                     </span>
                 </button>
+                <button type="button"
+                        class="korean-fieldwork-notebook-strip-copy"
+                        [class.copied]="isNotebookEntryCopied(entry)"
+                        [ngbTooltip]="getNotebookEntryCopyTooltip(entry)"
+                        container="body"
+                        placement="bottom"
+                        (click)="copyNotebookEntry(entry, $event)">
+                    <span class="mdi"
+                          [class.mdi-check]="isNotebookEntryCopied(entry)"
+                          [class.mdi-content-copy]="!isNotebookEntryCopied(entry)"></span>
+                    <span>{{getNotebookEntryCopyActionLabel(entry)}}</span>
+                </button>
                 <button *ngIf="canContinueNotebookEntry(entry, 'nextWork')"
                         type="button"
                         class="korean-fieldwork-notebook-strip-continue"
@@ -845,6 +881,18 @@
                         {{getNotebookEntryActionLabel(entry)}}
                         <span class="mdi mdi-open-in-new"></span>
                     </span>
+                </button>
+                <button type="button"
+                        class="korean-fieldwork-notebook-strip-copy"
+                        [class.copied]="isNotebookEntryCopied(entry)"
+                        [ngbTooltip]="getNotebookEntryCopyTooltip(entry)"
+                        container="body"
+                        placement="bottom"
+                        (click)="copyNotebookEntry(entry, $event)">
+                    <span class="mdi"
+                          [class.mdi-check]="isNotebookEntryCopied(entry)"
+                          [class.mdi-content-copy]="!isNotebookEntryCopied(entry)"></span>
+                    <span>{{getNotebookEntryCopyActionLabel(entry)}}</span>
                 </button>
                 <button *ngIf="canContinueNotebookEntry(entry, 'evidenceNumbers')"
                         type="button"
