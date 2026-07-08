@@ -7,6 +7,10 @@ import {
     KoreanFieldworkReadinessIssue
 } from './korean-fieldwork-readiness';
 import {
+    getKoreanFieldworkFeatureTypeLabel,
+    getKoreanFieldworkFeatureTypeLabelFromInterpretationType
+} from './korean-fieldwork-feature-types';
+import {
     getKoreanFieldworkCategoryLabel,
     getKoreanFieldworkFeatureInvestigationChecklistSummary,
     getKoreanFieldworkReportHandoffCategoryRank,
@@ -145,6 +149,7 @@ const DETAIL_FIELDS: DetailFieldDefinition[] = [
     },
     {
         label: '\uc131\uaca9',
+        getSummary: getFeatureTypeDetailSummary,
         fields: ['featureType', 'featureInterpretationType']
     },
     {
@@ -826,6 +831,19 @@ function getDetailLine(document: Document, definition: DetailFieldDefinition): s
     if (values.length === 0) return undefined;
 
     return `${definition.label}: ${values.join(', ')}`;
+}
+
+
+function getFeatureTypeDetailSummary(document: Document): string|undefined {
+
+    const featureTypeLabels = getListValues(document.resource.featureType)
+        .map(value => getKoreanFieldworkFeatureTypeLabel(value) ?? value);
+    const interpretationLabels = getListValues(document.resource.featureInterpretationType)
+        .map(value => getKoreanFieldworkFeatureTypeLabelFromInterpretationType(value) ?? value);
+
+    return Array.from(new Set([...featureTypeLabels, ...interpretationLabels]))
+        .filter(value => !!value && value !== '[]')
+        .join(', ') || undefined;
 }
 
 

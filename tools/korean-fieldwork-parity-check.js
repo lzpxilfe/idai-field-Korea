@@ -3326,14 +3326,19 @@ function validateReportHandoffPreSaveValidation() {
       || !coreRecordContractText.includes('getKoreanFieldworkFeatureInvestigationChecklistSummary')
       || !coreRecordContractText.includes('KOREAN_FIELDWORK_TRIAL_TRENCH_CHECKLIST_STEPS')
       || !coreRecordContractSpecText.includes('tablet investigation checklist order and Korean labels')
+      || !coreReportHandoffText.includes('getFeatureTypeDetailSummary')
+      || !coreReportHandoffText.includes('getKoreanFieldworkFeatureTypeLabel')
+      || !coreReportHandoffText.includes('getKoreanFieldworkFeatureTypeLabelFromInterpretationType')
+      || !coreReportHandoffSpecText.includes('feature type choices into HWP copy blocks')
       || !coreReportHandoffText.includes('getInvestigationStatusDetailSummary')
       || !coreReportHandoffText.includes('getKoreanFieldworkFeatureInvestigationChecklistSummary')
       || !coreReportHandoffText.includes('featureInvestigationChecklist')
       || !coreReportHandoffSpecText.includes('investigation checklist steps into HWP copy blocks')
       || !coreReportHandoffSpecText.includes("not.toContain('preInvestigationPhotoTaken')")
+      || !desktopPriorityStripSpecText.includes("not.toContain('pitFeature')")
       || !desktopChecklistText.includes('getSharedKoreanFieldworkChecklistSteps')
       || !desktopPriorityStripSpecText.includes("not.toContain('preInvestigationPhotoTaken')")) {
-    findings.push('report handoff HWP copy blocks must carry tablet investigation checklist values with shared Korean labels instead of raw valuelist keys');
+    findings.push('report handoff HWP copy blocks must carry tablet feature type and investigation checklist values with shared Korean labels instead of raw valuelist keys');
   }
   if (!coreReportHandoffText.includes('getPenMemoEvidenceSummary')
       || !coreReportHandoffText.includes('hasStrokeEvidence')

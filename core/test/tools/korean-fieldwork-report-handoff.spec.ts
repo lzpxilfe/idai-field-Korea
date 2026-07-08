@@ -3,6 +3,7 @@ import {
     normalizeKoreanFieldworkHwpPlainText,
     validateKoreanFieldworkReportHandoffCandidate
 } from '../../src/tools/korean-fieldwork-report-handoff';
+import { getKoreanFieldworkFeatureTypeLabel } from '../../src/tools/korean-fieldwork-feature-types';
 
 
 describe('Korean fieldwork report handoff', () => {
@@ -62,6 +63,26 @@ describe('Korean fieldwork report handoff', () => {
         expect(featureItem?.copyText).not.toContain('\u200B');
         expect(featureItem?.copyText).not.toMatch(/(^|[^\r])\n/);
         expect(featureItem?.copyText).toContain('\r\n');
+    });
+
+
+    it('carries tablet feature type choices into HWP copy blocks with shared Korean labels', () => {
+
+        const featureTypeLabel = getKoreanFieldworkFeatureTypeLabel('pit');
+        const handoff = makeKoreanFieldworkReportHandoff([
+            makeDocument('feature-1', 'Feature', {
+                identifier: 'feature-001',
+                featureType: 'pit',
+                featureInterpretationType: ['pitFeature']
+            })
+        ] as any);
+
+        const featureItem = handoff.items.find(item => item.documentId === 'feature-1');
+        const details = featureItem?.details.join('\n') ?? '';
+
+        expect(details).toContain(`\uc131\uaca9: ${featureTypeLabel}`);
+        expect(featureItem?.copyText).toContain(`\uc131\uaca9: ${featureTypeLabel}`);
+        expect(featureItem?.copyText).not.toContain('pitFeature');
     });
 
 

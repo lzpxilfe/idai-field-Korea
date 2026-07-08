@@ -14,6 +14,7 @@ import * as path from 'path';
 import {
     KoreanFieldworkPriorityStripComponent
 } from '../../../../src/app/components/resources/korean-fieldwork-priority-strip.component';
+import { getKoreanFieldworkFeatureTypeLabel } from 'idai-field-core';
 
 
 describe('KoreanFieldworkPriorityStripComponent', () => {
@@ -178,6 +179,7 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
         testWindow.require = jest.fn().mockReturnValue({ clipboard: { write, writeText } });
 
         try {
+            const featureTypeLabel = getKoreanFieldworkFeatureTypeLabel('pit');
             const component = createComponent({
                 find: jest.fn().mockResolvedValue({
                     documents: [
@@ -185,6 +187,8 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
                         createDocument('feature-1', 'Feature', {
                             identifier: 'pit-001',
                             shortDescription: 'round pit with dark fill',
+                            featureType: 'pit',
+                            featureInterpretationType: ['pitFeature'],
                             featureLocationSketch: '{"shape":"oval","center":{"x":75,"y":50},"scale":80}',
                             featureFreeDrawingStrokes:
                                 '{"version":1,"strokes":[{"points":[{"x":10,"y":20},{"x":40,"y":50}]}]}',
@@ -281,6 +285,8 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
             expect(featureItem.details.join('\n'))
                 .toContain('\uc790\uc720 \uc2a4\ucf00\uce58: \uc788\uc74c');
             expect(featureItem.details.join('\n'))
+                .toContain(`\uc131\uaca9: ${featureTypeLabel}`);
+            expect(featureItem.details.join('\n'))
                 .toContain(
                     '\uc870\uc0ac \ub2e8\uacc4 \ud655\uc778: '
                     + '\uc870\uc0ac \uc804 \uc0ac\uc9c4 \u00b7 \ud1a0\uce35\uc0ac\uc9c4 \u00b7 \uc720\ubb3c \uc218\uc2b5'
@@ -312,6 +318,8 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
             expect(featureItem.copyText)
                 .toContain('\uc790\uc720 \uc2a4\ucf00\uce58: \uc788\uc74c');
             expect(featureItem.copyText)
+                .toContain(`\uc131\uaca9: ${featureTypeLabel}`);
+            expect(featureItem.copyText)
                 .toContain(
                     '\uc870\uc0ac \ub2e8\uacc4 \ud655\uc778: '
                     + '\uc870\uc0ac \uc804 \uc0ac\uc9c4 \u00b7 \ud1a0\uce35\uc0ac\uc9c4 \u00b7 \uc720\ubb3c \uc218\uc2b5'
@@ -320,6 +328,8 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
                 .toContain('\uadfc\uac70 \ubc88\ud638: \uc0ac\uc9c4 12, \ub3c4\uba74 3');
             expect(featureItem.copyText)
                 .not.toContain('preInvestigationPhotoTaken');
+            expect(featureItem.copyText)
+                .not.toContain('pitFeature');
             expect(featureItem.copyText)
                 .not.toContain('"shape"');
             expect(featureItem.copyText)
