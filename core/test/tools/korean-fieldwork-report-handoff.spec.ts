@@ -92,7 +92,14 @@ describe('Korean fieldwork report handoff', () => {
             makeDocument('feature-1', 'Feature', {
                 identifier: 'pit-001',
                 shortDescription: 'round pit with dark fill',
+                period: 'bronzeAge',
                 featureRecordingStatus: 'candidate',
+                recordCreationTiming: 'duringFieldwork',
+                fieldRecordQuality: [
+                    'immediateRecording',
+                    'observationInterpretationSeparated'
+                ],
+                verificationState: 'observedInField',
                 featureInvestigationChecklist: [
                     'findsRecovered',
                     'preInvestigationPhotoTaken',
@@ -104,15 +111,28 @@ describe('Korean fieldwork report handoff', () => {
         const featureItem = handoff.items.find(item => item.documentId === 'feature-1');
         const details = featureItem?.details.join('\n') ?? '';
 
+        expect(details).toContain('\uc2dc\ub300: \uccad\ub3d9\uae30');
         expect(details).toContain(
-            '\uc870\uc0ac \uc0c1\ud0dc: candidate, '
+            '\uc870\uc0ac \uc0c1\ud0dc: '
+            + '\uc720\uad6c \uc9c4\ud589: \uc870\uc0ac \uc804, '
+            + '\uae30\ub85d \uc2dc\uc810: \ucd94\uac00 \uae30\ub85d, '
+            + '\uae30\ub85d \uad6c\ubd84: \ud604\uc7a5 \uae30\ub85d \u00b7 \ud574\uc11d, '
+            + '\ud655\uc778 \uc0c1\ud0dc: \ud604\uc7a5 \ud655\uc778, '
             + '\uc870\uc0ac \ub2e8\uacc4 \ud655\uc778: '
             + '\uc870\uc0ac \uc804 \uc0ac\uc9c4 \u00b7 \ud1a0\uce35\uc0ac\uc9c4 \u00b7 \uc720\ubb3c \uc218\uc2b5'
         );
+        expect(featureItem?.copyText).toContain('\uc2dc\ub300: \uccad\ub3d9\uae30');
         expect(featureItem?.copyText).toContain(
             '\uc870\uc0ac \ub2e8\uacc4 \ud655\uc778: '
             + '\uc870\uc0ac \uc804 \uc0ac\uc9c4 \u00b7 \ud1a0\uce35\uc0ac\uc9c4 \u00b7 \uc720\ubb3c \uc218\uc2b5'
         );
+        expect(featureItem?.copyText).toContain('\uae30\ub85d \uc2dc\uc810: \ucd94\uac00 \uae30\ub85d');
+        expect(featureItem?.copyText).toContain('\uae30\ub85d \uad6c\ubd84: \ud604\uc7a5 \uae30\ub85d \u00b7 \ud574\uc11d');
+        expect(featureItem?.copyText).toContain('\ud655\uc778 \uc0c1\ud0dc: \ud604\uc7a5 \ud655\uc778');
+        expect(featureItem?.copyText).not.toContain('duringFieldwork');
+        expect(featureItem?.copyText).not.toContain('immediateRecording');
+        expect(featureItem?.copyText).not.toContain('observedInField');
+        expect(featureItem?.copyText).not.toContain('bronzeAge');
         expect(featureItem?.copyText).not.toContain('preInvestigationPhotoTaken');
         expect(featureItem?.copyText).not.toContain('soilProfilePhotoLinked');
         expect(featureItem?.copyText).not.toContain('findsRecovered');

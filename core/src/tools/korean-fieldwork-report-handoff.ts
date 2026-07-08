@@ -12,8 +12,10 @@ import {
 } from './korean-fieldwork-feature-types';
 import {
     getKoreanFieldworkCategoryLabel,
+    getKoreanFieldworkFeaturePeriodSummary,
     getKoreanFieldworkFeatureInvestigationChecklistSummary,
     getKoreanFieldworkReportHandoffCategoryRank,
+    getKoreanFieldworkRecordFieldValueSummary,
     getKoreanFieldworkRelationLabel,
     isKoreanFieldworkReportHandoffCategory
 } from './korean-fieldwork-record-contract';
@@ -154,6 +156,7 @@ const DETAIL_FIELDS: DetailFieldDefinition[] = [
     },
     {
         label: '\uc2dc\ub300',
+        getSummary: getPeriodDetailSummary,
         fields: ['period', 'dating']
     },
     {
@@ -163,6 +166,7 @@ const DETAIL_FIELDS: DetailFieldDefinition[] = [
             'featureRecordingStatus',
             'recordCreationTiming',
             'fieldRecordQuality',
+            'verificationState',
             'featureInvestigationChecklist'
         ]
     },
@@ -270,6 +274,13 @@ const PEN_MEMO_CONTENT_FIELDS = [
     'penMemoAutoTranscript',
     'penMemoReviewedTranscript',
     'penMemoStrokes'
+];
+
+const KOREAN_FIELDWORK_LABELLED_RECORD_FIELDS = [
+    'featureRecordingStatus',
+    'recordCreationTiming',
+    'fieldRecordQuality',
+    'verificationState'
 ];
 
 const DAILY_LOG_CONTENT_LABELS: Readonly<Record<string, string>> = {
@@ -656,6 +667,14 @@ function getHandoffPrintableFieldValue(resource: NewResource, fieldName: string)
         return getKoreanFieldworkFeatureInvestigationChecklistSummary(resource.featureInvestigationChecklist);
     }
 
+    if (fieldName === 'period') {
+        return getKoreanFieldworkFeaturePeriodSummary(resource.period);
+    }
+
+    if (KOREAN_FIELDWORK_LABELLED_RECORD_FIELDS.includes(fieldName)) {
+        return getKoreanFieldworkRecordFieldValueSummary(fieldName, resource[fieldName]);
+    }
+
     return getPrintableValue(resource[fieldName]);
 }
 
@@ -847,12 +866,46 @@ function getFeatureTypeDetailSummary(document: Document): string|undefined {
 }
 
 
+function getPeriodDetailSummary(document: Document): string|undefined {
+
+    return [
+        getKoreanFieldworkFeaturePeriodSummary(document.resource.period),
+        getPrintableValue(document.resource.dating)
+    ].filter((value): value is string => !!value).join(', ') || undefined;
+}
+
+
 function getInvestigationStatusDetailSummary(document: Document): string|undefined {
 
     return [
-        getPrintableValue(document.resource.featureRecordingStatus),
-        getPrintableValue(document.resource.recordCreationTiming),
-        getPrintableValue(document.resource.fieldRecordQuality),
+        getLabeledEvidenceValue(
+            '\uc720\uad6c \uc9c4\ud589',
+            getKoreanFieldworkRecordFieldValueSummary(
+                'featureRecordingStatus',
+                document.resource.featureRecordingStatus
+            )
+        ),
+        getLabeledEvidenceValue(
+            '\uae30\ub85d \uc2dc\uc810',
+            getKoreanFieldworkRecordFieldValueSummary(
+                'recordCreationTiming',
+                document.resource.recordCreationTiming
+            )
+        ),
+        getLabeledEvidenceValue(
+            '\uae30\ub85d \uad6c\ubd84',
+            getKoreanFieldworkRecordFieldValueSummary(
+                'fieldRecordQuality',
+                document.resource.fieldRecordQuality
+            )
+        ),
+        getLabeledEvidenceValue(
+            '\ud655\uc778 \uc0c1\ud0dc',
+            getKoreanFieldworkRecordFieldValueSummary(
+                'verificationState',
+                document.resource.verificationState
+            )
+        ),
         getLabeledEvidenceValue(
             '\uc870\uc0ac \ub2e8\uacc4 \ud655\uc778',
             getKoreanFieldworkFeatureInvestigationChecklistSummary(

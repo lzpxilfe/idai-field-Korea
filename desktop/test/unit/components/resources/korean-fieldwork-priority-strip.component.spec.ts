@@ -189,6 +189,7 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
                             shortDescription: 'round pit with dark fill',
                             featureType: 'pit',
                             featureInterpretationType: ['pitFeature'],
+                            period: 'bronzeAge',
                             featureLocationSketch: '{"shape":"oval","center":{"x":75,"y":50},"scale":80}',
                             featureFreeDrawingStrokes:
                                 '{"version":1,"strokes":[{"points":[{"x":10,"y":20},{"x":40,"y":50}]}]}',
@@ -200,6 +201,9 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
                                 '[\uc190\uadf8\ub9bc \uc88c\ud45c] {"version":1,"strokes":[{"points":[{"x":10,"y":20},{"x":40,"y":50}]}]}'
                             ].join('\n'),
                             featureRecordingStatus: 'confirmed',
+                            recordCreationTiming: 'sameDayFieldRecord',
+                            fieldRecordQuality: ['immediateRecording'],
+                            verificationState: 'observedInField',
                             featureInvestigationChecklist: [
                                 'findsRecovered',
                                 'preInvestigationPhotoTaken',
@@ -287,6 +291,16 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
             expect(featureItem.details.join('\n'))
                 .toContain(`\uc131\uaca9: ${featureTypeLabel}`);
             expect(featureItem.details.join('\n'))
+                .toContain('\uc2dc\ub300: \uccad\ub3d9\uae30');
+            expect(featureItem.details.join('\n'))
+                .toContain(
+                    '\uc870\uc0ac \uc0c1\ud0dc: '
+                    + '\uc720\uad6c \uc9c4\ud589: \uc644\ub8cc, '
+                    + '\uae30\ub85d \uc2dc\uc810: \ub2f9\uc77c \uae30\ub85d, '
+                    + '\uae30\ub85d \uad6c\ubd84: \ud604\uc7a5 \uae30\ub85d, '
+                    + '\ud655\uc778 \uc0c1\ud0dc: \ud604\uc7a5 \ud655\uc778'
+                );
+            expect(featureItem.details.join('\n'))
                 .toContain(
                     '\uc870\uc0ac \ub2e8\uacc4 \ud655\uc778: '
                     + '\uc870\uc0ac \uc804 \uc0ac\uc9c4 \u00b7 \ud1a0\uce35\uc0ac\uc9c4 \u00b7 \uc720\ubb3c \uc218\uc2b5'
@@ -320,6 +334,12 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
             expect(featureItem.copyText)
                 .toContain(`\uc131\uaca9: ${featureTypeLabel}`);
             expect(featureItem.copyText)
+                .toContain('\uc2dc\ub300: \uccad\ub3d9\uae30');
+            expect(featureItem.copyText)
+                .toContain('\uae30\ub85d \uc2dc\uc810: \ub2f9\uc77c \uae30\ub85d');
+            expect(featureItem.copyText)
+                .toContain('\uae30\ub85d \uad6c\ubd84: \ud604\uc7a5 \uae30\ub85d');
+            expect(featureItem.copyText)
                 .toContain(
                     '\uc870\uc0ac \ub2e8\uacc4 \ud655\uc778: '
                     + '\uc870\uc0ac \uc804 \uc0ac\uc9c4 \u00b7 \ud1a0\uce35\uc0ac\uc9c4 \u00b7 \uc720\ubb3c \uc218\uc2b5'
@@ -330,6 +350,14 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
                 .not.toContain('preInvestigationPhotoTaken');
             expect(featureItem.copyText)
                 .not.toContain('pitFeature');
+            expect(featureItem.copyText)
+                .not.toContain('sameDayFieldRecord');
+            expect(featureItem.copyText)
+                .not.toContain('immediateRecording');
+            expect(featureItem.copyText)
+                .not.toContain('observedInField');
+            expect(featureItem.copyText)
+                .not.toContain('bronzeAge');
             expect(featureItem.copyText)
                 .not.toContain('"shape"');
             expect(featureItem.copyText)

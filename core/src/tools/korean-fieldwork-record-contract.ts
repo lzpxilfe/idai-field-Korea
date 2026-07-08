@@ -129,6 +129,49 @@ export const KOREAN_FIELDWORK_FEATURE_INVESTIGATION_CHECKLIST_LABELS: Readonly<R
     trenchObliquePhotoTaken: '\uc0ac\uc120 \uc0ac\uc9c4'
 };
 
+export const KOREAN_FIELDWORK_RECORD_VALUE_LABELS: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+    featureRecordingStatus: {
+        candidate: '\uc870\uc0ac \uc804',
+        investigating: '\uc870\uc0ac \uc911',
+        confirmed: '\uc644\ub8cc'
+    },
+    recordCreationTiming: {
+        sameDayFieldRecord: '\ub2f9\uc77c \uae30\ub85d',
+        duringFieldwork: '\ucd94\uac00 \uae30\ub85d',
+        fieldOnlyObservation: '\ud604\uc7a5 \ucd94\uc815',
+        handoverStage: '\uc778\uacc4 \ub2e8\uacc4',
+        reportStageGenerated: '\ubcf4\uace0 \ub2e8\uacc4',
+        postExcavationDerived: '\uc815\ub9ac \ud30c\uc0dd'
+    },
+    fieldRecordQuality: {
+        immediateRecording: '\ud604\uc7a5 \uae30\ub85d',
+        observationInterpretationSeparated: '\ud574\uc11d',
+        correctionNeeded: '\ubcf4\uc644 \uba54\ubaa8'
+    },
+    verificationState: {
+        observedInField: '\ud604\uc7a5 \ud655\uc778',
+        candidate: '\ud655\uc778 \ud6c4\ubcf4',
+        inferred: '\ucd94\uc815',
+        conflictingEvidence: '\uadfc\uac70 \ucda9\ub3cc',
+        notObserved: '\ubbf8\ud655\uc778',
+        needsRecheck: '\uc7ac\uac80\ud1a0',
+        pendingDecision: '\ucd94\uac00 \ud655\uc778'
+    },
+    period: {
+        undated: '\uc2dc\uae30\ubbf8\uc0c1',
+        paleolithic: '\uad6c\uc11d\uae30',
+        neolithic: '\uc2e0\uc11d\uae30',
+        bronzeAge: '\uccad\ub3d9\uae30',
+        earlyIronAge: '\ucd08\uae30\ucca0\uae30',
+        protoThreeKingdoms: '\uc6d0\uc0bc\uad6d',
+        threeKingdoms: '\uc0bc\uad6d',
+        unifiedSilla: '\ud1b5\uc77c\uc2e0\ub77c',
+        goryeo: '\uace0\ub824',
+        joseon: '\uc870\uc120',
+        modernContemporary: '\uadfc\ud604\ub300'
+    }
+};
+
 const KOREAN_FIELDWORK_FEATURE_INVESTIGATION_CHECKLIST_ORDER: readonly string[] = Array.from(new Set([
     ...KOREAN_FIELDWORK_FEATURE_CHECKLIST_STEPS,
     ...KOREAN_FIELDWORK_TRIAL_TRENCH_CHECKLIST_STEPS
@@ -333,6 +376,36 @@ export function getKoreanFieldworkFeatureInvestigationChecklistSummary(value: un
 }
 
 
+export function getKoreanFieldworkRecordValueLabel(fieldName: string, value: string): string {
+
+    return KOREAN_FIELDWORK_RECORD_VALUE_LABELS[fieldName]?.[value] ?? value;
+}
+
+
+export function getKoreanFieldworkRecordValueLabels(fieldName: string, value: unknown): string[] {
+
+    return getStringListValues(value)
+        .map(item => getKoreanFieldworkRecordValueLabel(fieldName, item));
+}
+
+
+export function getKoreanFieldworkRecordFieldValueSummary(fieldName: string, value: unknown): string|undefined {
+
+    const labels = getKoreanFieldworkRecordValueLabels(fieldName, value);
+
+    return labels.length > 0 ? labels.join(' \u00b7 ') : undefined;
+}
+
+
+export function getKoreanFieldworkFeaturePeriodSummary(value: unknown): string|undefined {
+
+    const labels = getKoreanFieldworkPeriodValues(value)
+        .map(period => getKoreanFieldworkRecordValueLabel('period', period));
+
+    return labels.length > 0 ? labels.join('~') : undefined;
+}
+
+
 export function isKoreanFieldworkReportHandoffCategory(categoryName: string): boolean {
 
     return KOREAN_FIELDWORK_REPORT_HANDOFF_CATEGORY_RANK[categoryName] !== undefined;
@@ -426,6 +499,26 @@ function getStringListValues(value: unknown): string[] {
     return text.split(/\r?\n|,\s*/)
         .map(line => line.trim())
         .filter(line => !!line);
+}
+
+
+function getKoreanFieldworkPeriodValues(value: unknown): string[] {
+
+    if (typeof value === 'string') {
+        const trimmedValue = value.trim();
+        return trimmedValue ? [trimmedValue] : [];
+    }
+
+    if (value === undefined || value === null || Array.isArray(value) || typeof value !== 'object') {
+        return [];
+    }
+
+    const record = value as Record<string, unknown>;
+    const values = [record.value, record.endValue]
+        .map(entry => typeof entry === 'string' ? entry.trim() : '')
+        .filter(entry => entry.length > 0);
+
+    return values.filter((entry, index) => values.indexOf(entry) === index);
 }
 
 

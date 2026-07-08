@@ -3,9 +3,12 @@ import {
     getKoreanFieldworkChecklistSteps,
     getKoreanFieldworkEvidenceChips,
     getKoreanFieldworkEvidenceDefinitionsForCategory,
+    getKoreanFieldworkFeaturePeriodSummary,
     getKoreanFieldworkFeatureInvestigationChecklistLabel,
     getKoreanFieldworkFeatureInvestigationChecklistLabels,
     getKoreanFieldworkFeatureInvestigationChecklistSummary,
+    getKoreanFieldworkRecordFieldValueSummary,
+    getKoreanFieldworkRecordValueLabel,
     getKoreanFieldworkReportHandoffCategoryRank,
     getKoreanFieldworkRelationLabel,
     isKoreanFieldworkReportHandoffCategory,
@@ -57,6 +60,27 @@ describe('Korean fieldwork record contract', () => {
         expect(getKoreanFieldworkReportHandoffCategoryRank(KOREAN_FIELDWORK_CATEGORIES.TRENCH))
             .toBeLessThan(getKoreanFieldworkReportHandoffCategoryRank(KOREAN_FIELDWORK_CATEGORIES.PHOTO));
         expect(getKoreanFieldworkReportHandoffCategoryRank('Project')).toBe(Number.MAX_SAFE_INTEGER);
+    });
+
+
+    it('keeps tablet quick-record value labels in the shared core contract', () => {
+
+        expect(getKoreanFieldworkRecordValueLabel('featureRecordingStatus', 'candidate'))
+            .toBe('\uc870\uc0ac \uc804');
+        expect(getKoreanFieldworkRecordFieldValueSummary('fieldRecordQuality', [
+            'immediateRecording',
+            'observationInterpretationSeparated'
+        ])).toBe('\ud604\uc7a5 \uae30\ub85d \u00b7 \ud574\uc11d');
+        expect(getKoreanFieldworkRecordFieldValueSummary('recordCreationTiming', 'duringFieldwork'))
+            .toBe('\ucd94\uac00 \uae30\ub85d');
+        expect(getKoreanFieldworkRecordFieldValueSummary('verificationState', 'observedInField'))
+            .toBe('\ud604\uc7a5 \ud655\uc778');
+        expect(getKoreanFieldworkFeaturePeriodSummary({
+            value: 'bronzeAge',
+            endValue: 'threeKingdoms'
+        })).toBe('\uccad\ub3d9\uae30~\uc0bc\uad6d');
+        expect(getKoreanFieldworkRecordValueLabel('unknownField', 'unknownValue'))
+            .toBe('unknownValue');
     });
 
 
