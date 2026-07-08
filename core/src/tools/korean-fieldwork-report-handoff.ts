@@ -1325,6 +1325,7 @@ function getFieldworkPhotoEvidenceSummary(document: Document): string|undefined 
             'imageUri',
             'fileUri'
         ])),
+        getPhotoReportMetadataSummary(document, 'fieldworkPhotoCapturedAt'),
         getStrokeEvidenceLabel('\uc0ac\uc9c4 \ud45c\uc2dc', document.resource.fieldworkPhotoAnnotationStrokes),
         getLabeledEvidenceValue('\uc694\uc57d', getPrintableValue(document.resource.shortDescription))
     ].filter((value): value is string => !!value).join(' / ') || undefined;
@@ -1339,6 +1340,7 @@ function getSoilProfilePhotoEvidenceSummary(document: Document): string|undefine
             'imageUri',
             'fieldworkPhotoUri'
         ])),
+        getPhotoReportMetadataSummary(document, 'soilProfilePhotoCapturedAt'),
         getStrokeEvidenceLabel('\uc0ac\uc9c4 \ud45c\uc2dc', document.resource.soilProfilePhotoAnnotationStrokes),
         getStrokeEvidenceLabel('\ud1a0\uce35\uc120 \ud45c\uc2dc', document.resource.soilProfileAnnotationStrokes),
         getStrokeEvidenceLabel('\uce35 \ubc88\ud638 \ud45c\uc2dc', document.resource.soilProfileLayerMarkers),
@@ -1357,6 +1359,41 @@ function getSoilProfilePhotoEvidenceSummary(document: Document): string|undefine
         )),
         getLabeledEvidenceValue('\uc694\uc57d', getPrintableValue(document.resource.shortDescription))
     ].filter((value): value is string => !!value).join(' / ') || undefined;
+}
+
+
+function getPhotoReportMetadataSummary(document: Document, capturedAtField: string): string|undefined {
+
+    const parts = [
+        getLabeledEvidenceValue('\uc6d0\ubcf8 \ud30c\uc77c', getPrintableValue(document.resource.originalFilename)),
+        getLabeledEvidenceValue('\ucd2c\uc601', getPhotoCapturedAtLabel(document.resource[capturedAtField])),
+        getLabeledEvidenceValue('\ud06c\uae30', getImageSizeLabel(document.resource.width, document.resource.height))
+    ].filter((value): value is string => !!value);
+
+    return parts.length > 0 ? parts.join(', ') : undefined;
+}
+
+
+function getPhotoCapturedAtLabel(value: any): string|undefined {
+
+    const text = getPrintableValue(value);
+    if (!text) return undefined;
+
+    const match = text.match(/^(\d{4}-\d{2}-\d{2})(?:[T\s](\d{2}:\d{2}))?/);
+    if (!match) return text;
+
+    return match[2] ? `${match[1]} ${match[2]}` : match[1];
+}
+
+
+function getImageSizeLabel(widthValue: any, heightValue: any): string|undefined {
+
+    const width = getNumberValue(widthValue);
+    const height = getNumberValue(heightValue);
+
+    return width !== undefined && height !== undefined
+        ? `${width}x${height}`
+        : undefined;
 }
 
 

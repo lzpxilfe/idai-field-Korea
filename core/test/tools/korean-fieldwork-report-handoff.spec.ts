@@ -448,9 +448,54 @@ describe('Korean fieldwork report handoff', () => {
         expect(issueDetails).toContain('pen-memo-auto-transcript-review');
         expect(featureItem?.copyText).toContain('\ud655\uc778 \uc0c1\uc138');
         expect(featureItem?.copyText).toContain('\uc0ac\uc9c4 \ud45c\uc2dc: \uc788\uc74c');
+        expect(featureItem?.copyText).toContain('\uc6d0\ubcf8 \ud30c\uc77c: photo-annotated.jpg');
+        expect(featureItem?.copyText).toContain('\ucd2c\uc601: 2026-06-23 01:02');
+        expect(featureItem?.copyText).toContain('\ud06c\uae30: 4032x3024');
         expect(featureItem?.copyText).toContain('fieldwork-photo-annotation-review');
         expect(featureItem?.copyText).toContain('pen-memo-auto-transcript-review');
         expect(featureItem?.copyText).not.toContain('"strokes"');
+    });
+
+
+    it('carries tablet photo report metadata into HWP copy blocks', () => {
+
+        const documents = [
+            makeDocument('feature-1', 'Feature', {
+                identifier: 'pit-001',
+                shortDescription: 'round pit with dark fill',
+                featureRecordingStatus: 'confirmed',
+                featureInvestigationChecklist: []
+            }),
+            makeDocument('photo-1', 'Photo', {
+                fieldworkPhotoUri: 'file:///tablet/photos/pit-001.jpg',
+                originalFilename: 'pit-001.jpg',
+                fieldworkPhotoCapturedAt: '2026-06-23T01:02:03.000Z',
+                width: 4032,
+                height: 3024,
+                relations: { depicts: ['feature-1'] }
+            }),
+            makeDocument('soil-photo-1', 'SoilProfilePhoto', {
+                soilProfilePhotoUri: 'file:///tablet/photos/soil-profile-1.jpg',
+                originalFilename: 'soil-profile-1.jpg',
+                soilProfilePhotoCapturedAt: '2026-06-23T02:03:04.000Z',
+                width: 3000,
+                height: 2000,
+                relations: { depicts: ['feature-1'] }
+            })
+        ];
+
+        const handoff = makeKoreanFieldworkReportHandoff(documents as any);
+        const featureItem = handoff.items.find(item => item.documentId === 'feature-1');
+        const evidenceDetails = featureItem?.evidenceDetails.join('\n') ?? '';
+
+        expect(evidenceDetails).toContain('\uc6d0\ubcf8 \ud30c\uc77c: pit-001.jpg');
+        expect(evidenceDetails).toContain('\ucd2c\uc601: 2026-06-23 01:02');
+        expect(evidenceDetails).toContain('\ud06c\uae30: 4032x3024');
+        expect(evidenceDetails).toContain('\uc6d0\ubcf8 \ud30c\uc77c: soil-profile-1.jpg');
+        expect(evidenceDetails).toContain('\ucd2c\uc601: 2026-06-23 02:03');
+        expect(evidenceDetails).toContain('\ud06c\uae30: 3000x2000');
+        expect(featureItem?.copyText).toContain('\uc6d0\ubcf8 \ud30c\uc77c: pit-001.jpg');
+        expect(featureItem?.copyText).toContain('\uc6d0\ubcf8 \ud30c\uc77c: soil-profile-1.jpg');
     });
 
 

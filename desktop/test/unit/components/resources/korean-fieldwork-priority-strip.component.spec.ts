@@ -218,12 +218,20 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
                         }),
                         createDocument('photo-1', 'Photo', {
                             fieldworkPhotoUri: 'file:///tablet/photos/pit-001.jpg',
+                            originalFilename: 'pit-001.jpg',
+                            fieldworkPhotoCapturedAt: '2026-06-23T01:02:03.000Z',
+                            width: 4032,
+                            height: 3024,
                             fieldworkPhotoAnnotationStrokes:
                                 '{"version":1,"strokes":[{"points":[{"x":10,"y":20},{"x":30,"y":40}]}]}',
                             relations: { depicts: ['feature-1'] }
                         }),
                         createDocument('soil-photo-1', 'SoilProfilePhoto', {
                             soilProfilePhotoUri: 'file:///tablet/photos/soil-photo-1.jpg',
+                            originalFilename: 'soil-photo-1.jpg',
+                            soilProfilePhotoCapturedAt: '2026-06-23T02:03:04.000Z',
+                            width: 3000,
+                            height: 2000,
                             soilProfilePhotoAnnotationStrokes:
                                 '{"version":1,"strokes":[{"points":[{"x":20,"y":30}]}]}',
                             soilProfileAnnotationStrokes:
@@ -322,6 +330,18 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
             expect(featureItem.evidenceDetails.join('\n'))
                 .toContain('file:///tablet/photos/pit-001.jpg');
             expect(featureItem.evidenceDetails.join('\n'))
+                .toContain('\uc6d0\ubcf8 \ud30c\uc77c: pit-001.jpg');
+            expect(featureItem.evidenceDetails.join('\n'))
+                .toContain('\ucd2c\uc601: 2026-06-23 01:02');
+            expect(featureItem.evidenceDetails.join('\n'))
+                .toContain('\ud06c\uae30: 4032x3024');
+            expect(featureItem.evidenceDetails.join('\n'))
+                .toContain('\uc6d0\ubcf8 \ud30c\uc77c: soil-photo-1.jpg');
+            expect(featureItem.evidenceDetails.join('\n'))
+                .toContain('\ucd2c\uc601: 2026-06-23 02:03');
+            expect(featureItem.evidenceDetails.join('\n'))
+                .toContain('\ud06c\uae30: 3000x2000');
+            expect(featureItem.evidenceDetails.join('\n'))
                 .toContain('\uc0ac\uc9c4 \ud45c\uc2dc: \uc788\uc74c');
             expect(featureItem.evidenceDetails.join('\n'))
                 .toContain('RGB 111/87/61 @ 20%/50%');
@@ -335,6 +355,10 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
                 .toContain('\uc2a4\ud3ec\uc774\ub4dc \uc704\uce58');
             expect(featureItem.copyText)
                 .toContain('1\uce35: RGB 111/87/61 @ 20%/50%');
+            expect(featureItem.copyText)
+                .toContain('\uc6d0\ubcf8 \ud30c\uc77c: pit-001.jpg');
+            expect(featureItem.copyText)
+                .toContain('\uc6d0\ubcf8 \ud30c\uc77c: soil-photo-1.jpg');
             expect(featureItem.copyText)
                 .not.toContain('\uc0ac\uc9c4 \uc120\ud0dd \uc9c0\uc810 20%/50% \ud3c9\uade0 RGB 111/87/61');
             expect(featureItem.copyText)
