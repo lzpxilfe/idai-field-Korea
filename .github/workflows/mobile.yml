@@ -62,6 +62,7 @@ jobs:
           components/Project/FieldworkPhotoAnnotationPanel.spec.tsx
           components/Project/KoreanFieldworkSoilColorPanel.spec.tsx
           components/Project/SoilProfileCameraButton.spec.ts
+          components/Project/korean-fieldwork-field-notes.spec.ts
           components/Project/soil-color-photo-assist.spec.ts
         working-directory: mobile
 
