@@ -33,6 +33,7 @@ describe('KoreanFieldworkSoilColorPanelComponent', () => {
         expect(template).toContain('사진 판독 후보');
         expect(template).toContain('사진에서 읽은 먼셀 후보');
         expect(template).toContain('getAssistSampleSourceLabel()');
+        expect(template).toContain('korean-fieldwork-soil-color-layer-sample-source');
         expect(template).toContain('토색 메모');
         expect(template).toContain('보정판 위치');
         expect(template).not.toContain('촬영 조건');
@@ -260,7 +261,8 @@ describe('KoreanFieldworkSoilColorPanelComponent', () => {
 
         component.applyAssistCandidate('10YR 4/3');
 
-        expect(component.document.resource.soilProfileColorSwatches).toBe('1: 10YR 4/3');
+        expect(component.document.resource.soilProfileColorSwatches)
+            .toBe('1: 10YR 4/3 RGB 111/87/61');
         expect(component.document.resource.soilColorAssistStatus).toBe('reviewed');
     });
 
@@ -304,6 +306,57 @@ describe('KoreanFieldworkSoilColorPanelComponent', () => {
 
         expect(component.getAssistSampleSourceLabel())
             .toBe('사진 선택 지점 20%/50% 평균 RGB 111/87/61');
+    });
+
+
+    it('carries tablet eyedropper sample locations into accepted desktop layer rows', () => {
+
+        component.document = {
+            resource: {
+                category: 'SoilProfilePhoto',
+                soilColorAssistCandidates: [
+                    '사진 선택 지점 20%/50% 평균 RGB 111/87/61',
+                    '1: 10YR 4/3 (높음)'
+                ].join('\n')
+            }
+        } as any;
+        component.fieldDefinitions = [
+            { name: 'soilProfileColorSwatches', editable: true },
+            { name: 'soilColorAssistCandidates', editable: true },
+            { name: 'soilColorAssistStatus', editable: true }
+        ] as any;
+
+        component.applyAssistCandidate('10YR 4/3');
+
+        expect(component.document.resource.soilProfileColorSwatches)
+            .toBe('1: 10YR 4/3 RGB 111/87/61 @ 20%/50%');
+        expect(component.getSoilColorRows()[0]).toMatchObject({
+            number: 1,
+            sampleLocationLabel: '사진 선택 위치 20%/50%',
+            sampleRgbLabel: 'RGB 111/87/61',
+            value: '10YR 4/3 RGB 111/87/61 @ 20%/50%'
+        });
+    });
+
+
+    it('keeps accepted eyedropper sample locations when desktop reviewers adjust Munsell values', () => {
+
+        component.document = {
+            resource: {
+                category: 'SoilProfilePhoto',
+                soilProfileColorSwatches: '1: 10YR 4/3 RGB 111/87/61 @ 20%/50%'
+            }
+        } as any;
+        component.fieldDefinitions = [
+            { name: 'soilProfileColorSwatches', editable: true }
+        ] as any;
+
+        component.applyMunsellPreset('7.5YR 4/4');
+
+        expect(component.document.resource.soilProfileColorSwatches)
+            .toBe('1: 7.5YR 4/4 RGB 111/87/61 @ 20%/50%');
+        expect(component.getSoilColorRows()[0].sampleLocationLabel)
+            .toBe('사진 선택 위치 20%/50%');
     });
 
 

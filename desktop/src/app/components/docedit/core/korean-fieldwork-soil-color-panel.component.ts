@@ -13,8 +13,18 @@ type SoilColorOption = {
 
 type SoilColorLayerRow = {
     number: number;
+    sampleLocationLabel?: string;
+    sampleRgbLabel?: string;
     value: string;
 };
+
+
+const SOIL_COLOR_ROW_RGB_SAMPLE_PATTERN =
+    /RGB\s+(\d{1,3})\/(\d{1,3})\/(\d{1,3})(?:\s+@\s*(\d{1,3})%\/(\d{1,3})%)?/i;
+const SOIL_COLOR_ASSIST_POINT_SAMPLE_PATTERN =
+    /^사진 선택 지점 (\d{1,3})%\/(\d{1,3})% 평균 RGB (\d{1,3})\/(\d{1,3})\/(\d{1,3})$/;
+const SOIL_COLOR_ASSIST_CENTER_SAMPLE_PATTERN =
+    /^사진 중앙부 평균 RGB (\d{1,3})\/(\d{1,3})\/(\d{1,3})$/;
 
 
 const SOIL_COLOR_FIELDS = {
@@ -134,7 +144,7 @@ export class KoreanFieldworkSoilColorPanelComponent {
         if (this.canRecordLayerMunsell()) {
             this.setLayerMunsell(value);
         } else if (this.canRecordPhotoSwatches()) {
-            this.setSoilProfileColorRowValue(this.getActiveSoilColorRowNumber(), value);
+            this.setSoilProfileColorRowValue(this.getActiveSoilColorRowNumber(), value, true);
         }
     }
 
@@ -161,7 +171,7 @@ export class KoreanFieldworkSoilColorPanelComponent {
                 this.updateSoilColorRowValue(
                     this.getValue(SOIL_COLOR_FIELDS.profileColorSwatches),
                     this.getActiveSoilColorRowNumber(),
-                    value
+                    this.getAcceptedAssistCandidateRowValue(value)
                 )
             );
             this.setAssistStatus('reviewed');
@@ -238,7 +248,7 @@ export class KoreanFieldworkSoilColorPanelComponent {
     }
 
 
-    public setSoilProfileColorRowValue(rowNumber: number, value: string) {
+    public setSoilProfileColorRowValue(rowNumber: number, value: string, preserveExistingSample: boolean = false) {
 
         this.selectSoilColorRow(rowNumber);
         this.setValue(
@@ -246,7 +256,8 @@ export class KoreanFieldworkSoilColorPanelComponent {
             this.updateSoilColorRowValue(
                 this.getValue(SOIL_COLOR_FIELDS.profileColorSwatches),
                 rowNumber,
-                value
+                value,
+                preserveExistingSample
             )
         );
     }
@@ -323,25 +334,128 @@ export class KoreanFieldworkSoilColorPanelComponent {
 
         return lines.map((line, index) => {
             const match = line.match(/^\s*(\d+)\s*:?\s*(.*)$/);
-            if (!match) return { number: index + 1, value: line.trim() };
+            if (!match) {
+                return {
+                    number: index + 1,
+                    ...this.getSoilColorRowSampleSummary(line),
+                    value: line.trim()
+                };
+            }
+
+            const value = match[2] ?? '';
 
             return {
                 number: Number.parseInt(match[1], 10),
-                value: match[2] ?? ''
+                ...this.getSoilColorRowSampleSummary(value),
+                value
             };
         });
     }
 
 
-    private updateSoilColorRowValue(currentValue: string, rowNumber: number, value: string): string {
+    private updateSoilColorRowValue(currentValue: string,
+                                    rowNumber: number,
+                                    value: string,
+                                    preserveExistingSample: boolean = false): string {
 
         const rows = this.parseSoilColorRows(currentValue);
         const rowIndex = rows.findIndex(row => row.number === rowNumber);
+        const nextValue = preserveExistingSample
+            ? this.withPreservedSoilColorSample(rows[rowIndex]?.value, value)
+            : value;
         const nextRows = rowIndex < 0
-            ? [...rows, { number: rowNumber, value }]
-            : rows.map((row, index) => index === rowIndex ? { ...row, value } : row);
+            ? [...rows, { number: rowNumber, value: nextValue }]
+            : rows.map((row, index) => index === rowIndex ? { ...row, value: nextValue } : row);
 
         return this.serializeSoilColorRows(nextRows);
+    }
+
+
+    private getAcceptedAssistCandidateRowValue(value: string): string {
+
+        const sampleSuffix = this.getSoilColorSampleSuffixFromAssistSource();
+
+        return sampleSuffix && !SOIL_COLOR_ROW_RGB_SAMPLE_PATTERN.test(value)
+            ? `${value} ${sampleSuffix}`
+            : value;
+    }
+
+
+    private getSoilColorSampleSuffixFromAssistSource(): string {
+
+        const sourceLabel = this.getAssistSampleSourceLabel();
+        const pointMatch = sourceLabel.match(SOIL_COLOR_ASSIST_POINT_SAMPLE_PATTERN);
+        if (pointMatch) {
+            const xPercent = this.normalizeSoilColorSamplePercent(pointMatch[1]);
+            const yPercent = this.normalizeSoilColorSamplePercent(pointMatch[2]);
+            const rgb = this.getValidRgbSample(pointMatch[3], pointMatch[4], pointMatch[5]);
+
+            return rgb ? `${rgb} @ ${xPercent}%/${yPercent}%` : '';
+        }
+
+        const centerMatch = sourceLabel.match(SOIL_COLOR_ASSIST_CENTER_SAMPLE_PATTERN);
+        if (centerMatch) {
+            return this.getValidRgbSample(centerMatch[1], centerMatch[2], centerMatch[3]) ?? '';
+        }
+
+        return '';
+    }
+
+
+    private withPreservedSoilColorSample(previousValue: string|undefined, nextValue: string): string {
+
+        if (!previousValue || SOIL_COLOR_ROW_RGB_SAMPLE_PATTERN.test(nextValue)) return nextValue;
+
+        const previousSample = this.getSoilColorRowSampleSummary(previousValue).sampleRawValue;
+
+        return previousSample && nextValue.trim()
+            ? `${nextValue.trim()} ${previousSample}`
+            : nextValue;
+    }
+
+
+    private getSoilColorRowSampleSummary(value: string): {
+        sampleLocationLabel?: string;
+        sampleRawValue?: string;
+        sampleRgbLabel?: string;
+    } {
+
+        const match = value.match(SOIL_COLOR_ROW_RGB_SAMPLE_PATTERN);
+        if (!match) return {};
+
+        const rgb = this.getValidRgbSample(match[1], match[2], match[3]);
+        if (!rgb) return {};
+
+        const xPercent = match[4] === undefined ? undefined : this.normalizeSoilColorSamplePercent(match[4]);
+        const yPercent = match[5] === undefined ? undefined : this.normalizeSoilColorSamplePercent(match[5]);
+        const sampleLocationLabel = xPercent !== undefined && yPercent !== undefined
+            ? `사진 선택 위치 ${xPercent}%/${yPercent}%`
+            : undefined;
+
+        return {
+            sampleLocationLabel,
+            sampleRawValue: sampleLocationLabel
+                ? `${rgb} @ ${xPercent}%/${yPercent}%`
+                : rgb,
+            sampleRgbLabel: rgb
+        };
+    }
+
+
+    private getValidRgbSample(redValue: string, greenValue: string, blueValue: string): string|undefined {
+
+        const values = [redValue, greenValue, blueValue].map(value => Number.parseInt(value, 10));
+        if (!values.every(value => Number.isFinite(value) && value >= 0 && value <= 255)) return undefined;
+
+        return `RGB ${values[0]}/${values[1]}/${values[2]}`;
+    }
+
+
+    private normalizeSoilColorSamplePercent(value: string): number {
+
+        const percent = Number.parseInt(value, 10);
+
+        return Number.isFinite(percent) ? Math.max(0, Math.min(100, Math.round(percent))) : 0;
     }
 
 

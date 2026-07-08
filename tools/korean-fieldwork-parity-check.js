@@ -3839,6 +3839,13 @@ function validateSoilColorReviewWorkflow() {
       || !desktopSoilColorPanelSpecText.includes('tablet eyedropper sample locations')) {
     findings.push('desktop soil color panel must show tablet eyedropper sample locations next to candidates');
   }
+  if (!desktopSoilColorPanelText.includes('getAcceptedAssistCandidateRowValue')
+      || !desktopSoilColorPanelText.includes('getSoilColorSampleSuffixFromAssistSource')
+      || !desktopSoilColorPanelTemplateText.includes('korean-fieldwork-soil-color-layer-sample-source')
+      || !desktopSoilColorPanelSpecText.includes('accepted desktop layer rows')
+      || !desktopSoilColorPanelSpecText.includes('keeps accepted eyedropper sample locations')) {
+    findings.push('desktop soil color panel must carry tablet eyedropper locations into accepted layer rows and preserve them during review edits');
+  }
   if (!desktopEvidenceReviewText.includes('sampleSourceLabel')
       || !desktopEvidenceReviewSpecText.includes('sampleSourceLabel')
       || !desktopRecordContextPanelText.includes('샘플 위치')

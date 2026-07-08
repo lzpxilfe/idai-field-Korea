@@ -95,18 +95,30 @@
         <div *ngIf="canRecordPhotoSwatches()"
              class="korean-fieldwork-soil-color-layer-list">
             <div *ngFor="let row of getSoilColorRows()"
-                 class="korean-fieldwork-soil-color-layer-row"
-                 [class.active]="row.number === getActiveSoilColorRowNumber()">
-                <button type="button"
-                        class="btn korean-fieldwork-soil-color-layer-number"
-                        (click)="selectSoilColorRow(row.number)">
-                    {{row.number}}
-                </button>
-                <input class="form-control korean-fieldwork-soil-color-layer-input"
-                       [ngModel]="row.value"
-                       (focus)="selectSoilColorRow(row.number)"
-                       (ngModelChange)="setSoilProfileColorRowValue(row.number, $event)"
-                       placeholder="먼셀값">
+                 class="korean-fieldwork-soil-color-layer-item">
+                <div class="korean-fieldwork-soil-color-layer-row"
+                     [class.active]="row.number === getActiveSoilColorRowNumber()">
+                    <button type="button"
+                            class="btn korean-fieldwork-soil-color-layer-number"
+                            (click)="selectSoilColorRow(row.number)">
+                        {{row.number}}
+                    </button>
+                    <input class="form-control korean-fieldwork-soil-color-layer-input"
+                           [ngModel]="row.value"
+                           (focus)="selectSoilColorRow(row.number)"
+                           (ngModelChange)="setSoilProfileColorRowValue(row.number, $event)"
+                           placeholder="먼셀값">
+                </div>
+                <div *ngIf="row.sampleLocationLabel || row.sampleRgbLabel"
+                     class="korean-fieldwork-soil-color-layer-sample-source">
+                    <span class="mdi mdi-eyedropper-variant"></span>
+                    <span *ngIf="row.sampleLocationLabel">{{row.sampleLocationLabel}}</span>
+                    <span *ngIf="!row.sampleLocationLabel">사진 색상 샘플</span>
+                    <span *ngIf="row.sampleRgbLabel"
+                          class="korean-fieldwork-soil-color-layer-sample-rgb">
+                        {{row.sampleRgbLabel}}
+                    </span>
+                </div>
             </div>
         </div>
     </div>
