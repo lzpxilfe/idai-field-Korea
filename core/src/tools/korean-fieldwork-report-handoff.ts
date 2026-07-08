@@ -89,6 +89,8 @@ export interface KoreanFieldworkReportHandoffValidation {
     relatedFields: string[];
     evidenceCount: number;
     issueCount: number;
+    copySections?: KoreanFieldworkReportHandoffCopySection[];
+    copyBodyText?: string;
     copyText?: string;
 }
 
@@ -661,6 +663,8 @@ export function validateKoreanFieldworkReportHandoffCandidate(
         relatedFields,
         evidenceCount: item?.evidenceCount ?? 0,
         issueCount: (item?.issueCount ?? 0) + messages.length,
+        copySections: item?.copySections,
+        copyBodyText: item ? getReportHandoffBodyCopyText(item) : undefined,
         copyText: item?.copyText
     };
 }

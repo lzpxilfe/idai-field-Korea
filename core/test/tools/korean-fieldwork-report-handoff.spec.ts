@@ -940,6 +940,16 @@ describe('Korean fieldwork report handoff', () => {
             issueCount: 0
         }));
         expect(validation.message).toContain('\ub370\uc2a4\ud06c\ud1b1 HWP \ubcf4\uace0\uc11c \ud0ed \uc804\ub2ec \ud655\uc778');
+        expect(validation.copySections?.map(section => section.id)).toEqual([
+            'body',
+            'summary',
+            'details',
+            'relations',
+            'evidence',
+            'issues'
+        ]);
+        expect(validation.copyBodyText).toBe('\uc720\uad6c pit-001: round pit with dark fill');
+        expect(validation.copyBodyText).not.toContain('\uc694\uc57d:');
         expect(validation.copyText).toContain('[\uc720\uad6c] pit-001');
     });
 

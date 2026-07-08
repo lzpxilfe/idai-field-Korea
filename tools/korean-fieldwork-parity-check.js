@@ -3351,6 +3351,8 @@ function validateReportHandoffPreSaveValidation() {
 
   if (!coreReportHandoffText.includes('validateKoreanFieldworkReportHandoffCandidate')
       || !coreReportHandoffText.includes('KoreanFieldworkReportHandoffValidation')
+      || !coreReportHandoffText.includes('copySections?: KoreanFieldworkReportHandoffCopySection[]')
+      || !coreReportHandoffText.includes('copyBodyText')
       || !coreReportHandoffText.includes('getKoreanFieldworkReportHandoffSaveMessage')
       || !coreReportHandoffText.includes('getKoreanFieldworkReportHandoffValidationDetailMessage')
       || !coreReportHandoffText.includes('RELATION_REQUIRED_CATEGORIES')
@@ -3358,6 +3360,8 @@ function validateReportHandoffPreSaveValidation() {
     findings.push('core report handoff must expose reusable pre-save validation for tablet and desktop report copy readiness');
   }
   if (!coreReportHandoffSpecText.includes('tablet save warnings for desktop HWP handoff gaps')
+      || !coreReportHandoffSpecText.includes('validation.copySections')
+      || !coreReportHandoffSpecText.includes('validation.copyBodyText')
       || !tabletAddText.includes('getKoreanFieldworkReportHandoffSaveMessage')
       || !tabletEditText.includes('getKoreanFieldworkReportHandoffSaveMessage')
       || tabletAddText.includes('getReportHandoffSaveMessage')
