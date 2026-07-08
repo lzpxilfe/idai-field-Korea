@@ -197,7 +197,9 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
             expect(component.getReportHandoffItem()?.copyText)
                 .toContain('\uc790\ub8cc \uc0c1\uc138:\r\n- \uc0ac\uc9c4 P1');
             expect(component.getReportHandoffItem()?.copySections.map(section => section.id))
-                .toEqual(['summary', 'details', 'evidence', 'issues']);
+                .toEqual(['body', 'summary', 'details', 'evidence', 'issues']);
+            expect(component.getReportHandoffItem()?.copySections.find(section => section.id === 'body')?.copyText)
+                .toBe('\uc720\uad6c F1: round pit with dark fill');
 
             await component.copyReportHandoffItem();
 

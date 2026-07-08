@@ -513,11 +513,14 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
             expect(featureItem.copyText).toContain('\uc790\ub8cc \uc0c1\uc138');
             expect(featureItem.copyText).toContain('\ud655\uc778 \uc0c1\uc138');
             expect(featureItem.copySections.map(section => section.id)).toEqual([
+                'body',
                 'summary',
                 'details',
                 'evidence',
                 'issues'
             ]);
+            expect(featureItem.copySections.find(section => section.id === 'body')?.copyText)
+                .toBe('\uc720\uad6c pit-001: round pit with dark fill');
             expect(featureItem.copySections.find(section => section.id === 'summary')?.copyText)
                 .toContain('[\uc720\uad6c] pit-001\r\n\uc694\uc57d: round pit with dark fill');
             expect(featureItem.copySections.find(section => section.id === 'evidence')?.copyText)

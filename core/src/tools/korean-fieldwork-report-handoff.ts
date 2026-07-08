@@ -34,7 +34,7 @@ import {
 
 export type KoreanFieldworkReportHandoffTone = 'ready'|'review';
 
-export type KoreanFieldworkReportHandoffCopySectionId = 'summary'|'details'|'relations'|'evidence'|'issues';
+export type KoreanFieldworkReportHandoffCopySectionId = 'body'|'summary'|'details'|'relations'|'evidence'|'issues';
 
 export interface KoreanFieldworkReportHandoffCopySection {
     id: KoreanFieldworkReportHandoffCopySectionId;
@@ -174,6 +174,7 @@ interface LabeledEvidenceFieldDefinition {
 
 const KO = {
     ALL_READY: '\ubc14\ub85c \uc778\uc6a9 \uac00\ub2a5',
+    BODY: '\ubcf8\ubb38',
     CATEGORY: '\uc720\ud615',
     CHECKED_FOR_DESKTOP: '\ub370\uc2a4\ud06c\ud1b1 HWP \ubcf4\uace0\uc11c \ud0ed \uc804\ub2ec \ud655\uc778',
     DETAILS: '\uae30\ub85d',
@@ -942,6 +943,9 @@ function makeCopySections({
 }: ReportHandoffCopyTextParts): KoreanFieldworkReportHandoffCopySection[] {
 
     return [
+        makeCopySection('body', KO.BODY, [
+            makeBodyCopyText({ categoryLabel, identifier, summary })
+        ]),
         makeCopySection('summary', KO.SUMMARY, [
             `[${categoryLabel}] ${identifier}`,
             `${KO.SUMMARY}: ${summary}`
@@ -963,6 +967,16 @@ function makeCopySections({
             ...(issueDetails.length > 0 ? [makeListBlock(KO.ISSUE_DETAILS, issueDetails)] : [])
         ])
     ];
+}
+
+
+function makeBodyCopyText({
+    categoryLabel,
+    identifier,
+    summary
+}: Pick<ReportHandoffCopyTextParts, 'categoryLabel'|'identifier'|'summary'>): string {
+
+    return `${categoryLabel} ${identifier}: ${summary}`;
 }
 
 

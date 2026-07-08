@@ -3381,6 +3381,8 @@ function validateReportHandoffPreSaveValidation() {
   }
   if (!coreReportHandoffText.includes('KoreanFieldworkReportHandoffCopySection')
       || !coreReportHandoffText.includes('copySections: makeCopySections')
+      || !coreReportHandoffText.includes('makeBodyCopyText')
+      || !coreReportHandoffSpecText.includes("section.id === 'body'")
       || !coreReportHandoffSpecText.includes('copySections.map(section => section.id)')) {
     findings.push('core report handoff must expose section-level HWP copy blocks for selective desktop pasting');
   }

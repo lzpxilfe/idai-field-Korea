@@ -69,11 +69,18 @@ describe('Korean fieldwork report handoff', () => {
         expect(featureItem?.copyText).not.toMatch(/(^|[^\r])\n/);
         expect(featureItem?.copyText).toContain('\r\n');
         expect(featureItem?.copySections.map(section => section.id)).toEqual([
+            'body',
             'summary',
             'details',
             'evidence',
             'issues'
         ]);
+        expect(featureItem?.copySections.find(section => section.id === 'body')?.copyText)
+            .toBe('\uc720\uad6c pit-001: round pit with dark fill');
+        expect(featureItem?.copySections.find(section => section.id === 'body')?.copyText)
+            .not.toContain('\uc694\uc57d:');
+        expect(featureItem?.copySections.find(section => section.id === 'body')?.copyText)
+            .not.toContain('[');
         expect(featureItem?.copySections.find(section => section.id === 'summary')?.copyText)
             .toContain('[\uc720\uad6c] pit-001\r\n\uc694\uc57d: round pit with dark fill');
         expect(featureItem?.copySections.find(section => section.id === 'evidence')?.copyText)
