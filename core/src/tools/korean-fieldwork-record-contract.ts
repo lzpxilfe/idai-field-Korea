@@ -1,5 +1,7 @@
 import { Document } from '../model/document/document';
 import { buildEvidenceBundle, EvidenceBundle } from './korean-fieldwork-readiness';
+import koreanFieldworkConfig from '../../config/Config-KoreanFieldwork.json';
+import libraryValuelistsLanguageProjectsKo from '../../config/Library/Valuelists/Language.projects.ko.json';
 
 
 export const KOREAN_FIELDWORK_CATEGORIES = {
@@ -213,6 +215,10 @@ export const KOREAN_FIELDWORK_RECORD_VALUE_LABELS: Readonly<Record<string, Reado
     }
 };
 
+const KOREAN_FIELDWORK_FORM_VALUELISTS = getKoreanFieldworkFormValuelists();
+const KOREAN_FIELDWORK_PROJECT_VALUELIST_LANGUAGE =
+    libraryValuelistsLanguageProjectsKo as Record<string, { values?: Record<string, { label?: string }> }>;
+
 const KOREAN_FIELDWORK_FEATURE_INVESTIGATION_CHECKLIST_ORDER: readonly string[] = Array.from(new Set([
     ...KOREAN_FIELDWORK_FEATURE_CHECKLIST_STEPS,
     ...KOREAN_FIELDWORK_TRIAL_TRENCH_CHECKLIST_STEPS
@@ -419,7 +425,16 @@ export function getKoreanFieldworkFeatureInvestigationChecklistSummary(value: un
 
 export function getKoreanFieldworkRecordValueLabel(fieldName: string, value: string): string {
 
-    return KOREAN_FIELDWORK_RECORD_VALUE_LABELS[fieldName]?.[value] ?? value;
+    return KOREAN_FIELDWORK_RECORD_VALUE_LABELS[fieldName]?.[value]
+        ?? getKoreanFieldworkProjectValuelistValueLabel(fieldName, value)
+        ?? value;
+}
+
+
+export function isKoreanFieldworkRecordValuelistField(fieldName: string): boolean {
+
+    return KOREAN_FIELDWORK_RECORD_VALUE_LABELS[fieldName] !== undefined
+        || KOREAN_FIELDWORK_FORM_VALUELISTS[fieldName] !== undefined;
 }
 
 
@@ -540,6 +555,33 @@ function getStringListValues(value: unknown): string[] {
     return text.split(/\r?\n|,\s*/)
         .map(line => line.trim())
         .filter(line => !!line);
+}
+
+
+function getKoreanFieldworkFormValuelists(): Record<string, string> {
+
+    const forms = (koreanFieldworkConfig as {
+        forms?: Record<string, { valuelists?: Record<string, string> }>
+    }).forms ?? {};
+
+    return Object.values(forms).reduce((result, form) => {
+        Object.entries(form.valuelists ?? {}).forEach(([fieldName, valuelistId]) => {
+            if (!result[fieldName]) result[fieldName] = valuelistId;
+        });
+
+        return result;
+    }, {} as Record<string, string>);
+}
+
+
+function getKoreanFieldworkProjectValuelistValueLabel(fieldName: string, value: string): string|undefined {
+
+    const valuelistId = KOREAN_FIELDWORK_FORM_VALUELISTS[fieldName];
+    const label = valuelistId
+        ? KOREAN_FIELDWORK_PROJECT_VALUELIST_LANGUAGE[valuelistId]?.values?.[value]?.label
+        : undefined;
+
+    return label && label.trim() ? label : undefined;
 }
 
 

@@ -625,6 +625,74 @@ describe('Korean fieldwork report handoff', () => {
     });
 
 
+    it('carries tablet find and sample collection notes into HWP copy blocks with shared Korean labels', () => {
+
+        const documents = [
+            makeDocument('feature-1', 'Feature', {
+                identifier: 'pit-001',
+                shortDescription: 'round pit with dark fill'
+            }),
+            makeDocument('find-1', 'Find', {
+                identifier: 'find-001',
+                findSpotDescription: 'pit floor, east edge',
+                findSampleResearchScope: ['reportIncludedArtifact', 'collectionStatusRecorded'],
+                artifactHandlingWorkflow: ['fieldCollection'],
+                artifactLabelRegisterLink: ['labelCreated', 'fieldSerialNumber'],
+                surfaceFindHandlingRecord: ['gpsLatLongRecorded'],
+                chanceFindProvenance: ['residentReport'],
+                tileKilnFindContext: ['productTile'],
+                relations: { isPresentIn: ['feature-1'] }
+            }),
+            makeDocument('sample-1', 'Sample', {
+                identifier: 'sample-001',
+                sampleType: 'charcoal',
+                samplePurpose: ['absoluteDating'],
+                findSampleResearchScope: ['charcoal', 'scienceAnalysisCandidate'],
+                sampleCollectionHandling: ['lightShielded'],
+                ironSampleAnalysisPlan: ['magnetReaction'],
+                archaeomagneticSampleContext: ['hearth'],
+                organicSoilAnalysisSample: ['interiorSoil'],
+                archaeobotanySampleDesign: ['amsCandidate'],
+                flotationProcessingRecord: ['flotation'],
+                relations: { isPresentIn: ['feature-1'] }
+            })
+        ];
+
+        const handoff = makeKoreanFieldworkReportHandoff(documents as any);
+        const featureItem = handoff.items.find(item => item.documentId === 'feature-1');
+        const findItem = handoff.items.find(item => item.documentId === 'find-1');
+        const sampleItem = handoff.items.find(item => item.documentId === 'sample-1');
+        const evidenceDetails = featureItem?.evidenceDetails.join('\n') ?? '';
+
+        expect(featureItem?.evidenceLabel).toContain('\uc720\ubb3c 1');
+        expect(featureItem?.evidenceLabel).toContain('\uc2dc\ub8cc 1');
+        expect(evidenceDetails).toContain('\uc720\ubb3c find-001');
+        expect(evidenceDetails).toContain('\ucd9c\ud1a0 \uc704\uce58: pit floor, east edge');
+        expect(evidenceDetails).toContain('\uc720\ubb3c\u00b7\uc2dc\ub8cc \uc5f0\uad6c\ubc94\uc704: \ubcf4\uace0\uc11c \uc218\ub85d \uc720\ubb3c');
+        expect(evidenceDetails).toContain('\uc720\ubb3c \uad00\ub9ac \uc808\ucc28: \ud604\uc7a5\uc218\uc2b5');
+        expect(evidenceDetails).toContain('\uc720\ubb3c \uaf2c\ub9ac\ud45c\u00b7\ub300\uc7a5 \uc5f0\uacb0: \uaf2c\ub9ac\ud45c \uc791\uc131');
+        expect(evidenceDetails).toContain('\uc9c0\ud45c \uc218\uc2b5\uc720\ubb3c \uad00\ub9ac: GPS \uc704\uacbd\ub3c4 \uae30\ub85d');
+        expect(evidenceDetails).toContain('\uc6b0\uc5f0\u00b7\uc2e0\uace0 \uc720\ubb3c \ucd9c\ucc98: \uc8fc\ubbfc \uc2e0\uace0');
+        expect(evidenceDetails).toContain('\uae30\uc640\uac00\ub9c8 \ucd9c\ud1a0\ud488 \uc131\uaca9: \uc0dd\uc0b0\ud488');
+        expect(evidenceDetails).toContain('\uc2dc\ub8cc sample-001');
+        expect(evidenceDetails).toContain('\uc2dc\ub8cc \uc885\ub958: charcoal');
+        expect(evidenceDetails).toContain('\uc2dc\ub8cc \ubaa9\uc801: \uc808\ub300\uc5f0\ub300');
+        expect(evidenceDetails).toContain('\uc2dc\ub8cc \ucc44\ucde8\u00b7\ubcf4\uad00: \ube5b \ucc28\ub2e8');
+        expect(evidenceDetails).toContain('\uc81c\ucca0 \uc2dc\ub8cc \ubd84\uc11d\uacc4\ud68d: \uc790\uc11d\ubc18\uc751');
+        expect(evidenceDetails).toContain('\uace0\uace0\uc9c0\uc790\uae30 \uc2dc\ub8cc \ub9e5\ub77d: \ub178\uc9c0');
+        expect(evidenceDetails).toContain('\uc720\uae30\ubb3c\u00b7\ud1a0\uc591 \ubd84\uc11d\uc2dc\ub8cc: \ub0b4\ubd80\ud1a0');
+        expect(evidenceDetails).toContain('\uc2dd\ubb3c\uace0\uace0\ud559 \uc2dc\ub8cc \uc124\uacc4: AMS \ud6c4\ubcf4');
+        expect(evidenceDetails).toContain('\ud50c\ub85c\ud14c\uc774\uc158 \ucc98\ub9ac\uae30\ub85d: \ud50c\ub85c\ud14c\uc774\uc158');
+        expect(featureItem?.copyText).toContain('\uc720\ubb3c find-001');
+        expect(featureItem?.copyText).toContain('\uc2dc\ub8cc sample-001');
+        expect(findItem?.summary).toContain('pit floor, east edge');
+        expect(sampleItem?.summary).toContain('\uc808\ub300\uc5f0\ub300');
+        expect(featureItem?.copyText).not.toContain('reportIncludedArtifact');
+        expect(featureItem?.copyText).not.toContain('absoluteDating');
+        expect(featureItem?.copyText).not.toContain('fieldCollection');
+    });
+
+
     it('orders investigation records before evidence records', () => {
 
         const documents = [

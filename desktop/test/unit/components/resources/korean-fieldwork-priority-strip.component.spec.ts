@@ -254,6 +254,26 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
                             penMemoTranscriptionStatus: 'pending',
                             relations: { depicts: ['feature-1'] }
                         }),
+                        createDocument('find-1', 'Find', {
+                            identifier: 'find-001',
+                            findSpotDescription: 'pit floor, east edge',
+                            findSampleResearchScope: ['reportIncludedArtifact'],
+                            artifactHandlingWorkflow: ['fieldCollection'],
+                            artifactLabelRegisterLink: ['labelCreated'],
+                            surfaceFindHandlingRecord: ['gpsLatLongRecorded'],
+                            chanceFindProvenance: ['residentReport'],
+                            relations: { isPresentIn: ['feature-1'] }
+                        }),
+                        createDocument('sample-1', 'Sample', {
+                            identifier: 'sample-001',
+                            sampleType: 'charcoal',
+                            samplePurpose: ['absoluteDating'],
+                            sampleCollectionHandling: ['lightShielded'],
+                            archaeomagneticSampleContext: ['hearth'],
+                            organicSoilAnalysisSample: ['interiorSoil'],
+                            archaeobotanySampleDesign: ['amsCandidate'],
+                            relations: { isPresentIn: ['feature-1'] }
+                        }),
                         createDocument('daily-log-1', 'DailyLog', {
                             identifier: '2026-06-30',
                             date: '2026-06-30',
@@ -286,14 +306,14 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
 
             expect(component.getPanelOptions().map(panel => panel.id)).toContain('report');
             expect(component.hasReportHandoffItems()).toBe(true);
-            expect(component.getReportHandoffSummaryLabel()).toContain('6');
+            expect(component.getReportHandoffSummaryLabel()).toContain('8');
 
             const [featureItem] = component.getReportHandoffItems();
             expect(featureItem).toMatchObject({
                 documentId: 'feature-1',
                 identifier: 'pit-001',
                 summary: 'round pit with dark fill',
-                evidenceCount: 4,
+                evidenceCount: 6,
                 tone: 'review'
             });
             expect(component.getReportHandoffPreviewItem()?.documentId).toBe('feature-1');
@@ -351,6 +371,20 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
                 .toContain('\uce35 \ubc88\ud638 \ud45c\uc2dc: \uc788\uc74c');
             expect(featureItem.evidenceDetails.join('\n'))
                 .toContain('\ud0dc\ube14\ub9bf \uc2a4\ucf00\uce58: \uc788\uc74c');
+            expect(featureItem.evidenceDetails.join('\n'))
+                .toContain('\uc720\ubb3c find-001');
+            expect(featureItem.evidenceDetails.join('\n'))
+                .toContain('\ucd9c\ud1a0 \uc704\uce58: pit floor, east edge');
+            expect(featureItem.evidenceDetails.join('\n'))
+                .toContain('\uc720\ubb3c \uad00\ub9ac \uc808\ucc28: \ud604\uc7a5\uc218\uc2b5');
+            expect(featureItem.evidenceDetails.join('\n'))
+                .toContain('\uc9c0\ud45c \uc218\uc2b5\uc720\ubb3c \uad00\ub9ac: GPS \uc704\uacbd\ub3c4 \uae30\ub85d');
+            expect(featureItem.evidenceDetails.join('\n'))
+                .toContain('\uc2dc\ub8cc sample-001');
+            expect(featureItem.evidenceDetails.join('\n'))
+                .toContain('\uc2dc\ub8cc \ubaa9\uc801: \uc808\ub300\uc5f0\ub300');
+            expect(featureItem.evidenceDetails.join('\n'))
+                .toContain('\uc2dc\ub8cc \ucc44\ucde8\u00b7\ubcf4\uad00: \ube5b \ucc28\ub2e8');
             expect(featureItem.copyText)
                 .toContain('\uc2a4\ud3ec\uc774\ub4dc \uc704\uce58');
             expect(featureItem.copyText)
@@ -365,6 +399,14 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
                 .toContain('\ud544\uae30 \uc6d0\ubcf8: \uc788\uc74c');
             expect(featureItem.copyText)
                 .toContain('\ud0dc\ube14\ub9bf \uc2a4\ucf00\uce58: \uc788\uc74c');
+            expect(featureItem.copyText)
+                .toContain('\uc720\ubb3c find-001');
+            expect(featureItem.copyText)
+                .toContain('\uc2dc\ub8cc sample-001');
+            expect(featureItem.copyText)
+                .not.toContain('reportIncludedArtifact');
+            expect(featureItem.copyText)
+                .not.toContain('absoluteDating');
             expect(featureItem.copyText)
                 .toContain('\uc790\uc720 \uc2a4\ucf00\uce58: \uc788\uc74c');
             expect(featureItem.copyText)

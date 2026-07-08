@@ -17,6 +17,7 @@ import {
     getKoreanFieldworkReportHandoffCategoryRank,
     getKoreanFieldworkRecordFieldValueSummary,
     getKoreanFieldworkRelationLabel,
+    isKoreanFieldworkRecordValuelistField,
     isKoreanFieldworkReportHandoffCategory
 } from './korean-fieldwork-record-contract';
 
@@ -102,6 +103,11 @@ interface EvidenceDetailDefinition {
     fields: string[];
 }
 
+interface LabeledEvidenceFieldDefinition {
+    label: string;
+    fieldName: string;
+}
+
 const KO = {
     ALL_READY: '\ubc14\ub85c \uc778\uc6a9 \uac00\ub2a5',
     CATEGORY: '\uc720\ud615',
@@ -139,6 +145,66 @@ const DAILY_LOG_DETAIL_FIELDS = [
     'dailyLogWorkMemoUpdatedAt',
     'dailyLogBoundaryMemoStrokes'
 ];
+
+const FIND_EVIDENCE_SUMMARY_FIELDS: LabeledEvidenceFieldDefinition[] = [
+    { label: '\uc694\uc57d', fieldName: 'shortDescription' },
+    { label: '\uc124\uba85', fieldName: 'description' },
+    { label: '\ucd9c\ud1a0 \uc704\uce58', fieldName: 'findSpotDescription' },
+    { label: '\uc720\ubb3c\u00b7\uc2dc\ub8cc \uc5f0\uad6c\ubc94\uc704', fieldName: 'findSampleResearchScope' },
+    { label: '\uc720\ubb3c \uad00\ub9ac \uc808\ucc28', fieldName: 'artifactHandlingWorkflow' },
+    { label: '\uc720\ubb3c \uc774\uc1a1 \uc548\uc804', fieldName: 'artifactTransportSafety' },
+    { label: '\uc784\uc2dc\uc218\uc7a5\uace0 \uc6b4\uc601', fieldName: 'temporaryStorageOperation' },
+    { label: '\uc720\ubb3c \ud604\uc7a5\ubcf5\uc6d0 \uc5f0\uacb0', fieldName: 'artifactFieldRestorationLink' },
+    { label: '\uc720\ubb3c \uaf2c\ub9ac\ud45c\u00b7\ub300\uc7a5 \uc5f0\uacb0', fieldName: 'artifactLabelRegisterLink' },
+    { label: '\uc9c0\ud45c \uc218\uc2b5\uc720\ubb3c \uad00\ub9ac', fieldName: 'surfaceFindHandlingRecord' },
+    { label: '\uc6b0\uc5f0\u00b7\uc2e0\uace0 \uc720\ubb3c \ucd9c\ucc98', fieldName: 'chanceFindProvenance' },
+    { label: '\uc720\ubb3c \uc218\uc2b5\u00b7\ubcf4\uc874 \uc704\ud5d8', fieldName: 'artifactRecoveryPreservationRisk' },
+    { label: '\uae30\uc640\uac00\ub9c8 \ucd9c\ud1a0\ud488 \uc131\uaca9', fieldName: 'tileKilnFindContext' },
+    { label: '\uc790\uae30 \uc720\ubb3c \uad00\ucc30', fieldName: 'porcelainFindObservation' }
+];
+
+const SAMPLE_EVIDENCE_SUMMARY_FIELDS: LabeledEvidenceFieldDefinition[] = [
+    { label: '\uc694\uc57d', fieldName: 'shortDescription' },
+    { label: '\uc124\uba85', fieldName: 'description' },
+    { label: '\uc2dc\ub8cc \uc885\ub958', fieldName: 'sampleType' },
+    { label: '\uc2e4\ud5d8\uc2e4 \ubc88\ud638', fieldName: 'labNumber' },
+    { label: '\ubb34\uac8c', fieldName: 'weight' },
+    { label: '\ubd80\ud53c', fieldName: 'volume' },
+    { label: '\uc2dc\ub8cc \ubaa9\uc801', fieldName: 'samplePurpose' },
+    { label: '\uc720\ubb3c\u00b7\uc2dc\ub8cc \uc5f0\uad6c\ubc94\uc704', fieldName: 'findSampleResearchScope' },
+    { label: '\uc2dc\ub8cc \ucc44\ucde8\u00b7\ubcf4\uad00', fieldName: 'sampleCollectionHandling' },
+    { label: '\uc218\ud608\uac74\ubb3c\uc9c0 \uc790\uc5f0\uacfc\ud559 \uc2dc\ub8cc', fieldName: 'pitDwellingScienceSamplingPlan' },
+    { label: '\uc81c\ucca0 \uc2dc\ub8cc \ubd84\uc11d\uacc4\ud68d', fieldName: 'ironSampleAnalysisPlan' },
+    { label: '\uae30\uc640\uac00\ub9c8 \ubd84\uc11d \uacc4\ud68d', fieldName: 'tileKilnAnalysisPlan' },
+    { label: '\ud1a0\uae30\uac00\ub9c8 \ubd84\uc11d \uacc4\ud68d', fieldName: 'potteryKilnAnalysisPlan' },
+    { label: '\uace0\uace0\uc9c0\uc790\uae30 \uc2dc\ub8cc \ub9e5\ub77d', fieldName: 'archaeomagneticSampleContext' },
+    { label: '\uce21\uad6c\ubd80\ud0c4\uc694 \ubd84\uc11d \uacc4\ud68d', fieldName: 'charcoalKilnAnalysisPlan' },
+    { label: '\uc790\uae30\uc694\uc7a5 \ubd84\uc11d \uacc4\ud68d', fieldName: 'porcelainAnalysisPlan' },
+    { label: '\uc778\uace8 \uc218\uc2b5\u00b7\ubd84\uc11d', fieldName: 'humanRemainsRecoveryAnalysis' },
+    { label: '\uc778\uace8 DNA \ud604\uc7a5\uad00\ub9ac', fieldName: 'humanDnaFieldControl' },
+    { label: '\uc720\uae30\ubb3c\u00b7\ud1a0\uc591 \ubd84\uc11d\uc2dc\ub8cc', fieldName: 'organicSoilAnalysisSample' },
+    { label: '\ud30c\uad34\ubd84\uc11d \uacb0\uc815', fieldName: 'destructiveAnalysisDecision' },
+    { label: '\ud328\ucd1d \uc2dc\ub8cc \ucc44\ucde8\uc804\ub7b5', fieldName: 'shellMiddenSamplingStrategy' },
+    { label: '\uace0\ud658\uacbd \ud504\ub85d\uc2dc \uc2dc\ub8cc', fieldName: 'paleoenvironmentProxySampling' },
+    { label: '\uc2dd\ubb3c\uace0\uace0\ud559 \uc2dc\ub8cc \uc124\uacc4', fieldName: 'archaeobotanySampleDesign' },
+    { label: '\uc2dd\ubb3c\uc720\uccb4 \ud45c\ubcf8\ucd94\ucd9c', fieldName: 'plantRemainSamplingMethod' },
+    { label: '\ud50c\ub85c\ud14c\uc774\uc158 \ucc98\ub9ac\uae30\ub85d', fieldName: 'flotationProcessingRecord' },
+    { label: '\ub3d9\ubb3c\uc720\uccb4 \uc218\uc2b5\u00b7\ud45c\ubcf8', fieldName: 'faunalRecoverySampling' },
+    { label: '\ub3d9\ubb3c\uc720\uccb4 \ubcf4\uc874\u00b7\ucde8\uae09', fieldName: 'faunalPreservationHandling' }
+];
+
+const FIND_SAMPLE_SUMMARY_FIELDS = Array.from(new Set([
+    'findSpotDescription',
+    'samplePurpose',
+    'sampleType',
+    'labNumber',
+    'weight',
+    'volume',
+    ...FIND_EVIDENCE_SUMMARY_FIELDS.map(definition => definition.fieldName),
+    ...SAMPLE_EVIDENCE_SUMMARY_FIELDS.map(definition => definition.fieldName)
+])).filter(fieldName =>
+    !['shortDescription', 'description'].includes(fieldName)
+);
 
 const DETAIL_FIELDS: DetailFieldDefinition[] = [
     {
@@ -239,7 +305,8 @@ const SUMMARY_FIELDS = [
     'dailyLogBoundaryMemoStrokes',
     'surveyBoundaryNote',
     'reportPreparationSourceText',
-    'reportEditorialIssueText'
+    'reportEditorialIssueText',
+    ...FIND_SAMPLE_SUMMARY_FIELDS
 ];
 
 const RELATION_REQUIRED_CATEGORIES = [
@@ -452,12 +519,14 @@ const EVIDENCE_DETAILS: EvidenceDetailDefinition[] = [
     {
         label: '\uc720\ubb3c',
         getDocuments: bundle => bundle.finds,
-        fields: ['shortDescription', 'description', 'findSpotDescription', 'artifactLabelRegisterLink']
+        getSummary: getFindEvidenceSummary,
+        fields: FIND_EVIDENCE_SUMMARY_FIELDS.map(definition => definition.fieldName)
     },
     {
         label: '\uc2dc\ub8cc',
         getDocuments: bundle => bundle.samples,
-        fields: ['shortDescription', 'description', 'samplePurpose']
+        getSummary: getSampleEvidenceSummary,
+        fields: SAMPLE_EVIDENCE_SUMMARY_FIELDS.map(definition => definition.fieldName)
     },
     {
         label: '\ud53c\ud2b8',
@@ -676,7 +745,8 @@ function getHandoffPrintableFieldValue(resource: NewResource, fieldName: string)
         return getKoreanFieldworkFeaturePeriodSummary(resource.period);
     }
 
-    if (KOREAN_FIELDWORK_LABELLED_RECORD_FIELDS.includes(fieldName)) {
+    if (KOREAN_FIELDWORK_LABELLED_RECORD_FIELDS.includes(fieldName)
+            || isKoreanFieldworkRecordValuelistField(fieldName)) {
         return getKoreanFieldworkRecordFieldValueSummary(fieldName, resource[fieldName]);
     }
 
@@ -828,6 +898,10 @@ function getSummaryFieldValue(document: Document, fieldName: string): string|und
 
     if (fieldName === 'fieldNote') {
         return getFieldNoteSummary(document.resource.fieldNote);
+    }
+
+    if (isKoreanFieldworkRecordValuelistField(fieldName)) {
+        return getKoreanFieldworkRecordFieldValueSummary(fieldName, document.resource[fieldName]);
     }
 
     return getPrintableValue(document.resource[fieldName]);
@@ -1424,6 +1498,33 @@ function getPenMemoEvidenceSummary(document: Document): string|undefined {
         getLabeledEvidenceValue('\uc694\uc57d', getPrintableValue(document.resource.shortDescription)),
         getPenMemoStrokeEvidenceLabel(document.resource.penMemoStrokes)
     ].filter((value): value is string => !!value).join(' / ') || undefined;
+}
+
+
+function getFindEvidenceSummary(document: Document): string|undefined {
+
+    return getLabeledEvidenceFieldSummary(document, FIND_EVIDENCE_SUMMARY_FIELDS);
+}
+
+
+function getSampleEvidenceSummary(document: Document): string|undefined {
+
+    return getLabeledEvidenceFieldSummary(document, SAMPLE_EVIDENCE_SUMMARY_FIELDS);
+}
+
+
+function getLabeledEvidenceFieldSummary(
+        document: Document,
+        definitions: LabeledEvidenceFieldDefinition[]
+): string|undefined {
+
+    return definitions
+        .map(definition => getLabeledEvidenceValue(
+            definition.label,
+            getHandoffPrintableFieldValue(document.resource, definition.fieldName)
+        ))
+        .filter((value): value is string => !!value)
+        .join(' / ') || undefined;
 }
 
 

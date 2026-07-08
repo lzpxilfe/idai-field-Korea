@@ -69,7 +69,7 @@ const DRAWING_CATEGORY = 'Drawing';
 const PEN_MEMO_CATEGORY = 'PenMemo';
 const SOIL_PROFILE_PHOTO_CATEGORY = 'SoilProfilePhoto';
 const MEDIA_RELATIONS = ['depicts', 'isDepictedIn', 'isSubjectOf', 'isResultOf'];
-const CONTAINMENT_RELATIONS = ['liesWithin', 'isRecordedInFeature'];
+const CONTAINMENT_RELATIONS = ['liesWithin', 'isRecordedInFeature', 'isPresentIn'];
 const FIELDWORK_IMAGE_UPLOAD_RELATED_FIELDS = [
     'fieldworkImageUploadStatus',
     'fieldworkImageUploadedAt',
