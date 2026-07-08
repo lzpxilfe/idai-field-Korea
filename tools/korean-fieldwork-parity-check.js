@@ -3659,6 +3659,17 @@ function validateTabletInstallGuide() {
       || !rootReadmeText.includes('일반 텍스트 클립보드')) {
     findings.push('root README must explain the tablet-to-Field-Desktop-to-HWP copy flow without making BridgeDesk the primary destination');
   }
+  if (!rootReadmeText.includes('태블릿 자료를 데스크톱으로 받기')
+      || !rootReadmeText.includes('Field Hub 동기화')
+      || !rootReadmeText.includes('original_image')
+      || !rootReadmeText.includes('fieldworkImageUploadStatus')
+      || !rootReadmeText.includes('fieldworkImageUploadedAt')
+      || !rootReadmeText.includes('fieldworkImageUploadTarget')
+      || !rootReadmeText.includes('fieldwork-image-export-manifest.json')
+      || !rootReadmeText.includes('fieldwork-image-export-manifest.csv')
+      || !rootReadmeText.includes('fieldwork-image-export-readme.txt')) {
+    findings.push('root README must document the Field Hub tablet-to-desktop sync and original image handoff contract');
+  }
   if (!desktopWorkflowText.includes('Run Korean fieldwork parity check')
       || !desktopWorkflowText.includes('tools/korean-fieldwork-*.js')
       || !desktopWorkflowText.includes('docs/korean-fieldwork/**')
