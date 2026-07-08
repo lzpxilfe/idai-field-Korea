@@ -422,6 +422,24 @@ describe('Korean fieldwork report handoff', () => {
     });
 
 
+    it('strips browser and rich-text clipboard residue from HWP copy text', () => {
+
+        expect(normalizeKoreanFieldworkHwpPlainText([
+            '\u202A[Feature]\tpit-001\u202C',
+            'Summary:\u00a0dark\u00ad fill\u0007',
+            '',
+            '',
+            '',
+            '\u200BDetails:\t\tsoil layer'
+        ].join('\r\n'))).toBe([
+            '[Feature] pit-001',
+            'Summary: dark fill',
+            '',
+            'Details: soil layer'
+        ].join('\r\n'));
+    });
+
+
     it('carries tablet closeout review issues into desktop HWP copy blocks', () => {
 
         const documents = [
