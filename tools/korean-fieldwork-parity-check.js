@@ -3541,7 +3541,12 @@ function validateReportHandoffPreSaveValidation() {
       || !desktopHwpClipboardText.includes("html: ''")
       || !desktopHwpClipboardText.includes("rtf: ''")
       || !desktopPriorityStripText.includes('writeKoreanFieldworkHwpClipboardText')
-      || !desktopPriorityStripSpecText.includes("write).toHaveBeenCalledWith({ text: featureItem.copyText, html: '', rtf: '' })")) {
+      || !desktopPriorityStripText.includes('isReportHandoffCopyAllCopied')
+      || !desktopPriorityStripTemplateText.includes('getReportHandoffCopyAllActionLabel()')
+      || !desktopPriorityStripSpecText.includes("write).toHaveBeenCalledWith({ text: featureItem.copyText, html: '', rtf: '' })")
+      || !desktopPriorityStripSpecText.includes('copyAllReportHandoffItems')
+      || !desktopPriorityStripSpecText.includes('reportHandoffCopyAllText')
+      || !desktopPriorityStripSpecText.includes('isReportHandoffCopyAllCopied')) {
     findings.push('desktop report handoff copy must use text-only clipboard writes without HTML or RTF for HWP-safe paste');
   }
   if (!desktopPriorityStripTemplateText.includes('previewItem.copySections')

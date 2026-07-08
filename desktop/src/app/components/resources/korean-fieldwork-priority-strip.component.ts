@@ -818,6 +818,9 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
     public isReportHandoffItemCopied = (item: KoreanFieldworkReportHandoffItem) =>
         this.reportCopiedDocumentId === item.documentId;
 
+    public isReportHandoffCopyAllCopied = () =>
+        this.reportCopiedDocumentId === '__all__';
+
     public isReportHandoffSectionCopied = (
             item: KoreanFieldworkReportHandoffItem,
             section: KoreanFieldworkReportHandoffCopySection
@@ -832,6 +835,9 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
 
     public getReportHandoffCopyActionLabel = (item: KoreanFieldworkReportHandoffItem) =>
         this.isReportHandoffItemCopied(item) ? '\ubcf5\uc0ac\ub428' : '\ubcf5\uc0ac';
+
+    public getReportHandoffCopyAllActionLabel = () =>
+        this.isReportHandoffCopyAllCopied() ? '\ubcf5\uc0ac\ub428' : '\uc804\uccb4 \ubcf5\uc0ac';
 
     public getReportHandoffSectionCopyActionLabel = (
             item: KoreanFieldworkReportHandoffItem,

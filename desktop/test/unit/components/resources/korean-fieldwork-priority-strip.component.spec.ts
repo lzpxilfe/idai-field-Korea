@@ -625,6 +625,19 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
             expect(component.getReportHandoffPreviewItem()?.documentId).toBe('feature-1');
             expect(component.getReportHandoffSectionCopyActionLabel(featureItem, evidenceSection))
                 .toBe('\ubcf5\uc0ac\ub428');
+
+            await component.copyAllReportHandoffItems();
+
+            expect(clear).toHaveBeenCalledTimes(3);
+            expect(write).toHaveBeenLastCalledWith({
+                text: component.reportHandoffCopyAllText,
+                html: '',
+                rtf: ''
+            });
+            expect(writeText).not.toHaveBeenCalled();
+            expect(component.reportHandoffCopyAllText).toContain(featureItem.copyText);
+            expect(component.isReportHandoffCopyAllCopied()).toBe(true);
+            expect(component.getReportHandoffCopyAllActionLabel()).toBe('\ubcf5\uc0ac\ub428');
         } finally {
             testWindow.require = previousRequire;
         }
