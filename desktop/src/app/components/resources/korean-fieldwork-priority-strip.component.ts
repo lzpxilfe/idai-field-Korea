@@ -225,6 +225,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
     public notebookDailyLogParentDocumentId: string|undefined;
     public reportHandoffItems: KoreanFieldworkReportHandoffItem[] = [];
     public reportHandoffCopyAllText: string = '';
+    public reportHandoffCopyAllBodyText: string = '';
     public reportCopiedDocumentId: string|undefined;
     public notebookCopiedEntryId: string|undefined;
     public selectedReportHandoffDocumentId: string|undefined;
@@ -844,6 +845,9 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
     public isReportHandoffCopyAllCopied = () =>
         this.reportCopiedDocumentId === '__all__';
 
+    public isReportHandoffCopyAllBodyCopied = () =>
+        this.reportCopiedDocumentId === '__all_body__';
+
     public isReportHandoffSectionCopied = (
             item: KoreanFieldworkReportHandoffItem,
             section: KoreanFieldworkReportHandoffCopySection
@@ -861,6 +865,9 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
 
     public getReportHandoffCopyAllActionLabel = () =>
         this.isReportHandoffCopyAllCopied() ? '\ubcf5\uc0ac\ub428' : '\uc804\uccb4 \ubcf5\uc0ac';
+
+    public getReportHandoffCopyAllBodyActionLabel = () =>
+        this.isReportHandoffCopyAllBodyCopied() ? '\ubcf5\uc0ac\ub428' : '\ubcf8\ubb38 \uc804\uccb4 \ubcf5\uc0ac';
 
     public getReportHandoffSectionCopyActionLabel = (
             item: KoreanFieldworkReportHandoffItem,
@@ -941,6 +948,19 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
         try {
             await writeKoreanFieldworkHwpClipboardText(this.reportHandoffCopyAllText);
             this.markReportHandoffCopied('__all__');
+        } catch (errWithParams) {
+            this.messages.add(errWithParams);
+        }
+    }
+
+    public async copyAllReportHandoffBodies(event?: Event) {
+
+        if (event) event.stopPropagation();
+        if (!this.reportHandoffCopyAllBodyText) return;
+
+        try {
+            await writeKoreanFieldworkHwpClipboardText(this.reportHandoffCopyAllBodyText);
+            this.markReportHandoffCopied('__all_body__');
         } catch (errWithParams) {
             this.messages.add(errWithParams);
         }
@@ -1508,6 +1528,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
                 this.notebookDailyLogParentDocumentId = notebookDailyLogParentDocumentId;
                 this.reportHandoffItems = reportHandoff?.items ?? [];
                 this.reportHandoffCopyAllText = reportHandoff?.copyAllText ?? '';
+                this.reportHandoffCopyAllBodyText = reportHandoff?.copyAllBodyText ?? '';
                 this.ensureReportHandoffPreviewSelection();
                 this.projectDocuments = documents;
                 this.keepActivePanelAvailable();
@@ -1531,6 +1552,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
                 this.notebookDailyLogParentDocumentId = undefined;
                 this.reportHandoffItems = [];
                 this.reportHandoffCopyAllText = '';
+                this.reportHandoffCopyAllBodyText = '';
                 this.selectedReportHandoffDocumentId = undefined;
                 this.reportHandoffShowsAll = false;
                 this.projectDocuments = [];

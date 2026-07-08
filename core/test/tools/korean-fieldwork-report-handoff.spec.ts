@@ -65,6 +65,12 @@ describe('Korean fieldwork report handoff', () => {
         expect(featureItem?.copyText).not.toContain('feature-complete-photo');
         expect(handoff.reviewCount).toBeGreaterThan(0);
         expect(handoff.copyAllText).toContain(featureItem!.copyText);
+        expect(handoff.copyAllBodyText).toContain('\uc720\uad6c pit-001: round pit with dark fill');
+        expect(handoff.copyAllBodyText).not.toContain('[\uc720\uad6c]');
+        expect(handoff.copyAllBodyText).not.toContain('\uc694\uc57d:');
+        expect(handoff.copyAllBodyText).not.toContain('\uc790\ub8cc \uc0c1\uc138');
+        expect(handoff.copyAllBodyText).not.toContain('\ud655\uc778 \uc0c1\uc138');
+        expect(handoff.copyAllBodyText).not.toMatch(/(^|[^\r])\n/);
         expect(featureItem?.copyText).not.toContain('\u200B');
         expect(featureItem?.copyText).not.toMatch(/(^|[^\r])\n/);
         expect(featureItem?.copyText).toContain('\r\n');

@@ -3387,8 +3387,10 @@ function validateReportHandoffPreSaveValidation() {
   }
   if (!coreReportHandoffText.includes('KoreanFieldworkReportHandoffCopySection')
       || !coreReportHandoffText.includes('copySections: makeCopySections')
+      || !coreReportHandoffText.includes('copyAllBodyText')
       || !coreReportHandoffText.includes('getReportBodyCopyText')
       || !coreReportHandoffText.includes('getKoreanFieldworkFieldNoteReportPreview')
+      || !coreReportHandoffSpecText.includes('copyAllBodyText')
       || !coreReportHandoffSpecText.includes("section.id === 'body'")
       || !coreReportHandoffSpecText.includes('copySections.map(section => section.id)')) {
     findings.push('core report handoff must expose section-level HWP copy blocks for selective desktop pasting');
@@ -3579,7 +3581,8 @@ function validateReportHandoffPreSaveValidation() {
   }
   if (!desktopPriorityStripText.includes('makeKoreanFieldworkReportHandoff')
       || !desktopPriorityStripText.includes('copyReportHandoffItem')
-      || !desktopPriorityStripText.includes('reportHandoffCopyAllText')) {
+      || !desktopPriorityStripText.includes('reportHandoffCopyAllText')
+      || !desktopPriorityStripText.includes('reportHandoffCopyAllBodyText')) {
     findings.push('desktop report handoff panel must keep using the same core copy-block contract');
   }
   if (!desktopHwpClipboardText.includes('normalizeKoreanFieldworkHwpPlainText')
@@ -3590,10 +3593,15 @@ function validateReportHandoffPreSaveValidation() {
       || !desktopHwpClipboardSpecText.includes("expect(write).not.toHaveBeenCalled()")
       || !desktopPriorityStripText.includes('writeKoreanFieldworkHwpClipboardText')
       || !desktopPriorityStripText.includes('isReportHandoffCopyAllCopied')
+      || !desktopPriorityStripText.includes('copyAllReportHandoffBodies')
+      || !desktopPriorityStripText.includes('reportHandoffCopyAllBodyText')
       || !desktopPriorityStripTemplateText.includes('getReportHandoffCopyAllActionLabel()')
+      || !desktopPriorityStripTemplateText.includes('getReportHandoffCopyAllBodyActionLabel()')
       || !desktopPriorityStripSpecText.includes('writeText).toHaveBeenCalledWith(featureItem.copyText)')
       || !desktopPriorityStripSpecText.includes('copyAllReportHandoffItems')
+      || !desktopPriorityStripSpecText.includes('copyAllReportHandoffBodies')
       || !desktopPriorityStripSpecText.includes('reportHandoffCopyAllText')
+      || !desktopPriorityStripSpecText.includes('reportHandoffCopyAllBodyText')
       || !desktopPriorityStripSpecText.includes('isReportHandoffCopyAllCopied')) {
     findings.push('desktop report handoff copy must use text-only clipboard writes without HTML or RTF for HWP-safe paste');
   }

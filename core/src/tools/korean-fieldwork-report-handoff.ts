@@ -71,6 +71,7 @@ export interface KoreanFieldworkReportHandoff {
     reviewCount: number;
     issueCount: number;
     copyAllText: string;
+    copyAllBodyText: string;
 }
 
 export type KoreanFieldworkReportHandoffValidationStatus = 'not-applicable'|'ready'|'review';
@@ -677,8 +678,17 @@ export function makeKoreanFieldworkReportHandoff(documents: Document[]): KoreanF
         readyCount: items.filter(item => item.tone === 'ready').length,
         reviewCount: items.filter(item => item.tone === 'review').length,
         issueCount: items.reduce((count, item) => count + item.issueCount, 0),
-        copyAllText: normalizeKoreanFieldworkHwpPlainText(items.map(item => item.copyText).join('\n\n'))
+        copyAllText: normalizeKoreanFieldworkHwpPlainText(items.map(item => item.copyText).join('\n\n')),
+        copyAllBodyText: normalizeKoreanFieldworkHwpPlainText(
+            items.map(getReportHandoffBodyCopyText).filter(Boolean).join('\n')
+        )
     };
+}
+
+
+function getReportHandoffBodyCopyText(item: KoreanFieldworkReportHandoffItem): string {
+
+    return item.copySections.find(section => section.id === 'body')?.copyText ?? '';
 }
 
 

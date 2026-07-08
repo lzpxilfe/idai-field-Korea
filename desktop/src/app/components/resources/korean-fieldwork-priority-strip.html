@@ -197,6 +197,16 @@
             <span class="korean-fieldwork-report-handoff-summary">{{getReportHandoffSummaryLabel()}}</span>
             <button type="button"
                     class="korean-fieldwork-report-handoff-copy-all"
+                    [class.copied]="isReportHandoffCopyAllBodyCopied()"
+                    [disabled]="!reportHandoffCopyAllBodyText"
+                    (click)="copyAllReportHandoffBodies($event)">
+                <span class="mdi"
+                      [class.mdi-check]="isReportHandoffCopyAllBodyCopied()"
+                      [class.mdi-content-copy]="!isReportHandoffCopyAllBodyCopied()"></span>
+                <span>{{getReportHandoffCopyAllBodyActionLabel()}}</span>
+            </button>
+            <button type="button"
+                    class="korean-fieldwork-report-handoff-copy-all"
                     [class.copied]="isReportHandoffCopyAllCopied()"
                     [disabled]="!reportHandoffCopyAllText"
                     (click)="copyAllReportHandoffItems($event)">
