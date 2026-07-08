@@ -65,6 +65,39 @@ describe('Korean fieldwork report handoff', () => {
     });
 
 
+    it('carries tablet investigation checklist steps into HWP copy blocks with Korean labels', () => {
+
+        const handoff = makeKoreanFieldworkReportHandoff([
+            makeDocument('feature-1', 'Feature', {
+                identifier: 'pit-001',
+                shortDescription: 'round pit with dark fill',
+                featureRecordingStatus: 'candidate',
+                featureInvestigationChecklist: [
+                    'findsRecovered',
+                    'preInvestigationPhotoTaken',
+                    'soilProfilePhotoLinked'
+                ]
+            })
+        ] as any);
+
+        const featureItem = handoff.items.find(item => item.documentId === 'feature-1');
+        const details = featureItem?.details.join('\n') ?? '';
+
+        expect(details).toContain(
+            '\uc870\uc0ac \uc0c1\ud0dc: candidate, '
+            + '\uc870\uc0ac \ub2e8\uacc4 \ud655\uc778: '
+            + '\uc870\uc0ac \uc804 \uc0ac\uc9c4 \u00b7 \ud1a0\uce35\uc0ac\uc9c4 \u00b7 \uc720\ubb3c \uc218\uc2b5'
+        );
+        expect(featureItem?.copyText).toContain(
+            '\uc870\uc0ac \ub2e8\uacc4 \ud655\uc778: '
+            + '\uc870\uc0ac \uc804 \uc0ac\uc9c4 \u00b7 \ud1a0\uce35\uc0ac\uc9c4 \u00b7 \uc720\ubb3c \uc218\uc2b5'
+        );
+        expect(featureItem?.copyText).not.toContain('preInvestigationPhotoTaken');
+        expect(featureItem?.copyText).not.toContain('soilProfilePhotoLinked');
+        expect(featureItem?.copyText).not.toContain('findsRecovered');
+    });
+
+
     it('summarizes feature location sketches without dumping tablet sketch JSON into HWP copy blocks', () => {
 
         const handoff = makeKoreanFieldworkReportHandoff([

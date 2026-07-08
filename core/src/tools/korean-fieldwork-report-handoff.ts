@@ -8,6 +8,7 @@ import {
 } from './korean-fieldwork-readiness';
 import {
     getKoreanFieldworkCategoryLabel,
+    getKoreanFieldworkFeatureInvestigationChecklistSummary,
     getKoreanFieldworkReportHandoffCategoryRank,
     getKoreanFieldworkRelationLabel,
     isKoreanFieldworkReportHandoffCategory
@@ -152,7 +153,13 @@ const DETAIL_FIELDS: DetailFieldDefinition[] = [
     },
     {
         label: '\uc870\uc0ac \uc0c1\ud0dc',
-        fields: ['featureRecordingStatus', 'recordCreationTiming', 'fieldRecordQuality']
+        getSummary: getInvestigationStatusDetailSummary,
+        fields: [
+            'featureRecordingStatus',
+            'recordCreationTiming',
+            'fieldRecordQuality',
+            'featureInvestigationChecklist'
+        ]
     },
     {
         label: '\uc704\uce58/\ub3c4\uba74',
@@ -640,6 +647,10 @@ function getHandoffPrintableFieldValue(resource: NewResource, fieldName: string)
         return getFieldNoteSummary(resource.fieldNote);
     }
 
+    if (fieldName === 'featureInvestigationChecklist') {
+        return getKoreanFieldworkFeatureInvestigationChecklistSummary(resource.featureInvestigationChecklist);
+    }
+
     return getPrintableValue(resource[fieldName]);
 }
 
@@ -809,12 +820,28 @@ function getDetailLine(document: Document, definition: DetailFieldDefinition): s
     if (summary) return `${definition.label}: ${summary}`;
 
     const values = definition.fields
-        .map(fieldName => getPrintableValue(document.resource[fieldName]))
+        .map(fieldName => getHandoffPrintableFieldValue(document.resource, fieldName))
         .filter((value): value is string => !!value);
 
     if (values.length === 0) return undefined;
 
     return `${definition.label}: ${values.join(', ')}`;
+}
+
+
+function getInvestigationStatusDetailSummary(document: Document): string|undefined {
+
+    return [
+        getPrintableValue(document.resource.featureRecordingStatus),
+        getPrintableValue(document.resource.recordCreationTiming),
+        getPrintableValue(document.resource.fieldRecordQuality),
+        getLabeledEvidenceValue(
+            '\uc870\uc0ac \ub2e8\uacc4 \ud655\uc778',
+            getKoreanFieldworkFeatureInvestigationChecklistSummary(
+                document.resource.featureInvestigationChecklist
+            )
+        )
+    ].filter((value): value is string => !!value).join(', ') || undefined;
 }
 
 

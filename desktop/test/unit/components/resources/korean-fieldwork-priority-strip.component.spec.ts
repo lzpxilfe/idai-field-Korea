@@ -196,7 +196,11 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
                                 '[\uc190\uadf8\ub9bc \uc88c\ud45c] {"version":1,"strokes":[{"points":[{"x":10,"y":20},{"x":40,"y":50}]}]}'
                             ].join('\n'),
                             featureRecordingStatus: 'confirmed',
-                            featureInvestigationChecklist: []
+                            featureInvestigationChecklist: [
+                                'findsRecovered',
+                                'preInvestigationPhotoTaken',
+                                'soilProfilePhotoLinked'
+                            ]
                         }),
                         createDocument('photo-1', 'Photo', {
                             fieldworkPhotoUri: 'file:///tablet/photos/pit-001.jpg',
@@ -277,6 +281,11 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
             expect(featureItem.details.join('\n'))
                 .toContain('\uc790\uc720 \uc2a4\ucf00\uce58: \uc788\uc74c');
             expect(featureItem.details.join('\n'))
+                .toContain(
+                    '\uc870\uc0ac \ub2e8\uacc4 \ud655\uc778: '
+                    + '\uc870\uc0ac \uc804 \uc0ac\uc9c4 \u00b7 \ud1a0\uce35\uc0ac\uc9c4 \u00b7 \uc720\ubb3c \uc218\uc2b5'
+                );
+            expect(featureItem.details.join('\n'))
                 .toContain('\ud604\uc7a5\uba54\ubaa8: \uad00\ucc30: \ubc14\ub2e5\uba74\uc5d0\uc11c \uc6d0\ud615 \uc724\uacfd \ud655\uc778.');
             expect(featureItem.details.join('\n'))
                 .toContain('\ub2e4\uc74c \uc791\uc5c5: \ub2e8\uba74 \uc0ac\uc9c4 \ubcf4\uac15.');
@@ -303,7 +312,14 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
             expect(featureItem.copyText)
                 .toContain('\uc790\uc720 \uc2a4\ucf00\uce58: \uc788\uc74c');
             expect(featureItem.copyText)
+                .toContain(
+                    '\uc870\uc0ac \ub2e8\uacc4 \ud655\uc778: '
+                    + '\uc870\uc0ac \uc804 \uc0ac\uc9c4 \u00b7 \ud1a0\uce35\uc0ac\uc9c4 \u00b7 \uc720\ubb3c \uc218\uc2b5'
+                );
+            expect(featureItem.copyText)
                 .toContain('\uadfc\uac70 \ubc88\ud638: \uc0ac\uc9c4 12, \ub3c4\uba74 3');
+            expect(featureItem.copyText)
+                .not.toContain('preInvestigationPhotoTaken');
             expect(featureItem.copyText)
                 .not.toContain('"shape"');
             expect(featureItem.copyText)

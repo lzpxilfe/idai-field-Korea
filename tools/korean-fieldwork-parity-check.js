@@ -3238,9 +3238,12 @@ function assertSourceOrder(findings, label, text, markers) {
 
 function validateReportHandoffPreSaveValidation() {
   const findings = [];
+  const coreRecordContractText = readTextFile('core/src/tools/korean-fieldwork-record-contract.ts');
+  const coreRecordContractSpecText = readTextFile('core/test/tools/korean-fieldwork-record-contract.spec.ts');
   const coreReportHandoffText = readTextFile('core/src/tools/korean-fieldwork-report-handoff.ts');
   const coreReportHandoffSpecText = readTextFile('core/test/tools/korean-fieldwork-report-handoff.spec.ts');
   const coreReadinessText = readTextFile('core/src/tools/korean-fieldwork-readiness.ts');
+  const desktopChecklistText = readTextFile('desktop/src/app/util/korean-fieldwork-checklist.ts');
   const tabletAddText = readTextFile('mobile/app/(tabs)/ProjectScreen/DocumentAdd.tsx');
   const tabletEditText = readTextFile('mobile/app/(tabs)/ProjectScreen/DocumentEdit.tsx');
   const desktopPriorityStripText = readTextFile(
@@ -3318,6 +3321,19 @@ function validateReportHandoffPreSaveValidation() {
       || !desktopPriorityStripSpecText.includes('\\uce35 \\ubc88\\ud638 \\ud45c\\uc2dc: \\uc788\\uc74c')
       || !desktopPriorityStripSpecText.includes('\\ud0dc\\ube14\\ub9bf \\uc2a4\\ucf00\\uce58: \\uc788\\uc74c')) {
     findings.push('report handoff HWP copy blocks must carry soil profile color swatches, tablet daily logs, selected-record field notes, tablet feature sketches, tablet photo/drawing annotations, and tablet eyedropper sample locations');
+  }
+  if (!coreRecordContractText.includes('KOREAN_FIELDWORK_FEATURE_INVESTIGATION_CHECKLIST_LABELS')
+      || !coreRecordContractText.includes('getKoreanFieldworkFeatureInvestigationChecklistSummary')
+      || !coreRecordContractText.includes('KOREAN_FIELDWORK_TRIAL_TRENCH_CHECKLIST_STEPS')
+      || !coreRecordContractSpecText.includes('tablet investigation checklist order and Korean labels')
+      || !coreReportHandoffText.includes('getInvestigationStatusDetailSummary')
+      || !coreReportHandoffText.includes('getKoreanFieldworkFeatureInvestigationChecklistSummary')
+      || !coreReportHandoffText.includes('featureInvestigationChecklist')
+      || !coreReportHandoffSpecText.includes('investigation checklist steps into HWP copy blocks')
+      || !coreReportHandoffSpecText.includes("not.toContain('preInvestigationPhotoTaken')")
+      || !desktopChecklistText.includes('getSharedKoreanFieldworkChecklistSteps')
+      || !desktopPriorityStripSpecText.includes("not.toContain('preInvestigationPhotoTaken')")) {
+    findings.push('report handoff HWP copy blocks must carry tablet investigation checklist values with shared Korean labels instead of raw valuelist keys');
   }
   if (!coreReportHandoffText.includes('getPenMemoEvidenceSummary')
       || !coreReportHandoffText.includes('hasStrokeEvidence')
@@ -3899,6 +3915,7 @@ function validateProgressModeAwareness() {
   const tabletText = readTextFile(tabletSource);
   const desktopText = readTextFile(desktopSource);
   const tabletProgressSpecText = readTextFile('mobile/components/Project/korean-fieldwork-progress.spec.ts');
+  const coreRecordContractText = readTextFile('core/src/tools/korean-fieldwork-record-contract.ts');
   const desktopChecklistText = readTextFile('desktop/src/app/util/korean-fieldwork-checklist.ts');
   const desktopChecklistSpecText = readTextFile('desktop/test/unit/util/korean-fieldwork-checklist.spec.ts');
   const tabletOverviewText = readTextFile('mobile/components/Project/korean-fieldwork-overview-chart.ts');
@@ -3929,6 +3946,9 @@ function validateProgressModeAwareness() {
     'inProgressPhotoTaken',
     'penMemoReviewed'
   ];
+  const checklistContractText = desktopChecklistText.includes('getSharedKoreanFieldworkChecklistSteps')
+    ? coreRecordContractText
+    : desktopChecklistText;
   const excavationDetail = '제토 뒤 확인한 유구를 조사 경계 안에 먼저 기록하세요.';
   const excavationAction = '유구 기록';
 
@@ -3957,7 +3977,7 @@ function validateProgressModeAwareness() {
     }
   }
   for (const value of tabletTrialTrenchChecklistValues) {
-    if (!desktopChecklistText.includes(`'${value}'`)) {
+    if (!checklistContractText.includes(`'${value}'`)) {
       findings.push(`desktop checklist utility must count tablet trial-trench step ${value}`);
     }
   }

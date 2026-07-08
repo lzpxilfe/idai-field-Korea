@@ -1,12 +1,18 @@
 import {
     getKoreanFieldworkCategoryLabel,
+    getKoreanFieldworkChecklistSteps,
     getKoreanFieldworkEvidenceChips,
     getKoreanFieldworkEvidenceDefinitionsForCategory,
+    getKoreanFieldworkFeatureInvestigationChecklistLabel,
+    getKoreanFieldworkFeatureInvestigationChecklistLabels,
+    getKoreanFieldworkFeatureInvestigationChecklistSummary,
     getKoreanFieldworkReportHandoffCategoryRank,
     getKoreanFieldworkRelationLabel,
     isKoreanFieldworkReportHandoffCategory,
     KOREAN_FIELDWORK_CATEGORIES,
-    KOREAN_FIELDWORK_CATEGORY_ORDER
+    KOREAN_FIELDWORK_CATEGORY_ORDER,
+    KOREAN_FIELDWORK_FEATURE_CHECKLIST_STEPS,
+    KOREAN_FIELDWORK_TRIAL_TRENCH_CHECKLIST_STEPS
 } from '../../src/tools/korean-fieldwork-record-contract';
 
 
@@ -51,6 +57,55 @@ describe('Korean fieldwork record contract', () => {
         expect(getKoreanFieldworkReportHandoffCategoryRank(KOREAN_FIELDWORK_CATEGORIES.TRENCH))
             .toBeLessThan(getKoreanFieldworkReportHandoffCategoryRank(KOREAN_FIELDWORK_CATEGORIES.PHOTO));
         expect(getKoreanFieldworkReportHandoffCategoryRank('Project')).toBe(Number.MAX_SAFE_INTEGER);
+    });
+
+
+    it('keeps tablet investigation checklist order and Korean labels in core', () => {
+
+        expect(KOREAN_FIELDWORK_FEATURE_CHECKLIST_STEPS).toEqual([
+            'preInvestigationPhotoTaken',
+            'inProgressPhotoTaken',
+            'soilProfilePhotoLinked',
+            'measuredDrawingCompleted',
+            'preRecoveryFindPhotoTaken',
+            'findsRecovered',
+            'samplesCollected',
+            'penMemoReviewed',
+            'completionPhotoTaken'
+        ]);
+        expect(KOREAN_FIELDWORK_TRIAL_TRENCH_CHECKLIST_STEPS).toEqual([
+            'trenchSoilCleaned',
+            'trenchFeatureChecked',
+            'trenchPitOpened',
+            'trenchPitProfileDrawn',
+            'trenchOverviewPhotoTaken',
+            'trenchObliquePhotoTaken',
+            'soilProfilePhotoLinked',
+            'inProgressPhotoTaken',
+            'penMemoReviewed'
+        ]);
+        expect(getKoreanFieldworkChecklistSteps(KOREAN_FIELDWORK_CATEGORIES.FEATURE))
+            .toBe(KOREAN_FIELDWORK_FEATURE_CHECKLIST_STEPS);
+        expect(getKoreanFieldworkChecklistSteps(KOREAN_FIELDWORK_CATEGORIES.TRENCH, 'trialTrench'))
+            .toBe(KOREAN_FIELDWORK_TRIAL_TRENCH_CHECKLIST_STEPS);
+        expect(getKoreanFieldworkChecklistSteps(KOREAN_FIELDWORK_CATEGORIES.TRENCH, 'excavation'))
+            .toEqual([]);
+        expect(getKoreanFieldworkFeatureInvestigationChecklistLabel('preInvestigationPhotoTaken'))
+            .toBe('\uc870\uc0ac \uc804 \uc0ac\uc9c4');
+        expect(getKoreanFieldworkFeatureInvestigationChecklistLabel('unknownStep'))
+            .toBe('unknownStep');
+        expect(getKoreanFieldworkFeatureInvestigationChecklistLabels([
+            'findsRecovered',
+            'preInvestigationPhotoTaken',
+            'unknownStep'
+        ])).toEqual([
+            '\uc870\uc0ac \uc804 \uc0ac\uc9c4',
+            '\uc720\ubb3c \uc218\uc2b5',
+            'unknownStep'
+        ]);
+        expect(getKoreanFieldworkFeatureInvestigationChecklistSummary(
+            '["trenchPitOpened","trenchSoilCleaned"]'
+        )).toBe('\ud1a0\uce35 \uc815\ub9ac \u00b7 \ud53c\ud2b8 \uc870\uc0ac');
     });
 
 

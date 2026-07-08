@@ -87,6 +87,53 @@ export const KOREAN_FIELDWORK_FEATURE_WORKFLOW_CATEGORIES: readonly string[] = [
     KOREAN_FIELDWORK_CATEGORIES.FEATURE_SEGMENT
 ];
 
+export const KOREAN_FIELDWORK_FEATURE_CHECKLIST_STEPS: readonly string[] = [
+    'preInvestigationPhotoTaken',
+    'inProgressPhotoTaken',
+    'soilProfilePhotoLinked',
+    'measuredDrawingCompleted',
+    'preRecoveryFindPhotoTaken',
+    'findsRecovered',
+    'samplesCollected',
+    'penMemoReviewed',
+    'completionPhotoTaken'
+];
+
+export const KOREAN_FIELDWORK_TRIAL_TRENCH_CHECKLIST_STEPS: readonly string[] = [
+    'trenchSoilCleaned',
+    'trenchFeatureChecked',
+    'trenchPitOpened',
+    'trenchPitProfileDrawn',
+    'trenchOverviewPhotoTaken',
+    'trenchObliquePhotoTaken',
+    'soilProfilePhotoLinked',
+    'inProgressPhotoTaken',
+    'penMemoReviewed'
+];
+
+export const KOREAN_FIELDWORK_FEATURE_INVESTIGATION_CHECKLIST_LABELS: Readonly<Record<string, string>> = {
+    preInvestigationPhotoTaken: '\uc870\uc0ac \uc804 \uc0ac\uc9c4',
+    inProgressPhotoTaken: '\uc870\uc0ac \uc911 \uc0ac\uc9c4',
+    soilProfilePhotoLinked: '\ud1a0\uce35\uc0ac\uc9c4',
+    measuredDrawingCompleted: '\uc2e4\uce21 \uc644\ub8cc',
+    preRecoveryFindPhotoTaken: '\uc218\uc2b5 \uc804 \uc720\ubb3c\uc0ac\uc9c4',
+    findsRecovered: '\uc720\ubb3c \uc218\uc2b5',
+    samplesCollected: '\uc2dc\ub8cc \ucc44\ucde8',
+    penMemoReviewed: '\ud39c\uba54\ubaa8 \uac80\ud1a0',
+    completionPhotoTaken: '\uc870\uc0ac \uc644\ub8cc \uc0ac\uc9c4',
+    trenchSoilCleaned: '\ud1a0\uce35 \uc815\ub9ac',
+    trenchFeatureChecked: '\uc720\uad6c \ud655\uc778',
+    trenchPitOpened: '\ud53c\ud2b8 \uc870\uc0ac',
+    trenchPitProfileDrawn: '\ud53c\ud2b8 \ud1a0\uce35\ub3c4',
+    trenchOverviewPhotoTaken: '\uc815\ubc29\ud5a5 \uc0ac\uc9c4',
+    trenchObliquePhotoTaken: '\uc0ac\uc120 \uc0ac\uc9c4'
+};
+
+const KOREAN_FIELDWORK_FEATURE_INVESTIGATION_CHECKLIST_ORDER: readonly string[] = Array.from(new Set([
+    ...KOREAN_FIELDWORK_FEATURE_CHECKLIST_STEPS,
+    ...KOREAN_FIELDWORK_TRIAL_TRENCH_CHECKLIST_STEPS
+]));
+
 export const KOREAN_FIELDWORK_FEATURE_SEGMENT_PARENT_CATEGORIES: readonly string[] = [
     KOREAN_FIELDWORK_CATEGORIES.OPERATION,
     KOREAN_FIELDWORK_CATEGORIES.TRENCH,
@@ -252,6 +299,40 @@ export function getKoreanFieldworkReportHandoffCategoryRank(categoryName: string
 }
 
 
+export function getKoreanFieldworkChecklistSteps(categoryName: string,
+                                                 investigationMode?: string): readonly string[] {
+
+    if (categoryName === KOREAN_FIELDWORK_CATEGORIES.TRENCH && investigationMode === 'trialTrench') {
+        return KOREAN_FIELDWORK_TRIAL_TRENCH_CHECKLIST_STEPS;
+    }
+
+    return KOREAN_FIELDWORK_FEATURE_WORKFLOW_CATEGORIES.includes(categoryName)
+        ? KOREAN_FIELDWORK_FEATURE_CHECKLIST_STEPS
+        : [];
+}
+
+
+export function getKoreanFieldworkFeatureInvestigationChecklistLabel(value: string): string {
+
+    return KOREAN_FIELDWORK_FEATURE_INVESTIGATION_CHECKLIST_LABELS[value] ?? value;
+}
+
+
+export function getKoreanFieldworkFeatureInvestigationChecklistLabels(value: unknown): string[] {
+
+    return getKoreanFieldworkFeatureInvestigationChecklistValues(value)
+        .map(getKoreanFieldworkFeatureInvestigationChecklistLabel);
+}
+
+
+export function getKoreanFieldworkFeatureInvestigationChecklistSummary(value: unknown): string|undefined {
+
+    const labels = getKoreanFieldworkFeatureInvestigationChecklistLabels(value);
+
+    return labels.length > 0 ? labels.join(' \u00b7 ') : undefined;
+}
+
+
 export function isKoreanFieldworkReportHandoffCategory(categoryName: string): boolean {
 
     return KOREAN_FIELDWORK_REPORT_HANDOFF_CATEGORY_RANK[categoryName] !== undefined;
@@ -297,4 +378,62 @@ function getEvidenceDocuments(bundle: EvidenceBundle,
                               bundleKey: KoreanFieldworkEvidenceBundleKey): Document[] {
 
     return bundle[bundleKey];
+}
+
+
+function getKoreanFieldworkFeatureInvestigationChecklistValues(value: unknown): string[] {
+
+    const rawValues = getStringListValues(value);
+    const seen = new Set<string>();
+    const uniqueValues = rawValues.filter(item => {
+        if (seen.has(item)) return false;
+
+        seen.add(item);
+        return true;
+    });
+    const knownValues = KOREAN_FIELDWORK_FEATURE_INVESTIGATION_CHECKLIST_ORDER
+        .filter(item => seen.has(item));
+    const unknownValues = uniqueValues.filter(item =>
+        !KOREAN_FIELDWORK_FEATURE_INVESTIGATION_CHECKLIST_ORDER.includes(item)
+    );
+
+    return [...knownValues, ...unknownValues];
+}
+
+
+function getStringListValues(value: unknown): string[] {
+
+    if (value === undefined || value === null) return [];
+
+    if (Array.isArray(value)) {
+        return value.flatMap(getStringListValues);
+    }
+
+    if (typeof value === 'object') {
+        const record = value as Record<string, unknown>;
+        if (typeof record.inputValue === 'string') return getStringListValues(record.inputValue);
+        if (typeof record.value === 'string') return getStringListValues(record.value);
+
+        return [];
+    }
+
+    const text = String(value).trim();
+    if (!text || text === '[]') return [];
+
+    const parsedValue = parseJsonValue(text);
+    if (parsedValue !== undefined) return getStringListValues(parsedValue);
+
+    return text.split(/\r?\n|,\s*/)
+        .map(line => line.trim())
+        .filter(line => !!line);
+}
+
+
+function parseJsonValue(value: string): unknown|undefined {
+
+    try {
+        return JSON.parse(value);
+    } catch {
+        return undefined;
+    }
 }

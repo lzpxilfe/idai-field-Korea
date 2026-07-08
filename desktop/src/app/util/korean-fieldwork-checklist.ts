@@ -1,4 +1,9 @@
-import { Document } from 'idai-field-core';
+import {
+    Document,
+    getKoreanFieldworkChecklistSteps as getSharedKoreanFieldworkChecklistSteps,
+    KOREAN_FIELDWORK_FEATURE_CHECKLIST_STEPS,
+    KOREAN_FIELDWORK_TRIAL_TRENCH_CHECKLIST_STEPS
+} from 'idai-field-core';
 
 
 export interface KoreanFieldworkChecklistMetrics {
@@ -6,46 +11,16 @@ export interface KoreanFieldworkChecklistMetrics {
     total: number;
 }
 
-export const KOREAN_FIELDWORK_FEATURE_CHECKLIST_STEPS: readonly string[] = [
-    'preInvestigationPhotoTaken',
-    'inProgressPhotoTaken',
-    'soilProfilePhotoLinked',
-    'measuredDrawingCompleted',
-    'preRecoveryFindPhotoTaken',
-    'findsRecovered',
-    'samplesCollected',
-    'penMemoReviewed',
-    'completionPhotoTaken'
-];
-
-export const KOREAN_FIELDWORK_TRIAL_TRENCH_CHECKLIST_STEPS: readonly string[] = [
-    'trenchSoilCleaned',
-    'trenchFeatureChecked',
-    'trenchPitOpened',
-    'trenchPitProfileDrawn',
-    'trenchOverviewPhotoTaken',
-    'trenchObliquePhotoTaken',
-    'soilProfilePhotoLinked',
-    'inProgressPhotoTaken',
-    'penMemoReviewed'
-];
-
-const FEATURE_CHECKLIST_CATEGORIES = new Set<string>([
-    'Feature',
-    'FeatureSegment'
-]);
+export {
+    KOREAN_FIELDWORK_FEATURE_CHECKLIST_STEPS,
+    KOREAN_FIELDWORK_TRIAL_TRENCH_CHECKLIST_STEPS
+};
 
 
 export function getKoreanFieldworkChecklistSteps(categoryName: string,
                                                  investigationMode?: string): readonly string[] {
 
-    if (categoryName === 'Trench' && investigationMode === 'trialTrench') {
-        return KOREAN_FIELDWORK_TRIAL_TRENCH_CHECKLIST_STEPS;
-    }
-
-    return FEATURE_CHECKLIST_CATEGORIES.has(categoryName)
-        ? KOREAN_FIELDWORK_FEATURE_CHECKLIST_STEPS
-        : [];
+    return getSharedKoreanFieldworkChecklistSteps(categoryName, investigationMode);
 }
 
 
