@@ -330,7 +330,7 @@ describe('Korean fieldwork report handoff', () => {
         expect(evidenceDetails)
             .toContain('\uce35 \ubc88\ud638 \ud45c\uc2dc: \uc788\uc74c');
         expect(evidenceDetails)
-            .toContain('\uc2a4\ud3ec\uc774\ub4dc \uc704\uce58: \uc0ac\uc9c4 \uc120\ud0dd \uc9c0\uc810 20%/50% \ud3c9\uade0 RGB 111/87/61');
+            .toContain('\uc2a4\ud3ec\uc774\ub4dc \uc704\uce58: 1\uce35: RGB 111/87/61 @ 20%/50%');
         expect(featureItem?.copyText)
             .toContain('RGB 111/87/61 @ 20%/50%');
         expect(featureItem?.copyText)
@@ -367,9 +367,47 @@ describe('Korean fieldwork report handoff', () => {
         const evidenceDetails = featureItem?.evidenceDetails.join('\n') ?? '';
 
         expect(evidenceDetails)
-            .toContain('\uc2a4\ud3ec\uc774\ub4dc \uc704\uce58: 1: RGB 111/87/61 @ 20%/50%, 2: RGB 139/128/88 @ 80%/50%');
+            .toContain('\uc2a4\ud3ec\uc774\ub4dc \uc704\uce58: 1\uce35: RGB 111/87/61 @ 20%/50%, 2\uce35: RGB 139/128/88 @ 80%/50%');
         expect(featureItem?.copyText)
-            .toContain('2: RGB 139/128/88 @ 80%/50%');
+            .toContain('2\uce35: RGB 139/128/88 @ 80%/50%');
+    });
+
+
+    it('prefers accepted layer color sample locations over the last tablet candidate in HWP copy blocks', () => {
+
+        const documents = [
+            makeDocument('feature-1', 'Feature', {
+                identifier: 'pit-001',
+                shortDescription: 'round pit with dark fill',
+                featureRecordingStatus: 'confirmed',
+                featureInvestigationChecklist: []
+            }),
+            makeDocument('soil-photo-1', 'SoilProfilePhoto', {
+                soilProfilePhotoUri: 'file:///tablet/photos/soil-photo-1.jpg',
+                soilProfileColorSwatches: [
+                    '1: 10YR 4/3 RGB 111/87/61 @ 20%/50%',
+                    '2: 2.5Y 5/3 RGB 139/128/88 @ 80%/45%'
+                ].join('\n'),
+                soilColorAssistCandidates: [
+                    '\uc0ac\uc9c4 \uc120\ud0dd \uc9c0\uc810 80%/45% \ud3c9\uade0 RGB 139/128/88',
+                    '1: 2.5Y 5/3 (\ub192\uc74c, \ucc28\uc774 0.0)'
+                ].join('\n'),
+                relations: { depicts: ['feature-1'] }
+            })
+        ];
+
+        const handoff = makeKoreanFieldworkReportHandoff(documents as any);
+        const featureItem = handoff.items.find(item => item.documentId === 'feature-1');
+        const evidenceDetails = featureItem?.evidenceDetails.join('\n') ?? '';
+
+        expect(evidenceDetails)
+            .toContain('\uc2a4\ud3ec\uc774\ub4dc \uc704\uce58: 1\uce35: RGB 111/87/61 @ 20%/50%, 2\uce35: RGB 139/128/88 @ 80%/45%');
+        expect(featureItem?.copyText)
+            .toContain('1\uce35: RGB 111/87/61 @ 20%/50%');
+        expect(featureItem?.copyText)
+            .toContain('2\uce35: RGB 139/128/88 @ 80%/45%');
+        expect(evidenceDetails)
+            .not.toContain('\uc0ac\uc9c4 \uc120\ud0dd \uc9c0\uc810 80%/45% \ud3c9\uade0 RGB 139/128/88');
     });
 
 

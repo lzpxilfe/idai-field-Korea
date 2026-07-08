@@ -1472,11 +1472,14 @@ function getLabeledEvidenceValue(label: string, value: string|undefined): string
 
 function getSoilColorSampleSourceLabel(value: any, swatchValue?: any): string|undefined {
 
+    const swatchLocationLabel = getSoilColorSampleLocationFromSwatches(swatchValue);
+    if (swatchLocationLabel) return swatchLocationLabel;
+
     const sourceLine = getTextLines(value)
         .map(line => line.trim())
         .find(line => SOIL_COLOR_SAMPLE_SOURCE_PATTERN.test(line));
 
-    return sourceLine ?? getSoilColorSampleLocationFromSwatches(swatchValue);
+    return sourceLine;
 }
 
 
@@ -1489,7 +1492,7 @@ function getSoilColorSampleLocationFromSwatches(value: any): string|undefined {
             if (!sampleMatch) return undefined;
 
             const rowMatch = line.match(SOIL_COLOR_ROW_NUMBER_PATTERN);
-            const rowLabel = rowMatch ? `${rowMatch[1]}: ` : '';
+            const rowLabel = rowMatch ? `${rowMatch[1]}층: ` : '';
 
             return `${rowLabel}RGB ${sampleMatch[1]}/${sampleMatch[2]}/${sampleMatch[3]} @ `
                 + `${sampleMatch[4]}%/${sampleMatch[5]}%`;
