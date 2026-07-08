@@ -304,7 +304,7 @@ function Start-MobileArtifactWorkflow {
             --limit 30
         if ($LASTEXITCODE -ne 0) { throw 'Could not list Mobile workflow_dispatch runs.' }
 
-        $runs = @($runsJson | ConvertFrom-Json)
+        $runs = $runsJson | ConvertFrom-Json
         $candidate = $runs |
             Where-Object {
                 $createdAt = ([DateTime]$_.createdAt).ToUniversalTime()
