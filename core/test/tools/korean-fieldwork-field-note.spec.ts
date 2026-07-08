@@ -1,8 +1,10 @@
 import {
     buildKoreanFieldworkFieldNoteText,
     extractKoreanFieldworkFieldNoteInput,
+    getKoreanFieldworkFieldNoteReportPreview,
     hasMeaningfulKoreanFieldworkFieldNoteText,
-    parseKoreanFieldworkFieldNote
+    parseKoreanFieldworkFieldNote,
+    shouldPromptKoreanFieldworkFieldNoteNextWork
 } from '../../src/tools/korean-fieldwork-field-note';
 
 
@@ -70,4 +72,51 @@ describe('Korean fieldwork field note contract', () => {
             '[\uad00\ucc30 \ub0b4\uc6a9]\n[\uadfc\uac70 \ubc88\ud638]'
         )).toBe(false);
     });
+
+
+    it('builds tablet report-preview sentences through the shared desktop handoff contract', () => {
+
+        const feature = makeDocument('feature-1', 'Feature', '수혈 1');
+
+        expect(getKoreanFieldworkFieldNoteReportPreview({}, feature)).toBeUndefined();
+        expect(getKoreanFieldworkFieldNoteReportPreview({
+            observation: '바닥면에서 원형 윤곽을 확인.',
+            interpretation: '주공 가능성이 있다.',
+            nextWork: '사진 보강 후 단면 정리.',
+            evidenceNumbers: '사진 12, 도면 3'
+        }, feature)).toEqual({
+            title: '수혈 1 보고서 정리 문장',
+            sentence: '유구 수혈 1은 바닥면에서 원형 윤곽을 확인. 주공 가능성이 있다.',
+            supportingDetail: '근거 번호: 사진 12, 도면 3 · 다음 작업: 사진 보강 후 단면 정리.',
+            missingParts: []
+        });
+        expect(getKoreanFieldworkFieldNoteReportPreview({
+            observation: '평면 형태 확인.'
+        }, feature)?.missingParts).toEqual([
+            '관찰과 구분한 해석',
+            '사진·도면·스케치·유물·시료 번호',
+            '다음 작업'
+        ]);
+        expect(getKoreanFieldworkFieldNoteReportPreview({
+            observation: '배수로로 이어지는 선형 흔적 확인.'
+        }, makeDocument('feature-2', 'Feature', '유구 2'))?.sentence)
+            .toBe('유구 2는 배수로로 이어지는 선형 흔적 확인.');
+        expect(shouldPromptKoreanFieldworkFieldNoteNextWork(feature)).toBe(true);
+        expect(shouldPromptKoreanFieldworkFieldNoteNextWork(
+            makeDocument('photo-1', 'Photo', '사진 1')
+        )).toBe(false);
+    });
 });
+
+
+function makeDocument(id: string, category: string, identifier: string) {
+
+    return {
+        resource: {
+            id,
+            identifier,
+            category,
+            relations: {}
+        }
+    } as any;
+}

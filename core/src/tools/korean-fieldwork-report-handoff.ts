@@ -27,6 +27,8 @@ import {
 import {
     KOREAN_FIELDWORK_FIELD_NOTE_HANDWRITING_SUMMARY_LABEL,
     KOREAN_FIELDWORK_FIELD_NOTE_SUMMARY_LABELS,
+    extractKoreanFieldworkFieldNoteInput,
+    getKoreanFieldworkFieldNoteReportPreview,
     KoreanFieldworkFieldNoteSectionId,
     parseKoreanFieldworkFieldNote
 } from './korean-fieldwork-field-note';
@@ -859,6 +861,7 @@ function makeReportHandoffItem(document: Document, documents: Document[]): Korea
     const title = `${categoryLabel} ${identifier}`;
     const tone: KoreanFieldworkReportHandoffTone = issueCount > 0 ? 'review' : 'ready';
     const copyTextParts = {
+        bodyText: getReportBodyCopyText(document, categoryLabel, identifier, summary),
         categoryLabel,
         details,
         evidenceDetails,
@@ -893,6 +896,7 @@ function makeReportHandoffItem(document: Document, documents: Document[]): Korea
 
 
 interface ReportHandoffCopyTextParts {
+    bodyText: string;
     categoryLabel: string;
     details: string[];
     evidenceDetails: string[];
@@ -931,6 +935,7 @@ function makeCopyText({
 
 
 function makeCopySections({
+    bodyText,
     categoryLabel,
     details,
     evidenceDetails,
@@ -944,7 +949,7 @@ function makeCopySections({
 
     return [
         makeCopySection('body', KO.BODY, [
-            makeBodyCopyText({ categoryLabel, identifier, summary })
+            bodyText
         ]),
         makeCopySection('summary', KO.SUMMARY, [
             `[${categoryLabel}] ${identifier}`,
@@ -970,13 +975,19 @@ function makeCopySections({
 }
 
 
-function makeBodyCopyText({
-    categoryLabel,
-    identifier,
-    summary
-}: Pick<ReportHandoffCopyTextParts, 'categoryLabel'|'identifier'|'summary'>): string {
+function getReportBodyCopyText(
+        document: Document,
+        categoryLabel: string,
+        identifier: string,
+        summary: string
+): string {
 
-    return `${categoryLabel} ${identifier}: ${summary}`;
+    const fieldNotePreview = getKoreanFieldworkFieldNoteReportPreview(
+        extractKoreanFieldworkFieldNoteInput(document.resource.fieldNote as any),
+        document
+    );
+
+    return fieldNotePreview?.sentence ?? `${categoryLabel} ${identifier}: ${summary}`;
 }
 
 

@@ -2302,6 +2302,12 @@ function validateProjectInvestigationModeWording() {
       findings.push(`${label} must parse field-note sections through the shared core contract`);
     }
   }
+  if (!coreFieldNoteText.includes('getKoreanFieldworkFieldNoteReportPreview')
+      || !coreFieldNoteText.includes('shouldPromptKoreanFieldworkFieldNoteNextWork')
+      || !tabletFieldNotesText.includes('getSharedKoreanFieldworkFieldNoteReportPreview')
+      || !tabletFieldNotesText.includes('CoreKoreanFieldworkFieldNoteReportPreview')) {
+    findings.push('tablet field-note report preview must use the shared core contract used by desktop HWP body copy');
+  }
   if (!koreanValuelistKoText.includes('"label": "조사 중 기록"')) {
     findings.push('Korean excavation context wording must fold quadrant/half-style investigation into 조사 중 기록');
   }
@@ -3381,7 +3387,8 @@ function validateReportHandoffPreSaveValidation() {
   }
   if (!coreReportHandoffText.includes('KoreanFieldworkReportHandoffCopySection')
       || !coreReportHandoffText.includes('copySections: makeCopySections')
-      || !coreReportHandoffText.includes('makeBodyCopyText')
+      || !coreReportHandoffText.includes('getReportBodyCopyText')
+      || !coreReportHandoffText.includes('getKoreanFieldworkFieldNoteReportPreview')
       || !coreReportHandoffSpecText.includes("section.id === 'body'")
       || !coreReportHandoffSpecText.includes('copySections.map(section => section.id)')) {
     findings.push('core report handoff must expose section-level HWP copy blocks for selective desktop pasting');

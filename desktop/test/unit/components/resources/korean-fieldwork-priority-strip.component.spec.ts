@@ -520,7 +520,7 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
                 'issues'
             ]);
             expect(featureItem.copySections.find(section => section.id === 'body')?.copyText)
-                .toBe('\uc720\uad6c pit-001: round pit with dark fill');
+                .toBe('\uc720\uad6c pit-001\uc740 \ubc14\ub2e5\uba74\uc5d0\uc11c \uc6d0\ud615 \uc724\uacfd \ud655\uc778. \uc8fc\uacf5 \uac00\ub2a5\uc131.');
             expect(featureItem.copySections.find(section => section.id === 'summary')?.copyText)
                 .toContain('[\uc720\uad6c] pit-001\r\n\uc694\uc57d: round pit with dark fill');
             expect(featureItem.copySections.find(section => section.id === 'evidence')?.copyText)

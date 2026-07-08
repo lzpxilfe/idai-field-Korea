@@ -295,6 +295,8 @@ describe('Korean fieldwork report handoff', () => {
             .toContain('\uadfc\uac70 \ubc88\ud638: \uc0ac\uc9c4 12, \ub3c4\uba74 3');
         expect(details)
             .toContain('\uc190\uadf8\ub9bc \uba54\ubaa8: 1\ud68d 2\uc810');
+        expect(featureItem?.copySections.find(section => section.id === 'body')?.copyText)
+            .toBe('\uc720\uad6c pit-001\uc740 \ubc14\ub2e5\uba74\uc5d0\uc11c \uc6d0\ud615 \uc724\uacfd \ud655\uc778. \uc8fc\uacf5 \uac00\ub2a5\uc131.');
         expect(featureItem?.copyText)
             .toContain('\ub2e4\uc74c \uc791\uc5c5: \ub2e8\uba74 \uc0ac\uc9c4 \ubcf4\uac15.');
         expect(featureItem?.copyText)

@@ -3,15 +3,18 @@ import {
   buildEvidenceBundle,
   Document,
   extractKoreanFieldworkFieldNoteInput as extractSharedKoreanFieldworkFieldNoteInput,
+  getKoreanFieldworkFieldNoteReportPreview as getSharedKoreanFieldworkFieldNoteReportPreview,
   hasAnyKoreanFieldworkFieldNoteInput,
   hasMeaningfulKoreanFieldworkFieldNoteText,
   KOREAN_FIELDWORK_FIELD_NOTE_SECTION_DEFINITIONS,
   KoreanFieldworkFieldNoteInput as CoreKoreanFieldworkFieldNoteInput,
+  KoreanFieldworkFieldNoteReportPreview as CoreKoreanFieldworkFieldNoteReportPreview,
   KoreanFieldworkReadinessIssue,
   NewDocument,
   normalizeKoreanFieldworkFieldNoteText,
   ProjectConfiguration,
   removeEmptyKoreanFieldworkFieldNoteInputValues,
+  shouldPromptKoreanFieldworkFieldNoteNextWork,
   trimKoreanFieldworkFieldNoteInput,
 } from 'idai-field-core';
 import { createKoreanFieldworkDraftResource } from './korean-fieldwork-document-drafts';
@@ -93,12 +96,8 @@ export interface KoreanFieldworkFieldNoteIssuePrompt {
   input: KoreanFieldworkFieldNoteInput;
 }
 
-export interface KoreanFieldworkFieldNoteReportPreview {
-  title: string;
-  sentence: string;
-  supportingDetail: string;
-  missingParts: string[];
-}
+export type KoreanFieldworkFieldNoteReportPreview =
+  CoreKoreanFieldworkFieldNoteReportPreview;
 
 export interface KoreanFieldworkFieldNoteRecordUpdates {
   [fieldName: string]: unknown;
@@ -171,6 +170,8 @@ const RECORD_FIELD_NOTE_SOURCE_LABEL = '기록 메모';
 export const normalizeFieldNoteText = normalizeKoreanFieldworkFieldNoteText;
 export const buildKoreanFieldworkFieldNoteText = buildSharedKoreanFieldworkFieldNoteText;
 export const extractKoreanFieldworkFieldNoteInput = extractSharedKoreanFieldworkFieldNoteInput;
+export const getKoreanFieldworkFieldNoteReportPreview =
+  getSharedKoreanFieldworkFieldNoteReportPreview;
 
 export const createKoreanFieldworkRecordMemoDraft = (
   document: Document,
@@ -870,40 +871,6 @@ export const getKoreanFieldworkFieldNoteIssuePrompts = (
       input: getIssuePromptInput(issue),
     }));
 
-export const getKoreanFieldworkFieldNoteReportPreview = (
-  input: KoreanFieldworkFieldNoteInput,
-  document: Document
-): KoreanFieldworkFieldNoteReportPreview | undefined => {
-  const observation = normalizeFieldNoteText(input.observation ?? '');
-  if (!observation) return undefined;
-
-  const interpretation = normalizeFieldNoteText(input.interpretation ?? '');
-  const nextWork = normalizeFieldNoteText(input.nextWork ?? '');
-  const evidenceNumbers = normalizeFieldNoteText(input.evidenceNumbers ?? '');
-  const recordLabel = document.resource.identifier || document.resource.id;
-  const categoryLabel = getKoreanFieldworkCategoryLabel(document.resource.category);
-  const missingParts = [
-    !interpretation ? '관찰과 구분한 해석' : undefined,
-    !evidenceNumbers ? '사진·도면·스케치·유물·시료 번호' : undefined,
-    !nextWork && shouldPromptNextWork(document) ? '다음 작업' : undefined,
-  ].filter((part): part is string => !!part);
-
-  return {
-    title: `${recordLabel} 보고서 정리 문장`,
-    sentence: [
-      `${formatReportSubject(categoryLabel, recordLabel)} ${trimSentenceEnd(observation)}.`,
-      interpretation
-        ? ` ${trimSentenceEnd(interpretation)}.`
-        : undefined,
-    ].join(''),
-    supportingDetail: [
-      evidenceNumbers ? `근거 번호: ${evidenceNumbers}` : undefined,
-      nextWork ? `다음 작업: ${nextWork}` : undefined,
-    ].filter((value): value is string => !!value).join(' · '),
-    missingParts,
-  };
-};
-
 export const getKoreanFieldworkFieldNoteRecordUpdates = (
   input: KoreanFieldworkFieldNoteInput,
   document: Document,
@@ -1117,46 +1084,6 @@ const inferDailyLogContent = (
 const hasText = (value: string | undefined): boolean =>
   normalizeFieldNoteText(value ?? '').length > 0;
 
-const trimSentenceEnd = (text: string): string =>
-  normalizeFieldNoteText(text).replace(/[.。．\s]+$/g, '');
-
-const formatReportSubject = (
-  categoryLabel: string,
-  recordLabel: string
-): string => {
-  const subjectLabel = recordLabel.startsWith(categoryLabel)
-    ? recordLabel
-    : `${categoryLabel} ${recordLabel}`;
-
-  return `${subjectLabel}${getKoreanSubjectParticle(recordLabel)}`;
-};
-
-const getKoreanSubjectParticle = (text: string): '은'|'는' => {
-  const lastCharacter = normalizeFieldNoteText(text).slice(-1);
-  if (!lastCharacter) return '는';
-
-  const digitSubjectParticles: Record<string, '은'|'는'> = {
-    '0': '은',
-    '1': '은',
-    '2': '는',
-    '3': '은',
-    '4': '는',
-    '5': '는',
-    '6': '은',
-    '7': '은',
-    '8': '은',
-    '9': '는',
-  };
-  if (digitSubjectParticles[lastCharacter]) {
-    return digitSubjectParticles[lastCharacter];
-  }
-
-  const codePoint = lastCharacter.charCodeAt(0);
-  if (codePoint < 0xac00 || codePoint > 0xd7a3) return '는';
-
-  return (codePoint - 0xac00) % 28 === 0 ? '는' : '은';
-};
-
 const FIELD_NOTE_EVIDENCE_ACTION_IDS = new Set<string>([
   'photos',
   'soilProfilePhotos',
@@ -1290,10 +1217,7 @@ const shouldPromptEvidenceNumbers = (
   );
 };
 
-const shouldPromptNextWork = (document: Document): boolean =>
-  FEATURE_PROGRESS_CATEGORIES.has(document.resource.category)
-  || document.resource.category === C.FIND
-  || document.resource.category === C.SAMPLE;
+const shouldPromptNextWork = shouldPromptKoreanFieldworkFieldNoteNextWork;
 
 const getIssuePromptLabel = (
   issue: KoreanFieldworkReadinessIssue

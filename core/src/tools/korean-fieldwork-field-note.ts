@@ -1,3 +1,10 @@
+import { Document } from '../model/document/document';
+import {
+    getKoreanFieldworkCategoryLabel,
+    KOREAN_FIELDWORK_CATEGORIES
+} from './korean-fieldwork-record-contract';
+
+
 export type KoreanFieldworkFieldNoteSectionId =
     'observation'|'interpretation'|'nextWork'|'evidenceNumbers';
 
@@ -13,6 +20,13 @@ export interface KoreanFieldworkParsedFieldNote {
     hasHandwritingEvidence: boolean;
     handwritingSummary?: string;
     sections: Record<KoreanFieldworkFieldNoteSectionId, string>;
+}
+
+export interface KoreanFieldworkFieldNoteReportPreview {
+    title: string;
+    sentence: string;
+    supportingDetail: string;
+    missingParts: string[];
 }
 
 export interface KoreanFieldworkFieldNoteParseOptions {
@@ -62,6 +76,14 @@ const KOREAN_FIELDWORK_FIELD_NOTE_SECTION_IDS: Readonly<Record<string, KoreanFie
     '\uc2a4\ucf00\uce58\u00b7\uc57d\uce21/\uadfc\uac70 \ubc88\ud638': 'evidenceNumbers',
     '\uadfc\uac70 \ubc88\ud638': 'evidenceNumbers'
 };
+
+const KOREAN_FIELDWORK_FIELD_NOTE_NEXT_WORK_CATEGORIES = new Set<string>([
+    KOREAN_FIELDWORK_CATEGORIES.FEATURE,
+    KOREAN_FIELDWORK_CATEGORIES.FEATURE_SEGMENT,
+    KOREAN_FIELDWORK_CATEGORIES.TRENCH,
+    KOREAN_FIELDWORK_CATEGORIES.FIND,
+    KOREAN_FIELDWORK_CATEGORIES.SAMPLE
+]);
 
 export const normalizeKoreanFieldworkFieldNoteText = (text: string): string =>
     text.replace(/\r\n/g, '\n').trim();
@@ -172,6 +194,49 @@ export function hasMeaningfulKoreanFieldworkFieldNoteText(text: string): boolean
 }
 
 
+export function getKoreanFieldworkFieldNoteReportPreview(
+        input: KoreanFieldworkFieldNoteInput,
+        document: Document
+): KoreanFieldworkFieldNoteReportPreview|undefined {
+
+    const observation = normalizeKoreanFieldworkFieldNoteText(input.observation ?? '');
+    if (!observation) return undefined;
+
+    const interpretation = normalizeKoreanFieldworkFieldNoteText(input.interpretation ?? '');
+    const nextWork = normalizeKoreanFieldworkFieldNoteText(input.nextWork ?? '');
+    const evidenceNumbers = normalizeKoreanFieldworkFieldNoteText(input.evidenceNumbers ?? '');
+    const recordLabel = document.resource.identifier || document.resource.id;
+    const categoryLabel = getKoreanFieldworkCategoryLabel(document.resource.category);
+    const missingParts = [
+        !interpretation ? '\uad00\ucc30\uacfc \uad6c\ubd84\ud55c \ud574\uc11d' : undefined,
+        !evidenceNumbers ? '\uc0ac\uc9c4\u00b7\ub3c4\uba74\u00b7\uc2a4\ucf00\uce58\u00b7\uc720\ubb3c\u00b7\uc2dc\ub8cc \ubc88\ud638' : undefined,
+        !nextWork && shouldPromptKoreanFieldworkFieldNoteNextWork(document) ? '\ub2e4\uc74c \uc791\uc5c5' : undefined
+    ].filter((part): part is string => !!part);
+
+    return {
+        title: `${recordLabel} \ubcf4\uace0\uc11c \uc815\ub9ac \ubb38\uc7a5`,
+        sentence: [
+            `${formatKoreanFieldworkFieldNoteReportSubject(categoryLabel, recordLabel)} `
+                + `${trimKoreanFieldworkFieldNoteSentenceEnd(observation)}.`,
+            interpretation
+                ? ` ${trimKoreanFieldworkFieldNoteSentenceEnd(interpretation)}.`
+                : undefined
+        ].join(''),
+        supportingDetail: [
+            evidenceNumbers ? `\uadfc\uac70 \ubc88\ud638: ${evidenceNumbers}` : undefined,
+            nextWork ? `\ub2e4\uc74c \uc791\uc5c5: ${nextWork}` : undefined
+        ].filter((value): value is string => !!value).join(' \u00b7 '),
+        missingParts
+    };
+}
+
+
+export function shouldPromptKoreanFieldworkFieldNoteNextWork(document: Document): boolean {
+
+    return KOREAN_FIELDWORK_FIELD_NOTE_NEXT_WORK_CATEGORIES.has(document.resource.category);
+}
+
+
 export function getKoreanFieldworkFieldNoteSectionId(
         label: string
 ): KoreanFieldworkFieldNoteSectionId|undefined {
@@ -197,6 +262,51 @@ export function formatKoreanFieldworkFieldNoteSection(label: string, value?: str
     const text = normalizeKoreanFieldworkFieldNoteText(value ?? '');
 
     return text ? `[${label}] ${text}` : undefined;
+}
+
+
+function trimKoreanFieldworkFieldNoteSentenceEnd(text: string): string {
+
+    return normalizeKoreanFieldworkFieldNoteText(text).replace(/[.\u3002\uff0e\s]+$/g, '');
+}
+
+
+function formatKoreanFieldworkFieldNoteReportSubject(
+        categoryLabel: string,
+        recordLabel: string
+): string {
+
+    const subjectLabel = recordLabel.startsWith(categoryLabel)
+        ? recordLabel
+        : `${categoryLabel} ${recordLabel}`;
+
+    return `${subjectLabel}${getKoreanFieldworkSubjectParticle(recordLabel)}`;
+}
+
+
+function getKoreanFieldworkSubjectParticle(text: string): '\uc740'|'\ub294' {
+
+    const lastCharacter = normalizeKoreanFieldworkFieldNoteText(text).slice(-1);
+    if (!lastCharacter) return '\ub294';
+
+    const digitSubjectParticles: Record<string, '\uc740'|'\ub294'> = {
+        '0': '\uc740',
+        '1': '\uc740',
+        '2': '\ub294',
+        '3': '\uc740',
+        '4': '\ub294',
+        '5': '\ub294',
+        '6': '\uc740',
+        '7': '\uc740',
+        '8': '\uc740',
+        '9': '\ub294'
+    };
+    if (digitSubjectParticles[lastCharacter]) return digitSubjectParticles[lastCharacter];
+
+    const codePoint = lastCharacter.charCodeAt(0);
+    if (codePoint < 0xac00 || codePoint > 0xd7a3) return '\ub294';
+
+    return (codePoint - 0xac00) % 28 === 0 ? '\ub294' : '\uc740';
 }
 
 
