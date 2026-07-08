@@ -3311,11 +3311,17 @@ function validateReportHandoffPreSaveValidation() {
   if (!tabletPackageText.includes('"test:ci": "jest --watchAll=false --runInBand"')
       || !tabletWorkflowText.includes('mobile-handoff-tests')
       || !tabletWorkflowText.includes('branches:')
-      || !tabletWorkflowText.includes('Run tablet HWP handoff tests')
-      || !tabletWorkflowText.includes('npm run test:ci -- --runTestsByPath components/Project/DocumentAdd.spec.tsx components/Project/DocumentEdit.spec.tsx')
+      || !tabletWorkflowText.includes('Run tablet handoff compatibility tests')
+      || !tabletWorkflowText.includes('npm run test:ci -- --runTestsByPath')
+      || !tabletWorkflowText.includes('components/Project/DocumentAdd.spec.tsx')
+      || !tabletWorkflowText.includes('components/Project/DocumentEdit.spec.tsx')
+      || !tabletWorkflowText.includes('components/Project/FieldworkPhotoAnnotationPanel.spec.tsx')
+      || !tabletWorkflowText.includes('components/Project/KoreanFieldworkSoilColorPanel.spec.tsx')
+      || !tabletWorkflowText.includes('components/Project/SoilProfileCameraButton.spec.ts')
+      || !tabletWorkflowText.includes('components/Project/soil-color-photo-assist.spec.ts')
       || !tabletWorkflowText.includes("startsWith(github.ref, 'refs/tags/')")
       || !tabletWorkflowText.includes("github.event_name == 'workflow_dispatch'")) {
-    findings.push('mobile CI must run focused tablet HWP handoff tests on branch changes while keeping APK builds gated to tags, PRs, or manual runs');
+    findings.push('mobile CI must run focused tablet HWP handoff and soil-photo eyedropper compatibility tests on branch changes while keeping APK builds gated to tags, PRs, or manual runs');
   }
   if (!coreReportHandoffText.includes('normalizeKoreanFieldworkHwpPlainText')
       || !coreReportHandoffText.includes(".replace(/\\r\\n?/g, '\\n')")

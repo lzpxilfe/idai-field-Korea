@@ -54,8 +54,15 @@ jobs:
         run: npm ci --legacy-peer-deps
         working-directory: mobile
 
-      - name: Run tablet HWP handoff tests
-        run: npm run test:ci -- --runTestsByPath components/Project/DocumentAdd.spec.tsx components/Project/DocumentEdit.spec.tsx
+      - name: Run tablet handoff compatibility tests
+        run: >
+          npm run test:ci -- --runTestsByPath
+          components/Project/DocumentAdd.spec.tsx
+          components/Project/DocumentEdit.spec.tsx
+          components/Project/FieldworkPhotoAnnotationPanel.spec.tsx
+          components/Project/KoreanFieldworkSoilColorPanel.spec.tsx
+          components/Project/SoilProfileCameraButton.spec.ts
+          components/Project/soil-color-photo-assist.spec.ts
         working-directory: mobile
 
   build-android-apk:
