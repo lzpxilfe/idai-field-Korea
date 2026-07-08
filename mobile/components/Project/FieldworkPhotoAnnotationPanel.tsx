@@ -30,6 +30,13 @@ import {
   DEFAULT_FIELDWORK_DRAWING_TOOL,
   KoreanFieldworkBrushControls,
 } from './KoreanFieldworkFullscreenDrawingModal';
+import {
+  FieldworkPhotoRect as Rect,
+  MAX_FIELDWORK_PHOTO_COORDINATE,
+  denormalizeFieldworkPhotoPoint,
+  getContainedImageFrame,
+  normalizeFieldworkPhotoCoordinate,
+} from './fieldwork-photo-coordinate';
 import { SOIL_COLOR_MUNSELL_REFERENCES } from './soil-color-photo-assist';
 
 export interface FieldworkPhotoSamplePoint {
@@ -85,7 +92,7 @@ const DEFAULT_CANVAS_SIZE = {
   height: 240,
   width: 320,
 };
-const MAX_COORDINATE = 10000;
+const MAX_COORDINATE = MAX_FIELDWORK_PHOTO_COORDINATE;
 const DEFAULT_BRUSH_STROKE_WIDTH = DEFAULT_FIELDWORK_BRUSH_WIDTH;
 const DEFAULT_PHOTO_BRUSH_COLOR = '#ffea00';
 const DEFAULT_DRAWING_TOOL = DEFAULT_FIELDWORK_DRAWING_TOOL;
@@ -106,13 +113,6 @@ const IMAGE_URI_MIME_TYPES: Record<string, string> = {
   png: 'image/png',
   webp: 'image/webp',
 };
-
-interface Rect {
-  height: number;
-  left: number;
-  top: number;
-  width: number;
-}
 
 const FieldworkPhotoAnnotationPanel: React.FC<FieldworkPhotoAnnotationPanelProps> = ({
   imageUri,
@@ -902,51 +902,8 @@ const getSampleConfirmationMessage = (
   return `${label}${colorText} - 확인을 누르면 기록합니다.`;
 };
 
-const normalizeCoordinate = (value: number): number =>
-  Number.isFinite(value)
-    ? Math.max(0, Math.min(MAX_COORDINATE, Math.round(value)))
-    : 0;
-
-const denormalizePoint = (
-  point: KoreanFieldworkHandwritingPoint,
-  imageFrame: Rect
-) => ({
-  x: imageFrame.left + ((point.x / MAX_COORDINATE) * imageFrame.width),
-  y: imageFrame.top + ((point.y / MAX_COORDINATE) * imageFrame.height),
-});
-
-const getContainedImageFrame = (
-  canvasSize: { height: number; width: number },
-  imageSize: { height: number; width: number }
-): Rect => {
-  if (
-    canvasSize.height <= 0
-    || canvasSize.width <= 0
-    || imageSize.height <= 0
-    || imageSize.width <= 0
-  ) {
-    return {
-      height: canvasSize.height,
-      left: 0,
-      top: 0,
-      width: canvasSize.width,
-    };
-  }
-
-  const scale = Math.min(
-    canvasSize.width / imageSize.width,
-    canvasSize.height / imageSize.height
-  );
-  const width = imageSize.width * scale;
-  const height = imageSize.height * scale;
-
-  return {
-    height,
-    left: (canvasSize.width - width) / 2,
-    top: (canvasSize.height - height) / 2,
-    width,
-  };
-};
+const normalizeCoordinate = normalizeFieldworkPhotoCoordinate;
+const denormalizePoint = denormalizeFieldworkPhotoPoint;
 
 const getPointDistance = (
   pointA: KoreanFieldworkHandwritingPoint,

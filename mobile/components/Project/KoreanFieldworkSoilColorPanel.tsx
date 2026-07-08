@@ -3,8 +3,10 @@ import {
   CategoryForm,
   NewResource,
 } from 'idai-field-core';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
+  Image,
+  LayoutChangeEvent,
   Modal,
   ScrollView,
   StyleSheet,
@@ -16,6 +18,10 @@ import {
 import {
   KOREAN_FIELDWORK_CATEGORIES,
 } from './korean-fieldwork-categories';
+import {
+  FieldworkPhotoSize,
+  getContainedImageFrame,
+} from './fieldwork-photo-coordinate';
 import { extractMunsellCandidateOptions } from './soil-color-photo-assist';
 
 interface KoreanFieldworkSoilColorPanelProps {
@@ -49,7 +55,7 @@ interface SoilColorSampleSummary {
   red: number;
 }
 
-interface SoilColorSamplePointSummary {
+export interface SoilColorSamplePointSummary {
   xPercent: number;
   yPercent: number;
 }
@@ -66,6 +72,12 @@ const SOIL_COLOR_FIELDS = {
   profileColorSwatches: 'soilProfileColorSwatches',
   soilColorNote: 'soilColorNote',
 } as const;
+
+const SOIL_PROFILE_PHOTO_URI_FIELDS = [
+  'soilProfilePhotoUri',
+  'imageUri',
+  'fieldworkPhotoUri',
+] as const;
 
 const MUNSELL_HUE_OPTIONS: {
   families: readonly SoilColorOption[];
@@ -150,6 +162,9 @@ const KoreanFieldworkSoilColorPanel: React.FC<KoreanFieldworkSoilColorPanelProps
     () => getSoilColorRows(getTextValue(resource, SOIL_COLOR_FIELDS.profileColorSwatches)),
     [resource]
   );
+  const soilProfilePhotoUri = canRecordPhotoSwatches
+    ? getSoilProfilePhotoUri(resource)
+    : undefined;
   const [selectedRowNumber, setSelectedRowNumber] = useState(
     getActiveLayerNumber(resource) ?? 1
   );
@@ -317,6 +332,10 @@ const KoreanFieldworkSoilColorPanel: React.FC<KoreanFieldworkSoilColorPanelProps
 
       {canRecordPhotoSwatches && (
         <QuickSection title="층별 토색">
+          <SoilColorSamplePhotoOverlay
+            imageUri={soilProfilePhotoUri}
+            rows={soilColorRows}
+          />
           {soilColorRows.map((row) => (
             <TouchableOpacity
               activeOpacity={0.86}
@@ -416,21 +435,6 @@ const KoreanFieldworkSoilColorPanel: React.FC<KoreanFieldworkSoilColorPanelProps
                           style={styles.layerSampleLocationRow}
                           testID={`soilColorLayerSampleLocation_${row.number}`}
                         >
-                          <View
-                            style={styles.layerSampleLocationMap}
-                            testID={`soilColorLayerSampleLocationMap_${row.number}`}
-                          >
-                            <View
-                              style={[
-                                styles.layerSampleLocationMarker,
-                                {
-                                  left: `${getMarkerPercent(row.sample.point.xPercent)}%`,
-                                  top: `${getMarkerPercent(row.sample.point.yPercent)}%`,
-                                },
-                              ]}
-                              testID={`soilColorLayerSampleLocationMarker_${row.number}`}
-                            />
-                          </View>
                           <MaterialIcons name="my-location" size={13} color="#175cd3" />
                           <Text
                             numberOfLines={1}
@@ -666,6 +670,104 @@ const LayerNumberModal: React.FC<{
   </Modal>
 );
 
+const SoilColorSamplePhotoOverlay: React.FC<{
+  imageUri?: string;
+  rows: SoilColorLayerRow[];
+}> = ({ imageUri, rows }) => {
+  const markers = useMemo(
+    () => rows.flatMap((row) => {
+      const point = row.sample?.point;
+
+      return point
+        ? [{ number: row.number, point }]
+        : [];
+    }),
+    [rows]
+  );
+  const [containerSize, setContainerSize] =
+    useState<FieldworkPhotoSize>({ height: 0, width: 0 });
+  const [imageSize, setImageSize] =
+    useState<FieldworkPhotoSize>({ height: 0, width: 0 });
+
+  useEffect(() => {
+    if (!imageUri) {
+      setImageSize({ height: 0, width: 0 });
+      return;
+    }
+
+    let isActive = true;
+    setImageSize({ height: 0, width: 0 });
+    Image.getSize(
+      imageUri,
+      (width, height) => {
+        if (isActive && width > 0 && height > 0) {
+          setImageSize({ width, height });
+        }
+      },
+      () => {
+        if (isActive) setImageSize({ height: 0, width: 0 });
+      }
+    );
+
+    return () => {
+      isActive = false;
+    };
+  }, [imageUri]);
+
+  if (!imageUri || markers.length === 0) return null;
+
+  const updateContainerSize = (event: LayoutChangeEvent) => {
+    const { height, width } = event.nativeEvent.layout;
+    if (height > 0 && width > 0) setContainerSize({ height, width });
+  };
+
+  return (
+    <View style={styles.photoSampleOverlay} testID="soilColorPhotoSampleOverlay">
+      <View
+        onLayout={updateContainerSize}
+        style={styles.photoSampleImageFrame}
+        testID="soilColorPhotoSampleImageFrame"
+      >
+        <Image
+          onLoad={(event) => {
+            const source = event.nativeEvent.source;
+            if (source?.height > 0 && source.width > 0) {
+              setImageSize({ height: source.height, width: source.width });
+            }
+          }}
+          resizeMode="contain"
+          source={{ uri: imageUri }}
+          style={styles.photoSampleImage}
+          testID="soilColorPhotoSampleImage"
+        />
+        <View pointerEvents="none" style={styles.photoSampleMarkerLayer}>
+          {markers.map((marker) => (
+            <View
+              key={marker.number}
+              style={[
+                styles.photoSampleMarker,
+                getSoilColorPhotoMarkerStyle(
+                  marker.point,
+                  containerSize,
+                  imageSize
+                ),
+              ]}
+              testID={`soilColorPhotoSampleMarker_${marker.number}`}
+            >
+              <Text
+                style={styles.photoSampleMarkerText}
+                testID={`soilColorPhotoSampleMarkerText_${marker.number}`}
+              >
+                {marker.number}
+              </Text>
+            </View>
+          ))}
+        </View>
+      </View>
+    </View>
+  );
+};
+
 const QuickSection: React.FC<{
   title: string;
   children: React.ReactNode;
@@ -885,8 +987,33 @@ const clampSamplePercent = (value: number): number =>
     ? Math.max(0, Math.min(100, Math.round(value)))
     : 0;
 
-const getMarkerPercent = (value: number): number =>
-  Math.max(4, Math.min(96, clampSamplePercent(value)));
+export const getSoilColorPhotoMarkerStyle = (
+  point: SoilColorSamplePointSummary,
+  containerSize: FieldworkPhotoSize,
+  imageSize: FieldworkPhotoSize
+) => {
+  const xPercent = clampSamplePercent(point.xPercent);
+  const yPercent = clampSamplePercent(point.yPercent);
+
+  if (
+    containerSize.height <= 0
+    || containerSize.width <= 0
+    || imageSize.height <= 0
+    || imageSize.width <= 0
+  ) {
+    return {
+      left: `${xPercent}%`,
+      top: `${yPercent}%`,
+    };
+  }
+
+  const imageFrame = getContainedImageFrame(containerSize, imageSize);
+
+  return {
+    left: imageFrame.left + ((xPercent / 100) * imageFrame.width),
+    top: imageFrame.top + ((yPercent / 100) * imageFrame.height),
+  };
+};
 
 const formatSoilColorSampleLabel = (
   red: number,
@@ -1071,6 +1198,13 @@ const getTextValue = (
   return value;
 };
 
+const getSoilProfilePhotoUri = (resource: NewResource): string | undefined =>
+  SOIL_PROFILE_PHOTO_URI_FIELDS
+    .map((fieldName) => resource[fieldName])
+    .find((value): value is string =>
+      typeof value === 'string' && value.trim().length > 0
+    );
+
 const getTextFromUnknown = (value: unknown): string =>
   typeof value === 'string' ? value : '';
 
@@ -1107,6 +1241,44 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '900',
     marginBottom: 6,
+  },
+  photoSampleOverlay: {
+    marginBottom: 8,
+  },
+  photoSampleImageFrame: {
+    backgroundColor: '#111827',
+    borderColor: '#667085',
+    borderRadius: 6,
+    borderWidth: 1,
+    height: 220,
+    overflow: 'hidden',
+    position: 'relative',
+    width: '100%',
+  },
+  photoSampleImage: {
+    height: '100%',
+    width: '100%',
+  },
+  photoSampleMarkerLayer: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  photoSampleMarker: {
+    alignItems: 'center',
+    backgroundColor: '#175cd3',
+    borderColor: 'white',
+    borderRadius: 14,
+    borderWidth: 2,
+    height: 28,
+    justifyContent: 'center',
+    marginLeft: -14,
+    marginTop: -14,
+    position: 'absolute',
+    width: 28,
+  },
+  photoSampleMarkerText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '900',
   },
   layerRow: {
     alignItems: 'flex-start',
@@ -1214,28 +1386,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginTop: 4,
     minHeight: 24,
-  },
-  layerSampleLocationMap: {
-    backgroundColor: '#f8fafc',
-    borderColor: '#84caff',
-    borderRadius: 4,
-    borderWidth: 1,
-    height: 24,
-    marginRight: 6,
-    overflow: 'hidden',
-    position: 'relative',
-    width: 42,
-  },
-  layerSampleLocationMarker: {
-    backgroundColor: '#175cd3',
-    borderColor: 'white',
-    borderRadius: 4,
-    borderWidth: 1,
-    height: 8,
-    marginLeft: -4,
-    marginTop: -4,
-    position: 'absolute',
-    width: 8,
   },
   layerSampleLocationText: {
     color: '#175cd3',

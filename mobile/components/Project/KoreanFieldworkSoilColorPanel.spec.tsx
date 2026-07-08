@@ -5,6 +5,7 @@ import {
 } from 'idai-field-core';
 import React from 'react';
 import KoreanFieldworkSoilColorPanel, {
+  getSoilColorPhotoMarkerStyle,
   getSoilProfileColorSampleUpdates,
 } from './KoreanFieldworkSoilColorPanel';
 import { KOREAN_FIELDWORK_CATEGORIES } from './korean-fieldwork-categories';
@@ -287,13 +288,14 @@ describe('KoreanFieldworkSoilColorPanel', () => {
     expect(queryByTestId('soilColorCandidateOption_10YR 4/3')).toBeNull();
   });
 
-  it('shows stored RGB sample details on the sampled soil layer row', () => {
-    const { getByTestId } = render(
+  it('shows stored RGB sample details on the sampled soil layer photo', () => {
+    const { getByTestId, queryByTestId } = render(
       <KoreanFieldworkSoilColorPanel
         category={createCategoryForm([
           'soilProfileColorSwatches',
         ])}
         resource={createResource(C.SOIL_PROFILE_PHOTO, {
+          soilProfilePhotoUri: 'file:///tablet/photos/profile-1.jpg',
           soilProfileColorSwatches:
             '1: 10YR 4/3 RGB 111/87/61 @ 20%/50%',
         })}
@@ -305,11 +307,26 @@ describe('KoreanFieldworkSoilColorPanel', () => {
     expect(getByTestId('soilColorLayerSampleResultText_1').props.children)
       .toBe('RGB 111/87/61 @ 20%/50%');
     expect(getByTestId('soilColorLayerSampleLocation_1')).toBeTruthy();
-    expect(getByTestId('soilColorLayerSampleLocationMap_1')).toBeTruthy();
-    expect(getByTestId('soilColorLayerSampleLocationMarker_1')).toBeTruthy();
+    expect(queryByTestId('soilColorLayerSampleLocationMap_1')).toBeNull();
     expect(getByTestId('soilColorLayerSampleLocationText_1').props.children)
       .toBe('선택 위치 20%/50%');
+    expect(getByTestId('soilColorPhotoSampleOverlay')).toBeTruthy();
+    expect(getByTestId('soilColorPhotoSampleImage')).toBeTruthy();
+    expect(getByTestId('soilColorPhotoSampleMarker_1')).toBeTruthy();
+    expect(getByTestId('soilColorPhotoSampleMarkerText_1').props.children)
+      .toBe(1);
     expect(getByTestId('soilColorLayerNoteInput_1').props.value).toBe('');
+  });
+
+  it('positions soil color sample markers within the contained photo frame', () => {
+    expect(getSoilColorPhotoMarkerStyle(
+      { xPercent: 80, yPercent: 50 },
+      { height: 300, width: 300 },
+      { height: 200, width: 400 }
+    )).toEqual({
+      left: 240,
+      top: 150,
+    });
   });
 
   it('writes the first photo-sampled Munsell candidate into the active layer row', () => {
