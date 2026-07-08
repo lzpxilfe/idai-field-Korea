@@ -3261,9 +3261,18 @@ function validateReportHandoffPreSaveValidation() {
 
   if (!coreReportHandoffText.includes('validateKoreanFieldworkReportHandoffCandidate')
       || !coreReportHandoffText.includes('KoreanFieldworkReportHandoffValidation')
+      || !coreReportHandoffText.includes('getKoreanFieldworkReportHandoffSaveMessage')
+      || !coreReportHandoffText.includes('getKoreanFieldworkReportHandoffValidationDetailMessage')
       || !coreReportHandoffText.includes('RELATION_REQUIRED_CATEGORIES')
       || !coreReportHandoffText.includes('MEDIA_URI_FIELDS')) {
     findings.push('core report handoff must expose reusable pre-save validation for tablet and desktop report copy readiness');
+  }
+  if (!coreReportHandoffSpecText.includes('tablet save warnings for desktop HWP handoff gaps')
+      || !tabletAddText.includes('getKoreanFieldworkReportHandoffSaveMessage')
+      || !tabletEditText.includes('getKoreanFieldworkReportHandoffSaveMessage')
+      || tabletAddText.includes('getReportHandoffSaveMessage')
+      || tabletEditText.includes('getReportHandoffSaveMessage')) {
+    findings.push('tablet save flows must use the shared core HWP handoff save message, including concrete review details');
   }
   if (!coreReportHandoffText.includes('normalizeKoreanFieldworkHwpPlainText')
       || !coreReportHandoffText.includes(".replace(/\\r\\n?/g, '\\n')")
@@ -3421,7 +3430,7 @@ function validateReportHandoffPreSaveValidation() {
     ['tablet edit screen', tabletEditText]
   ]) {
     if (!text.includes('validateKoreanFieldworkReportHandoffCandidate')
-        || !text.includes('getReportHandoffSaveMessage')
+        || !text.includes('getKoreanFieldworkReportHandoffSaveMessage')
         || !text.includes("reportHandoffValidation.status === 'review' ? 5000 : 3000")) {
       findings.push(`${label} must validate desktop report handoff before saving tablet records`);
     }

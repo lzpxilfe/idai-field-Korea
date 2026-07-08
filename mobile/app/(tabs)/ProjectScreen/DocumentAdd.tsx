@@ -4,7 +4,7 @@ import {
   CategoryForm,
   NewDocument,
   NewResource,
-  type KoreanFieldworkReportHandoffValidation,
+  getKoreanFieldworkReportHandoffSaveMessage,
   validateKoreanFieldworkReportHandoffCandidate,
 } from 'idai-field-core';
 import React, { useCallback, useContext, useEffect, useState } from 'react';
@@ -197,7 +197,7 @@ const DocumentAdd: React.FC = () => {
         .then((doc) => {
           showToast(
             ToastType.Success,
-            getReportHandoffSaveMessage(
+            getKoreanFieldworkReportHandoffSaveMessage(
               `${doc.resource.identifier} 기록을 만들었습니다.`,
               reportHandoffValidation
             ),
@@ -415,14 +415,6 @@ const getStringValue = (value: unknown): string | undefined =>
   typeof value === 'string' && value.trim().length > 0
     ? value
     : undefined;
-
-const getReportHandoffSaveMessage = (
-  baseMessage: string,
-  validation: KoreanFieldworkReportHandoffValidation
-): string =>
-  validation.status === 'not-applicable'
-    ? baseMessage
-    : `${baseMessage} ${validation.message}`;
 
 const sampleSoilProfileColor = async (
   imageUri: string | undefined,

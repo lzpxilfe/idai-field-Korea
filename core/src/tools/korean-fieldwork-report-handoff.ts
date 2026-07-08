@@ -69,6 +69,8 @@ export interface KoreanFieldworkReportHandoffValidation {
     copyText?: string;
 }
 
+const REPORT_HANDOFF_SAVE_MESSAGE_DETAIL_LIMIT = 2;
+
 export function normalizeKoreanFieldworkHwpPlainText(text: string): string {
 
     const normalized = (text ?? '')
@@ -83,6 +85,46 @@ export function normalizeKoreanFieldworkHwpPlainText(text: string): string {
         .trim();
 
     return normalized.replace(/\n/g, '\r\n');
+}
+
+
+export function getKoreanFieldworkReportHandoffSaveMessage(
+        baseMessage: string,
+        validation: KoreanFieldworkReportHandoffValidation,
+        detailLimit: number = REPORT_HANDOFF_SAVE_MESSAGE_DETAIL_LIMIT
+): string {
+
+    const message = validation.status === 'not-applicable'
+        ? baseMessage
+        : [baseMessage, validation.message].filter(value => !!value).join(' ');
+    const detailMessage = getKoreanFieldworkReportHandoffValidationDetailMessage(validation, detailLimit);
+
+    return detailMessage ? `${message}\n${detailMessage}` : message;
+}
+
+
+export function getKoreanFieldworkReportHandoffValidationDetailMessage(
+        validation: KoreanFieldworkReportHandoffValidation,
+        detailLimit: number = REPORT_HANDOFF_SAVE_MESSAGE_DETAIL_LIMIT
+): string|undefined {
+
+    if (validation.status !== 'review') return undefined;
+
+    const messages = validation.messages
+        .map(message => message.trim())
+        .filter(message => message.length > 0);
+    if (messages.length === 0) return undefined;
+
+    const normalizedLimit = Math.max(1, Math.floor(detailLimit));
+    const visibleMessages = messages.slice(0, normalizedLimit);
+    const remainingCount = Math.max(0, messages.length - visibleMessages.length);
+    const detailLines = visibleMessages.map(message => `- ${message}`);
+
+    if (remainingCount > 0) {
+        detailLines.push(`- \uc678 ${remainingCount}\uac74 \ub354 \ud655\uc778`);
+    }
+
+    return `\ubcf4\uc644 \ud56d\ubaa9:\n${detailLines.join('\n')}`;
 }
 
 interface DetailFieldDefinition {

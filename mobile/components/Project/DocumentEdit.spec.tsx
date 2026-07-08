@@ -40,6 +40,7 @@ const removeProject = jest.fn();
 const getMapSettings = jest.fn();
 const setMapSettings = jest.fn();
 const setMapProviderSettings = jest.fn();
+const mockShowToast = jest.fn();
 
 jest.mock('@/repositories/document-repository');
 jest.mock('@/hooks/use-pouchdb-datastore', () => ({
@@ -51,6 +52,10 @@ jest.mock('@/contexts/project-context', () => {
   const React = require('react');
   return { ProjectContext: React.createContext(null) };
 });
+jest.mock('@/hooks/use-toast', () => ({
+  __esModule: true,
+  default: () => ({ showToast: mockShowToast }),
+}));
 jest.mock('dateformat', () => jest.fn(() => '2026-01-01'));
 jest.mock('expo-barcode-scanner');
 jest.mock('react-native-webview', () => {
@@ -158,6 +163,7 @@ describe('DocumentEdit', () => {
     cleanup();
     jest.clearAllMocks();
     mockNavigate.mockClear();
+    mockShowToast.mockClear();
     mockUseGlobalSearchParams.mockReset();
   });
 
@@ -262,6 +268,29 @@ describe('DocumentEdit', () => {
       expect(renderAPI.getByTestId('fieldworkFreeDrawingFullscreenCanvas'))
         .toBeTruthy()
     );
+  });
+
+  it('shows desktop HWP handoff details after saving tablet edits that need review', async () => {
+    cleanup();
+    mockUseGlobalSearchParams.mockReturnValue({
+      docId: 'si1',
+      categoryName: 'Photo',
+    });
+    renderAPI = renderDocumentEditScreen(
+      preferences,
+      config,
+      repository
+    );
+
+    await waitFor(() => renderAPI.getByTestId('documentForm'));
+    fireEvent.press(renderAPI.getByTestId('editDocBtn'));
+
+    await waitFor(() => expect(mockShowToast).toHaveBeenCalled());
+
+    const toastMessage = mockShowToast.mock.calls[0][1];
+    expect(toastMessage).toContain('HWP');
+    expect(toastMessage).toContain('보완 항목');
+    expect(toastMessage).toContain('사진/도면');
   });
 });
 

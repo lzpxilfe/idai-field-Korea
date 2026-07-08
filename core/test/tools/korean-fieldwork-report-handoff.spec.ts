@@ -1,4 +1,6 @@
 import {
+    getKoreanFieldworkReportHandoffSaveMessage,
+    getKoreanFieldworkReportHandoffValidationDetailMessage,
     makeKoreanFieldworkReportHandoff,
     normalizeKoreanFieldworkHwpPlainText,
     validateKoreanFieldworkReportHandoffCandidate
@@ -803,6 +805,42 @@ describe('Korean fieldwork report handoff', () => {
         expect(validation.messages.join('\n')).toContain('\uc0ac\uc9c4/\ub3c4\uba74');
         expect(validation.relatedFields).toContain('fieldworkPhotoUri');
         expect(validation.relatedFields).toContain('relations');
+    });
+
+
+    it('adds concrete tablet save warnings for desktop HWP handoff gaps', () => {
+
+        const validation = validateKoreanFieldworkReportHandoffCandidate({
+            identifier: 'photo-001',
+            category: 'Photo',
+            relations: {}
+        } as any);
+        const message = getKoreanFieldworkReportHandoffSaveMessage(
+            'photo-001 saved.',
+            validation
+        );
+
+        expect(message).toContain('photo-001 saved.');
+        expect(message).toContain(validation.message);
+        expect(message).toContain('\ubcf4\uc644 \ud56d\ubaa9:');
+        expect(message).toContain('HWP \ubcf5\uc0ac \ubb38\uc7a5');
+        expect(message).toContain('\uc0c1\uc704 \uc870\uc0ac\uad6c\uc5ed');
+        expect(message).toContain('\uc678 1\uac74 \ub354 \ud655\uc778');
+    });
+
+
+    it('keeps tablet save messages quiet when a record is not part of HWP handoff', () => {
+
+        const validation = validateKoreanFieldworkReportHandoffCandidate({
+            identifier: 'term-001',
+            category: 'TermAuthority',
+            relations: {}
+        } as any);
+
+        expect(getKoreanFieldworkReportHandoffSaveMessage('term saved.', validation))
+            .toBe('term saved.');
+        expect(getKoreanFieldworkReportHandoffValidationDetailMessage(validation))
+            .toBeUndefined();
     });
 
 
