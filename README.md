@@ -83,6 +83,8 @@ GitHub Actions가 만든 최신 APK를 받아 곧바로 USB 연결 태블릿에 
 .\install-idai-field-android-apk.ps1 -BuildLatestArtifact -DownloadPlatformTools
 ```
 
+이 fresh build 명령은 실행 전에 로컬 작업트리가 깨끗한지, 현재 로컬 커밋이 GitHub의 빌드 대상 `master`와 같은지 확인합니다. 아직 커밋하지 않은 수정이나 푸시하지 않은 커밋이 있으면 태블릿 설치를 멈춥니다. 의도적으로 원격 `master`만 빌드하려면 `-AllowRefMismatch`를 추가합니다.
+
 C드라이브 용량을 아끼려면 APK와 Android 도구를 둘 작업 폴더를 다른 드라이브로 지정합니다. 이 경우 APK는 `G:\idai-field-android\apk`, Android platform-tools는 `G:\idai-field-android\platform-tools` 아래에 저장됩니다.
 
 ```powershell

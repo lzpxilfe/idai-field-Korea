@@ -56,6 +56,8 @@ Double-click `BUILD_AND_INSTALL_TABLET_APK.cmd` from the repository root, or run
 .\install-idai-field-android-apk.ps1 -BuildLatestArtifact -DownloadPlatformTools
 ```
 
+Before starting that fresh build, the installer verifies that the working tree is clean and the local HEAD matches the GitHub ref being built. If local edits or unpushed commits would be skipped by GitHub Actions, the install stops. Add `-AllowRefMismatch` only when you intentionally want to build the remote `master` ref anyway.
+
 To keep APK downloads and Android platform-tools off the C drive, choose a work directory on another drive. The APK is stored under `G:\idai-field-android\apk`, and platform-tools are stored under `G:\idai-field-android\platform-tools`.
 
 ```powershell

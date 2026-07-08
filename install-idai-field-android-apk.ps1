@@ -8,6 +8,7 @@ param(
     [string]$ArtifactRef = 'master',
     [int]$ArtifactTimeoutMinutes = 90,
     [int]$ArtifactPollSeconds = 20,
+    [switch]$AllowRefMismatch,
     [string]$DownloadDirectory,
     [string]$WorkDirectory = $env:IDAI_FIELD_ANDROID_WORKDIR,
     [switch]$DownloadOnly,
@@ -32,12 +33,15 @@ function Show-Usage {
     Write-Host '  .\install-idai-field-android-apk.ps1 -FromLatestArtifact -DownloadPlatformTools'
     Write-Host '  .\install-idai-field-android-apk.ps1 -FromLatestArtifact -DownloadPlatformTools -WorkDirectory G:\idai-field-android'
     Write-Host '  .\install-idai-field-android-apk.ps1 -BuildLatestArtifact -DownloadPlatformTools -WorkDirectory G:\idai-field-android'
+    Write-Host '  .\install-idai-field-android-apk.ps1 -BuildLatestArtifact -AllowRefMismatch'
     Write-Host '  .\install-idai-field-android-apk.ps1 -FromLatestArtifact -DownloadOnly'
     Write-Host '  .\install-idai-field-android-apk.ps1 -DeviceSerial R83Y70CADYP'
     Write-Host ''
     Write-Host 'Enable Developer options and USB debugging on the tablet, then approve the USB debugging prompt.'
     Write-Host 'Use -FromLatestArtifact to download the newest APK artifact from GitHub Actions before installing.'
     Write-Host 'Use -BuildLatestArtifact after code changes to start the Mobile APK build, wait for it, then install that exact artifact.'
+    Write-Host 'Before -BuildLatestArtifact starts, the script verifies that local HEAD matches the GitHub ref being built.'
+    Write-Host 'Use -AllowRefMismatch only when you intentionally want to build the remote ref even if local files differ.'
     Write-Host 'Use -WorkDirectory or IDAI_FIELD_ANDROID_WORKDIR to keep APK and Android tool downloads off the repository drive.'
 }
 
@@ -156,6 +160,18 @@ function Resolve-GitHubCli {
     throw 'GitHub CLI (gh) was not found. Install GitHub CLI or pass -ApkPath to a downloaded APK.'
 }
 
+function Resolve-GitCommand {
+    $gitCommand = Get-Command git.exe -ErrorAction SilentlyContinue
+    if (-not $gitCommand) {
+        $gitCommand = Get-Command git -ErrorAction SilentlyContinue
+    }
+    if ($gitCommand) {
+        return $gitCommand.Source
+    }
+
+    return $null
+}
+
 function Get-GitHubRefSha {
     param(
         [string]$Gh,
@@ -167,6 +183,57 @@ function Get-GitHubRefSha {
     if ($LASTEXITCODE -ne 0) { return $null }
 
     return ($commitJson | ConvertFrom-Json).sha
+}
+
+function Assert-ArtifactRefMatchesLocalWorktree {
+    param(
+        [string]$Gh,
+        [string]$Repository,
+        [string]$Ref,
+        [switch]$AllowMismatch
+    )
+
+    if ($AllowMismatch) {
+        Write-Host "Skipping local/ref freshness check because -AllowRefMismatch was passed."
+        return
+    }
+
+    $git = Resolve-GitCommand
+    if (-not $git) {
+        throw 'Git was not found. Install Git or rerun with -AllowRefMismatch if you intentionally want to build the remote ref.'
+    }
+
+    $gitMetadataPath = Join-Path $repoDir '.git'
+    if (-not (Test-Path -LiteralPath $gitMetadataPath)) {
+        throw 'This folder has no .git metadata. Use -FromLatestArtifact for regular installs, or rerun with -AllowRefMismatch to build the remote ref anyway.'
+    }
+
+    $status = @(& $git -C $repoDir status --porcelain)
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Could not inspect local git status before starting the APK build.'
+    }
+    if ($status.Count -gt 0) {
+        $statusPreview = ($status | Select-Object -First 8) -join '; '
+        throw "Local changes are not committed: $statusPreview. Commit and push them before building a tablet APK, or rerun with -AllowRefMismatch to build remote '$Ref' anyway."
+    }
+
+    $localHeadOutput = @(& $git -C $repoDir rev-parse HEAD)
+    if ($LASTEXITCODE -ne 0 -or $localHeadOutput.Count -eq 0 -or [string]::IsNullOrWhiteSpace($localHeadOutput[0])) {
+        throw 'Could not inspect local git HEAD before starting the APK build.'
+    }
+    $localHead = $localHeadOutput[0].Trim()
+
+    $remoteHead = Get-GitHubRefSha -Gh $Gh -Repository $Repository -Ref $Ref
+    if ([string]::IsNullOrWhiteSpace($remoteHead)) {
+        throw "Could not resolve GitHub ref '$Ref' in $Repository before starting the APK build."
+    }
+    $remoteHead = $remoteHead.Trim()
+
+    if ($localHead -ne $remoteHead) {
+        throw "Local HEAD $($localHead.Substring(0, 12)) does not match $Repository@$Ref $($remoteHead.Substring(0, 12)). Commit and push the local code before installing it on the tablet, or rerun with -AllowRefMismatch to build the remote ref anyway."
+    }
+
+    Write-Host "Local HEAD matches $Repository@$Ref ($($localHead.Substring(0, 12)))."
 }
 
 function Get-RunArtifact {
@@ -420,6 +487,11 @@ try {
     $preferredArtifactRun = $null
     if ($BuildLatestArtifact) {
         $gh = Resolve-GitHubCli
+        Assert-ArtifactRefMatchesLocalWorktree `
+            -Gh $gh `
+            -Repository $Repo `
+            -Ref $ArtifactRef `
+            -AllowMismatch:$AllowRefMismatch
         $preferredArtifactRun = Start-MobileArtifactWorkflow `
             -Gh $gh `
             -Repository $Repo `

@@ -3596,7 +3596,11 @@ function validateTabletInstallGuide() {
       || !tabletInstallScriptText.includes('$Gh workflow run Mobile')
       || !tabletInstallScriptText.includes('workflow_dispatch')
       || !tabletInstallScriptText.includes('Wait-RunArtifact')
-      || !tabletInstallScriptText.includes('PreferredArtifactRun')) {
+      || !tabletInstallScriptText.includes('PreferredArtifactRun')
+      || !tabletInstallScriptText.includes('[switch]$AllowRefMismatch')
+      || !tabletInstallScriptText.includes('Assert-ArtifactRefMatchesLocalWorktree')
+      || !tabletInstallScriptText.includes('status --porcelain')
+      || !tabletInstallScriptText.includes('rev-parse HEAD')) {
     findings.push('tablet APK installer must install or download the newest Mobile GitHub Actions APK artifact for post-change tablet checks');
   }
   if (!tabletBuildInstallShortcutText.includes('-BuildLatestArtifact -DownloadPlatformTools')
@@ -3645,7 +3649,8 @@ function validateTabletInstallGuide() {
         || !text.includes('INSTALL_LATEST_TABLET_APK.cmd')
         || !text.includes('DOWNLOAD_LATEST_TABLET_APK.cmd')
         || !text.includes('-WorkDirectory G:\\idai-field-android')
-        || !text.includes('IDAI_FIELD_ANDROID_WORKDIR')) {
+        || !text.includes('IDAI_FIELD_ANDROID_WORKDIR')
+        || !text.includes('-AllowRefMismatch')) {
       findings.push(`${label} must document both direct latest APK install and download-only tablet handoff commands`);
     }
   }
