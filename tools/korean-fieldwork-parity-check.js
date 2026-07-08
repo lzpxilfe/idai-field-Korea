@@ -3537,10 +3537,12 @@ function validateReportHandoffPreSaveValidation() {
   }
   if (!desktopHwpClipboardText.includes('normalizeKoreanFieldworkHwpPlainText')
       || !desktopHwpClipboardText.includes('electronClipboard.clear?.()')
-      || !desktopHwpClipboardText.includes("electronClipboard.write({ text: plainText, html: '' })")
+      || !desktopHwpClipboardText.includes('makeKoreanFieldworkHwpClipboardPayload')
+      || !desktopHwpClipboardText.includes("html: ''")
+      || !desktopHwpClipboardText.includes("rtf: ''")
       || !desktopPriorityStripText.includes('writeKoreanFieldworkHwpClipboardText')
-      || !desktopPriorityStripSpecText.includes("write).toHaveBeenCalledWith({ text: featureItem.copyText, html: '' })")) {
-    findings.push('desktop report handoff copy must use text-only clipboard writes for HWP-safe paste');
+      || !desktopPriorityStripSpecText.includes("write).toHaveBeenCalledWith({ text: featureItem.copyText, html: '', rtf: '' })")) {
+    findings.push('desktop report handoff copy must use text-only clipboard writes without HTML or RTF for HWP-safe paste');
   }
   if (!desktopPriorityStripTemplateText.includes('previewItem.copySections')
       || !desktopPriorityStripTemplateText.includes('korean-fieldwork-report-handoff-copy-section')
