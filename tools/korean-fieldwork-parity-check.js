@@ -3553,6 +3553,7 @@ function validateTabletInstallGuide() {
   const desktopStartOtherDriveShortcutText = readTextFile('START_FIELD_DESKTOP_TO_OTHER_DRIVE.cmd');
   const desktopStartScriptText = readTextFile('run-idai-field-ko.ps1');
   const desktopShortcutInstallerText = readTextFile('INSTALL_FIELD_DESKTOP_SHORTCUT.cmd');
+  const desktopShortcutInstallerScriptText = readTextFile('tools/windows/install_field_desktop_shortcut.ps1');
   const tabletInstallScriptText = readTextFile('install-idai-field-android-apk.ps1');
   const tabletBuildInstallShortcutText = readTextFile('BUILD_AND_INSTALL_TABLET_APK.cmd');
   const tabletBuildInstallOtherDriveShortcutText = readTextFile('BUILD_AND_INSTALL_TABLET_APK_TO_OTHER_DRIVE.cmd');
@@ -3575,7 +3576,12 @@ function validateTabletInstallGuide() {
       || !desktopStartOtherDriveShortcutText.includes('DEFAULT_RUNTIME=G:\\idai-field-desktop-runtime')
       || !desktopStartOtherDriveShortcutText.includes('IDAI_FIELD_RUNTIME_DIR=%RUNTIME_DIR%')
       || !desktopStartOtherDriveShortcutText.includes('run-idai-field-ko.ps1')
-      || !desktopShortcutInstallerText.includes('install_field_desktop_shortcut.ps1')) {
+      || !desktopShortcutInstallerText.includes('install_field_desktop_shortcut.ps1')
+      || !desktopShortcutInstallerText.includes('tools\\windows\\install_field_desktop_shortcut.ps1')
+      || !desktopShortcutInstallerScriptText.includes('New-FieldDesktopShortcut')
+      || !desktopShortcutInstallerScriptText.includes('START_FIELD_DESKTOP.cmd')
+      || !desktopShortcutInstallerScriptText.includes('START_FIELD_DESKTOP_TO_OTHER_DRIVE.cmd')
+      || !desktopShortcutInstallerScriptText.includes('Field Desktop (other drive cache)')) {
     findings.push('desktop launcher must provide Field Desktop entry points with an external runtime/cache directory option');
   }
   if (!tabletInstallScriptText.includes('[switch]$FromLatestArtifact')
@@ -3645,7 +3651,8 @@ function validateTabletInstallGuide() {
   }
   if (!rootReadmeText.includes('START_FIELD_DESKTOP_TO_OTHER_DRIVE.cmd')
       || !rootReadmeText.includes('IDAI_FIELD_RUNTIME_DIR')
-      || !rootReadmeText.includes('G:\\idai-field-desktop-runtime')) {
+      || !rootReadmeText.includes('G:\\idai-field-desktop-runtime')
+      || !rootReadmeText.includes('Field Desktop (other drive cache)')) {
     findings.push('root README must document the Field Desktop other-drive runtime/cache launcher');
   }
   if (!rootReadmeText.includes('Field Desktop의 `보고서/HWP 복사` 패널')
