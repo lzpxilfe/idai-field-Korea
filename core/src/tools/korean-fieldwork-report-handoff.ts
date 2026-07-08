@@ -7,6 +7,9 @@ import {
     KoreanFieldworkReadinessIssue
 } from './korean-fieldwork-readiness';
 import {
+    getKoreanFieldworkFeatureAttributeSummaries
+} from './korean-fieldwork-feature-attributes';
+import {
     getKoreanFieldworkFeatureTypeLabel,
     getKoreanFieldworkFeatureTypeLabelFromInterpretationType
 } from './korean-fieldwork-feature-types';
@@ -149,7 +152,7 @@ export function getKoreanFieldworkReportHandoffValidationDetailMessage(
 interface DetailFieldDefinition {
     label: string;
     getSummary?: (document: Document) => string|undefined;
-    fields: string[];
+    fields: readonly string[];
 }
 
 interface EvidenceCountDefinition {
@@ -1092,8 +1095,12 @@ function getFeatureTypeDetailSummary(document: Document): string|undefined {
         .map(value => getKoreanFieldworkFeatureTypeLabel(value) ?? value);
     const interpretationLabels = getListValues(document.resource.featureInterpretationType)
         .map(value => getKoreanFieldworkFeatureTypeLabelFromInterpretationType(value) ?? value);
+    const featureAttributeSummaries = getKoreanFieldworkFeatureAttributeSummaries(document.resource);
+    const featureAttributeSummary = featureAttributeSummaries.length > 0
+        ? `\uc720\ud615\ubcc4 \ud655\uc778: ${featureAttributeSummaries.join(', ')}`
+        : undefined;
 
-    return Array.from(new Set([...featureTypeLabels, ...interpretationLabels]))
+    return Array.from(new Set([...featureTypeLabels, ...interpretationLabels, featureAttributeSummary]))
         .filter(value => !!value && value !== '[]')
         .join(', ') || undefined;
 }

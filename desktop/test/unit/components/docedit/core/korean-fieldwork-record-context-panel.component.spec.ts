@@ -94,7 +94,7 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
         expect(component.getStatusChips()).toEqual(expect.arrayContaining([
             { label: '장축 N-23°-E · 자북', tone: 'info' },
             { label: '완료', tone: 'success' },
-            { label: '가마 핵심 연소부·소성부', tone: 'success' },
+            { label: '가마 핵심 연소부 기록·소성부 기록', tone: 'success' },
             { label: '현장 확인', tone: 'success' }
         ]));
         expect(component.hasNotebookEntries()).toBe(true);

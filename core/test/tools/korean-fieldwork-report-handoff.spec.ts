@@ -111,6 +111,7 @@ describe('Korean fieldwork report handoff', () => {
             makeDocument('feature-1', 'Feature', {
                 identifier: 'pit-001',
                 shortDescription: 'round pit with dark fill',
+                featureType: 'pit',
                 period: 'bronzeAge',
                 featureRecordingStatus: 'candidate',
                 recordCreationTiming: 'duringFieldwork',
@@ -128,6 +129,10 @@ describe('Korean fieldwork report handoff', () => {
                     'featureLineVisible',
                     'confirmedBeforeInternalExcavation'
                 ],
+                pitFeatureFunctionAssessment: [
+                    'storageCandidate',
+                    'functionNotAssumed'
+                ],
                 featureInvestigationChecklist: [
                     'findsRecovered',
                     'preInvestigationPhotoTaken',
@@ -140,6 +145,13 @@ describe('Korean fieldwork report handoff', () => {
         const details = featureItem?.details.join('\n') ?? '';
 
         expect(details).toContain('\uc2dc\ub300: \uccad\ub3d9\uae30');
+        expect(details).toContain(
+            '\uc720\ud615\ubcc4 \ud655\uc778: '
+            + '\ucd5c\ucd08 \ub178\ucd9c: '
+            + '\ucd5c\ucd08 \ub178\ucd9c \uc0ac\uc9c4 \u00b7 '
+            + '\uc720\uad6c\uc120 \uac00\uc2dc \u00b7 \ub0b4\ubd80\uc870\uc0ac \uc804 \ud655\uc815, '
+            + '\uae30\ub2a5 \ud6c4\ubcf4: \ucc3d\uace0 \ud6c4\ubcf4 \u00b7 \uc131\uaca9 \uc790\ub3d9\ud310\uc815 \uae08\uc9c0'
+        );
         expect(details).toContain(
             '\uc870\uc0ac \uc0c1\ud0dc: '
             + '\uc720\uad6c \uc9c4\ud589: \uc870\uc0ac \uc804, '
@@ -155,6 +167,9 @@ describe('Korean fieldwork report handoff', () => {
             + '\uc870\uc0ac \uc804 \uc0ac\uc9c4 \u00b7 \ud1a0\uce35\uc0ac\uc9c4 \u00b7 \uc720\ubb3c \uc218\uc2b5'
         );
         expect(featureItem?.copyText).toContain('\uc2dc\ub300: \uccad\ub3d9\uae30');
+        expect(featureItem?.copyText).toContain(
+            '\uae30\ub2a5 \ud6c4\ubcf4: \ucc3d\uace0 \ud6c4\ubcf4 \u00b7 \uc131\uaca9 \uc790\ub3d9\ud310\uc815 \uae08\uc9c0'
+        );
         expect(featureItem?.copyText).toContain(
             '\uc870\uc0ac \ub2e8\uacc4 \ud655\uc778: '
             + '\uc870\uc0ac \uc804 \uc0ac\uc9c4 \u00b7 \ud1a0\uce35\uc0ac\uc9c4 \u00b7 \uc720\ubb3c \uc218\uc2b5'
@@ -183,6 +198,8 @@ describe('Korean fieldwork report handoff', () => {
         expect(featureItem?.copyText).not.toContain('firstExposurePhoto');
         expect(featureItem?.copyText).not.toContain('featureLineVisible');
         expect(featureItem?.copyText).not.toContain('confirmedBeforeInternalExcavation');
+        expect(featureItem?.copyText).not.toContain('storageCandidate');
+        expect(featureItem?.copyText).not.toContain('functionNotAssumed');
     });
 
 

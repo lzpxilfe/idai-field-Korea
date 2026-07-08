@@ -1405,7 +1405,8 @@ function validateGuidedFeatureDraftDefaults() {
   }
   if (
     !desktopFeatureGuidanceUtilText.includes('getKoreanFieldworkFeatureGuidanceSelectedAttributeLabels')
-    || !desktopFeatureGuidanceUtilText.includes("combustionPartRecorded: '연소부'")
+    || !desktopFeatureGuidanceUtilText.includes('getKoreanFieldworkRecordValueLabel')
+    || !desktopFeatureGuidanceUtilText.includes('getKoreanFieldworkFeatureAttributeValueLabel')
     || !desktopRecordContextText.includes('getKoreanFieldworkFeatureGuidanceSelectedAttributeLabels')
     || !desktopRecordContextText.includes('핵심 속성 미기록')
   ) {
@@ -2159,7 +2160,7 @@ function validateProjectInvestigationModeWording() {
     'mobile/components/Project/KoreanFieldworkQuickRecordPanel.tsx'
   );
   const tabletFeatureAttributesText = readTextFile(
-    'mobile/components/Project/korean-fieldwork-feature-attributes.ts'
+    'core/src/tools/korean-fieldwork-feature-attributes.ts'
   );
   const tabletFieldNotesText = readTextFile(
     'mobile/components/Project/korean-fieldwork-field-notes.ts'
@@ -2262,9 +2263,9 @@ function validateProjectInvestigationModeWording() {
     }
   }
   for (const requiredAnchor of [
-    '유구 성격 미정이면 미정으로 두고',
-    '평면·단면 스케치 번호',
-    '약측값',
+    '유구 성격이 미정이면 미정으로 두고',
+    '평면/단면 스케치 번호',
+    '실측값',
     '사진·도면 번호',
     '성격 미정/추정 사유'
   ]) {
@@ -3155,7 +3156,7 @@ function validateRecordPanelOrder() {
   }
   if (!desktopRecordContextPanelText.includes('pushFeatureAttributeChip')
       || !desktopRecordContextPanelText.includes('formatFeatureAttributeLabels')
-      || !desktopRecordContextPanelSpecText.includes('가마 핵심 연소부·소성부')
+      || !desktopRecordContextPanelSpecText.includes('가마 핵심 연소부 기록·소성부 기록')
       || !desktopRecordContextPanelSpecText.includes('가마 핵심 속성 미기록')) {
     findings.push('desktop record context panel must render guided feature core attributes inside the opened record');
   }
@@ -4977,29 +4978,34 @@ function extractFeatureTypeOptions(filePath, arrayName, interpretationPropertyNa
 
 function extractTabletFeatureAttributes() {
   const text = readTextFile(
-    'mobile/components/Project/korean-fieldwork-feature-attributes.ts'
+    'core/src/tools/korean-fieldwork-feature-attributes.ts'
   );
   const result = {};
-  const typePattern = /^  ([A-Za-z0-9_]+): \[([\s\S]*?)^  \],?/gm;
+  const typePattern = /^ {4}([A-Za-z0-9_]+): \[([\s\S]*?)^ {4}\],?/gm;
   let typeMatch;
 
   while ((typeMatch = typePattern.exec(text)) !== null) {
-    result[typeMatch[1]] = extractFieldValueGroups(typeMatch[2], 'options');
+    result[typeMatch[1]] = extractFieldValueGroups(typeMatch[2], 'valueIds');
   }
 
   return result;
 }
 
 function extractTabletFeatureAttributeLabels() {
-  const text = readTextFile(
-    'mobile/components/Project/korean-fieldwork-feature-attributes.ts'
-  );
+  const tabletAttributes = extractTabletFeatureAttributes();
+  const configLabels = extractGuidedFeatureConfigLabels();
   const result = {};
-  const typePattern = /^  ([A-Za-z0-9_]+): \[([\s\S]*?)^  \],?/gm;
-  let typeMatch;
 
-  while ((typeMatch = typePattern.exec(text)) !== null) {
-    result[typeMatch[1]] = extractFieldValueLabels(typeMatch[2]);
+  for (const [featureType, fieldValues] of Object.entries(tabletAttributes)) {
+    result[featureType] = {};
+
+    for (const [fieldName, valueIds] of Object.entries(fieldValues)) {
+      result[featureType][fieldName] = {};
+
+      for (const valueId of valueIds) {
+        result[featureType][fieldName][valueId] = configLabels[fieldName]?.[valueId];
+      }
+    }
   }
 
   return result;

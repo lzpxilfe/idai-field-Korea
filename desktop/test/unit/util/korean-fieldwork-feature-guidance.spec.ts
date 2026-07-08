@@ -159,7 +159,7 @@ describe('korean-fieldwork-feature-guidance', () => {
             kilnPreset.checklists
         );
 
-        expect(labels).toEqual(['연소부', '소성부', '평면형']);
+        expect(labels).toEqual(['연소부 기록', '소성부 기록', '평면형 기록']);
         expect(getKoreanFieldworkFeatureGuidanceValueLabel('unknownValue')).toBe('unknownValue');
     });
 

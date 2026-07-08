@@ -1,4 +1,12 @@
-import { Condition, Document, Field, Resource } from 'idai-field-core';
+import {
+    Condition,
+    Document,
+    Field,
+    getKoreanFieldworkFeatureAttributeValueLabel,
+    getKoreanFieldworkRecordValueLabel,
+    KOREAN_FIELDWORK_FEATURE_ATTRIBUTE_FIELD_NAMES,
+    Resource
+} from 'idai-field-core';
 
 
 export type KoreanFieldworkFeatureNarrativeTarget = 'description'|'featureChecklistNote'|'interpretation';
@@ -533,11 +541,7 @@ const GUIDANCE_INTERPRETATION_VALUES = new Set(
         .filter((value): value is string => value !== undefined)
 );
 
-const GUIDANCE_CHECKLIST_FIELD_NAMES = new Set(
-    KOREAN_FIELDWORK_FEATURE_GUIDANCE_PRESETS.flatMap(preset =>
-        preset.checklists.map(checklist => checklist.fieldName)
-    )
-);
+const GUIDANCE_CHECKLIST_FIELD_NAMES = new Set(KOREAN_FIELDWORK_FEATURE_ATTRIBUTE_FIELD_NAMES);
 
 
 export function isKoreanFieldworkFeatureGuidanceCategory(categoryName: string|undefined): boolean {
@@ -633,14 +637,18 @@ export function getKoreanFieldworkFeatureGuidanceSelectedAttributeLabels(
     return checklists.flatMap(checklist =>
         getStringArrayResourceValue(document.resource, checklist.fieldName)
             .filter(valueId => checklist.valueIds.includes(valueId))
-            .map(getKoreanFieldworkFeatureGuidanceValueLabel)
+            .map(valueId => getKoreanFieldworkRecordValueLabel(checklist.fieldName, valueId))
     );
 }
 
 
 export function getKoreanFieldworkFeatureGuidanceValueLabel(valueId: string): string {
 
-    return FEATURE_GUIDANCE_VALUE_LABELS[valueId] ?? valueId;
+    const sharedLabel = getKoreanFieldworkFeatureAttributeValueLabel(valueId);
+
+    return sharedLabel !== valueId
+        ? sharedLabel
+        : FEATURE_GUIDANCE_VALUE_LABELS[valueId] ?? valueId;
 }
 
 
