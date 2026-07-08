@@ -290,6 +290,7 @@ describe('DocumentEdit', () => {
     const toastMessage = mockShowToast.mock.calls[0][1];
     expect(toastMessage).toContain('HWP');
     expect(toastMessage).toContain('보완 항목');
+    expect(toastMessage).toContain('HWP 본문 미리보기');
     expect(toastMessage).toContain('상위 조사구역');
   });
 });

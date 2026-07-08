@@ -3320,6 +3320,8 @@ function validateReportHandoffPreSaveValidation() {
   const desktopChecklistText = readTextFile('desktop/src/app/util/korean-fieldwork-checklist.ts');
   const tabletAddText = readTextFile('mobile/app/(tabs)/ProjectScreen/DocumentAdd.tsx');
   const tabletEditText = readTextFile('mobile/app/(tabs)/ProjectScreen/DocumentEdit.tsx');
+  const mobileDocumentAddSpecText = readTextFile('mobile/components/Project/DocumentAdd.spec.tsx');
+  const mobileDocumentEditSpecText = readTextFile('mobile/components/Project/DocumentEdit.spec.tsx');
   const tabletPackageText = readTextFile('mobile/package.json');
   const tabletWorkflowText = readTextFile('.github/workflows/mobile.yml');
   const desktopPriorityStripText = readTextFile(
@@ -3355,6 +3357,7 @@ function validateReportHandoffPreSaveValidation() {
       || !coreReportHandoffText.includes('copyBodyText')
       || !coreReportHandoffText.includes('getKoreanFieldworkReportHandoffSaveMessage')
       || !coreReportHandoffText.includes('getKoreanFieldworkReportHandoffValidationDetailMessage')
+      || !coreReportHandoffText.includes('getKoreanFieldworkReportHandoffValidationCopyPreviewMessage')
       || !coreReportHandoffText.includes('RELATION_REQUIRED_CATEGORIES')
       || !coreReportHandoffText.includes('MEDIA_URI_FIELDS')) {
     findings.push('core report handoff must expose reusable pre-save validation for tablet and desktop report copy readiness');
@@ -3362,8 +3365,11 @@ function validateReportHandoffPreSaveValidation() {
   if (!coreReportHandoffSpecText.includes('tablet save warnings for desktop HWP handoff gaps')
       || !coreReportHandoffSpecText.includes('validation.copySections')
       || !coreReportHandoffSpecText.includes('validation.copyBodyText')
+      || !coreReportHandoffSpecText.includes('HWP \\ubcf8\\ubb38 \\ubbf8\\ub9ac\\ubcf4\\uae30')
       || !tabletAddText.includes('getKoreanFieldworkReportHandoffSaveMessage')
       || !tabletEditText.includes('getKoreanFieldworkReportHandoffSaveMessage')
+      || !mobileDocumentAddSpecText.includes('HWP 본문 미리보기')
+      || !mobileDocumentEditSpecText.includes('HWP 본문 미리보기')
       || tabletAddText.includes('getReportHandoffSaveMessage')
       || tabletEditText.includes('getReportHandoffSaveMessage')) {
     findings.push('tablet save flows must use the shared core HWP handoff save message, including concrete review details');

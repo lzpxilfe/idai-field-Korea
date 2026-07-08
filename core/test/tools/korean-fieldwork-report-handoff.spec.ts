@@ -1,5 +1,6 @@
 import {
     getKoreanFieldworkReportHandoffSaveMessage,
+    getKoreanFieldworkReportHandoffValidationCopyPreviewMessage,
     getKoreanFieldworkReportHandoffValidationDetailMessage,
     makeKoreanFieldworkReportHandoff,
     normalizeKoreanFieldworkHwpPlainText,
@@ -951,6 +952,11 @@ describe('Korean fieldwork report handoff', () => {
         expect(validation.copyBodyText).toBe('\uc720\uad6c pit-001: round pit with dark fill');
         expect(validation.copyBodyText).not.toContain('\uc694\uc57d:');
         expect(validation.copyText).toContain('[\uc720\uad6c] pit-001');
+
+        const detailMessage = getKoreanFieldworkReportHandoffValidationDetailMessage(validation);
+        expect(detailMessage).toContain('HWP \ubcf8\ubb38 \ubbf8\ub9ac\ubcf4\uae30');
+        expect(detailMessage).toContain('\uc720\uad6c pit-001: round pit with dark fill');
+        expect(detailMessage).not.toContain('\ubcf4\uc644 \ud56d\ubaa9:');
     });
 
 
@@ -987,9 +993,28 @@ describe('Korean fieldwork report handoff', () => {
         expect(message).toContain('photo-001 saved.');
         expect(message).toContain(validation.message);
         expect(message).toContain('\ubcf4\uc644 \ud56d\ubaa9:');
+        expect(message).toContain('HWP \ubcf8\ubb38 \ubbf8\ub9ac\ubcf4\uae30');
         expect(message).toContain('HWP \ubcf5\uc0ac \ubb38\uc7a5');
         expect(message).toContain('\uc0c1\uc704 \uc870\uc0ac\uad6c\uc5ed');
         expect(message).toContain('\uc678 1\uac74 \ub354 \ud655\uc778');
+    });
+
+
+    it('keeps tablet HWP body previews compact for save messages', () => {
+
+        const message = getKoreanFieldworkReportHandoffValidationCopyPreviewMessage({
+            status: 'ready',
+            isReportHandoffCategory: true,
+            isCopyable: true,
+            message: '',
+            messages: [],
+            relatedFields: [],
+            evidenceCount: 0,
+            issueCount: 0,
+            copyBodyText: '유구 pit-001은 바닥면에서 원형 윤곽 확인. 주공 가능성이 있어 보고서 본문에 별도로 정리한다.'
+        }, 24);
+
+        expect(message).toBe('HWP \ubcf8\ubb38 \ubbf8\ub9ac\ubcf4\uae30:\n- 유구 pit-001은 바닥면에서 원형...');
     });
 
 

@@ -95,6 +95,7 @@ export interface KoreanFieldworkReportHandoffValidation {
 }
 
 const REPORT_HANDOFF_SAVE_MESSAGE_DETAIL_LIMIT = 2;
+const REPORT_HANDOFF_COPY_PREVIEW_MAX_LENGTH = 120;
 
 export function normalizeKoreanFieldworkHwpPlainText(text: string): string {
 
@@ -135,23 +136,65 @@ export function getKoreanFieldworkReportHandoffValidationDetailMessage(
         detailLimit: number = REPORT_HANDOFF_SAVE_MESSAGE_DETAIL_LIMIT
 ): string|undefined {
 
-    if (validation.status !== 'review') return undefined;
+    const detailMessages: string[] = [];
 
-    const messages = validation.messages
-        .map(message => message.trim())
-        .filter(message => message.length > 0);
-    if (messages.length === 0) return undefined;
+    if (validation.status === 'review') {
+        const messages = validation.messages
+            .map(message => message.trim())
+            .filter(message => message.length > 0);
 
-    const normalizedLimit = Math.max(1, Math.floor(detailLimit));
-    const visibleMessages = messages.slice(0, normalizedLimit);
-    const remainingCount = Math.max(0, messages.length - visibleMessages.length);
-    const detailLines = visibleMessages.map(message => `- ${message}`);
+        if (messages.length > 0) {
+            const normalizedLimit = Math.max(1, Math.floor(detailLimit));
+            const visibleMessages = messages.slice(0, normalizedLimit);
+            const remainingCount = Math.max(0, messages.length - visibleMessages.length);
+            const detailLines = visibleMessages.map(message => `- ${message}`);
 
-    if (remainingCount > 0) {
-        detailLines.push(`- \uc678 ${remainingCount}\uac74 \ub354 \ud655\uc778`);
+            if (remainingCount > 0) {
+                detailLines.push(`- \uc678 ${remainingCount}\uac74 \ub354 \ud655\uc778`);
+            }
+
+            detailMessages.push(`\ubcf4\uc644 \ud56d\ubaa9:\n${detailLines.join('\n')}`);
+        }
     }
 
-    return `\ubcf4\uc644 \ud56d\ubaa9:\n${detailLines.join('\n')}`;
+    const copyPreviewMessage = getKoreanFieldworkReportHandoffValidationCopyPreviewMessage(validation);
+    if (copyPreviewMessage) detailMessages.push(copyPreviewMessage);
+
+    return detailMessages.length > 0 ? detailMessages.join('\n') : undefined;
+}
+
+
+export function getKoreanFieldworkReportHandoffValidationCopyPreviewMessage(
+        validation: KoreanFieldworkReportHandoffValidation,
+        maxLength: number = REPORT_HANDOFF_COPY_PREVIEW_MAX_LENGTH
+): string|undefined {
+
+    const bodyText = validation.copyBodyText
+        ?? validation.copySections?.find(section => section.id === 'body')?.copyText;
+    const previewText = normalizeValidationCopyPreviewText(bodyText, maxLength);
+
+    return previewText
+        ? `HWP \ubcf8\ubb38 \ubbf8\ub9ac\ubcf4\uae30:\n- ${previewText}`
+        : undefined;
+}
+
+
+function normalizeValidationCopyPreviewText(text: string|undefined, maxLength: number): string {
+
+    const previewText = (text ?? '')
+        .replace(/\r\n?/g, '\n')
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0)
+        .join(' ')
+        .replace(/ {2,}/g, ' ')
+        .trim();
+    if (!previewText) return '';
+
+    const normalizedMaxLength = Math.max(8, Math.floor(maxLength));
+    if (previewText.length <= normalizedMaxLength) return previewText;
+
+    return `${previewText.slice(0, normalizedMaxLength - 3).replace(/ +$/g, '')}...`;
 }
 
 interface DetailFieldDefinition {
