@@ -188,6 +188,34 @@ describe('Korean fieldwork report handoff', () => {
     });
 
 
+    it('summarizes tablet drawing sketches without dumping stroke JSON into HWP copy blocks', () => {
+
+        const documents = [
+            makeDocument('feature-1', 'Feature', {
+                identifier: 'pit-001',
+                shortDescription: 'round pit with dark fill',
+                featureRecordingStatus: 'confirmed',
+                featureInvestigationChecklist: []
+            }),
+            makeDocument('drawing-1', 'Drawing', {
+                drawingSketchStrokes: '{"version":1,"strokes":[{"points":[{"x":10,"y":20},{"x":50,"y":60}]}]}',
+                relations: { depicts: ['feature-1'] }
+            })
+        ];
+
+        const handoff = makeKoreanFieldworkReportHandoff(documents as any);
+        const featureItem = handoff.items.find(item => item.documentId === 'feature-1');
+        const evidenceDetails = featureItem?.evidenceDetails.join('\n') ?? '';
+
+        expect(evidenceDetails)
+            .toContain('\ud0dc\ube14\ub9bf \uc2a4\ucf00\uce58: \uc788\uc74c');
+        expect(featureItem?.copyText)
+            .toContain('\ud0dc\ube14\ub9bf \uc2a4\ucf00\uce58: \uc788\uc74c');
+        expect(featureItem?.copyText)
+            .not.toContain('"strokes"');
+    });
+
+
     it('summarizes handwritten tablet pen memos without dumping stroke JSON into HWP copy blocks', () => {
 
         const documents = [

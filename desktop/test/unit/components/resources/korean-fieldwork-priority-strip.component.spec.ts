@@ -208,6 +208,11 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
                             ].join('\n'),
                             relations: { depicts: ['feature-1'] }
                         }),
+                        createDocument('drawing-1', 'Drawing', {
+                            drawingSketchStrokes:
+                                '{"version":1,"strokes":[{"points":[{"x":10,"y":20},{"x":50,"y":60}]}]}',
+                            relations: { depicts: ['feature-1'] }
+                        }),
                         createDocument('memo-handwritten', 'PenMemo', {
                             penMemoStrokes: '{"version":1,"strokes":[{"points":[{"x":10,"y":20},{"x":30,"y":40}]}]}',
                             penMemoTranscriptionStatus: 'pending',
@@ -222,14 +227,14 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
 
             expect(component.getPanelOptions().map(panel => panel.id)).toContain('report');
             expect(component.hasReportHandoffItems()).toBe(true);
-            expect(component.getReportHandoffSummaryLabel()).toContain('4');
+            expect(component.getReportHandoffSummaryLabel()).toContain('5');
 
             const [featureItem] = component.getReportHandoffItems();
             expect(featureItem).toMatchObject({
                 documentId: 'feature-1',
                 identifier: 'pit-001',
                 summary: 'round pit with dark fill',
-                evidenceCount: 3,
+                evidenceCount: 4,
                 tone: 'review'
             });
             expect(component.getReportHandoffPreviewItem()?.documentId).toBe('feature-1');
@@ -244,12 +249,16 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
                 .toContain('\ud1a0\uce35\uc120 \ud45c\uc2dc: \uc788\uc74c');
             expect(featureItem.evidenceDetails.join('\n'))
                 .toContain('\uce35 \ubc88\ud638 \ud45c\uc2dc: \uc788\uc74c');
+            expect(featureItem.evidenceDetails.join('\n'))
+                .toContain('\ud0dc\ube14\ub9bf \uc2a4\ucf00\uce58: \uc788\uc74c');
             expect(featureItem.copyText)
                 .toContain('\uc2a4\ud3ec\uc774\ub4dc \uc704\uce58');
             expect(featureItem.copyText)
                 .toContain('\uc0ac\uc9c4 \uc120\ud0dd \uc9c0\uc810 20%/50% \ud3c9\uade0 RGB 111/87/61');
             expect(featureItem.copyText)
                 .toContain('\ud544\uae30 \uc6d0\ubcf8: \uc788\uc74c');
+            expect(featureItem.copyText)
+                .toContain('\ud0dc\ube14\ub9bf \uc2a4\ucf00\uce58: \uc788\uc74c');
             expect(featureItem.copyText)
                 .not.toContain('"strokes"');
             expect(featureItem.issueDetails.join('\n'))

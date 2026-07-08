@@ -3279,20 +3279,24 @@ function validateReportHandoffPreSaveValidation() {
   }
   if (!coreReportHandoffText.includes('getSoilProfilePhotoEvidenceSummary')
       || !coreReportHandoffText.includes('getFieldworkPhotoEvidenceSummary')
+      || !coreReportHandoffText.includes('getDrawingEvidenceSummary')
       || !coreReportHandoffText.includes('soilProfileColorSwatches')
       || !coreReportHandoffText.includes('fieldworkPhotoAnnotationStrokes')
       || !coreReportHandoffText.includes('soilProfilePhotoAnnotationStrokes')
       || !coreReportHandoffText.includes('soilProfileLayerMarkers')
+      || !coreReportHandoffText.includes('drawingSketchStrokes')
       || !coreReportHandoffText.includes('SOIL_COLOR_SAMPLE_SOURCE_PATTERN')
       || !coreReportHandoffText.includes('RGB_SAMPLE_LOCATION_PATTERN')
       || !coreReportHandoffSpecText.includes('soil profile color sample locations into HWP copy blocks')
       || !coreReportHandoffSpecText.includes('recovers soil profile eyedropper locations from layer swatches')
+      || !coreReportHandoffSpecText.includes('tablet drawing sketches without dumping stroke JSON')
       || !coreReportHandoffSpecText.includes('\\ud1a0\\uce35\\uc120 \\ud45c\\uc2dc: \\uc788\\uc74c')
       || !coreReportHandoffSpecText.includes('\\uc0ac\\uc9c4 \\ud45c\\uc2dc: \\uc788\\uc74c')
       || !desktopPriorityStripSpecText.includes('RGB 111/87/61 @ 20%/50%')
       || !desktopPriorityStripSpecText.includes('\\uc2a4\\ud3ec\\uc774\\ub4dc \\uc704\\uce58')
-      || !desktopPriorityStripSpecText.includes('\\uce35 \\ubc88\\ud638 \\ud45c\\uc2dc: \\uc788\\uc74c')) {
-    findings.push('report handoff HWP copy blocks must carry soil profile color swatches, tablet photo annotations, and tablet eyedropper sample locations');
+      || !desktopPriorityStripSpecText.includes('\\uce35 \\ubc88\\ud638 \\ud45c\\uc2dc: \\uc788\\uc74c')
+      || !desktopPriorityStripSpecText.includes('\\ud0dc\\ube14\\ub9bf \\uc2a4\\ucf00\\uce58: \\uc788\\uc74c')) {
+    findings.push('report handoff HWP copy blocks must carry soil profile color swatches, tablet photo/drawing annotations, and tablet eyedropper sample locations');
   }
   if (!coreReportHandoffText.includes('getPenMemoEvidenceSummary')
       || !coreReportHandoffText.includes('hasStrokeEvidence')

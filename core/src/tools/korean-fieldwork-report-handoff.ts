@@ -303,7 +303,8 @@ const EVIDENCE_DETAILS: EvidenceDetailDefinition[] = [
     {
         label: '\ub3c4\uba74',
         getDocuments: bundle => bundle.drawings,
-        fields: ['shortDescription', 'fileUri', 'imageUri', 'fieldworkPhotoUri']
+        getSummary: getDrawingEvidenceSummary,
+        fields: ['shortDescription', 'fileUri', 'imageUri', 'fieldworkPhotoUri', 'drawingSketchStrokes']
     },
     {
         label: '\ud604\uc7a5\uba54\ubaa8',
@@ -746,6 +747,20 @@ function getSoilProfilePhotoEvidenceSummary(document: Document): string|undefine
             document.resource.soilProfileCaptureNote
         )),
         getLabeledEvidenceValue('\uc694\uc57d', getPrintableValue(document.resource.shortDescription))
+    ].filter((value): value is string => !!value).join(' / ') || undefined;
+}
+
+
+function getDrawingEvidenceSummary(document: Document): string|undefined {
+
+    return [
+        getLabeledEvidenceValue('\uc694\uc57d', getPrintableValue(document.resource.shortDescription)),
+        getLabeledEvidenceValue('\uc6d0\ubcf8', getFirstPrintableField(document, [
+            'fileUri',
+            'imageUri',
+            'fieldworkPhotoUri'
+        ])),
+        getStrokeEvidenceLabel('\ud0dc\ube14\ub9bf \uc2a4\ucf00\uce58', document.resource.drawingSketchStrokes)
     ].filter((value): value is string => !!value).join(' / ') || undefined;
 }
 
