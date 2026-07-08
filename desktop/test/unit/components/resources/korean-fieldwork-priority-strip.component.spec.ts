@@ -190,10 +190,17 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
                         }),
                         createDocument('photo-1', 'Photo', {
                             fieldworkPhotoUri: 'file:///tablet/photos/pit-001.jpg',
+                            fieldworkPhotoAnnotationStrokes:
+                                '{"version":1,"strokes":[{"points":[{"x":10,"y":20},{"x":30,"y":40}]}]}',
                             relations: { depicts: ['feature-1'] }
                         }),
                         createDocument('soil-photo-1', 'SoilProfilePhoto', {
                             soilProfilePhotoUri: 'file:///tablet/photos/soil-photo-1.jpg',
+                            soilProfilePhotoAnnotationStrokes:
+                                '{"version":1,"strokes":[{"points":[{"x":20,"y":30}]}]}',
+                            soilProfileAnnotationStrokes:
+                                '{"version":1,"strokes":[{"points":[{"x":15,"y":40},{"x":70,"y":45}]}]}',
+                            soilProfileLayerMarkers: '[{"x":20,"y":50,"label":"1"}]',
                             soilProfileColorSwatches: '1: 10YR 4/3 RGB 111/87/61 @ 20%/50%',
                             soilColorAssistCandidates: [
                                 '\uc0ac\uc9c4 \uc120\ud0dd \uc9c0\uc810 20%/50% \ud3c9\uade0 RGB 111/87/61',
@@ -230,7 +237,13 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
             expect(featureItem.evidenceDetails.join('\n'))
                 .toContain('file:///tablet/photos/pit-001.jpg');
             expect(featureItem.evidenceDetails.join('\n'))
+                .toContain('\uc0ac\uc9c4 \ud45c\uc2dc: \uc788\uc74c');
+            expect(featureItem.evidenceDetails.join('\n'))
                 .toContain('RGB 111/87/61 @ 20%/50%');
+            expect(featureItem.evidenceDetails.join('\n'))
+                .toContain('\ud1a0\uce35\uc120 \ud45c\uc2dc: \uc788\uc74c');
+            expect(featureItem.evidenceDetails.join('\n'))
+                .toContain('\uce35 \ubc88\ud638 \ud45c\uc2dc: \uc788\uc74c');
             expect(featureItem.copyText)
                 .toContain('\uc2a4\ud3ec\uc774\ub4dc \uc704\uce58');
             expect(featureItem.copyText)

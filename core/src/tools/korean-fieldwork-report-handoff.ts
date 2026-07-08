@@ -274,7 +274,15 @@ const EVIDENCE_DETAILS: EvidenceDetailDefinition[] = [
     {
         label: '\uc0ac\uc9c4',
         getDocuments: bundle => bundle.photos,
-        fields: ['fieldworkPhotoCaption', 'fieldworkPhotoUri', 'imageUri', 'fileUri', 'shortDescription']
+        getSummary: getFieldworkPhotoEvidenceSummary,
+        fields: [
+            'fieldworkPhotoCaption',
+            'fieldworkPhotoUri',
+            'imageUri',
+            'fileUri',
+            'fieldworkPhotoAnnotationStrokes',
+            'shortDescription'
+        ]
     },
     {
         label: '\ud1a0\uce35\uc0ac\uc9c4',
@@ -282,6 +290,9 @@ const EVIDENCE_DETAILS: EvidenceDetailDefinition[] = [
         getSummary: getSoilProfilePhotoEvidenceSummary,
         fields: [
             'soilProfilePhotoUri',
+            'soilProfilePhotoAnnotationStrokes',
+            'soilProfileAnnotationStrokes',
+            'soilProfileLayerMarkers',
             'soilProfileColorSwatches',
             'soilColorAssistCandidates',
             'soilProfileColorNote',
@@ -488,7 +499,7 @@ function hasPrintableField(resource: NewResource, fieldNames: string[]): boolean
 function hasPenMemoContent(resource: NewResource): boolean {
 
     return hasPrintableField(resource, PEN_MEMO_CONTENT_FIELDS.filter(fieldName => fieldName !== 'penMemoStrokes'))
-        || hasPenMemoStrokeEvidence(resource.penMemoStrokes);
+        || hasStrokeEvidence(resource.penMemoStrokes);
 }
 
 
@@ -695,6 +706,21 @@ function getEvidenceDetailLine(document: Document, definition: EvidenceDetailDef
 }
 
 
+function getFieldworkPhotoEvidenceSummary(document: Document): string|undefined {
+
+    return [
+        getLabeledEvidenceValue('\uc124\uba85', getPrintableValue(document.resource.fieldworkPhotoCaption)),
+        getLabeledEvidenceValue('\uc6d0\ubcf8', getFirstPrintableField(document, [
+            'fieldworkPhotoUri',
+            'imageUri',
+            'fileUri'
+        ])),
+        getStrokeEvidenceLabel('\uc0ac\uc9c4 \ud45c\uc2dc', document.resource.fieldworkPhotoAnnotationStrokes),
+        getLabeledEvidenceValue('\uc694\uc57d', getPrintableValue(document.resource.shortDescription))
+    ].filter((value): value is string => !!value).join(' / ') || undefined;
+}
+
+
 function getSoilProfilePhotoEvidenceSummary(document: Document): string|undefined {
 
     return [
@@ -703,6 +729,9 @@ function getSoilProfilePhotoEvidenceSummary(document: Document): string|undefine
             'imageUri',
             'fieldworkPhotoUri'
         ])),
+        getStrokeEvidenceLabel('\uc0ac\uc9c4 \ud45c\uc2dc', document.resource.soilProfilePhotoAnnotationStrokes),
+        getStrokeEvidenceLabel('\ud1a0\uce35\uc120 \ud45c\uc2dc', document.resource.soilProfileAnnotationStrokes),
+        getStrokeEvidenceLabel('\uce35 \ubc88\ud638 \ud45c\uc2dc', document.resource.soilProfileLayerMarkers),
         getLabeledEvidenceValue('\uce35\ubcc4 \ud1a0\uc0c9', getPrintableValue(
             document.resource.soilProfileColorSwatches
         )),
@@ -739,13 +768,19 @@ function getPenMemoEvidenceSummary(document: Document): string|undefined {
 
 function getPenMemoStrokeEvidenceLabel(value: any): string|undefined {
 
-    return hasPenMemoStrokeEvidence(value)
-        ? '\ud544\uae30 \uc6d0\ubcf8: \uc788\uc74c'
+    return getStrokeEvidenceLabel('\ud544\uae30 \uc6d0\ubcf8', value);
+}
+
+
+function getStrokeEvidenceLabel(label: string, value: any): string|undefined {
+
+    return hasStrokeEvidence(value)
+        ? `${label}: \uc788\uc74c`
         : undefined;
 }
 
 
-function hasPenMemoStrokeEvidence(value: any): boolean {
+function hasStrokeEvidence(value: any): boolean {
 
     if (value === undefined || value === null) return false;
 
@@ -754,7 +789,7 @@ function hasPenMemoStrokeEvidence(value: any): boolean {
         if (!text || text === '[]' || text === '{}') return false;
 
         const parsed = parseJsonValue(text);
-        return parsed === undefined ? true : hasPenMemoStrokeEvidence(parsed);
+        return parsed === undefined ? true : hasStrokeEvidence(parsed);
     }
 
     if (Array.isArray(value)) return value.some(hasStrokeValue);
@@ -764,7 +799,7 @@ function hasPenMemoStrokeEvidence(value: any): boolean {
 
         return Object.keys(value)
             .filter(key => key !== 'version')
-            .some(key => hasPenMemoStrokeEvidence(value[key]));
+            .some(key => hasStrokeEvidence(value[key]));
     }
 
     return !!String(value).trim();

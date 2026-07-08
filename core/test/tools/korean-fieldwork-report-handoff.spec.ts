@@ -76,6 +76,9 @@ describe('Korean fieldwork report handoff', () => {
             }),
             makeDocument('soil-photo-1', 'SoilProfilePhoto', {
                 soilProfilePhotoUri: 'file:///tablet/photos/soil-photo-1.jpg',
+                soilProfilePhotoAnnotationStrokes: '{"version":1,"strokes":[{"points":[{"x":20,"y":30}]}]}',
+                soilProfileAnnotationStrokes: '{"version":1,"strokes":[{"points":[{"x":15,"y":40},{"x":70,"y":45}]}]}',
+                soilProfileLayerMarkers: '[{"x":20,"y":50,"label":"1"}]',
                 soilProfileColorSwatches: '1: 10YR 4/3 RGB 111/87/61 @ 20%/50%',
                 soilColorAssistCandidates: [
                     '\uc0ac\uc9c4 \uc120\ud0dd \uc9c0\uc810 20%/50% \ud3c9\uade0 RGB 111/87/61',
@@ -93,11 +96,21 @@ describe('Korean fieldwork report handoff', () => {
         expect(evidenceDetails)
             .toContain('\uce35\ubcc4 \ud1a0\uc0c9: 1: 10YR 4/3 RGB 111/87/61 @ 20%/50%');
         expect(evidenceDetails)
+            .toContain('\uc0ac\uc9c4 \ud45c\uc2dc: \uc788\uc74c');
+        expect(evidenceDetails)
+            .toContain('\ud1a0\uce35\uc120 \ud45c\uc2dc: \uc788\uc74c');
+        expect(evidenceDetails)
+            .toContain('\uce35 \ubc88\ud638 \ud45c\uc2dc: \uc788\uc74c');
+        expect(evidenceDetails)
             .toContain('\uc2a4\ud3ec\uc774\ub4dc \uc704\uce58: \uc0ac\uc9c4 \uc120\ud0dd \uc9c0\uc810 20%/50% \ud3c9\uade0 RGB 111/87/61');
         expect(featureItem?.copyText)
             .toContain('RGB 111/87/61 @ 20%/50%');
         expect(featureItem?.copyText)
             .toContain('\uc2a4\ud3ec\uc774\ub4dc \uc704\uce58');
+        expect(featureItem?.copyText)
+            .toContain('\ud1a0\uce35\uc120 \ud45c\uc2dc: \uc788\uc74c');
+        expect(featureItem?.copyText)
+            .not.toContain('"strokes"');
         expect(featureItem?.copyText).not.toMatch(/(^|[^\r])\n/);
     });
 
@@ -168,8 +181,10 @@ describe('Korean fieldwork report handoff', () => {
         expect(issueDetails).toContain('fieldwork-photo-annotation-review');
         expect(issueDetails).toContain('pen-memo-auto-transcript-review');
         expect(featureItem?.copyText).toContain('\ud655\uc778 \uc0c1\uc138');
+        expect(featureItem?.copyText).toContain('\uc0ac\uc9c4 \ud45c\uc2dc: \uc788\uc74c');
         expect(featureItem?.copyText).toContain('fieldwork-photo-annotation-review');
         expect(featureItem?.copyText).toContain('pen-memo-auto-transcript-review');
+        expect(featureItem?.copyText).not.toContain('"strokes"');
     });
 
 
