@@ -94,6 +94,49 @@ describe('Korean fieldwork report handoff', () => {
     });
 
 
+    it('carries selected-record tablet field notes into HWP copy blocks without dumping handwriting JSON', () => {
+
+        const handoff = makeKoreanFieldworkReportHandoff([
+            makeDocument('feature-1', 'Feature', {
+                identifier: 'pit-001',
+                fieldNote: [
+                    '[\uad00\ucc30 \ub0b4\uc6a9] \ubc14\ub2e5\uba74\uc5d0\uc11c \uc6d0\ud615 \uc724\uacfd \ud655\uc778.',
+                    '[\ud574\uc11d] \uc8fc\uacf5 \uac00\ub2a5\uc131.',
+                    '[\ub2e4\uc74c \uc791\uc5c5] \ub2e8\uba74 \uc0ac\uc9c4 \ubcf4\uac15.',
+                    '[\uadfc\uac70 \ubc88\ud638] \uc0ac\uc9c4 12, \ub3c4\uba74 3',
+                    '[\uc190\uadf8\ub9bc \uba54\ubaa8] 1\ud68d 2\uc810',
+                    '[\uc190\uadf8\ub9bc \uc88c\ud45c] {"version":1,"strokes":[{"points":[{"x":10,"y":20},{"x":40,"y":50}]}]}'
+                ].join('\n'),
+                interpretation: '\uc8fc\uacf5 \uac00\ub2a5\uc131.',
+                featureRecordingStatus: 'candidate',
+                featureInvestigationChecklist: []
+            })
+        ] as any);
+
+        const featureItem = handoff.items.find(item => item.documentId === 'feature-1');
+        const details = featureItem?.details.join('\n') ?? '';
+
+        expect(featureItem?.summary)
+            .toBe('\uad00\ucc30: \ubc14\ub2e5\uba74\uc5d0\uc11c \uc6d0\ud615 \uc724\uacfd \ud655\uc778.');
+        expect(details)
+            .toContain('\ud604\uc7a5\uba54\ubaa8: \uad00\ucc30: \ubc14\ub2e5\uba74\uc5d0\uc11c \uc6d0\ud615 \uc724\uacfd \ud655\uc778.');
+        expect(details)
+            .toContain('\ud574\uc11d: \uc8fc\uacf5 \uac00\ub2a5\uc131.');
+        expect(details)
+            .toContain('\ub2e4\uc74c \uc791\uc5c5: \ub2e8\uba74 \uc0ac\uc9c4 \ubcf4\uac15.');
+        expect(details)
+            .toContain('\uadfc\uac70 \ubc88\ud638: \uc0ac\uc9c4 12, \ub3c4\uba74 3');
+        expect(details)
+            .toContain('\uc190\uadf8\ub9bc \uba54\ubaa8: 1\ud68d 2\uc810');
+        expect(featureItem?.copyText)
+            .toContain('\ub2e4\uc74c \uc791\uc5c5: \ub2e8\uba74 \uc0ac\uc9c4 \ubcf4\uac15.');
+        expect(featureItem?.copyText)
+            .not.toContain('\uc190\uadf8\ub9bc \uc88c\ud45c');
+        expect(featureItem?.copyText)
+            .not.toContain('"strokes"');
+    });
+
+
     it('carries tablet daily log journal fields into HWP copy blocks without dumping boundary JSON', () => {
 
         const handoff = makeKoreanFieldworkReportHandoff([

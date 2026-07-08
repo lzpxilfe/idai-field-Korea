@@ -199,6 +199,11 @@ const DETAIL_FIELDS: DetailFieldDefinition[] = [
         fields: DAILY_LOG_DETAIL_FIELDS
     },
     {
+        label: '\ud604\uc7a5\uba54\ubaa8',
+        getSummary: getFieldNoteDetailSummary,
+        fields: ['fieldNote', 'interpretation']
+    },
+    {
         label: '\uba54\ubaa8',
         fields: ['description', 'penMemoReviewedTranscript', 'penMemoAutoTranscript']
     }
@@ -208,6 +213,7 @@ const SUMMARY_FIELDS = [
     'shortDescription',
     'description',
     'diaryAbstract',
+    'fieldNote',
     'penMemoReviewedTranscript',
     'penMemoAutoTranscript',
     'featureGeometryRevisionNote',
@@ -301,6 +307,31 @@ const DAILY_LOG_REVIEW_LABELS: Readonly<Record<string, string>> = {
     reportCarryForwardChecked: '\ubcf4\uace0\uc11c \ubc18\uc601 \ud655\uc778',
     pendingDecision: '\ucd94\uac00 \ud655\uc778'
 };
+
+type FieldNoteSectionId = 'observation'|'interpretation'|'nextWork'|'evidenceNumbers';
+
+const FIELD_NOTE_SECTION_LABELS: Readonly<Record<FieldNoteSectionId, string>> = {
+    observation: '\uad00\ucc30',
+    interpretation: '\ud574\uc11d',
+    nextWork: '\ub2e4\uc74c \uc791\uc5c5',
+    evidenceNumbers: '\uadfc\uac70 \ubc88\ud638'
+};
+
+const FIELD_NOTE_SECTION_IDS: Readonly<Record<string, FieldNoteSectionId>> = {
+    '\uad00\ucc30 \ub0b4\uc6a9': 'observation',
+    '\ud574\uc11d': 'interpretation',
+    '\ub2e4\uc74c \uc791\uc5c5': 'nextWork',
+    '\uc0ac\uc9c4\u00b7\ub3c4\uba74\u00b7\uc2a4\ucf00\uce58\u00b7\uc720\ubb3c\u00b7\uc2dc\ub8cc \ubc88\ud638': 'evidenceNumbers',
+    '\uc0ac\uc9c4\u00b7\ub3c4\uba74\u00b7\uc720\ubb3c\u00b7\uc2dc\ub8cc \ubc88\ud638': 'evidenceNumbers',
+    '\uc2a4\ucf00\uce58\u00b7\uc57d\uce21/\uadfc\uac70 \ubc88\ud638': 'evidenceNumbers',
+    '\uadfc\uac70 \ubc88\ud638': 'evidenceNumbers'
+};
+
+const FIELD_NOTE_HANDWRITING_SUMMARY_LABEL = '\uc190\uadf8\ub9bc \uba54\ubaa8';
+const FIELD_NOTE_HANDWRITING_COORDINATE_LABELS = new Set([
+    '\uc190\uadf8\ub9bc \uc88c\ud45c',
+    '\uc190\uadf8\ub9bc \uba54\ubaa8 \uc88c\ud45c'
+]);
 
 const RELATION_DETAIL_ORDER = [
     'liesWithin',
@@ -605,6 +636,10 @@ function getHandoffPrintableFieldValue(resource: NewResource, fieldName: string)
         );
     }
 
+    if (fieldName === 'fieldNote') {
+        return getFieldNoteSummary(resource.fieldNote);
+    }
+
     return getPrintableValue(resource[fieldName]);
 }
 
@@ -749,6 +784,10 @@ function getSummaryFieldValue(document: Document, fieldName: string): string|und
             '\uc791\uc5c5\uc77c\uc9c0 \uacbd\uacc4 \uba54\ubaa8',
             document.resource.dailyLogBoundaryMemoStrokes
         );
+    }
+
+    if (fieldName === 'fieldNote') {
+        return getFieldNoteSummary(document.resource.fieldNote);
     }
 
     return getPrintableValue(document.resource[fieldName]);
@@ -949,6 +988,156 @@ function getDateOnlyLabel(value: any): string|undefined {
 
     const match = text.match(/\d{4}-\d{2}-\d{2}/);
     return match?.[0] ?? text;
+}
+
+
+function getFieldNoteDetailSummary(document: Document): string|undefined {
+
+    const summaryParts = getFieldNoteSummaryParts(document.resource.fieldNote);
+    const interpretation = getLabeledEvidenceValue(
+        FIELD_NOTE_SECTION_LABELS.interpretation,
+        getPrintableValue(document.resource.interpretation)
+    );
+    const parts = interpretation
+        ? Array.from(new Set([...summaryParts, interpretation]))
+        : summaryParts;
+
+    return parts.join(', ') || undefined;
+}
+
+
+function getFieldNoteSummary(value: any): string|undefined {
+
+    return getFieldNoteSummaryParts(value)[0];
+}
+
+
+function getFieldNoteSummaryParts(value: any): string[] {
+
+    const parsed = parseFieldNote(value);
+    const sectionParts = ([
+        'observation',
+        'interpretation',
+        'nextWork',
+        'evidenceNumbers'
+    ] as FieldNoteSectionId[])
+        .map(sectionId => getLabeledEvidenceValue(
+            FIELD_NOTE_SECTION_LABELS[sectionId],
+            getPrintableValue(parsed.sections[sectionId])
+        ))
+        .filter((item): item is string => !!item);
+    const fallback = parsed.fallbackLines.length > 0
+        ? getLabeledEvidenceValue('\uba54\ubaa8', parsed.fallbackLines.join(' / '))
+        : undefined;
+    const handwriting = getFieldNoteHandwritingLabel(parsed);
+
+    return [
+        ...sectionParts,
+        fallback,
+        handwriting
+    ].filter((item): item is string => !!item);
+}
+
+
+function parseFieldNote(value: any): {
+    fallbackLines: string[];
+    hasHandwritingEvidence: boolean;
+    handwritingSummary?: string;
+    sections: Record<FieldNoteSectionId, string>;
+} {
+
+    const result = {
+        fallbackLines: [] as string[],
+        hasHandwritingEvidence: false,
+        handwritingSummary: undefined as string|undefined,
+        sections: {
+            observation: '',
+            interpretation: '',
+            nextWork: '',
+            evidenceNumbers: ''
+        } as Record<FieldNoteSectionId, string>
+    };
+    let currentSection: FieldNoteSectionId|undefined;
+
+    getTextLines(value).forEach(rawLine => {
+        const line = rawLine.trim();
+        if (!line) return;
+
+        const headingMatch = line.match(/^\[([^\]]+)\]\s*(.*)$/);
+        if (headingMatch) {
+            const heading = headingMatch[1].trim();
+            const text = headingMatch[2].trim();
+            const sectionId = FIELD_NOTE_SECTION_IDS[heading];
+
+            currentSection = sectionId;
+            if (sectionId) {
+                appendFieldNoteSectionLine(result.sections, sectionId, text);
+            } else {
+                handleFieldNoteSpecialLine(result, heading, text);
+            }
+            return;
+        }
+
+        if (currentSection) {
+            appendFieldNoteSectionLine(result.sections, currentSection, line);
+        } else if (!isLikelyJsonText(line)) {
+            result.fallbackLines.push(line);
+        }
+    });
+
+    return result;
+}
+
+
+function appendFieldNoteSectionLine(sections: Record<FieldNoteSectionId, string>,
+                                    sectionId: FieldNoteSectionId,
+                                    value: string) {
+
+    if (!value || isLikelyJsonText(value)) return;
+
+    sections[sectionId] = sections[sectionId]
+        ? `${sections[sectionId]}\n${value}`
+        : value;
+}
+
+
+function handleFieldNoteSpecialLine(result: ReturnType<typeof parseFieldNote>,
+                                    heading: string,
+                                    text: string) {
+
+    if (heading === FIELD_NOTE_HANDWRITING_SUMMARY_LABEL) {
+        result.handwritingSummary = text || result.handwritingSummary;
+        return;
+    }
+
+    if (FIELD_NOTE_HANDWRITING_COORDINATE_LABELS.has(heading)) {
+        result.hasHandwritingEvidence = hasStrokeEvidence(text);
+        return;
+    }
+
+    if (text && !isLikelyJsonText(text)) result.fallbackLines.push(`${heading}: ${text}`);
+}
+
+
+function getFieldNoteHandwritingLabel(parsed: ReturnType<typeof parseFieldNote>): string|undefined {
+
+    if (parsed.handwritingSummary) {
+        return `${FIELD_NOTE_HANDWRITING_SUMMARY_LABEL}: ${parsed.handwritingSummary}`;
+    }
+
+    return parsed.hasHandwritingEvidence
+        ? `${FIELD_NOTE_HANDWRITING_SUMMARY_LABEL}: \uc788\uc74c`
+        : undefined;
+}
+
+
+function isLikelyJsonText(value: string): boolean {
+
+    const text = value.trim();
+    if (!text) return false;
+    if (!['{', '['].includes(text[0])) return false;
+
+    return parseJsonValue(text) !== undefined;
 }
 
 

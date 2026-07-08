@@ -188,6 +188,13 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
                             featureLocationSketch: '{"shape":"oval","center":{"x":75,"y":50},"scale":80}',
                             featureFreeDrawingStrokes:
                                 '{"version":1,"strokes":[{"points":[{"x":10,"y":20},{"x":40,"y":50}]}]}',
+                            fieldNote: [
+                                '[\uad00\ucc30 \ub0b4\uc6a9] \ubc14\ub2e5\uba74\uc5d0\uc11c \uc6d0\ud615 \uc724\uacfd \ud655\uc778.',
+                                '[\ud574\uc11d] \uc8fc\uacf5 \uac00\ub2a5\uc131.',
+                                '[\ub2e4\uc74c \uc791\uc5c5] \ub2e8\uba74 \uc0ac\uc9c4 \ubcf4\uac15.',
+                                '[\uadfc\uac70 \ubc88\ud638] \uc0ac\uc9c4 12, \ub3c4\uba74 3',
+                                '[\uc190\uadf8\ub9bc \uc88c\ud45c] {"version":1,"strokes":[{"points":[{"x":10,"y":20},{"x":40,"y":50}]}]}'
+                            ].join('\n'),
                             featureRecordingStatus: 'confirmed',
                             featureInvestigationChecklist: []
                         }),
@@ -269,6 +276,10 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
                 .toContain('\uc704\uce58 \uc57d\ub3c4: \uc788\uc74c');
             expect(featureItem.details.join('\n'))
                 .toContain('\uc790\uc720 \uc2a4\ucf00\uce58: \uc788\uc74c');
+            expect(featureItem.details.join('\n'))
+                .toContain('\ud604\uc7a5\uba54\ubaa8: \uad00\ucc30: \ubc14\ub2e5\uba74\uc5d0\uc11c \uc6d0\ud615 \uc724\uacfd \ud655\uc778.');
+            expect(featureItem.details.join('\n'))
+                .toContain('\ub2e4\uc74c \uc791\uc5c5: \ub2e8\uba74 \uc0ac\uc9c4 \ubcf4\uac15.');
             expect(featureItem.evidenceDetails.join('\n'))
                 .toContain('file:///tablet/photos/pit-001.jpg');
             expect(featureItem.evidenceDetails.join('\n'))
@@ -292,9 +303,13 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
             expect(featureItem.copyText)
                 .toContain('\uc790\uc720 \uc2a4\ucf00\uce58: \uc788\uc74c');
             expect(featureItem.copyText)
+                .toContain('\uadfc\uac70 \ubc88\ud638: \uc0ac\uc9c4 12, \ub3c4\uba74 3');
+            expect(featureItem.copyText)
                 .not.toContain('"shape"');
             expect(featureItem.copyText)
                 .not.toContain('"strokes"');
+            expect(featureItem.copyText)
+                .not.toContain('\uc190\uadf8\ub9bc \uc88c\ud45c');
             expect(featureItem.issueDetails.join('\n'))
                 .toContain('fieldwork-photo-upload-missing');
             expect(featureItem.copyText).toContain('pit-001');
