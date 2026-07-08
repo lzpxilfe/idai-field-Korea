@@ -3549,6 +3549,10 @@ function validateTabletInstallGuide() {
   const findings = [];
   const rootReadmeText = readTextFile('README.md');
   const tabletInstallDocText = readTextFile('docs/korean-fieldwork/android-tablet-install.ko.md');
+  const desktopStartShortcutText = readTextFile('START_FIELD_DESKTOP.cmd');
+  const desktopStartOtherDriveShortcutText = readTextFile('START_FIELD_DESKTOP_TO_OTHER_DRIVE.cmd');
+  const desktopStartScriptText = readTextFile('run-idai-field-ko.ps1');
+  const desktopShortcutInstallerText = readTextFile('INSTALL_FIELD_DESKTOP_SHORTCUT.cmd');
   const tabletInstallScriptText = readTextFile('install-idai-field-android-apk.ps1');
   const tabletBuildInstallShortcutText = readTextFile('BUILD_AND_INSTALL_TABLET_APK.cmd');
   const tabletBuildInstallOtherDriveShortcutText = readTextFile('BUILD_AND_INSTALL_TABLET_APK_TO_OTHER_DRIVE.cmd');
@@ -3564,6 +3568,15 @@ function validateTabletInstallGuide() {
 
   if (!tabletWorkflowText.includes('name: idai-field-mobile-android-apk')) {
     findings.push('mobile workflow must publish the Android APK artifact under the documented name');
+  }
+  if (!desktopStartShortcutText.includes('run-idai-field-ko.ps1')
+      || !desktopStartScriptText.includes('IDAI_FIELD_RUNTIME_DIR')
+      || !desktopStartScriptText.includes('npm_config_cache')
+      || !desktopStartOtherDriveShortcutText.includes('DEFAULT_RUNTIME=G:\\idai-field-desktop-runtime')
+      || !desktopStartOtherDriveShortcutText.includes('IDAI_FIELD_RUNTIME_DIR=%RUNTIME_DIR%')
+      || !desktopStartOtherDriveShortcutText.includes('run-idai-field-ko.ps1')
+      || !desktopShortcutInstallerText.includes('install_field_desktop_shortcut.ps1')) {
+    findings.push('desktop launcher must provide Field Desktop entry points with an external runtime/cache directory option');
   }
   if (!tabletInstallScriptText.includes('[switch]$FromLatestArtifact')
       || !tabletInstallScriptText.includes('[switch]$DownloadOnly')
@@ -3630,6 +3643,11 @@ function validateTabletInstallGuide() {
       findings.push(`${label} must document both direct latest APK install and download-only tablet handoff commands`);
     }
   }
+  if (!rootReadmeText.includes('START_FIELD_DESKTOP_TO_OTHER_DRIVE.cmd')
+      || !rootReadmeText.includes('IDAI_FIELD_RUNTIME_DIR')
+      || !rootReadmeText.includes('G:\\idai-field-desktop-runtime')) {
+    findings.push('root README must document the Field Desktop other-drive runtime/cache launcher');
+  }
   if (!rootReadmeText.includes('Field Desktop의 `보고서/HWP 복사` 패널')
       || !rootReadmeText.includes('일반 텍스트 클립보드')) {
     findings.push('root README must explain the tablet-to-Field-Desktop-to-HWP copy flow without making BridgeDesk the primary destination');
@@ -3638,6 +3656,11 @@ function validateTabletInstallGuide() {
       || !desktopWorkflowText.includes('tools/korean-fieldwork-*.js')
       || !desktopWorkflowText.includes('docs/korean-fieldwork/**')
       || !desktopWorkflowText.includes('README.md')
+      || !desktopWorkflowText.includes('START_FIELD_DESKTOP.cmd')
+      || !desktopWorkflowText.includes('START_FIELD_DESKTOP_TO_OTHER_DRIVE.cmd')
+      || !desktopWorkflowText.includes('INSTALL_FIELD_DESKTOP_SHORTCUT.cmd')
+      || !desktopWorkflowText.includes('run-idai-field-ko.ps1')
+      || !desktopWorkflowText.includes('tools/windows/**')
       || !desktopWorkflowText.includes('BUILD_AND_INSTALL_TABLET_APK.cmd')
       || !desktopWorkflowText.includes('BUILD_AND_INSTALL_TABLET_APK_TO_OTHER_DRIVE.cmd')
       || !desktopWorkflowText.includes('BUILD_AND_DOWNLOAD_TABLET_APK.cmd')
