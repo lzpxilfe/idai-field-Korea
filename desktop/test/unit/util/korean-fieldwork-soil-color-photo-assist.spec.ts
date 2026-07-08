@@ -24,7 +24,7 @@ describe('Korean fieldwork soil color photo assist', () => {
         );
 
         expect(updates.soilColorAssistStatus).toBe('candidatesAvailable');
-        expect(updates.soilColorAssistCandidates).toContain('1: 10YR 4/3');
+        expect(updates.soilColorAssistCandidates).toContain('1: 10YR 3/4');
         expect(updates.soilColorAssistCandidates).toContain('사진 중앙부 평균 RGB');
     });
 
@@ -48,7 +48,7 @@ describe('Korean fieldwork soil color photo assist', () => {
             red: 139
         });
 
-        expect(candidates[0].munsell).toBe('2.5Y 5/3');
+        expect(candidates[0].munsell).toBe('2.5Y 5/4');
         expect(candidates[0].confidence).toBe('high');
     });
 
@@ -85,9 +85,9 @@ describe('Korean fieldwork soil color photo assist', () => {
         );
 
         expect(leftUpdates.soilColorAssistCandidates).toContain('사진 선택 지점 20%/50%');
-        expect(leftUpdates.soilColorAssistCandidates).toContain('1: 10YR 4/3');
+        expect(leftUpdates.soilColorAssistCandidates).toContain('1: 10YR 3/4');
         expect(rightUpdates.soilColorAssistCandidates).toContain('사진 선택 지점 80%/50%');
-        expect(rightUpdates.soilColorAssistCandidates).toContain('1: 2.5Y 5/3');
+        expect(rightUpdates.soilColorAssistCandidates).toContain('1: 2.5Y 5/4');
     });
 
 
@@ -121,7 +121,7 @@ describe('Korean fieldwork soil color photo assist', () => {
         );
 
         expect(document.resource.soilColorAssistStatus).toBe('candidatesAvailable');
-        expect(document.resource.soilColorAssistCandidates).toContain('10YR 4/3');
+        expect(document.resource.soilColorAssistCandidates).toContain('10YR 3/4');
     });
 });
 

@@ -154,6 +154,7 @@ const featureRows = [
       'mobile/components/Project/soil-color-photo-assist.ts'
     ],
     desktop: [
+      'core/src/tools/korean-fieldwork-soil-color.ts',
       'desktop/src/app/components/docedit/core/korean-fieldwork-soil-color-panel.component.ts',
       'desktop/src/app/util/korean-fieldwork-soil-color-candidates.ts',
       'desktop/src/app/util/korean-fieldwork-soil-color-photo-assist.ts'
@@ -386,6 +387,8 @@ const releaseCriticalPatterns = [
   /^core\/test\/tools\/korean-fieldwork-draft-defaults\.spec\.ts$/,
   /^core\/src\/tools\/korean-fieldwork-report-handoff\.ts$/,
   /^core\/test\/tools\/korean-fieldwork-report-handoff\.spec\.ts$/,
+  /^core\/src\/tools\/korean-fieldwork-soil-color\.ts$/,
+  /^core\/test\/tools\/korean-fieldwork-soil-color\.spec\.ts$/,
   /^mobile\/app\/\(tabs\)\/ProjectScreen\/Document(Add|Edit)\.tsx$/,
   /^mobile\/app\/\(tabs\)\/ProjectScreen\/index\.tsx$/,
   /^mobile\/app\/\(tabs\)\/SettingsScreen\.tsx$/,
@@ -475,6 +478,7 @@ const classifiedSupportSourceGroups = [
   {
     reason: 'release verification tooling that keeps tablet and desktop fieldwork flows aligned',
     files: [
+      'core/test/tools/korean-fieldwork-soil-color.spec.ts',
       'tools/korean-fieldwork-media-contract-check.js',
       'tools/korean-fieldwork-parity-check.js',
       'tools/korean-fieldwork-verify.js'
@@ -3815,6 +3819,9 @@ function validateSoilColorReviewWorkflow() {
   const desktopCandidateSpecText = readTextFile('desktop/test/unit/util/korean-fieldwork-soil-color-candidates.spec.ts');
   const desktopAssistText = readTextFile('desktop/src/app/util/korean-fieldwork-soil-color-photo-assist.ts');
   const desktopAssistSpecText = readTextFile('desktop/test/unit/util/korean-fieldwork-soil-color-photo-assist.spec.ts');
+  const sharedSoilColorText = readTextFile('core/src/tools/korean-fieldwork-soil-color.ts');
+  const sharedSoilColorSpecText = readTextFile('core/test/tools/korean-fieldwork-soil-color.spec.ts');
+  const tabletAssistText = readTextFile('mobile/components/Project/soil-color-photo-assist.ts');
   const desktopEvidenceReviewText = readTextFile('desktop/src/app/util/korean-fieldwork-evidence-review.ts');
   const desktopEvidenceReviewSpecText = readTextFile('desktop/test/unit/util/korean-fieldwork-evidence-review.spec.ts');
   const desktopRecordContextPanelText = readTextFile(
@@ -3987,6 +3994,26 @@ function validateSoilColorReviewWorkflow() {
       || !desktopAssistSpecText.includes('사진 선택 지점 80%/50%')) {
     findings.push('desktop soil color photo assist must sample Munsell candidates from selected uploaded image points');
   }
+  if (!sharedSoilColorText.includes('MUNSELL_ARCHAEOLOGY_CHIP_DATA')
+      || !sharedSoilColorText.includes('deltaE2000')
+      || !sharedSoilColorText.includes('CANDIDATE_COUNT = 5')
+      || !sharedSoilColorSpecText.includes('expanded Munsell archaeology chip table')
+      || !sharedSoilColorSpecText.includes('2.5GY 2.5/10')) {
+    findings.push('core soil color engine must keep the expanded Munsell archaeology candidate table and parser covered');
+  }
+  for (const [label, text] of [
+    ['tablet soil color assist utility', tabletAssistText],
+    ['desktop soil color assist utility', desktopAssistText]
+  ]) {
+    if (!text.includes("from 'idai-field-core'")
+        || !text.includes('getNearestMunsellCandidates')) {
+      findings.push(`${label} must use the shared core soil color candidate engine`);
+    }
+  }
+  if (!desktopCandidateText.includes("from 'idai-field-core'")
+      || !desktopCandidateText.includes('extractMunsellCandidateOptions')) {
+    findings.push('desktop soil color candidate parser must use the shared core Munsell candidate parser');
+  }
 
   for (const source of assistGenerators) {
     const text = readTextFile(source.filePath);
@@ -4020,9 +4047,10 @@ function validateSoilColorReviewWorkflow() {
     findings.push('desktop workbench must show exact photo-derived Munsell candidate values before opening the record');
   }
   if (!desktopCandidateText.includes('extractMunsellCandidateOptions')
-      || !desktopCandidateText.includes('GLEY')
+      || !desktopCandidateText.includes("from 'idai-field-core'")
       || !desktopCandidateText.includes('먼셀 후보')
-      || !desktopCandidateSpecText.includes('GLEY 1 5/N')) {
+      || !desktopCandidateSpecText.includes('GLEY 1 5/N')
+      || !desktopCandidateSpecText.includes('2.5GY 2.5/10')) {
     findings.push('desktop Munsell candidate parser must mirror tablet candidate extraction for review surfaces');
   }
   if (desktopCloseoutText.includes('Munsell 값') || desktopCloseoutText.includes('Munsell 후보')) {

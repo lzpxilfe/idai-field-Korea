@@ -14,10 +14,18 @@ describe('korean-fieldwork-soil-color-candidates', () => {
             '1: 10YR 4/3 (높음, 차이 0.0)',
             '2: 7.5YR 4/3 (보통, 차이 8.1)',
             '3: 10YR 4/3 (중복)',
-            '4: GLEY 1 5/N (낮음)'
+            '4: GLEY 1 5/N (낮음)',
+            '5: 2.5GY 2.5/10 (낮음)',
+            '6: N 4/0 (낮음)'
         ].join('\n'));
 
-        expect(candidates).toEqual(['10YR 4/3', '7.5YR 4/3', 'GLEY 1 5/N']);
+        expect(candidates).toEqual([
+            '10YR 4/3',
+            '7.5YR 4/3',
+            'GLEY 1 5/N',
+            '2.5GY 2.5/10',
+            'N 4/0'
+        ]);
     });
 
 

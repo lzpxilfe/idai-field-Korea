@@ -1,21 +1,12 @@
-const MUNSELL_CANDIDATE_PATTERN =
-    /\b(?:GLEY\s*[12]\s*\d\/N|(?:10|7\.5|5|2\.5)(?:YR|Y|R)\s+\d(?:\.\d)?\/\d(?:\.\d)?)\b/g;
+import { extractMunsellCandidateOptions } from 'idai-field-core';
+
 const SOIL_COLOR_SAMPLE_SOURCE_PATTERN =
     /^사진 (?:중앙부|선택 지점 \d+%\/\d+%) 평균 RGB \d+\/\d+\/\d+$/;
 const RGB_SAMPLE_LOCATION_PATTERN = /RGB\s+(\d{1,3})\/(\d{1,3})\/(\d{1,3})\s+@\s*(\d{1,3})%\/(\d{1,3})%/i;
 const SOIL_COLOR_ROW_NUMBER_PATTERN = /^\s*(\d+)\s*:/;
 
 
-export function extractMunsellCandidateOptions(value: unknown): string[] {
-
-    if (typeof value !== 'string') return [];
-
-    const matches = value.toUpperCase().match(MUNSELL_CANDIDATE_PATTERN) ?? [];
-
-    return Array.from(new Set(
-        matches.map(match => match.replace(/\s+/g, ' ').trim())
-    ));
-}
+export { extractMunsellCandidateOptions };
 
 
 export function getMunsellCandidateSummaryLabel(value: unknown,
