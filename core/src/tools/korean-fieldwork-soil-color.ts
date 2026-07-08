@@ -373,6 +373,17 @@ export const extractMunsellCandidateOptions = (text: unknown): string[] => {
 export const hasMunsellCandidateOptions = (text: unknown): boolean =>
   extractMunsellCandidateOptions(text).length > 0;
 
+export const getMunsellCandidateSummaryLabel = (
+  text: unknown,
+  maxCandidates = 3
+): string => {
+  const candidates = extractMunsellCandidateOptions(text).slice(0, maxCandidates);
+
+  return candidates.length > 0
+    ? `\uba3c\uc140 \ud6c4\ubcf4 ${candidates.join(', ')}`
+    : '';
+};
+
 export const parseSoilProfileColorSwatchRows = (
   currentValue: unknown
 ): SoilProfileColorSwatchRow[] => {

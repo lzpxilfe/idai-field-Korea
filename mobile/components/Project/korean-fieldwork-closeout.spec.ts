@@ -28,7 +28,7 @@ describe('Korean fieldwork closeout summary', () => {
 
     expect(summary.status).toBe('needsReview');
     expect(summary.title).toBe('마감 전 확인');
-    expect(summary.detail).toBe('이어서 볼 항목 1건, 살펴볼 항목 1건이 남아 있습니다.');
+    expect(summary.detail).toBe('보완 항목 1건, 안내 항목 1건이 남아 있습니다.');
   });
 
   it('returns a clear state when no issues remain', () => {

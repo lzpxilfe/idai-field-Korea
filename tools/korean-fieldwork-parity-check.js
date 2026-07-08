@@ -4049,6 +4049,8 @@ function validateSoilColorReviewWorkflow() {
   const desktopAssistSpecText = readTextFile('desktop/test/unit/util/korean-fieldwork-soil-color-photo-assist.spec.ts');
   const sharedSoilColorText = readTextFile('core/src/tools/korean-fieldwork-soil-color.ts');
   const sharedSoilColorSpecText = readTextFile('core/test/tools/korean-fieldwork-soil-color.spec.ts');
+  const coreReadinessText = readTextFile('core/src/tools/korean-fieldwork-readiness.ts');
+  const coreReadinessSpecText = readTextFile('core/test/tools/korean-fieldwork-readiness.spec.ts');
   const tabletAssistText = readTextFile('mobile/components/Project/soil-color-photo-assist.ts');
   const desktopEvidenceReviewText = readTextFile('desktop/src/app/util/korean-fieldwork-evidence-review.ts');
   const desktopEvidenceReviewSpecText = readTextFile('desktop/test/unit/util/korean-fieldwork-evidence-review.spec.ts');
@@ -4270,15 +4272,23 @@ function validateSoilColorReviewWorkflow() {
     }
   }
 
-  if (!desktopCloseoutText.includes('사진에서 읽은 먼셀 후보')) {
-    findings.push('desktop closeout must explain photo-derived soil color values as 먼셀 후보');
+  if (!coreReadinessText.includes('soil-color-candidates-review')
+      || !coreReadinessText.includes('getMunsellCandidateSummaryLabel')
+      || !coreReadinessSpecText.includes('먼셀 후보 10YR 4/3')) {
+    findings.push('core closeout readiness must carry exact photo-derived Munsell candidate values into review issues');
   }
-  if (!desktopCloseoutText.includes('먼셀값')) {
-    findings.push('desktop closeout must use Korean field wording 먼셀값');
+  if (!coreReadinessText.includes('\\uba3c\\uc140\\uac12')
+      && !coreReadinessText.includes('먼셀값')) {
+    findings.push('core closeout readiness must use Korean field wording 먼셀값');
   }
-  if (!desktopCloseoutText.includes('getMunsellCandidateSummaryLabel')
-      || !desktopCloseoutSpecText.includes('먼셀 후보 10YR 4/3')) {
-    findings.push('desktop closeout must carry exact photo-derived Munsell candidate values into review issues');
+  for (const [label, text] of [
+    ['desktop closeout', desktopCloseoutText],
+    ['tablet closeout', tabletCloseoutText]
+  ]) {
+    if (!text.includes("from 'idai-field-core'")
+        || !text.includes('makeKoreanFieldworkCloseoutSummary')) {
+      findings.push(`${label} must re-export the shared core closeout summary contract`);
+    }
   }
   if (!desktopWorkbenchText.includes('getMunsellCandidateSummaryLabel')
       || !desktopWorkbenchSpecText.includes('먼셀 후보 10YR 4/3')) {
@@ -4286,46 +4296,43 @@ function validateSoilColorReviewWorkflow() {
   }
   if (!desktopCandidateText.includes('extractMunsellCandidateOptions')
       || !desktopCandidateText.includes("from 'idai-field-core'")
-      || (!desktopCandidateText.includes('먼셀 후보')
-        && !desktopCandidateText.includes('\\uba3c\\uc140 \\ud6c4\\ubcf4'))
+      || !desktopCandidateText.includes('getMunsellCandidateSummaryLabel')
+      || !sharedSoilColorText.includes('getMunsellCandidateSummaryLabel')
+      || (!sharedSoilColorText.includes('먼셀 후보')
+        && !sharedSoilColorText.includes('\\uba3c\\uc140 \\ud6c4\\ubcf4'))
       || !desktopCandidateSpecText.includes('GLEY 1 5/N')
       || !desktopCandidateSpecText.includes('2.5GY 2.5/10')) {
     findings.push('desktop Munsell candidate parser must mirror tablet candidate extraction for review surfaces');
   }
-  if (desktopCloseoutText.includes('Munsell 값') || desktopCloseoutText.includes('Munsell 후보')) {
-    findings.push('desktop closeout still uses mixed-language Munsell wording');
+  if (coreReadinessText.includes('Munsell 값') || coreReadinessText.includes('Munsell 후보')) {
+    findings.push('core closeout readiness still uses mixed-language Munsell wording');
   }
 
-  for (const [label, text] of [
-    ['desktop closeout', desktopCloseoutText],
-    ['tablet closeout', tabletCloseoutText]
-  ]) {
-    if (!text.includes('getPhotoAnnotationCloseoutIssues')
-        || !text.includes('fieldwork-photo-annotation-review')
-        || !text.includes('soil-profile-photo-annotation-review')
-        || !text.includes('shortDescription')) {
-      findings.push(`${label} must turn tablet photo annotations into closeout review work until they are described`);
-    }
-    if (!text.includes('getFieldRecordQualityReviewCloseoutIssues')
-        || !text.includes('field-record-quality-review-follow-up')
-        || !text.includes('reviewedRecordUnit')
-        || !text.includes('qualityReviewStage')
-        || !text.includes('qualityCorrectionBasis')
-        || !text.includes('reportEvaluationFeedback')
-        || !text.includes('getKoreanFieldworkRecordFieldValueSummary')) {
-      findings.push(`${label} must carry tablet FieldRecordQualityReview details into closeout with shared Korean labels`);
-    }
+  if (!coreReadinessText.includes('getPhotoAnnotationCloseoutIssues')
+      || !coreReadinessText.includes('fieldwork-photo-annotation-review')
+      || !coreReadinessText.includes('soil-profile-photo-annotation-review')
+      || !coreReadinessText.includes('shortDescription')) {
+    findings.push('core closeout readiness must turn tablet photo annotations into closeout review work until they are described');
+  }
+  if (!coreReadinessText.includes('getFieldRecordQualityReviewCloseoutIssues')
+      || !coreReadinessText.includes('field-record-quality-review-follow-up')
+      || !coreReadinessText.includes('reviewedRecordUnit')
+      || !coreReadinessText.includes('qualityReviewStage')
+      || !coreReadinessText.includes('qualityCorrectionBasis')
+      || !coreReadinessText.includes('reportEvaluationFeedback')
+      || !coreReadinessText.includes('getKoreanFieldworkCloseoutFieldValueSummary')) {
+    findings.push('core closeout readiness must carry tablet FieldRecordQualityReview details into closeout with shared Korean labels');
   }
   for (const [label, text] of [
+    ['core readiness closeout test', coreReadinessSpecText],
     ['desktop closeout test', desktopCloseoutSpecText],
     ['tablet closeout test', tabletCloseoutSpecText]
   ]) {
-    if (!text.includes('adds closeout review issues for tablet photo annotations without descriptions')
-        || !text.includes('fieldwork-photo-annotation-review')
+    if (!text.includes('fieldwork-photo-annotation-review')
         || !text.includes('soil-profile-photo-annotation-review')) {
       findings.push(`${label} must cover annotated tablet photos in closeout`);
     }
-    if (!text.includes('adds field record quality review details to closeout with shared labels')
+    if (!text.includes('field-record-quality-review-follow-up')
         || !text.includes("not.toContain('sourceRecordCorrection')")
         || !text.includes("not.toContain('supplementRequestTracked')")) {
       findings.push(`${label} must cover FieldRecordQualityReview closeout labels without leaking internal value keys`);

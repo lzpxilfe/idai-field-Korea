@@ -3,6 +3,7 @@ import {
     formatSoilProfileColorPhotoSamplePointLabel,
     formatSoilProfileColorPhotoSampleSourceLabel,
     getNearestMunsellCandidates,
+    getMunsellCandidateSummaryLabel,
     hasMunsellCandidateOptions,
     normalizeSoilProfileColorPhotoSampleCoordinate,
     parseSoilProfileColorSwatchRows,
@@ -79,6 +80,20 @@ describe('Korean fieldwork soil color candidate engine', () => {
         ]);
         expect(hasMunsellCandidateOptions('사진 색상 샘플을 읽지 못했습니다.')).toBe(false);
     });
+
+
+    it('summarizes tablet Munsell candidates for shared closeout review labels', () => {
+
+        expect(getMunsellCandidateSummaryLabel([
+            '1: 10YR 4/3 (높음)',
+            '2: GLEY 1 5/N (보통)',
+            '3: 2.5GY 2.5/10 (낮음)',
+            '4: N 4/0 (낮음)'
+        ].join('\n'))).toBe('먼셀 후보 10YR 4/3, GLEY 1 5/N, 2.5GY 2.5/10');
+        expect(getMunsellCandidateSummaryLabel('사진 색상 샘플을 읽지 못했습니다.')).toBe('');
+    });
+
+
     it('parses soil profile swatches with field notes and tablet eyedropper locations', () => {
 
         const rows = parseSoilProfileColorSwatchRows(

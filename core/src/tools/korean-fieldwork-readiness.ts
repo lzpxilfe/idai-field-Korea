@@ -1,4 +1,5 @@
 import { Document } from '../model/document/document';
+import { getMunsellCandidateSummaryLabel } from './korean-fieldwork-soil-color';
 
 export type KoreanFieldworkReadinessSeverity = 'info'|'warning'|'critical';
 
@@ -42,6 +43,31 @@ export interface KoreanFieldworkTodaySummary {
     featureCandidates: Document[];
     openIssues: KoreanFieldworkReadinessIssue[];
     issueCountByDocumentId: { [documentId: string]: number };
+}
+
+export type KoreanFieldworkCloseoutStatus = 'clear'|'needsReview'|'blocked';
+
+export interface KoreanFieldworkCloseoutCounts {
+    critical: number;
+    warning: number;
+    info: number;
+}
+
+export interface KoreanFieldworkCloseoutSummary {
+    status: KoreanFieldworkCloseoutStatus;
+    title: string;
+    detail: string;
+    counts: KoreanFieldworkCloseoutCounts;
+    issues: KoreanFieldworkReadinessIssue[];
+}
+
+interface KoreanFieldworkPenMemoPoint {
+    x: number;
+    y: number;
+}
+
+interface KoreanFieldworkPenMemoStroke {
+    points: KoreanFieldworkPenMemoPoint[];
 }
 
 export interface TermAuthorityMatch {
@@ -104,6 +130,94 @@ const SOIL_PROFILE_PHOTO_ANNOTATION_FIELDS = [
     'soilProfilePhotoAnnotationStrokes',
     'soilProfileAnnotationStrokes'
 ];
+const FIELD_RECORD_QUALITY_REVIEW_CATEGORY = 'FieldRecordQualityReview';
+const FIELD_RECORD_QUALITY_REVIEW_CLOSED_STAGE = 'closedAfterCorrection';
+const FIELD_RECORD_QUALITY_REVIEW_REPORT_FEEDBACK_STAGE = 'postEvaluationFeedback';
+const FIELD_RECORD_QUALITY_REVIEW_DETAIL_FIELDS = [
+    {
+        fieldName: 'reviewedRecordUnit',
+        label: '\uac80\ud1a0 \ub300\uc0c1'
+    },
+    {
+        fieldName: 'qualityReviewStage',
+        label: '\uac80\ud1a0 \ub2e8\uacc4'
+    },
+    {
+        fieldName: 'qualityCorrectionBasis',
+        label: '\uc218\uc815\u00b7\ubcf4\uc644 \uadfc\uac70'
+    },
+    {
+        fieldName: 'reportEvaluationFeedback',
+        label: '\ud3c9\uac00 \ud658\ub958'
+    }
+];
+const FIELD_RECORD_QUALITY_REVIEW_REQUIRED_FIELD_NAMES = [
+    'reviewedRecordUnit',
+    'qualityReviewStage',
+    'qualityCorrectionBasis'
+];
+const FIELD_RECORD_QUALITY_REVIEW_VALUE_LABELS: Record<string, Record<string, string>> = {
+    reviewedRecordUnit: {
+        operationRecord: '\uc870\uc0ac\uad6c\uc5ed\u00b7\uc791\uc5c5\uae30\ub85d',
+        featureGroupRecord: '\uad00\ub828 \uc720\uad6c \uae30\ub85d',
+        featureRecord: '\uc720\uad6c \uae30\ub85d',
+        featureSegmentRecord: '\ud53c\ud2b8\u00b7\uc720\uad6c \uc138\ubd80 \uae30\ub85d',
+        findRecord: '\uc720\ubb3c \uae30\ub85d',
+        sampleRecord: '\uc2dc\ub8cc \uae30\ub85d',
+        dailyLog: '\uc870\uc0ac\uc77c\uc9c0',
+        personalNotebook: '\uac1c\uc778 \uc57c\uc7a5',
+        drawing: '\ub3c4\uba74',
+        photo: '\uc0ac\uc9c4',
+        gisOr3d: 'GIS\u00b73D \uc790\ub8cc',
+        reportDraft: '\ubcf4\uace0\uc11c \ucd08\uc548',
+        pendingDecision: '\ucd94\uac00 \ud655\uc778'
+    },
+    qualityReviewStage: {
+        sameDayReview: '\ub2f9\uc77c \uac80\ud1a0',
+        crossRecorderReview: '\uc870\uc0ac\uc790 \uad50\ucc28\uac80\ud1a0',
+        supervisorReview: '\ucc45\uc784\uc870\uc0ac\uc790 \uac80\ud1a0',
+        specialistReview: '\uc804\ubb38\uac00 \uac80\ud1a0',
+        reportPreparationReview: '\ubcf4\uace0\uc11c \uc791\uc131 \uc804 \uac80\ud1a0',
+        postEvaluationFeedback: '\ubcf4\uace0\uc11c \ud3c9\uac00 \ud6c4 \ud658\ub958',
+        sourceRecordCorrection: '\uc6d0\uae30\ub85d \ubcf4\uc644',
+        closedAfterCorrection: '\ubcf4\uc644 \ud6c4 \uc885\ub8cc',
+        pendingDecision: '\ucd94\uac00 \ud655\uc778'
+    },
+    qualityCorrectionBasis: {
+        factInterpretationSeparated: '\uc0ac\uc2e4\u00b7\ud574\uc11d \ubd84\ub9ac',
+        correctionReasonLinked: '\uc218\uc815 \uc0ac\uc720 \uc5f0\uacb0',
+        originalRecordPreserved: '\uc6d0\uae30\ub85d \ubcf4\uc874',
+        changeHistoryRecorded: '\ubcc0\uacbd \uc774\ub825 \uae30\ub85d',
+        reviewerNamed: '\uac80\ud1a0\uc790 \uba85\uc2dc',
+        sourceMediaChecked: '\uc6d0\uc0ac\uc9c4\u00b7\uc6d0\ub3c4\uba74 \ub300\uc870',
+        numberConversionChecked: '\ubc88\ud638 \ubcc0\ud658 \ub300\uc870',
+        contradictionRecorded: '\ubaa8\uc21c\uc810 \uae30\ub85d',
+        nextFieldworkAction: '\ub2e4\uc74c \ud604\uc7a5\uc870\uce58',
+        pendingDecision: '\ucd94\uac00 \ud655\uc778'
+    },
+    reportEvaluationFeedback: {
+        selfEvaluation: '\uae30\uad00 \uc790\uccb4\ud3c9\uac00',
+        committeeEvaluation: '\uc704\uc6d0\ud68c \ud3c9\uac00',
+        scoreDifference: '\ud3c9\uac00 \uc810\uc218 \ucc28\uc774',
+        siteTypeApplicability: '\uc720\uc801\uc720\ud615 \uc801\uc6a9\uc131',
+        nonApplicableItem: '\ube44\ud574\ub2f9 \ud3c9\uac00 \ud56d\ubaa9',
+        exclusionRationale: '\uc801\uc6a9 \uc81c\uc678 \uadfc\uac70',
+        fieldQualityNotSubstituted: '\ud604\uc7a5\uc131 \ub300\uccb4\ubd88\uac00',
+        fieldRecordReview: '\uc6d0\uae30\ub85d \uc7ac\uac80\ud1a0',
+        expertFieldParticipation: '\uc804\ubb38\uac00 \ud604\uc7a5\ucc38\uc5ec',
+        stakeholderCoordination: '\uc774\ud574\uad00\uacc4 \uc870\uc815',
+        lowBidRisk: '\uc800\uac00\uc218\uc8fc \uc704\ud5d8',
+        formalEvaluationLimit: '\ud615\uc2dd\ud3c9\uac00 \ud55c\uacc4',
+        improvementForNextInvestigation: '\ub2e4\uc74c \uc870\uc0ac \uac1c\uc120',
+        supplementRequestTracked: '\ubcf4\uc644\uc694\uad6c \ucd94\uc801',
+        pendingDecision: '\ucd94\uac00 \ud655\uc778'
+    }
+};
+const CLOSEOUT_SEVERITY_ORDER: Record<KoreanFieldworkReadinessSeverity, number> = {
+    critical: 0,
+    warning: 1,
+    info: 2
+};
 const FIELDWORK_IMAGE_UPLOAD_RULES = [
     {
         categories: ['Photo'],
@@ -355,6 +469,57 @@ export function buildEvidenceBundle(rootDocument: Document, documents: Document[
     };
 }
 
+export function makeKoreanFieldworkCloseoutSummary(
+        documents: Document[],
+        maxIssues: number = 4
+): KoreanFieldworkCloseoutSummary {
+
+    return getKoreanFieldworkCloseoutSummary(
+        dedupeKoreanFieldworkReadinessIssues([
+            ...getKoreanFieldworkCloseoutReviewIssues(documents),
+            ...getKoreanFieldworkTodaySummary(documents).openIssues
+        ]),
+        maxIssues
+    );
+}
+
+export function getKoreanFieldworkCloseoutSummary(
+        issues: KoreanFieldworkReadinessIssue[],
+        maxIssues: number = 4
+): KoreanFieldworkCloseoutSummary {
+
+    const counts = getCloseoutIssueCounts(issues);
+    const sortedIssues = issues.slice().sort(compareCloseoutIssues);
+
+    if (counts.critical > 0) {
+        return {
+            status: 'blocked',
+            title: '\uba3c\uc800 \ubcfc \ud56d\ubaa9',
+            detail: `\uc624\ub298 \uba3c\uc800 \ucc98\ub9ac\ud560 \ud56d\ubaa9 ${counts.critical}\uac74\uc774 \ub0a8\uc544 \uc788\uc2b5\ub2c8\ub2e4.`,
+            counts,
+            issues: sortedIssues.slice(0, maxIssues)
+        };
+    }
+
+    if (counts.warning + counts.info > 0) {
+        return {
+            status: 'needsReview',
+            title: '\ub9c8\uac10 \uc804 \ud655\uc778',
+            detail: `\ubcf4\uc644 \ud56d\ubaa9 ${counts.warning}\uac74, \uc548\ub0b4 \ud56d\ubaa9 ${counts.info}\uac74\uc774 \ub0a8\uc544 \uc788\uc2b5\ub2c8\ub2e4.`,
+            counts,
+            issues: sortedIssues.slice(0, maxIssues)
+        };
+    }
+
+    return {
+        status: 'clear',
+        title: '\ub9c8\uac10 \uac00\ub2a5',
+        detail: '\ud604\uc7ac \uc870\uc0ac \uad6c\uc5ed \uae30\ub85d\uc73c\ub85c \ub0a8\uc740 \uc810\uac80 \ud56d\ubaa9\uc774 \uc5c6\uc2b5\ub2c8\ub2e4.',
+        counts,
+        issues: []
+    };
+}
+
 export function getKoreanFieldworkCloseoutReviewIssues(documents: Document[]): KoreanFieldworkReadinessIssue[] {
 
     return documents.flatMap(document => {
@@ -369,6 +534,12 @@ export function getKoreanFieldworkCloseoutReviewIssues(documents: Document[]): K
         }
         if (document.resource.category === PEN_MEMO_CATEGORY) {
             return getPenMemoCloseoutIssues(document);
+        }
+        if (document.resource.category === FIELD_RECORD_QUALITY_REVIEW_CATEGORY) {
+            return [
+                ...getFieldRecordQualityReviewCloseoutIssues(document),
+                ...getDirectFieldworkPhotoCloseoutIssues(document)
+            ];
         }
         if (DIRECT_FIELDWORK_PHOTO_CATEGORIES.includes(document.resource.category)) {
             return getDirectFieldworkPhotoCloseoutIssues(document);
@@ -519,6 +690,99 @@ function uniqueDocuments(documents: Document[]): Document[] {
     });
 }
 
+function getFieldRecordQualityReviewCloseoutIssues(document: Document): KoreanFieldworkReadinessIssue[] {
+
+    const missingFields = getMissingFieldRecordQualityReviewFields(document.resource);
+    const qualityReviewStages = getStringListValue(document.resource.qualityReviewStage);
+    const isClosed = qualityReviewStages.includes(FIELD_RECORD_QUALITY_REVIEW_CLOSED_STAGE);
+
+    if (isClosed && missingFields.length === 0) return [];
+
+    const detailSummary = getFieldRecordQualityReviewDetailSummary(document.resource);
+    const missingLabels = getFieldRecordQualityReviewFieldLabels(missingFields);
+    const issueFields = dedupeStrings([
+        ...missingFields,
+        ...FIELD_RECORD_QUALITY_REVIEW_DETAIL_FIELDS.map(field => field.fieldName),
+        'recordCreationTiming',
+        'fieldRecordQuality',
+        'reportCrossCheck',
+        'verificationState'
+    ]);
+
+    return [createCloseoutReviewIssue(
+        document,
+        missingFields.length > 0
+            ? 'field-record-quality-review-context-missing'
+            : 'field-record-quality-review-follow-up',
+        missingFields.length > 0
+            ? '\uae30\ub85d \ubcf4\uc644 \uba54\ubaa8\uc5d0 \ubcf4\uace0\uc11c \uc791\uc131\uc5d0 \ud544\uc694\ud55c \uac80\ud1a0 \ub9e5\ub77d\uc774 \ube60\uc838 \uc788\uc2b5\ub2c8\ub2e4.'
+            : '\uae30\ub85d \ubcf4\uc644 \uba54\ubaa8\ub97c HWP \uc791\uc131 \uc804\uc5d0 \ud655\uc778\ud574\uc57c \ud569\ub2c8\ub2e4.',
+        getFieldRecordQualityReviewRecommendedAction(detailSummary, missingLabels),
+        issueFields
+    )];
+}
+
+function getMissingFieldRecordQualityReviewFields(resource: Record<string, any>): string[] {
+
+    const missingFields = FIELD_RECORD_QUALITY_REVIEW_REQUIRED_FIELD_NAMES.filter(fieldName =>
+        !getKoreanFieldworkCloseoutFieldValueSummary(fieldName, resource[fieldName])
+    );
+    const qualityReviewStages = getStringListValue(resource.qualityReviewStage);
+
+    if (qualityReviewStages.includes(FIELD_RECORD_QUALITY_REVIEW_REPORT_FEEDBACK_STAGE)
+            && !getKoreanFieldworkCloseoutFieldValueSummary(
+                'reportEvaluationFeedback',
+                resource.reportEvaluationFeedback
+            )) {
+        missingFields.push('reportEvaluationFeedback');
+    }
+
+    return missingFields;
+}
+
+function getFieldRecordQualityReviewDetailSummary(resource: Record<string, any>): string[] {
+
+    return FIELD_RECORD_QUALITY_REVIEW_DETAIL_FIELDS
+        .map(({ fieldName, label }) => {
+            const summary = getKoreanFieldworkCloseoutFieldValueSummary(fieldName, resource[fieldName]);
+
+            return summary ? `${label}: ${summary}` : undefined;
+        })
+        .filter((summary): summary is string => !!summary);
+}
+
+function getFieldRecordQualityReviewFieldLabels(fieldNames: string[]): string[] {
+
+    return fieldNames
+        .map(fieldName =>
+            FIELD_RECORD_QUALITY_REVIEW_DETAIL_FIELDS.find(field => field.fieldName === fieldName)?.label
+        )
+        .filter((label): label is string => !!label);
+}
+
+function getFieldRecordQualityReviewRecommendedAction(detailSummary: string[],
+                                                      missingLabels: string[]): string {
+
+    const detailText = detailSummary.length > 0
+        ? `${detailSummary.join('. ')}. `
+        : '';
+
+    if (missingLabels.length > 0) {
+        return `${detailText}${missingLabels.join(', ')}\uc744 \ucc44\uc6b0\uace0, \ub370\uc2a4\ud06c\ud1b1 HWP \ubcf5\uc0ac \ube14\ub85d\uc5d0\uc11c \uac19\uc740 \ub77c\ubca8\ub85c \ubcf4\uc774\ub294\uc9c0 \ud655\uc778\ud558\uc138\uc694.`;
+    }
+
+    return `${detailText}\uc218\uc815 \ub0b4\uc5ed\uc774 \uc6d0\uae30\ub85d\uc744 \uc9c0\uc6b0\uc9c0 \uc54a\uace0 \ubcf4\uace0\uc11c \uc791\uc131\uc6a9 \ubcf5\uc0ac \ube14\ub85d\uacfc \uc77c\uce58\ud558\ub294\uc9c0 \ud655\uc778\ud558\uc138\uc694.`;
+}
+
+function getKoreanFieldworkCloseoutFieldValueSummary(fieldName: string, value: unknown): string|undefined {
+
+    const labels = getStringListValue(value)
+        .map(item => FIELD_RECORD_QUALITY_REVIEW_VALUE_LABELS[fieldName]?.[item] ?? item)
+        .filter(label => label.trim().length > 0);
+
+    return labels.length > 0 ? labels.join(' \u00b7 ') : undefined;
+}
+
 function getFieldworkPhotoCloseoutIssues(document: Document): KoreanFieldworkReadinessIssue[] {
 
     return [
@@ -561,7 +825,7 @@ function getDirectFieldworkPhotoCloseoutIssues(document: Document): KoreanFieldw
         document,
         DIRECT_FIELDWORK_PHOTO_URI_FIELDS,
         'fieldwork-attached-photo-upload-missing',
-        '\uae30\ub85d\uc5d0 \uc9c1\uc811 \ubd99\uc740 \ud604\uc7a5\uc0ac\uc9c4 \uc6d0\ubcf8 \ubcf4\uc874 \uc0c1\ud0dc\uac00 \uc544\uc9c1 \ud655\uc778\ub418\uc9c0 \uc54a\uc558\uc2b5\ub2c8\ub2e4.'
+        '\uae30\ub85d\uc5d0 \uc9c1\uc811 \ubd99\uc740 \ud0dc\ube14\ub9bf \uc0ac\uc9c4 \uc6d0\ubcf8 \ubcf4\uc874 \uc0c1\ud0dc\uac00 \uc544\uc9c1 \ud655\uc778\ub418\uc9c0 \uc54a\uc558\uc2b5\ub2c8\ub2e4.'
     );
 }
 
@@ -590,19 +854,25 @@ function getSoilProfilePhotoCloseoutIssues(document: Document): KoreanFieldworkR
     ];
 
     if (document.resource.soilColorAssistStatus === 'candidatesAvailable') {
+        const candidateSummary = getMunsellCandidateSummaryLabel(
+            document.resource.soilColorAssistCandidates
+        );
         issues.push(createCloseoutReviewIssue(
             document,
             'soil-color-candidates-review',
             '\uc0ac\uc9c4\uc5d0\uc11c \uc77d\uc740 \uba3c\uc140 \ud6c4\ubcf4\ub97c \uac80\ud1a0\ud574\uc57c \ud569\ub2c8\ub2e4.',
-            '\uc0ac\uc9c4 \ud6c4\ubcf4 \uc911 \uc2e4\uc81c \ud1a0\uc0c9\uc744 \uc120\ud0dd\ud558\uac70\ub098 \uc9c1\uc811 \uba3c\uc140\uac12\uc744 \ud655\uc778\ud558\uc138\uc694.',
+            `${candidateSummary ? `${candidateSummary}. ` : ''}\uc0ac\uc9c4 \ud6c4\ubcf4 \uc911 \uc2e4\uc81c \ud1a0\uc0c9\uc744 \uc120\ud0dd\ud558\uac70\ub098 \uc9c1\uc811 \uba3c\uc140\uac12\uc744 \ud655\uc778\ud558\uc138\uc694.`,
             ['soilColorAssistCandidates', 'soilColorAssistStatus', 'soilProfileColorSwatches']
         ));
     } else if (document.resource.soilColorAssistStatus === 'lowConfidence') {
+        const candidateSummary = getMunsellCandidateSummaryLabel(
+            document.resource.soilColorAssistCandidates
+        );
         issues.push(createCloseoutReviewIssue(
             document,
             'soil-color-low-confidence',
             '\uc0ac\uc9c4 \ud1a0\uc0c9 \ud6c4\ubcf4\uc758 \uc2e0\ub8b0\ub3c4\uac00 \ub0ae\uc2b5\ub2c8\ub2e4.',
-            '\ud604\uc7a5\uc5d0\uc11c \uba3c\uc140\uac12\uc744 \uc9c1\uc811 \ud655\uc778\ud558\uace0 \ud1a0\uc0c9 \uba54\ubaa8\ub97c \ubcf4\uac15\ud558\uc138\uc694.',
+            `${candidateSummary ? `${candidateSummary}. ` : ''}\ud604\uc7a5\uc5d0\uc11c \uba3c\uc140\uac12\uc744 \uc9c1\uc811 \ud655\uc778\ud558\uace0 \ud1a0\uc0c9 \uba54\ubaa8\ub97c \ubcf4\uac15\ud558\uc138\uc694.`,
             ['soilColorAssistCandidates', 'soilColorAssistStatus', 'soilProfileColorSwatches']
         ));
     }
@@ -623,29 +893,149 @@ function getSoilProfilePhotoCloseoutIssues(document: Document): KoreanFieldworkR
 
 function getPenMemoCloseoutIssues(document: Document): KoreanFieldworkReadinessIssue[] {
 
-    if (hasTextValue(document.resource.penMemoReviewedTranscript)) return [];
+    const hasReviewedTranscript = hasTextValue(document.resource.penMemoReviewedTranscript);
+    const hasAutoTranscript = hasTextValue(document.resource.penMemoAutoTranscript);
+    const hasHandwriting = hasPenMemoHandwriting(document.resource.penMemoStrokes);
 
-    if (hasTextValue(document.resource.penMemoAutoTranscript)) {
+    if (hasReviewedTranscript) return [];
+
+    if (hasAutoTranscript) {
+        const action = hasHandwriting
+            ? '자동 전사를 원본 손글씨와 대조하고 검토 전사문으로 확정하세요.'
+            : '자동 전사를 확인하고 검토 전사문으로 확정하세요.';
         return [createCloseoutReviewIssue(
             document,
             'pen-memo-auto-transcript-review',
-            '\uc790\ub3d9 \ud544\uc0ac\ub41c \ud604\uc7a5\uba54\ubaa8\uac00 \uc544\uc9c1 \uac80\ud1a0\ub418\uc9c0 \uc54a\uc558\uc2b5\ub2c8\ub2e4.',
-            '\uc790\ub3d9 \ud544\uc0ac\ubb38\uc744 \uc6d0\ubcf8 \ud544\uae30\uc640 \ub300\uc870\ud558\uace0 \uac80\ud1a0 \ud544\uc0ac\ubb38\uc73c\ub85c \ud655\uc815\ud558\uc138\uc694.',
+            [
+                '자동 전사된 야장 메모가 검토되지 않았습니다.',
+                hasHandwriting ? getPenMemoSketchSummaryLabel(document.resource.penMemoStrokes) : ''
+            ].filter(Boolean).join(' '),
+            `${toSentencePrefix(getPenMemoTranscriptionSummaryLabel(document))}. ${action}`,
             ['penMemoAutoTranscript', 'penMemoReviewedTranscript', 'penMemoTranscriptionStatus']
         )];
     }
 
-    if (hasEvidenceValue(document.resource.penMemoStrokes)) {
+    if (hasHandwriting) {
         return [createCloseoutReviewIssue(
             document,
             'pen-memo-handwriting-transcription',
-            '\ud0dc\ube14\ub9bf \ud544\uae30 \ud604\uc7a5\uba54\ubaa8\uac00 \uc544\uc9c1 \ud544\uc0ac\ub418\uc9c0 \uc54a\uc558\uc2b5\ub2c8\ub2e4.',
-            '\ud544\uae30 \uc790\ub8cc\ub97c \uc77d\uc5b4 \uac80\ud1a0 \ud544\uc0ac\ubb38\uc73c\ub85c \uc62e\uae30\uc138\uc694.',
+            [
+                '태블릿 손글씨 야장 메모가 아직 전사되지 않았습니다.',
+                getPenMemoSketchSummaryLabel(document.resource.penMemoStrokes)
+            ].filter(Boolean).join(' '),
+            `${getPenMemoTranscriptionSummaryLabel(document)} 태블릿 손글씨 원자료를 읽어 검토 전사문으로 남기세요.`,
             ['penMemoStrokes', 'penMemoReviewedTranscript', 'penMemoTranscriptionStatus']
         )];
     }
 
     return [];
+}
+
+
+function getPenMemoTranscriptionSummaryLabel(document: Document): string {
+
+    const hasAutoTranscript = hasTextValue(document.resource.penMemoAutoTranscript);
+    const hasHandwriting = hasPenMemoHandwriting(document.resource.penMemoStrokes);
+    const sourceLabel = hasAutoTranscript && hasHandwriting
+        ? '태블릿 손글씨·자동 전사'
+        : hasAutoTranscript
+            ? '자동 전사 검토'
+            : '태블릿 손글씨 원자료';
+    const sketchSummaryLabel = getPenMemoSketchSummaryLabel(document.resource.penMemoStrokes);
+
+    return [sourceLabel, sketchSummaryLabel]
+        .filter(label => label.trim().length > 0)
+        .join(' · ');
+}
+
+
+function getPenMemoSketchSummaryLabel(value: unknown): string {
+
+    const stats = getPenMemoStrokeStats(value);
+    if (stats.strokeCount === 0) return '';
+    if (stats.pointCount === 0) return `스케치 메모 ${stats.strokeCount}획.`;
+
+    return `스케치 메모 ${stats.strokeCount}획/${stats.pointCount}점.`;
+}
+
+
+function getPenMemoStrokeStats(value: unknown): { strokeCount: number, pointCount: number } {
+
+    if (typeof value !== 'string') return getPenMemoStrokeStatsFromStrokes(getParsedPenMemoStrokes(value));
+
+    const trimmedValue = value.trim();
+    if (!trimmedValue || trimmedValue === '[]') return { strokeCount: 0, pointCount: 0 };
+
+    try {
+        return getPenMemoStrokeStatsFromStrokes(getParsedPenMemoStrokes(JSON.parse(trimmedValue)));
+    } catch (_err) {
+        return { strokeCount: 1, pointCount: 0 };
+    }
+}
+
+
+function getPenMemoStrokeStatsFromStrokes(strokes: KoreanFieldworkPenMemoStroke[]): {
+    strokeCount: number;
+    pointCount: number;
+} {
+
+    return {
+        strokeCount: strokes.length,
+        pointCount: strokes.reduce((sum, stroke) => sum + stroke.points.length, 0)
+    };
+}
+
+
+function getParsedPenMemoStrokes(value: unknown): KoreanFieldworkPenMemoStroke[] {
+
+    const strokesValue = isRecord(value) && Array.isArray(value.strokes)
+        ? value.strokes
+        : value;
+    if (!Array.isArray(strokesValue)) return [];
+
+    return strokesValue
+        .map(getPenMemoStrokePoints)
+        .filter(points => points.length > 0)
+        .map(points => ({ points }));
+}
+
+
+function getPenMemoStrokePoints(stroke: unknown): KoreanFieldworkPenMemoPoint[] {
+
+    const points = isRecord(stroke) && Array.isArray(stroke.points)
+        ? stroke.points
+        : stroke;
+
+    if (!Array.isArray(points)) return [];
+
+    return points
+        .map(getPenMemoStrokePoint)
+        .filter((point): point is KoreanFieldworkPenMemoPoint => point !== undefined);
+}
+
+
+function getPenMemoStrokePoint(point: unknown): KoreanFieldworkPenMemoPoint|undefined {
+
+    if (!isRecord(point)) return undefined;
+
+    return getFiniteCoordinate(point.x) === undefined || getFiniteCoordinate(point.y) === undefined
+        ? undefined
+        : {
+            x: getFiniteCoordinate(point.x) as number,
+            y: getFiniteCoordinate(point.y) as number
+        };
+}
+
+
+function hasPenMemoHandwriting(value: unknown): boolean {
+
+    return getPenMemoStrokeStats(value).strokeCount > 0;
+}
+
+
+function toSentencePrefix(value: string): string {
+
+    return value.replace(/[.。]\s*$/, '');
 }
 
 
@@ -663,7 +1053,7 @@ function getPhotoAnnotationCloseoutIssues(
         document,
         ruleId,
         message,
-        '\ud45c\uc2dc \uc704\uce58\uc640 \uc758\ubbf8\ub97c \uc124\uba85 \ub610\ub294 \uc694\uc57d\uc5d0 \uc62e\uaca8 HWP \ubcf4\uace0\uc11c \uc791\uc131 \ub54c \ub193\uce58\uc9c0 \uc54a\uac8c \ud558\uc138\uc694.',
+        '표시 위치와 의미를 description이나 shortDescription에 옮겨 HWP 보고서 작성 때 놓치지 않게 하세요.',
         [annotatedField, 'description', 'shortDescription']
     )];
 }
@@ -687,7 +1077,7 @@ function getPhotoUploadCloseoutIssues(
         document,
         ruleId,
         message,
-        '\ud0dc\ube14\ub9bf \ub610\ub294 \ud504\ub85c\uc81d\ud2b8 \ubc31\uc5c5 \uc704\uce58\uc5d0 \uc6d0\ubcf8 \ud30c\uc77c\uc774 \ub0a8\uc544 \uc788\ub294\uc9c0 \ud655\uc778\ud558\uace0 \ubcf4\uc874 \uc704\uce58\ub97c \uae30\ub85d\ud558\uc138\uc694.',
+        '태블릿 또는 프로젝트 백업 위치에 원본 파일이 남아 있는지 확인하고, 보존 위치와 확인 시각을 남기세요.',
         FIELDWORK_IMAGE_UPLOAD_RELATED_FIELDS
     )];
 }
@@ -728,7 +1118,15 @@ function getMissingPhotoReportMetadataFields(resource: Record<string, any>, capt
 
 function getMissingPhotoReportMetadataLabel(fields: string[]): string {
 
-    return fields.join(', ');
+    return fields
+        .map(field => {
+            if (field === 'originalFilename') return '\uc6d0\ubcf8 \ud30c\uc77c\uba85';
+            if (field === 'width') return '\uac00\ub85c \ud06c\uae30';
+            if (field === 'height') return '\uc138\ub85c \ud06c\uae30';
+
+            return '\ucd2c\uc601\uc2dc\uac01';
+        })
+        .join(', ');
 }
 
 
@@ -793,6 +1191,101 @@ function getNumberValue(value: unknown): number|undefined {
 
     return undefined;
 }
+
+function getStringListValue(value: unknown): string[] {
+
+    if (value === undefined || value === null) return [];
+
+    if (Array.isArray(value)) {
+        return value.flatMap(getStringListValue);
+    }
+
+    if (typeof value === 'object') {
+        const record = value as Record<string, unknown>;
+        if (typeof record.inputValue === 'string') return getStringListValue(record.inputValue);
+        if (typeof record.value === 'string') return getStringListValue(record.value);
+
+        return [];
+    }
+
+    const text = String(value).trim();
+    if (!text || text === '[]') return [];
+
+    const parsedValue = parseJsonValue(text);
+    if (parsedValue !== undefined) return getStringListValue(parsedValue);
+
+    return text.split(/\r?\n|,\s*/)
+        .map(item => item.trim())
+        .filter(item => !!item);
+}
+
+function parseJsonValue(value: string): unknown|undefined {
+
+    if (!/^\s*[\[{"]/.test(value)) return undefined;
+
+    try {
+        return JSON.parse(value);
+    } catch (_err) {
+        return undefined;
+    }
+}
+
+function dedupeStrings(values: string[]): string[] {
+
+    return Array.from(new Set(values));
+}
+
+function getCloseoutIssueCounts(issues: KoreanFieldworkReadinessIssue[]): KoreanFieldworkCloseoutCounts {
+
+    return issues.reduce((counts, issue) => ({
+        ...counts,
+        [issue.severity]: counts[issue.severity] + 1
+    }), {
+        critical: 0,
+        warning: 0,
+        info: 0
+    });
+}
+
+function compareCloseoutIssues(issueA: KoreanFieldworkReadinessIssue,
+                               issueB: KoreanFieldworkReadinessIssue): number {
+
+    const severityDiff = CLOSEOUT_SEVERITY_ORDER[issueA.severity]
+        - CLOSEOUT_SEVERITY_ORDER[issueB.severity];
+    if (severityDiff !== 0) return severityDiff;
+
+    return issueA.identifier.localeCompare(issueB.identifier)
+        || issueA.ruleId.localeCompare(issueB.ruleId);
+}
+
+function dedupeKoreanFieldworkReadinessIssues(
+        issues: KoreanFieldworkReadinessIssue[]
+): KoreanFieldworkReadinessIssue[] {
+
+    const seen = new Set<string>();
+
+    return issues.filter(issue => {
+        const key = `${issue.documentId}\u001f${issue.ruleId}`;
+        if (seen.has(key)) return false;
+
+        seen.add(key);
+        return true;
+    });
+}
+
+function isRecord(value: unknown): value is Record<string, any> {
+
+    return typeof value === 'object' && value !== null;
+}
+
+
+function getFiniteCoordinate(value: unknown): number|undefined {
+
+    return typeof value === 'number' && Number.isFinite(value)
+        ? Math.max(0, Math.min(10000, value))
+        : undefined;
+}
+
 
 function isUploadableLocalUri(uri: string|undefined): boolean {
 

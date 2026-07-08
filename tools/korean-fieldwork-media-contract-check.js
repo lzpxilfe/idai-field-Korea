@@ -942,44 +942,39 @@ function checkCoreReadinessAndConfigContract() {
   requireIncludes(source, "'webOrServerBackup'", 'readiness rules must require webOrServerBackup preservation');
   requireIncludes(source, "'backupVerified'", 'readiness rules must require backupVerified preservation');
 
+  for (const [needle, message] of [
+    [
+      'hasConfirmedKoreanFieldworkImageUpload',
+      'core closeout readiness must use the core Field Hub backup completion rule'
+    ],
+    [
+      'fieldwork-attached-photo-upload-missing',
+      'core closeout readiness must warn for direct fieldwork record photos without confirmed original preservation'
+    ],
+    ['fieldworkImageUploadedUri', 'core closeout readiness must expose missing upload URI as a review field'],
+    ['fieldworkImageUploadedProject', 'core closeout readiness must expose missing upload project as a review field'],
+    ['fieldworkImageUploadedSizeBytes', 'core closeout readiness must expose missing upload size as a review field'],
+    [
+      'fieldworkImageStoredSizeBytes',
+      'core closeout readiness must expose missing Field Hub stored size as a review field'
+    ],
+    [
+      'fieldworkImageStoredSha256',
+      'core closeout readiness must expose missing Field Hub stored SHA-256 as a review field'
+    ]
+  ]) {
+    requireIncludes(files.coreReadiness, needle, message);
+  }
+
   for (const [label, closeoutSource] of [
     ['tablet closeout', files.mobileCloseout],
     ['desktop closeout', files.desktopCloseout]
   ]) {
+    requireIncludes(closeoutSource, "from 'idai-field-core'", `${label} must re-export the shared core closeout contract`);
     requireIncludes(
       closeoutSource,
-      'hasConfirmedKoreanFieldworkImageUpload',
-      `${label} must use the core Field Hub backup completion rule`
-    );
-    requireIncludes(
-      closeoutSource,
-      'fieldwork-attached-photo-upload-missing',
-      `${label} must warn for direct fieldwork record photos without confirmed original preservation`
-    );
-    requireIncludes(
-      closeoutSource,
-      'fieldworkImageUploadedUri',
-      `${label} must expose missing upload URI as a review field`
-    );
-    requireIncludes(
-      closeoutSource,
-      'fieldworkImageUploadedProject',
-      `${label} must expose missing upload project as a review field`
-    );
-    requireIncludes(
-      closeoutSource,
-      'fieldworkImageUploadedSizeBytes',
-      `${label} must expose missing upload size as a review field`
-    );
-    requireIncludes(
-      closeoutSource,
-      'fieldworkImageStoredSizeBytes',
-      `${label} must expose missing Field Hub stored size as a review field`
-    );
-    requireIncludes(
-      closeoutSource,
-      'fieldworkImageStoredSha256',
-      `${label} must expose missing Field Hub stored SHA-256 as a review field`
+      'makeKoreanFieldworkCloseoutSummary',
+      `${label} must expose the shared core closeout summary entry point`
     );
   }
 
@@ -1048,8 +1043,8 @@ function checkCloseoutUserTextContract() {
   );
 
   for (const [label, source] of [
-    ['tablet closeout', files.mobileCloseout],
-    ['desktop closeout', files.desktopCloseout],
+    ['core readiness', files.coreReadiness],
+    ['core readiness tests', files.coreReadinessSpec],
     ['tablet closeout tests', files.mobileCloseoutSpec],
     ['desktop closeout tests', files.desktopCloseoutSpec]
   ]) {
@@ -1058,6 +1053,14 @@ function checkCloseoutUserTextContract() {
       '도면 원본 보존 상태가 아직 확인되지 않았습니다.',
       `${label} must keep the Drawing preservation warning readable for Korean field teams`
     );
+    rejectMojibakeSuspects(source, label);
+  }
+
+  for (const [label, source] of [
+    ['tablet closeout', files.mobileCloseout],
+    ['desktop closeout', files.desktopCloseout]
+  ]) {
+    requireIncludes(source, "from 'idai-field-core'", `${label} must delegate readable closeout text to core`);
     rejectMojibakeSuspects(source, label);
   }
 }

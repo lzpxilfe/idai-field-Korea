@@ -1,7 +1,10 @@
 import {
     buildEvidenceBundle,
+    getKoreanFieldworkCloseoutSummary,
+    getKoreanFieldworkCloseoutReviewIssues,
     getKoreanFieldworkReadinessIssues,
     getKoreanFieldworkTodaySummary,
+    makeKoreanFieldworkCloseoutSummary,
     searchTermAuthorities
 } from '../../src/tools/korean-fieldwork-readiness';
 
@@ -152,6 +155,10 @@ describe('Korean fieldwork readiness', () => {
             'fieldworkImageStoredSha256',
             'digitalSourcePreservation'
         ]);
+        expect(issues[3]).toEqual(jasmine.objectContaining({
+            documentId: 'drawing-1',
+            message: '도면 원본 보존 상태가 아직 확인되지 않았습니다.'
+        }));
     });
 
 
@@ -340,6 +347,175 @@ describe('Korean fieldwork readiness', () => {
     });
 
 
+    it('summarizes closeout status with Korean labels from shared core issues', () => {
+
+        const summary = getKoreanFieldworkCloseoutSummary([
+            makeIssue('warning', 'feature-2', 'feature-2', 'w'),
+            makeIssue('critical', 'feature-1', 'feature-1', 'c'),
+            makeIssue('info', 'sample-1', 'sample-1', 'i')
+        ] as any);
+        const reviewSummary = getKoreanFieldworkCloseoutSummary([
+            makeIssue('info', 'find-1', 'find-1', 'i'),
+            makeIssue('warning', 'feature-1', 'feature-1', 'w')
+        ] as any);
+        const clearSummary = getKoreanFieldworkCloseoutSummary([]);
+
+        expect(summary.status).toBe('blocked');
+        expect(summary.title).toBe('먼저 볼 항목');
+        expect(summary.counts).toEqual({ critical: 1, warning: 1, info: 1 });
+        expect(summary.issues.map(issue => issue.ruleId)).toEqual(['c', 'w', 'i']);
+        expect(reviewSummary.status).toBe('needsReview');
+        expect(reviewSummary.title).toBe('마감 전 확인');
+        expect(reviewSummary.detail).toBe('보완 항목 1건, 안내 항목 1건이 남아 있습니다.');
+        expect(clearSummary.status).toBe('clear');
+        expect(clearSummary.title).toBe('마감 가능');
+    });
+
+
+    it('adds shared soil profile photo closeout issues with tablet Munsell candidates', () => {
+
+        const soilProfilePhoto = makeDocument('soil-photo-1', 'SoilProfilePhoto', {
+            identifier: '토층사진 1',
+            originalFilename: 'soil-profile-1.jpg',
+            width: 3000,
+            height: 2000,
+            soilProfilePhotoCapturedAt: '2026-06-23T01:02:03.000Z',
+            soilColorAssistStatus: 'candidatesAvailable',
+            soilColorAssistCandidates: '1: 10YR 4/3 (높음, 차이 0.0)',
+            soilProfileColorSwatches: '[]'
+        });
+
+        const summary = makeKoreanFieldworkCloseoutSummary([soilProfilePhoto] as any);
+
+        expect(summary.status).toBe('needsReview');
+        expect(summary.issues.map(issue => issue.ruleId)).toEqual([
+            'soil-color-candidates-review',
+            'soil-profile-color-swatches-missing'
+        ]);
+        expect(summary.issues[0].message).toBe('사진에서 읽은 먼셀 후보를 검토해야 합니다.');
+        expect(summary.issues[0].recommendedAction).toContain('먼셀 후보 10YR 4/3');
+        expect(summary.issues[0].recommendedAction).toContain('먼셀값');
+    });
+
+
+    it('adds Korean report metadata labels to shared photo closeout issues', () => {
+
+        const photo = makeDocument('photo-1', 'Photo', {
+            identifier: '사진 1',
+            originalFilename: '',
+            width: 4032
+        });
+
+        const summary = makeKoreanFieldworkCloseoutSummary([photo] as any);
+
+        expect(summary.issues.map(issue => issue.ruleId)).toEqual([
+            'fieldwork-photo-report-metadata-missing'
+        ]);
+        expect(summary.issues[0].recommendedAction).toContain('원본 파일명');
+        expect(summary.issues[0].recommendedAction).toContain('촬영시각');
+        expect(summary.issues[0].recommendedAction).toContain('세로 크기');
+    });
+
+
+    it('adds shared closeout review issues for tablet photo annotations without descriptions', () => {
+
+        const annotatedPhoto = makeDocument('photo-annotated', 'Photo', {
+            identifier: 'Annotated photo',
+            fieldworkPhotoCapturedAt: '2026-06-23T01:02:03.000Z',
+            originalFilename: 'photo-annotated.jpg',
+            width: 4032,
+            height: 3024,
+            fieldworkPhotoAnnotationStrokes:
+                '{"version":1,"strokes":[{"points":[{"x":1000,"y":1000},{"x":5000,"y":5000}]}]}'
+        });
+        const annotatedSoilPhoto = makeDocument('soil-photo-annotated', 'SoilProfilePhoto', {
+            identifier: 'Annotated soil',
+            soilProfilePhotoCapturedAt: '2026-06-23T01:02:03.000Z',
+            originalFilename: 'soil-photo-annotated.jpg',
+            width: 3000,
+            height: 2000,
+            soilProfileColorSwatches: '10YR 4/3',
+            soilProfilePhotoAnnotationStrokes:
+                '{"version":1,"strokes":[{"points":[{"x":2000,"y":3000}]}]}'
+        });
+        const explainedPhoto = makeDocument('photo-explained', 'Photo', {
+            identifier: 'Explained photo',
+            description: '함몰 벽면 균열 표시',
+            fieldworkPhotoCapturedAt: '2026-06-23T01:02:03.000Z',
+            originalFilename: 'photo-explained.jpg',
+            width: 4032,
+            height: 3024,
+            fieldworkPhotoAnnotationStrokes:
+                '{"version":1,"strokes":[{"points":[{"x":2000,"y":2000}]}]}'
+        });
+
+        const issues = getKoreanFieldworkCloseoutReviewIssues([
+            annotatedPhoto,
+            annotatedSoilPhoto,
+            explainedPhoto
+        ] as any);
+
+        expect(issues.map(issue => issue.ruleId)).toEqual([
+            'fieldwork-photo-annotation-review',
+            'soil-profile-photo-annotation-review'
+        ]);
+        expect(issues[0]).toEqual(jasmine.objectContaining({
+            documentId: 'photo-annotated',
+            relatedFields: ['fieldworkPhotoAnnotationStrokes', 'description', 'shortDescription']
+        }));
+        expect(issues[0].recommendedAction).toContain('description');
+        expect(issues[1]).toEqual(jasmine.objectContaining({
+            documentId: 'soil-photo-annotated',
+            relatedFields: ['soilProfilePhotoAnnotationStrokes', 'description', 'shortDescription']
+        }));
+    });
+
+
+    it('adds field record quality review closeout details with shared labels', () => {
+
+        const qualityReview = makeDocument('quality-review-1', 'FieldRecordQualityReview', {
+            identifier: 'quality-001',
+            reviewedRecordUnit: JSON.stringify(['featureRecord', 'dailyLog']),
+            qualityReviewStage: { value: JSON.stringify(['sameDayReview', 'sourceRecordCorrection']) },
+            qualityCorrectionBasis: ['correctionReasonLinked', 'sourceMediaChecked'],
+            reportEvaluationFeedback: ['fieldRecordReview', 'supplementRequestTracked'],
+            recordCreationTiming: 'duringFieldwork',
+            fieldRecordQuality: ['immediateRecording'],
+            verificationState: 'observedInField'
+        });
+        const closedReview = makeDocument('quality-review-2', 'FieldRecordQualityReview', {
+            identifier: 'quality-002',
+            reviewedRecordUnit: ['featureRecord'],
+            qualityReviewStage: ['closedAfterCorrection'],
+            qualityCorrectionBasis: ['sourceMediaChecked'],
+            recordCreationTiming: 'duringFieldwork',
+            fieldRecordQuality: ['immediateRecording'],
+            verificationState: 'observedInField'
+        });
+
+        const issues = getKoreanFieldworkCloseoutReviewIssues([
+            qualityReview,
+            closedReview
+        ] as any);
+
+        expect(issues.map(issue => issue.ruleId)).toEqual([
+            'field-record-quality-review-follow-up'
+        ]);
+        expect(issues[0].relatedFields).toEqual(jasmine.arrayContaining([
+            'reviewedRecordUnit',
+            'qualityReviewStage',
+            'qualityCorrectionBasis',
+            'reportEvaluationFeedback'
+        ]));
+        expect(issues[0].recommendedAction).toContain('검토 대상: 유구 기록 · 조사일지');
+        expect(issues[0].recommendedAction).toContain('검토 단계: 당일 검토 · 원기록 보완');
+        expect(issues[0].recommendedAction).toContain('수정·보완 근거: 수정 사유 연결 · 원사진·원도면 대조');
+        expect(issues[0].recommendedAction).toContain('평가 환류: 원기록 재검토 · 보완요구 추적');
+        expect(issues[0].recommendedAction).not.toContain('sourceRecordCorrection');
+        expect(issues[0].recommendedAction).not.toContain('supplementRequestTracked');
+    });
+
+
     it('finds TermAuthority records by alias while keeping authority and alias separate', () => {
 
         const authority = makeDocument('term-1', 'TermAuthority', {
@@ -376,5 +552,26 @@ function makeDocument(id: string, category: string, resource: any = {}): any {
         },
         created: {},
         modified: []
+    };
+}
+
+
+function makeIssue(
+        severity: 'critical'|'warning'|'info',
+        documentId: string,
+        identifier: string,
+        ruleId: string
+): any {
+
+    return {
+        severity,
+        documentId,
+        identifier,
+        ruleId,
+        category: 'Feature',
+        message: 'message',
+        relatedFields: [],
+        recommendedAction: '확인하세요.',
+        blocksSave: false
     };
 }
