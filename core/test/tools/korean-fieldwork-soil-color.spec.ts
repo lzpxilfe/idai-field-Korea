@@ -34,6 +34,14 @@ describe('Korean fieldwork soil color candidate engine', () => {
     });
 
 
+    it('ignores empty candidate text from partial desktop review records', () => {
+
+        expect(extractMunsellCandidateOptions(undefined)).toEqual([]);
+        expect(extractMunsellCandidateOptions(null)).toEqual([]);
+        expect(hasMunsellCandidateOptions(undefined)).toBe(false);
+    });
+
+
     it('extracts full tablet Munsell candidate syntax for desktop review surfaces', () => {
 
         expect(extractMunsellCandidateOptions([

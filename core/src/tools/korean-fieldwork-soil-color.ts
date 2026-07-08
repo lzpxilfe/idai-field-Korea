@@ -323,7 +323,9 @@ export const getNearestMunsellCandidates = (
     .slice(0, CANDIDATE_COUNT);
 };
 
-export const extractMunsellCandidateOptions = (text: string): string[] => {
+export const extractMunsellCandidateOptions = (text: unknown): string[] => {
+  if (typeof text !== 'string') return [];
+
   const matches = text.toUpperCase().match(
     /\b(?:GLEY\s*[12]\s*\d(?:\.\d)?\/N|(?:10|7\.5|5|2\.5)(?:R|YR|Y|GY|G|BG|B|PB|P|RP)\s+\d(?:\.\d)?\/\d+(?:\.\d)?|N\s*\d(?:\.\d)?\/0)\b/g
   ) ?? [];
@@ -334,7 +336,7 @@ export const extractMunsellCandidateOptions = (text: string): string[] => {
 };
 
 export const hasMunsellCandidateOptions = (text: unknown): boolean =>
-  typeof text === 'string' && extractMunsellCandidateOptions(text).length > 0;
+  extractMunsellCandidateOptions(text).length > 0;
 
 function hexToRgb(hex: string): RgbSample {
   return {
