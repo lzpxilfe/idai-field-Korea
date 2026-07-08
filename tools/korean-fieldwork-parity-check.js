@@ -3457,6 +3457,25 @@ function validateReportHandoffPreSaveValidation() {
       || !desktopPriorityStripSpecText.includes("not.toContain('preInvestigationPhotoTaken')")) {
     findings.push('report handoff HWP copy blocks must carry tablet feature type, period, status, quality, verification, geometry, and investigation checklist values with shared Korean labels instead of raw valuelist keys');
   }
+  if (!coreReportHandoffText.includes('FIELD_RECORD_QUALITY_REVIEW_CATEGORY')
+      || !coreReportHandoffText.includes('FIELD_RECORD_QUALITY_REVIEW_DETAIL_FIELDS')
+      || !coreReportHandoffText.includes('getFieldRecordQualityReviewDetailSummary')
+      || !coreReportHandoffText.includes('reviewedRecordUnit')
+      || !coreReportHandoffText.includes('qualityReviewStage')
+      || !coreReportHandoffText.includes('qualityCorrectionBasis')
+      || !coreReportHandoffText.includes('reportCrossCheck')
+      || !coreReportHandoffText.includes('reportEvaluationFeedback')
+      || !coreReportHandoffSpecText.includes('field record quality review cards into HWP copy blocks')
+      || !coreReportHandoffSpecText.includes("not.toContain('sameDayReview')")
+      || !coreReportHandoffSpecText.includes("not.toContain('supplementRequestTracked')")
+      || !desktopPriorityStripSpecText.includes('quality-review-1')
+      || !desktopPriorityStripSpecText.includes('qualityReviewStage')
+      || !desktopPriorityStripSpecText.includes('reportEvaluationFeedback')
+      || !desktopPriorityStripSpecText.includes('toggleReportHandoffItems()')
+      || !desktopPriorityStripSpecText.includes("not.toContain('sourceRecordCorrection')")
+      || !desktopPriorityStripSpecText.includes("not.toContain('supplementRequestTracked')")) {
+    findings.push('report handoff HWP copy blocks must carry tablet field record quality review cards with shared Korean labels instead of raw valuelist keys');
+  }
   if (!coreReportHandoffText.includes('getPenMemoEvidenceSummary')
       || !coreReportHandoffText.includes('hasStrokeEvidence')
       || !coreReportHandoffSpecText.includes('handwritten tablet pen memos without dumping stroke JSON')

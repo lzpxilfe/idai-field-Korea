@@ -14,7 +14,10 @@ import * as path from 'path';
 import {
     KoreanFieldworkPriorityStripComponent
 } from '../../../../src/app/components/resources/korean-fieldwork-priority-strip.component';
-import { getKoreanFieldworkFeatureTypeLabel } from 'idai-field-core';
+import {
+    getKoreanFieldworkFeatureTypeLabel,
+    getKoreanFieldworkRecordFieldValueSummary
+} from 'idai-field-core';
 
 
 describe('KoreanFieldworkPriorityStripComponent', () => {
@@ -283,6 +286,18 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
                             archaeobotanySampleDesign: ['amsCandidate'],
                             relations: { isPresentIn: ['feature-1'] }
                         }),
+                        createDocument('quality-review-1', 'FieldRecordQualityReview', {
+                            identifier: 'quality-001',
+                            reviewedRecordUnit: ['featureRecord', 'dailyLog'],
+                            qualityReviewStage: ['sameDayReview', 'sourceRecordCorrection'],
+                            qualityCorrectionBasis: ['correctionReasonLinked', 'originalRecordPreserved'],
+                            recordCreationTiming: 'sameDayFieldRecord',
+                            fieldRecordQuality: ['correctionNeeded'],
+                            reportCrossCheck: ['manuscript', 'photoRegister'],
+                            reportEvaluationFeedback: ['fieldRecordReview', 'supplementRequestTracked'],
+                            verificationState: 'needsRecheck',
+                            relations: { isRecordedIn: ['operation-1'] }
+                        }),
                         createDocument('daily-log-1', 'DailyLog', {
                             identifier: '2026-06-30',
                             date: '2026-06-30',
@@ -315,7 +330,7 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
 
             expect(component.getPanelOptions().map(panel => panel.id)).toContain('report');
             expect(component.hasReportHandoffItems()).toBe(true);
-            expect(component.getReportHandoffSummaryLabel()).toContain('8');
+            expect(component.getReportHandoffSummaryLabel()).toContain('9');
 
             const [featureItem] = component.getReportHandoffItems();
             expect(featureItem).toMatchObject({
@@ -537,6 +552,47 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
             expect(drawingItem).toBeDefined();
             expect(drawingItem!.summary)
                 .toContain('\ud0dc\ube14\ub9bf \uc2a4\ucf00\uce58: \uc788\uc74c');
+
+            expect(component.hasReportHandoffOverflow()).toBe(true);
+            component.toggleReportHandoffItems();
+            const qualityItem = component.getReportHandoffItems()
+                .find(item => item.documentId === 'quality-review-1');
+            const reviewedRecordUnit = getKoreanFieldworkRecordFieldValueSummary(
+                'reviewedRecordUnit',
+                ['featureRecord', 'dailyLog']
+            )!;
+            const reviewStage = getKoreanFieldworkRecordFieldValueSummary(
+                'qualityReviewStage',
+                ['sameDayReview', 'sourceRecordCorrection']
+            )!;
+            const correctionBasis = getKoreanFieldworkRecordFieldValueSummary(
+                'qualityCorrectionBasis',
+                ['correctionReasonLinked', 'originalRecordPreserved']
+            )!;
+            const reportCrossCheck = getKoreanFieldworkRecordFieldValueSummary(
+                'reportCrossCheck',
+                ['manuscript', 'photoRegister']
+            )!;
+            const reportFeedback = getKoreanFieldworkRecordFieldValueSummary(
+                'reportEvaluationFeedback',
+                ['fieldRecordReview', 'supplementRequestTracked']
+            )!;
+            expect(qualityItem).toBeDefined();
+            expect(qualityItem!.summary).toContain(reviewedRecordUnit);
+            expect(qualityItem!.summary).toContain(reviewStage);
+            expect(qualityItem!.summary).toContain(correctionBasis);
+            expect(qualityItem!.details.join('\n')).toContain(reviewedRecordUnit);
+            expect(qualityItem!.details.join('\n')).toContain(reviewStage);
+            expect(qualityItem!.details.join('\n')).toContain(correctionBasis);
+            expect(qualityItem!.details.join('\n')).toContain(reportCrossCheck);
+            expect(qualityItem!.details.join('\n')).toContain(reportFeedback);
+            expect(qualityItem!.copyText).toContain(reviewedRecordUnit);
+            expect(qualityItem!.copyText).toContain(reviewStage);
+            expect(qualityItem!.copyText).toContain(correctionBasis);
+            expect(qualityItem!.copyText).toContain(reportCrossCheck);
+            expect(qualityItem!.copyText).toContain(reportFeedback);
+            expect(qualityItem!.copyText).not.toContain('sourceRecordCorrection');
+            expect(qualityItem!.copyText).not.toContain('supplementRequestTracked');
 
             const dailyLogItem = component.getReportHandoffItems()
                 .find(item => item.documentId === 'daily-log-1');

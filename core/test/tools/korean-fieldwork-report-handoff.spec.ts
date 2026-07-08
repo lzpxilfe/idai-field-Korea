@@ -6,6 +6,7 @@ import {
     validateKoreanFieldworkReportHandoffCandidate
 } from '../../src/tools/korean-fieldwork-report-handoff';
 import { getKoreanFieldworkFeatureTypeLabel } from '../../src/tools/korean-fieldwork-feature-types';
+import { getKoreanFieldworkRecordFieldValueSummary } from '../../src/tools/korean-fieldwork-record-contract';
 
 
 describe('Korean fieldwork report handoff', () => {
@@ -336,6 +337,67 @@ describe('Korean fieldwork report handoff', () => {
             .not.toContain('strippingProgress');
         expect(dailyLogItem?.copyText)
             .not.toContain('"strokes"');
+    });
+
+
+    it('carries field record quality review cards into HWP copy blocks with shared labels', () => {
+
+        const handoff = makeKoreanFieldworkReportHandoff([
+            makeDocument('quality-review-1', 'FieldRecordQualityReview', {
+                identifier: 'quality-001',
+                reviewedRecordUnit: ['featureRecord', 'dailyLog'],
+                qualityReviewStage: ['sameDayReview', 'sourceRecordCorrection'],
+                qualityCorrectionBasis: ['correctionReasonLinked', 'originalRecordPreserved'],
+                recordCreationTiming: 'sameDayFieldRecord',
+                fieldRecordQuality: ['correctionNeeded'],
+                reportCrossCheck: ['manuscript', 'photoRegister'],
+                reportEvaluationFeedback: ['fieldRecordReview', 'supplementRequestTracked'],
+                verificationState: 'needsRecheck',
+                relations: { isRecordedIn: ['operation-1'] }
+            })
+        ] as any);
+        const qualityItem = handoff.items.find(item => item.documentId === 'quality-review-1');
+        const detailText = qualityItem?.details.join('\n') ?? '';
+        const reviewedRecordUnit = getKoreanFieldworkRecordFieldValueSummary(
+            'reviewedRecordUnit',
+            ['featureRecord', 'dailyLog']
+        )!;
+        const reviewStage = getKoreanFieldworkRecordFieldValueSummary(
+            'qualityReviewStage',
+            ['sameDayReview', 'sourceRecordCorrection']
+        )!;
+        const correctionBasis = getKoreanFieldworkRecordFieldValueSummary(
+            'qualityCorrectionBasis',
+            ['correctionReasonLinked', 'originalRecordPreserved']
+        )!;
+        const reportCrossCheck = getKoreanFieldworkRecordFieldValueSummary(
+            'reportCrossCheck',
+            ['manuscript', 'photoRegister']
+        )!;
+        const reportFeedback = getKoreanFieldworkRecordFieldValueSummary(
+            'reportEvaluationFeedback',
+            ['fieldRecordReview', 'supplementRequestTracked']
+        )!;
+
+        expect(qualityItem?.summary).toContain(reviewedRecordUnit);
+        expect(qualityItem?.summary).toContain(reviewStage);
+        expect(qualityItem?.summary).toContain(correctionBasis);
+        expect(detailText).toContain('\uae30\ub85d \uac80\ud1a0:');
+        expect(detailText).toContain(reviewedRecordUnit);
+        expect(detailText).toContain(reviewStage);
+        expect(detailText).toContain(correctionBasis);
+        expect(detailText).toContain(reportCrossCheck);
+        expect(detailText).toContain(reportFeedback);
+        expect(qualityItem?.copyText).toContain(reviewedRecordUnit);
+        expect(qualityItem?.copyText).toContain(reviewStage);
+        expect(qualityItem?.copyText).toContain(correctionBasis);
+        expect(qualityItem?.copyText).toContain(reportCrossCheck);
+        expect(qualityItem?.copyText).toContain(reportFeedback);
+        expect(qualityItem?.copyText).not.toContain('featureRecord');
+        expect(qualityItem?.copyText).not.toContain('sameDayReview');
+        expect(qualityItem?.copyText).not.toContain('correctionReasonLinked');
+        expect(qualityItem?.copyText).not.toContain('photoRegister');
+        expect(qualityItem?.copyText).not.toContain('supplementRequestTracked');
     });
 
 

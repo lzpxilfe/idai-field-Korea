@@ -183,6 +183,7 @@ const KO = {
 };
 
 const DAILY_LOG_CATEGORY = 'DailyLog';
+const FIELD_RECORD_QUALITY_REVIEW_CATEGORY = 'FieldRecordQualityReview';
 const DAILY_LOG_DETAIL_FIELDS = [
     'dailyLogInvestigatorCount',
     'dailyLogLaborerCount',
@@ -198,6 +199,16 @@ const DAILY_LOG_DETAIL_FIELDS = [
     'dailyLogBoundaryMemoUpdatedAt',
     'dailyLogWorkMemoUpdatedAt',
     'dailyLogBoundaryMemoStrokes'
+];
+const FIELD_RECORD_QUALITY_REVIEW_DETAIL_FIELDS = [
+    'reviewedRecordUnit',
+    'qualityReviewStage',
+    'qualityCorrectionBasis',
+    'recordCreationTiming',
+    'fieldRecordQuality',
+    'reportCrossCheck',
+    'reportEvaluationFeedback',
+    'verificationState'
 ];
 
 const FIND_EVIDENCE_SUMMARY_FIELDS: LabeledEvidenceFieldDefinition[] = [
@@ -342,6 +353,11 @@ const DETAIL_FIELDS: DetailFieldDefinition[] = [
         fields: DAILY_LOG_DETAIL_FIELDS
     },
     {
+        label: '\uae30\ub85d \uac80\ud1a0',
+        getSummary: getFieldRecordQualityReviewDetailSummary,
+        fields: FIELD_RECORD_QUALITY_REVIEW_DETAIL_FIELDS
+    },
+    {
         label: '\ud604\uc7a5\uba54\ubaa8',
         getSummary: getFieldNoteDetailSummary,
         fields: ['fieldNote', 'interpretation']
@@ -365,6 +381,9 @@ const SUMMARY_FIELDS = [
     'dailyLogContent',
     'dailyLogBoundaryMemoStrokes',
     'surveyBoundaryNote',
+    'reviewedRecordUnit',
+    'qualityReviewStage',
+    'qualityCorrectionBasis',
     'reportPreparationSourceText',
     'reportEditorialIssueText',
     ...FIND_SAMPLE_SUMMARY_FIELDS
@@ -736,6 +755,9 @@ function getValidationRelatedFields(resource: NewResource, messages: string[]): 
     if (category && MEDIA_URI_FIELDS[category]) fields.push(...MEDIA_URI_FIELDS[category]);
     if (category === 'PenMemo') fields.push(...PEN_MEMO_CONTENT_FIELDS);
     if (category === DAILY_LOG_CATEGORY) fields.push(...DAILY_LOG_DETAIL_FIELDS);
+    if (category === FIELD_RECORD_QUALITY_REVIEW_CATEGORY) {
+        fields.push(...FIELD_RECORD_QUALITY_REVIEW_DETAIL_FIELDS);
+    }
 
     return Array.from(new Set(fields));
 }
@@ -985,6 +1007,9 @@ function getSummary(document: Document, categoryLabel: string): string {
     const mediaSummary = getMediaRecordSummary(document);
     if (mediaSummary) return truncate(mediaSummary, 180);
 
+    const qualityReviewSummary = getFieldRecordQualityReviewSummary(document);
+    if (qualityReviewSummary) return truncate(qualityReviewSummary, 180);
+
     for (const fieldName of SUMMARY_FIELDS) {
         const value = getSummaryFieldValue(document, fieldName);
         if (value) return truncate(value, 180);
@@ -1196,6 +1221,81 @@ function getDailyLogDetailSummary(document: Document): string|undefined {
         getLabeledEvidenceValue(
             '\uc791\uc5c5\uc77c\uc9c0 \uc218\uc815',
             getDateOnlyLabel(document.resource.dailyLogWorkMemoUpdatedAt)
+        )
+    ].filter((value): value is string => !!value).join(', ') || undefined;
+}
+
+
+function getFieldRecordQualityReviewSummary(document: Document): string|undefined {
+
+    if (document.resource.category !== FIELD_RECORD_QUALITY_REVIEW_CATEGORY) return undefined;
+
+    return [
+        getLabeledEvidenceValue(
+            '\uac80\ud1a0 \ub300\uc0c1',
+            getKoreanFieldworkRecordFieldValueSummary(
+                'reviewedRecordUnit',
+                document.resource.reviewedRecordUnit
+            )
+        ),
+        getLabeledEvidenceValue(
+            '\uac80\ud1a0 \ub2e8\uacc4',
+            getKoreanFieldworkRecordFieldValueSummary(
+                'qualityReviewStage',
+                document.resource.qualityReviewStage
+            )
+        ),
+        getLabeledEvidenceValue(
+            '\uc218\uc815\u00b7\ubcf4\uc644 \uadfc\uac70',
+            getKoreanFieldworkRecordFieldValueSummary(
+                'qualityCorrectionBasis',
+                document.resource.qualityCorrectionBasis
+            )
+        )
+    ].filter((value): value is string => !!value).join(', ') || undefined;
+}
+
+
+function getFieldRecordQualityReviewDetailSummary(document: Document): string|undefined {
+
+    if (document.resource.category !== FIELD_RECORD_QUALITY_REVIEW_CATEGORY) return undefined;
+
+    return [
+        getFieldRecordQualityReviewSummary(document),
+        getLabeledEvidenceValue(
+            '\uae30\ub85d \uc2dc\uc810',
+            getKoreanFieldworkRecordFieldValueSummary(
+                'recordCreationTiming',
+                document.resource.recordCreationTiming
+            )
+        ),
+        getLabeledEvidenceValue(
+            '\uae30\ub85d \uad6c\ubd84',
+            getKoreanFieldworkRecordFieldValueSummary(
+                'fieldRecordQuality',
+                document.resource.fieldRecordQuality
+            )
+        ),
+        getLabeledEvidenceValue(
+            '\ubcf4\uace0\uc11c \ub300\uc870',
+            getKoreanFieldworkRecordFieldValueSummary(
+                'reportCrossCheck',
+                document.resource.reportCrossCheck
+            )
+        ),
+        getLabeledEvidenceValue(
+            '\ud3c9\uac00 \ud658\ub958',
+            getKoreanFieldworkRecordFieldValueSummary(
+                'reportEvaluationFeedback',
+                document.resource.reportEvaluationFeedback
+            )
+        ),
+        getLabeledEvidenceValue(
+            '\ud655\uc778 \uc0c1\ud0dc',
+            getKoreanFieldworkRecordFieldValueSummary(
+                'verificationState',
+                document.resource.verificationState
+            )
         )
     ].filter((value): value is string => !!value).join(', ') || undefined;
 }
