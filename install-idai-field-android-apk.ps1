@@ -2,8 +2,12 @@ param(
     [string]$ApkPath = '.\dist\android\idai-field-mobile-release.apk',
     [string]$DeviceSerial,
     [switch]$FromLatestArtifact,
+    [switch]$BuildLatestArtifact,
     [string]$Repo = 'lzpxilfe/idai-field',
     [string]$ArtifactName = 'idai-field-mobile-android-apk',
+    [string]$ArtifactRef = 'master',
+    [int]$ArtifactTimeoutMinutes = 90,
+    [int]$ArtifactPollSeconds = 20,
     [string]$DownloadDirectory,
     [string]$WorkDirectory = $env:IDAI_FIELD_ANDROID_WORKDIR,
     [switch]$DownloadOnly,
@@ -27,11 +31,13 @@ function Show-Usage {
     Write-Host '  .\install-idai-field-android-apk.ps1 -ApkPath .\idai-field-mobile-release.apk -DownloadPlatformTools'
     Write-Host '  .\install-idai-field-android-apk.ps1 -FromLatestArtifact -DownloadPlatformTools'
     Write-Host '  .\install-idai-field-android-apk.ps1 -FromLatestArtifact -DownloadPlatformTools -WorkDirectory G:\idai-field-android'
+    Write-Host '  .\install-idai-field-android-apk.ps1 -BuildLatestArtifact -DownloadPlatformTools -WorkDirectory G:\idai-field-android'
     Write-Host '  .\install-idai-field-android-apk.ps1 -FromLatestArtifact -DownloadOnly'
     Write-Host '  .\install-idai-field-android-apk.ps1 -DeviceSerial R83Y70CADYP'
     Write-Host ''
     Write-Host 'Enable Developer options and USB debugging on the tablet, then approve the USB debugging prompt.'
     Write-Host 'Use -FromLatestArtifact to download the newest APK artifact from GitHub Actions before installing.'
+    Write-Host 'Use -BuildLatestArtifact after code changes to start the Mobile APK build, wait for it, then install that exact artifact.'
     Write-Host 'Use -WorkDirectory or IDAI_FIELD_ANDROID_WORKDIR to keep APK and Android tool downloads off the repository drive.'
 }
 
@@ -150,6 +156,129 @@ function Resolve-GitHubCli {
     throw 'GitHub CLI (gh) was not found. Install GitHub CLI or pass -ApkPath to a downloaded APK.'
 }
 
+function Get-GitHubRefSha {
+    param(
+        [string]$Gh,
+        [string]$Repository,
+        [string]$Ref
+    )
+
+    $commitJson = & $Gh api "repos/$Repository/commits/$Ref"
+    if ($LASTEXITCODE -ne 0) { return $null }
+
+    return ($commitJson | ConvertFrom-Json).sha
+}
+
+function Get-RunArtifact {
+    param(
+        [string]$Gh,
+        [string]$Repository,
+        [string]$ExpectedArtifactName,
+        [long]$RunId
+    )
+
+    $artifactsJson = & $Gh api "repos/$Repository/actions/runs/$RunId/artifacts"
+    if ($LASTEXITCODE -ne 0) { return $null }
+
+    $artifacts = @((($artifactsJson | ConvertFrom-Json).artifacts))
+    return $artifacts |
+        Where-Object { $_.name -eq $ExpectedArtifactName } |
+        Select-Object -First 1
+}
+
+function Wait-RunArtifact {
+    param(
+        [string]$Gh,
+        [string]$Repository,
+        [string]$ExpectedArtifactName,
+        [long]$RunId
+    )
+
+    $deadline = [DateTime]::UtcNow.AddMinutes(5)
+    while ([DateTime]::UtcNow -lt $deadline) {
+        $artifact = Get-RunArtifact `
+            -Gh $Gh `
+            -Repository $Repository `
+            -ExpectedArtifactName $ExpectedArtifactName `
+            -RunId $RunId
+        if ($artifact) { return $artifact }
+
+        Start-Sleep -Seconds 10
+    }
+
+    throw "Mobile workflow run $RunId completed but artifact '$ExpectedArtifactName' was not found."
+}
+
+function Start-MobileArtifactWorkflow {
+    param(
+        [string]$Gh,
+        [string]$Repository,
+        [string]$ExpectedArtifactName,
+        [string]$Ref
+    )
+
+    $requestedAt = [DateTime]::UtcNow.AddMinutes(-2)
+    $expectedHeadSha = Get-GitHubRefSha -Gh $Gh -Repository $Repository -Ref $Ref
+    $pollSeconds = [Math]::Max(5, $ArtifactPollSeconds)
+    $timeoutMinutes = [Math]::Max(1, $ArtifactTimeoutMinutes)
+    $deadline = [DateTime]::UtcNow.AddMinutes($timeoutMinutes)
+    $lastReportedRunId = $null
+
+    Write-Host "Starting Mobile workflow on ref '$Ref' to build APK artifact."
+    & $Gh workflow run Mobile --repo $Repository --ref $Ref
+    if ($LASTEXITCODE -ne 0) { throw 'Could not start the Mobile workflow.' }
+
+    while ([DateTime]::UtcNow -lt $deadline) {
+        $runsJson = & $Gh run list `
+            --repo $Repository `
+            --workflow Mobile `
+            --event workflow_dispatch `
+            --json databaseId,displayTitle,createdAt,headSha,status,conclusion `
+            --limit 30
+        if ($LASTEXITCODE -ne 0) { throw 'Could not list Mobile workflow_dispatch runs.' }
+
+        $runs = @($runsJson | ConvertFrom-Json)
+        $candidate = $runs |
+            Where-Object {
+                $createdAt = ([DateTime]$_.createdAt).ToUniversalTime()
+                $createdAt -ge $requestedAt `
+                    -and (-not $expectedHeadSha -or $_.headSha -eq $expectedHeadSha)
+            } |
+            Sort-Object { [DateTime]$_.createdAt } -Descending |
+            Select-Object -First 1
+
+        if ($candidate) {
+            if ($lastReportedRunId -ne $candidate.databaseId) {
+                Write-Host "Waiting for Mobile workflow run $($candidate.databaseId): $($candidate.displayTitle)"
+                $lastReportedRunId = $candidate.databaseId
+            }
+
+            if ($candidate.status -eq 'completed') {
+                if ($candidate.conclusion -ne 'success') {
+                    throw "Mobile workflow run $($candidate.databaseId) finished with conclusion '$($candidate.conclusion)'."
+                }
+
+                $artifact = Wait-RunArtifact `
+                    -Gh $Gh `
+                    -Repository $Repository `
+                    -ExpectedArtifactName $ExpectedArtifactName `
+                    -RunId $candidate.databaseId
+
+                return [pscustomobject]@{
+                    Run = $candidate
+                    Artifact = $artifact
+                }
+            }
+        } else {
+            Write-Host 'Waiting for the dispatched Mobile workflow run to appear.'
+        }
+
+        Start-Sleep -Seconds $pollSeconds
+    }
+
+    throw "Timed out waiting for Mobile workflow APK build after $timeoutMinutes minutes."
+}
+
 function Get-LatestArtifactRun {
     param(
         [string]$Gh,
@@ -167,11 +296,11 @@ function Get-LatestArtifactRun {
 
     $runs = $runsJson | ConvertFrom-Json
     foreach ($run in $runs) {
-        $artifactsJson = & $Gh api "repos/$Repository/actions/runs/$($run.databaseId)/artifacts"
-        if ($LASTEXITCODE -ne 0) { continue }
-
-        $artifacts = ($artifactsJson | ConvertFrom-Json).artifacts
-        $artifact = $artifacts | Where-Object { $_.name -eq $ExpectedArtifactName } | Select-Object -First 1
+        $artifact = Get-RunArtifact `
+            -Gh $Gh `
+            -Repository $Repository `
+            -ExpectedArtifactName $ExpectedArtifactName `
+            -RunId $run.databaseId
         if ($artifact) {
             return [pscustomobject]@{
                 Run = $run
@@ -187,7 +316,8 @@ function Get-ApkFromLatestArtifact {
     param(
         [string]$Repository,
         [string]$ExpectedArtifactName,
-        [string]$TargetDirectory
+        [string]$TargetDirectory,
+        [object]$PreferredArtifactRun
     )
 
     $gh = Resolve-GitHubCli
@@ -199,10 +329,14 @@ function Get-ApkFromLatestArtifact {
     New-Item -ItemType Directory -Force -Path $downloadDir | Out-Null
     Write-Host "Using APK download directory: $downloadDir"
 
-    $artifactRun = Get-LatestArtifactRun `
-        -Gh $gh `
-        -Repository $Repository `
-        -ExpectedArtifactName $ExpectedArtifactName
+    $artifactRun = if ($PreferredArtifactRun) {
+        $PreferredArtifactRun
+    } else {
+        Get-LatestArtifactRun `
+            -Gh $gh `
+            -Repository $Repository `
+            -ExpectedArtifactName $ExpectedArtifactName
+    }
 
     $runDownloadDir = Join-Path $downloadDir "run-$($artifactRun.Run.databaseId)"
     New-Item -ItemType Directory -Force -Path $runDownloadDir | Out-Null
@@ -283,11 +417,22 @@ if ($Help) {
 }
 
 try {
-    $fullApkPath = if ($FromLatestArtifact) {
+    $preferredArtifactRun = $null
+    if ($BuildLatestArtifact) {
+        $gh = Resolve-GitHubCli
+        $preferredArtifactRun = Start-MobileArtifactWorkflow `
+            -Gh $gh `
+            -Repository $Repo `
+            -ExpectedArtifactName $ArtifactName `
+            -Ref $ArtifactRef
+    }
+
+    $fullApkPath = if ($FromLatestArtifact -or $BuildLatestArtifact) {
         Get-ApkFromLatestArtifact `
             -Repository $Repo `
             -ExpectedArtifactName $ArtifactName `
-            -TargetDirectory $DownloadDirectory
+            -TargetDirectory $DownloadDirectory `
+            -PreferredArtifactRun $preferredArtifactRun
     } else {
         Resolve-FullPath -Path $ApkPath
     }

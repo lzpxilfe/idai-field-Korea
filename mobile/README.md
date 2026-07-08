@@ -48,13 +48,25 @@ Double-click `INSTALL_LATEST_TABLET_APK.cmd` from the repository root, or run:
 .\install-idai-field-android-apk.ps1 -FromLatestArtifact -DownloadPlatformTools
 ```
 
+After changing tablet code and pushing `master`, build and install an APK from that exact commit:
+
+Double-click `BUILD_AND_INSTALL_TABLET_APK.cmd` from the repository root, or run:
+
+```powershell
+.\install-idai-field-android-apk.ps1 -BuildLatestArtifact -DownloadPlatformTools
+```
+
 To keep APK downloads and Android platform-tools off the C drive, choose a work directory on another drive. The APK is stored under `G:\idai-field-android\apk`, and platform-tools are stored under `G:\idai-field-android\platform-tools`.
 
 ```powershell
 .\install-idai-field-android-apk.ps1 -FromLatestArtifact -DownloadPlatformTools -WorkDirectory G:\idai-field-android
 ```
 
-Double-click `INSTALL_LATEST_TABLET_APK_TO_OTHER_DRIVE.cmd` for the same flow, or set `IDAI_FIELD_ANDROID_WORKDIR` before using the regular shortcut.
+Double-click `INSTALL_LATEST_TABLET_APK_TO_OTHER_DRIVE.cmd` for the same flow, or set `IDAI_FIELD_ANDROID_WORKDIR` before using the regular shortcut. For a fresh post-change APK on another drive, use `BUILD_AND_INSTALL_TABLET_APK_TO_OTHER_DRIVE.cmd` or:
+
+```powershell
+.\install-idai-field-android-apk.ps1 -BuildLatestArtifact -DownloadPlatformTools -WorkDirectory G:\idai-field-android
+```
 
 To only download that APK for manual transfer to a tablet:
 
@@ -71,6 +83,12 @@ To only download to another drive:
 ```
 
 You can also double-click `DOWNLOAD_LATEST_TABLET_APK_TO_OTHER_DRIVE.cmd`.
+
+To build a fresh APK and only download it, use `BUILD_AND_DOWNLOAD_TABLET_APK.cmd` or `BUILD_AND_DOWNLOAD_TABLET_APK_TO_OTHER_DRIVE.cmd`.
+
+```powershell
+.\install-idai-field-android-apk.ps1 -BuildLatestArtifact -DownloadOnly -WorkDirectory G:\idai-field-android
+```
 
 For USB development on an installed development build:
 

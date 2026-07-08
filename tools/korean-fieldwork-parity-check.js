@@ -3550,6 +3550,10 @@ function validateTabletInstallGuide() {
   const rootReadmeText = readTextFile('README.md');
   const tabletInstallDocText = readTextFile('docs/korean-fieldwork/android-tablet-install.ko.md');
   const tabletInstallScriptText = readTextFile('install-idai-field-android-apk.ps1');
+  const tabletBuildInstallShortcutText = readTextFile('BUILD_AND_INSTALL_TABLET_APK.cmd');
+  const tabletBuildInstallOtherDriveShortcutText = readTextFile('BUILD_AND_INSTALL_TABLET_APK_TO_OTHER_DRIVE.cmd');
+  const tabletBuildDownloadShortcutText = readTextFile('BUILD_AND_DOWNLOAD_TABLET_APK.cmd');
+  const tabletBuildDownloadOtherDriveShortcutText = readTextFile('BUILD_AND_DOWNLOAD_TABLET_APK_TO_OTHER_DRIVE.cmd');
   const tabletInstallShortcutText = readTextFile('INSTALL_LATEST_TABLET_APK.cmd');
   const tabletInstallOtherDriveShortcutText = readTextFile('INSTALL_LATEST_TABLET_APK_TO_OTHER_DRIVE.cmd');
   const tabletDownloadShortcutText = readTextFile('DOWNLOAD_LATEST_TABLET_APK.cmd');
@@ -3568,8 +3572,29 @@ function validateTabletInstallGuide() {
       || !tabletInstallScriptText.includes('[string]$WorkDirectory')
       || !tabletInstallScriptText.includes('IDAI_FIELD_ANDROID_WORKDIR')
       || !tabletInstallScriptText.includes('Resolve-ApkDownloadDirectory')
-      || !tabletInstallScriptText.includes('Resolve-PlatformToolsCacheDirectory')) {
+      || !tabletInstallScriptText.includes('Resolve-PlatformToolsCacheDirectory')
+      || !tabletInstallScriptText.includes('[switch]$BuildLatestArtifact')
+      || !tabletInstallScriptText.includes('$Gh workflow run Mobile')
+      || !tabletInstallScriptText.includes('workflow_dispatch')
+      || !tabletInstallScriptText.includes('Wait-RunArtifact')
+      || !tabletInstallScriptText.includes('PreferredArtifactRun')) {
     findings.push('tablet APK installer must install or download the newest Mobile GitHub Actions APK artifact for post-change tablet checks');
+  }
+  if (!tabletBuildInstallShortcutText.includes('-BuildLatestArtifact -DownloadPlatformTools')
+      || !tabletBuildInstallShortcutText.includes('IDAI_FIELD_ANDROID_WORKDIR')
+      || !tabletBuildInstallShortcutText.includes('install-idai-field-android-apk.ps1')
+      || !tabletBuildDownloadShortcutText.includes('-BuildLatestArtifact -DownloadOnly')
+      || !tabletBuildDownloadShortcutText.includes('IDAI_FIELD_ANDROID_WORKDIR')
+      || !tabletBuildDownloadShortcutText.includes('install-idai-field-android-apk.ps1')) {
+    findings.push('root tablet APK shortcuts must provide double-click fresh build install and download-only entry points');
+  }
+  if (!tabletBuildInstallOtherDriveShortcutText.includes('DEFAULT_WORKDIR=G:\\idai-field-android')
+      || !tabletBuildInstallOtherDriveShortcutText.includes('-BuildLatestArtifact -DownloadPlatformTools')
+      || !tabletBuildInstallOtherDriveShortcutText.includes('-WorkDirectory "%WORKDIR%"')
+      || !tabletBuildDownloadOtherDriveShortcutText.includes('DEFAULT_WORKDIR=G:\\idai-field-android')
+      || !tabletBuildDownloadOtherDriveShortcutText.includes('-BuildLatestArtifact -DownloadOnly')
+      || !tabletBuildDownloadOtherDriveShortcutText.includes('-WorkDirectory "%WORKDIR%"')) {
+    findings.push('root tablet APK shortcuts must include prompted other-drive fresh build entry points for low-C-drive Windows users');
   }
   if (!tabletInstallShortcutText.includes('-FromLatestArtifact -DownloadPlatformTools')
       || !tabletInstallShortcutText.includes('IDAI_FIELD_ANDROID_WORKDIR')
@@ -3594,6 +3619,10 @@ function validateTabletInstallGuide() {
   ]) {
     if (!text.includes('-FromLatestArtifact -DownloadPlatformTools')
         || !text.includes('-FromLatestArtifact -DownloadOnly')
+        || !text.includes('-BuildLatestArtifact -DownloadPlatformTools')
+        || !text.includes('-BuildLatestArtifact -DownloadOnly')
+        || !text.includes('BUILD_AND_INSTALL_TABLET_APK.cmd')
+        || !text.includes('BUILD_AND_DOWNLOAD_TABLET_APK.cmd')
         || !text.includes('INSTALL_LATEST_TABLET_APK.cmd')
         || !text.includes('DOWNLOAD_LATEST_TABLET_APK.cmd')
         || !text.includes('-WorkDirectory G:\\idai-field-android')
@@ -3609,6 +3638,10 @@ function validateTabletInstallGuide() {
       || !desktopWorkflowText.includes('tools/korean-fieldwork-*.js')
       || !desktopWorkflowText.includes('docs/korean-fieldwork/**')
       || !desktopWorkflowText.includes('README.md')
+      || !desktopWorkflowText.includes('BUILD_AND_INSTALL_TABLET_APK.cmd')
+      || !desktopWorkflowText.includes('BUILD_AND_INSTALL_TABLET_APK_TO_OTHER_DRIVE.cmd')
+      || !desktopWorkflowText.includes('BUILD_AND_DOWNLOAD_TABLET_APK.cmd')
+      || !desktopWorkflowText.includes('BUILD_AND_DOWNLOAD_TABLET_APK_TO_OTHER_DRIVE.cmd')
       || !desktopWorkflowText.includes('INSTALL_LATEST_TABLET_APK.cmd')
       || !desktopWorkflowText.includes('INSTALL_LATEST_TABLET_APK_TO_OTHER_DRIVE.cmd')
       || !desktopWorkflowText.includes('DOWNLOAD_LATEST_TABLET_APK.cmd')

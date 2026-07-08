@@ -30,10 +30,22 @@ USB로 연결된 태블릿에 바로 설치:
 .\install-idai-field-android-apk.ps1 -FromLatestArtifact -DownloadPlatformTools
 ```
 
+코드를 수정해 `master`에 푸시한 직후 그 커밋의 APK를 새로 만들어 설치하려면 `BUILD_AND_INSTALL_TABLET_APK.cmd`를 더블클릭하거나 다음 명령을 실행한다. 이 명령은 Mobile GitHub Actions를 수동 실행하고, APK 빌드가 끝날 때까지 기다린 뒤 그 산출물을 설치한다.
+
+```powershell
+.\install-idai-field-android-apk.ps1 -BuildLatestArtifact -DownloadPlatformTools
+```
+
 C드라이브 용량이 부족하면 APK와 Android 도구를 저장할 작업 폴더를 다른 드라이브로 지정한다. 아래 예시는 APK를 `G:\idai-field-android\apk`, platform-tools를 `G:\idai-field-android\platform-tools` 아래에 둔다.
 
 ```powershell
 .\install-idai-field-android-apk.ps1 -FromLatestArtifact -DownloadPlatformTools -WorkDirectory G:\idai-field-android
+```
+
+수정 직후 빌드와 설치도 같은 작업 폴더를 쓸 수 있다. 명령어 대신 `BUILD_AND_INSTALL_TABLET_APK_TO_OTHER_DRIVE.cmd`를 더블클릭해도 된다.
+
+```powershell
+.\install-idai-field-android-apk.ps1 -BuildLatestArtifact -DownloadPlatformTools -WorkDirectory G:\idai-field-android
 ```
 
 명령어 대신 `INSTALL_LATEST_TABLET_APK_TO_OTHER_DRIVE.cmd`를 더블클릭하면 작업 폴더를 입력한 뒤 같은 설치 흐름을 실행한다. 항상 같은 위치를 쓰려면 `IDAI_FIELD_ANDROID_WORKDIR` 환경변수를 지정해 둔 뒤 기존 `INSTALL_LATEST_TABLET_APK.cmd`를 실행해도 된다.
@@ -50,6 +62,12 @@ APK 파일만 다른 드라이브에 받으려면 `DOWNLOAD_LATEST_TABLET_APK_TO
 
 ```powershell
 .\install-idai-field-android-apk.ps1 -FromLatestArtifact -DownloadOnly -WorkDirectory G:\idai-field-android
+```
+
+수정 직후 APK 파일만 새로 만들어 받아야 하면 `BUILD_AND_DOWNLOAD_TABLET_APK.cmd` 또는 `BUILD_AND_DOWNLOAD_TABLET_APK_TO_OTHER_DRIVE.cmd`를 사용한다.
+
+```powershell
+.\install-idai-field-android-apk.ps1 -BuildLatestArtifact -DownloadOnly -WorkDirectory G:\idai-field-android
 ```
 
 이 명령은 `idai-field-mobile-android-apk` 산출물을 찾는다. 작업 폴더를 지정하지 않으면 `dist/android/run-<Actions 실행 번호>` 아래에 내려받고, `-WorkDirectory`를 지정하면 `<작업 폴더>/apk/run-<Actions 실행 번호>` 아래에 내려받는다.
