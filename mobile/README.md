@@ -42,11 +42,15 @@ From the repository root on Windows:
 
 To install the newest APK produced by the Mobile GitHub Actions workflow:
 
+Double-click `INSTALL_LATEST_TABLET_APK.cmd` from the repository root, or run:
+
 ```powershell
 .\install-idai-field-android-apk.ps1 -FromLatestArtifact -DownloadPlatformTools
 ```
 
 To only download that APK for manual transfer to a tablet:
+
+Double-click `DOWNLOAD_LATEST_TABLET_APK.cmd` from the repository root, or run:
 
 ```powershell
 .\install-idai-field-android-apk.ps1 -FromLatestArtifact -DownloadOnly

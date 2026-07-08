@@ -368,6 +368,7 @@ const releaseCriticalPatterns = [
   /^\.github\/workflows\/(desktop|mobile)\.yml$/,
   /^README\.md$/,
   /^docs\/korean-fieldwork\/android-tablet-install\.ko\.md$/,
+  /^(INSTALL|DOWNLOAD)_LATEST_TABLET_APK\.cmd$/,
   /^install-idai-field-android-apk\.ps1$/,
   /^mobile\/README\.md$/,
   /^tools\/korean-fieldwork-(media-contract-check|parity-check|verify)\.js$/,
@@ -3496,6 +3497,8 @@ function validateTabletInstallGuide() {
   const rootReadmeText = readTextFile('README.md');
   const tabletInstallDocText = readTextFile('docs/korean-fieldwork/android-tablet-install.ko.md');
   const tabletInstallScriptText = readTextFile('install-idai-field-android-apk.ps1');
+  const tabletInstallShortcutText = readTextFile('INSTALL_LATEST_TABLET_APK.cmd');
+  const tabletDownloadShortcutText = readTextFile('DOWNLOAD_LATEST_TABLET_APK.cmd');
   const tabletReadmeText = readTextFile('mobile/README.md');
   const desktopWorkflowText = readTextFile('.github/workflows/desktop.yml');
   const tabletWorkflowText = readTextFile('.github/workflows/mobile.yml');
@@ -3509,13 +3512,21 @@ function validateTabletInstallGuide() {
       || !tabletInstallScriptText.includes('run-$($artifactRun.Run.databaseId)')) {
     findings.push('tablet APK installer must install or download the newest Mobile GitHub Actions APK artifact for post-change tablet checks');
   }
+  if (!tabletInstallShortcutText.includes('-FromLatestArtifact -DownloadPlatformTools')
+      || !tabletInstallShortcutText.includes('install-idai-field-android-apk.ps1')
+      || !tabletDownloadShortcutText.includes('-FromLatestArtifact -DownloadOnly')
+      || !tabletDownloadShortcutText.includes('install-idai-field-android-apk.ps1')) {
+    findings.push('root tablet APK shortcuts must provide double-click install and download-only entry points');
+  }
   for (const [label, text] of [
     ['root README', rootReadmeText],
     ['tablet README', tabletReadmeText],
     ['Android tablet install guide', tabletInstallDocText]
   ]) {
     if (!text.includes('-FromLatestArtifact -DownloadPlatformTools')
-        || !text.includes('-FromLatestArtifact -DownloadOnly')) {
+        || !text.includes('-FromLatestArtifact -DownloadOnly')
+        || !text.includes('INSTALL_LATEST_TABLET_APK.cmd')
+        || !text.includes('DOWNLOAD_LATEST_TABLET_APK.cmd')) {
       findings.push(`${label} must document both direct latest APK install and download-only tablet handoff commands`);
     }
   }
@@ -3526,7 +3537,9 @@ function validateTabletInstallGuide() {
   if (!desktopWorkflowText.includes('Run Korean fieldwork parity check')
       || !desktopWorkflowText.includes('tools/korean-fieldwork-*.js')
       || !desktopWorkflowText.includes('docs/korean-fieldwork/**')
-      || !desktopWorkflowText.includes('README.md')) {
+      || !desktopWorkflowText.includes('README.md')
+      || !desktopWorkflowText.includes('INSTALL_LATEST_TABLET_APK.cmd')
+      || !desktopWorkflowText.includes('DOWNLOAD_LATEST_TABLET_APK.cmd')) {
     findings.push('desktop workflow must run parity checks when Korean fieldwork install guides or verifier scripts change');
   }
 
