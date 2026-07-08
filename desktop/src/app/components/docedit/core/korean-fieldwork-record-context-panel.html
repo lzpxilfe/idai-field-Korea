@@ -67,6 +67,45 @@
         </div>
     </div>
 
+    <div *ngIf="getReportHandoffItem() as reportItem"
+         class="korean-fieldwork-record-context-hwp">
+        <div class="korean-fieldwork-record-context-hwp-title">
+            <span class="mdi mdi-file-document-edit-outline"></span>
+            <span>&#48372;&#44256;&#49436;/HWP &#48373;&#49324;</span>
+            <span class="korean-fieldwork-record-context-hwp-summary">
+                {{reportItem.summary}}
+            </span>
+        </div>
+        <div class="korean-fieldwork-record-context-hwp-metrics">
+            <span>{{reportItem.evidenceLabel}}</span>
+            <span [class.warning]="reportItem.issueCount > 0">{{reportItem.issueLabel}}</span>
+        </div>
+        <div class="korean-fieldwork-record-context-hwp-actions">
+            <button type="button"
+                    class="korean-fieldwork-record-context-hwp-action primary"
+                    [class.copied]="isReportHandoffItemCopied()"
+                    (click)="copyReportHandoffItem()">
+                <span class="mdi"
+                      [class.mdi-check]="isReportHandoffItemCopied()"
+                      [class.mdi-content-copy]="!isReportHandoffItemCopied()"></span>
+                <span>{{getReportHandoffCopyActionLabel()}}</span>
+            </button>
+            <button *ngFor="let section of reportItem.copySections"
+                    type="button"
+                    class="korean-fieldwork-record-context-hwp-action"
+                    [class.copied]="isReportHandoffSectionCopied(section)"
+                    (click)="copyReportHandoffSection(section)">
+                <span class="mdi"
+                      [class.mdi-check]="isReportHandoffSectionCopied(section)"
+                      [class.mdi-content-copy]="!isReportHandoffSectionCopied(section)"></span>
+                <span>{{getReportHandoffSectionCopyActionLabel(section)}}</span>
+                <span class="korean-fieldwork-record-context-hwp-lines">
+                    {{section.lineCount}}
+                </span>
+            </button>
+        </div>
+    </div>
+
     <div *ngIf="getFeatureLocationSketchPreview() as sketchPreview"
          class="korean-fieldwork-record-context-feature-sketch">
         <div class="korean-fieldwork-record-context-feature-sketch-title">

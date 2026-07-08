@@ -9,7 +9,6 @@ import {
     KoreanFieldworkReportHandoffItem,
     KoreanFieldworkReadinessIssue,
     makeKoreanFieldworkReportHandoff,
-    normalizeKoreanFieldworkHwpPlainText,
     PouchdbDatastore,
     ProjectConfiguration
 } from 'idai-field-core';
@@ -117,6 +116,7 @@ import {
     createKoreanFieldworkDraftResource,
     getKoreanFieldworkContinuationActions
 } from '../../util/korean-fieldwork-document-drafts';
+import { writeKoreanFieldworkHwpClipboardText } from '../../util/korean-fieldwork-hwp-clipboard';
 import {
     KOREAN_FIELDWORK_FEATURE_GUIDANCE_PRESETS,
     KoreanFieldworkFeatureGuidancePreset
@@ -880,7 +880,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
 
         try {
             this.selectedReportHandoffDocumentId = item.documentId;
-            await this.writeClipboardText(item.copyText);
+            await writeKoreanFieldworkHwpClipboardText(item.copyText);
             this.markReportHandoffCopied(item.documentId);
         } catch (errWithParams) {
             this.messages.add(errWithParams);
@@ -897,7 +897,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
 
         try {
             this.selectedReportHandoffDocumentId = item.documentId;
-            await this.writeClipboardText(section.copyText);
+            await writeKoreanFieldworkHwpClipboardText(section.copyText);
             this.markReportHandoffCopied(this.getReportHandoffSectionCopyId(item, section));
         } catch (errWithParams) {
             this.messages.add(errWithParams);
@@ -910,7 +910,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
         if (!this.reportHandoffCopyAllText) return;
 
         try {
-            await this.writeClipboardText(this.reportHandoffCopyAllText);
+            await writeKoreanFieldworkHwpClipboardText(this.reportHandoffCopyAllText);
             this.markReportHandoffCopied('__all__');
         } catch (errWithParams) {
             this.messages.add(errWithParams);
@@ -1645,41 +1645,6 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
     private async openDocument(documentId: string) {
 
         await this.routing.jumpToResource(await this.datastore.get(documentId));
-    }
-
-    private async writeClipboardText(text: string) {
-
-        const plainText = normalizeKoreanFieldworkHwpPlainText(text);
-        const nodeRequire = typeof window !== 'undefined'
-            ? (window as any).require
-            : undefined;
-
-        try {
-            const electronClipboard = nodeRequire?.('electron')?.clipboard;
-            if (electronClipboard?.write) {
-                try {
-                    electronClipboard.clear?.();
-                } catch (_) {}
-
-                electronClipboard.write({ text: plainText, html: '' });
-                return;
-            }
-            if (electronClipboard?.writeText) {
-                try {
-                    electronClipboard.clear?.();
-                } catch (_) {}
-
-                electronClipboard.writeText(plainText);
-                return;
-            }
-        } catch (_) {}
-
-        if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-            await navigator.clipboard.writeText(plainText);
-            return;
-        }
-
-        throw new Error('Clipboard is not available.');
     }
 
     private markReportHandoffCopied(documentId: string) {

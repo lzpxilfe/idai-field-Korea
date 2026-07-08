@@ -748,6 +748,125 @@ korean-fieldwork-record-context-panel {
     padding: 7px 9px;
   }
 
+  .korean-fieldwork-record-context-hwp {
+    background: #f8fbff;
+    border: 1px solid #b2ddff;
+    border-radius: 6px;
+    display: grid;
+    gap: 7px;
+    margin-top: 9px;
+    min-width: 0;
+    padding: 8px;
+  }
+
+  .korean-fieldwork-record-context-hwp-title,
+  .korean-fieldwork-record-context-hwp-metrics {
+    align-items: center;
+    display: flex;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .korean-fieldwork-record-context-hwp-title {
+    color: #175cd3;
+    font-size: 12px;
+    font-weight: 900;
+    line-height: 1.2;
+
+    > .mdi {
+      flex: 0 0 auto;
+      font-size: 16px;
+    }
+  }
+
+  .korean-fieldwork-record-context-hwp-summary {
+    color: #475467;
+    flex: 1 1 auto;
+    font-size: 11px;
+    font-weight: 800;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .korean-fieldwork-record-context-hwp-metrics {
+    color: #667085;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1.2;
+
+    span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .warning {
+      color: #b54708;
+    }
+  }
+
+  .korean-fieldwork-record-context-hwp-actions {
+    display: grid;
+    gap: 5px;
+    grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+    min-width: 0;
+  }
+
+  .korean-fieldwork-record-context-hwp-action {
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid #d0d5dd;
+    border-radius: 4px;
+    color: #344054;
+    display: grid;
+    font-size: 11px;
+    font-weight: 900;
+    gap: 4px;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    line-height: 1;
+    min-height: 30px;
+    min-width: 0;
+    padding: 5px 7px;
+
+    &:hover {
+      background: #f9fafb;
+      border-color: #98a2b3;
+    }
+
+    &.primary {
+      background: #eff8ff;
+      border-color: #84caff;
+      color: #175cd3;
+    }
+
+    &.copied {
+      background: #ecfdf3;
+      border-color: #abefc6;
+      color: #027a48;
+    }
+
+    > span:nth-child(2) {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  .korean-fieldwork-record-context-hwp-lines {
+    background: #f2f4f7;
+    border-radius: 999px;
+    color: #667085;
+    font-size: 10px;
+    line-height: 1;
+    min-width: 18px;
+    padding: 3px 5px;
+    text-align: center;
+  }
+
   .korean-fieldwork-record-context-identifier {
     background: #ffffff;
     border: 1px solid #d0d5dd;

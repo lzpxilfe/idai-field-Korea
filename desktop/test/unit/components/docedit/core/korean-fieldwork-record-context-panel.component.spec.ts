@@ -151,6 +151,75 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
     });
 
 
+    it('exposes current record HWP copy blocks in the desktop record context', async () => {
+
+        const write = jest.fn();
+        const writeText = jest.fn();
+        const clear = jest.fn();
+        const testWindow = (global as any).window ?? ((global as any).window = {});
+        const previousRequire = testWindow.require;
+        testWindow.require = jest.fn().mockReturnValue({ clipboard: { clear, write, writeText } });
+
+        try {
+            const feature = createDocument('feature-1', 'Feature', 'F1', {}, {
+                shortDescription: 'round pit with dark fill',
+                featureRecordingStatus: 'confirmed',
+                featureInvestigationChecklist: []
+            });
+            const photo = createDocument('photo-1', 'Photo', 'P1', {
+                depicts: ['feature-1']
+            }, {
+                fieldworkPhotoUri: 'file:///tablet/photos/F1.jpg',
+                originalFilename: 'F1.jpg',
+                fieldworkPhotoCapturedAt: '2026-06-23T01:02:03.000Z',
+                width: 4032,
+                height: 3024
+            });
+            const component = createComponent({
+                find: jest.fn().mockResolvedValue({ documents: [feature, photo] })
+            });
+            component.document = feature as any;
+            component.fieldDefinitions = [
+                field('featureRecordingStatus'),
+                field('featureInvestigationChecklist')
+            ] as any;
+
+            await component.ngOnChanges();
+
+            expect(component.hasReportHandoffItem()).toBe(true);
+            expect(component.getReportHandoffItem()).toMatchObject({
+                documentId: 'feature-1',
+                identifier: 'F1',
+                summary: 'round pit with dark fill'
+            });
+            expect(component.getReportHandoffItem()?.copyText).toContain('[\uc720\uad6c] F1');
+            expect(component.getReportHandoffItem()?.copyText)
+                .toContain('\uc790\ub8cc \uc0c1\uc138:\r\n- \uc0ac\uc9c4 P1');
+            expect(component.getReportHandoffItem()?.copySections.map(section => section.id))
+                .toEqual(['summary', 'details', 'evidence', 'issues']);
+
+            await component.copyReportHandoffItem();
+
+            const item = component.getReportHandoffItem()!;
+            expect(clear).toHaveBeenCalledTimes(1);
+            expect(write).toHaveBeenCalledWith({ text: item.copyText, html: '' });
+            expect(writeText).not.toHaveBeenCalled();
+            expect(component.getReportHandoffCopyActionLabel()).toBe('\ubcf5\uc0ac\ub428');
+
+            const evidenceSection = item.copySections.find(section => section.id === 'evidence')!;
+            await component.copyReportHandoffSection(evidenceSection);
+
+            expect(clear).toHaveBeenCalledTimes(2);
+            expect(write).toHaveBeenLastCalledWith({ text: evidenceSection.copyText, html: '' });
+            expect(writeText).not.toHaveBeenCalled();
+            expect(component.getReportHandoffSectionCopyActionLabel(evidenceSection))
+                .toBe('\ubcf5\uc0ac\ub428');
+        } finally {
+            testWindow.require = previousRequire;
+        }
+    });
+
+
     it('uses tablet feature geometry status values and lets desktop update them', () => {
 
         const feature = createDocument('feature-1', 'Feature', 'F1', {}, {

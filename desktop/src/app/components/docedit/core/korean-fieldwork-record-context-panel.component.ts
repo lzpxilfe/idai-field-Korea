@@ -8,7 +8,10 @@ import {
     EvidenceBundle,
     Field,
     hasConfirmedKoreanFieldworkImageUpload,
+    KoreanFieldworkReportHandoffCopySection,
+    KoreanFieldworkReportHandoffItem,
     Labels,
+    makeKoreanFieldworkReportHandoff,
     ProjectConfiguration
 } from 'idai-field-core';
 import { Routing } from '../../../services/routing';
@@ -53,6 +56,7 @@ import {
     KoreanFieldworkRecordActionItem,
     makeKoreanFieldworkRecordActions
 } from '../../../util/korean-fieldwork-record-actions';
+import { writeKoreanFieldworkHwpClipboardText } from '../../../util/korean-fieldwork-hwp-clipboard';
 import { getKoreanFieldworkBoundaryMethodLabel } from '../../../util/korean-fieldwork-boundary-summary';
 import { getKoreanFieldworkEvidenceChips } from '../../../util/korean-fieldwork-record-evidence';
 import { getKoreanFieldworkInvestigationModeOption } from '../../../util/korean-fieldwork-project-setup';
@@ -709,6 +713,8 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
     public notebookEntries: KoreanFieldworkNotebookEntry[] = [];
     public continuationActions: KoreanFieldworkContinuationAction[] = [];
     public recordActions: KoreanFieldworkRecordActionItem[] = [];
+    public reportHandoffItem: KoreanFieldworkReportHandoffItem|undefined;
+    public reportHandoffCopiedId: string|undefined;
     public identifierRevisionNextValue: string = '';
     public identifierRevisionReason: string = '';
 
@@ -804,6 +810,29 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
 
 
     public getRecordActions = () => this.recordActions;
+
+
+    public hasReportHandoffItem = () => !!this.reportHandoffItem;
+
+
+    public getReportHandoffItem = () => this.reportHandoffItem;
+
+
+    public isReportHandoffItemCopied = () =>
+        !!this.reportHandoffItem && this.reportHandoffCopiedId === this.reportHandoffItem.documentId;
+
+
+    public isReportHandoffSectionCopied = (section: KoreanFieldworkReportHandoffCopySection) =>
+        !!this.reportHandoffItem
+        && this.reportHandoffCopiedId === this.getReportHandoffSectionCopyId(this.reportHandoffItem, section);
+
+
+    public getReportHandoffCopyActionLabel = () =>
+        this.isReportHandoffItemCopied() ? '\ubcf5\uc0ac\ub428' : '\uc804\uccb4';
+
+
+    public getReportHandoffSectionCopyActionLabel = (section: KoreanFieldworkReportHandoffCopySection) =>
+        this.isReportHandoffSectionCopied(section) ? '\ubcf5\uc0ac\ub428' : section.label;
 
 
     public hasEvidenceMetrics = () => this.evidenceMetrics.length > 0;
@@ -1160,6 +1189,26 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
     }
 
 
+    public async copyReportHandoffItem() {
+
+        const item = this.reportHandoffItem;
+        if (!item?.copyText) return;
+
+        await writeKoreanFieldworkHwpClipboardText(item.copyText);
+        this.markReportHandoffCopied(item.documentId);
+    }
+
+
+    public async copyReportHandoffSection(section: KoreanFieldworkReportHandoffCopySection) {
+
+        const item = this.reportHandoffItem;
+        if (!item || !section.copyText) return;
+
+        await writeKoreanFieldworkHwpClipboardText(section.copyText);
+        this.markReportHandoffCopied(this.getReportHandoffSectionCopyId(item, section));
+    }
+
+
     private async createContinuationDraft(categoryName: string, featureType?: string) {
 
         if (!this.document?.resource?.id) return;
@@ -1204,6 +1253,7 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
             this.notebookEntries = [];
             this.continuationActions = [];
             this.recordActions = [];
+            this.reportHandoffItem = undefined;
             this.projectDocuments = [];
             return;
         }
@@ -1239,6 +1289,8 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
             this.projectConfiguration,
             4
         );
+        this.reportHandoffItem = makeKoreanFieldworkReportHandoff(documents)
+            .items.find(item => item.documentId === this.document.resource.id);
     }
 
 
@@ -1454,6 +1506,26 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
     private getDocumentLabel(document: Document): string {
 
         return document.resource.identifier || document.resource.id;
+    }
+
+
+    private markReportHandoffCopied(copiedId: string) {
+
+        this.reportHandoffCopiedId = copiedId;
+        setTimeout(() => {
+            if (this.reportHandoffCopiedId === copiedId) {
+                this.reportHandoffCopiedId = undefined;
+            }
+        }, 1600);
+    }
+
+
+    private getReportHandoffSectionCopyId(
+            item: KoreanFieldworkReportHandoffItem,
+            section: KoreanFieldworkReportHandoffCopySection
+    ): string {
+
+        return `${item.documentId}::${section.id}`;
     }
 
 

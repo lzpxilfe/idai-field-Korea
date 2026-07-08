@@ -330,9 +330,13 @@ const featureRows = [
       'core/src/tools/korean-fieldwork-document-drafts.ts',
       'core/src/tools/korean-fieldwork-record-contract.ts',
       'core/src/tools/korean-fieldwork-report-handoff.ts',
+      'desktop/src/app/components/docedit/core/korean-fieldwork-record-context-panel.component.ts',
+      'desktop/src/app/components/docedit/core/korean-fieldwork-record-context-panel.html',
+      'desktop/src/app/components/docedit/core/korean-fieldwork-record-context-panel.scss',
       'desktop/src/app/components/resources/korean-fieldwork-priority-strip.component.ts',
       'desktop/src/app/components/resources/korean-fieldwork-priority-strip.html',
-      'desktop/src/app/components/resources/korean-fieldwork-priority-strip.scss'
+      'desktop/src/app/components/resources/korean-fieldwork-priority-strip.scss',
+      'desktop/src/app/util/korean-fieldwork-hwp-clipboard.ts'
     ],
     tabletTests: [
       'mobile/components/Project/korean-fieldwork-document-drafts.spec.ts',
@@ -340,6 +344,7 @@ const featureRows = [
       'mobile/hooks/use-fieldwork-image-sync.spec.ts'
     ],
     desktopTests: [
+      'desktop/test/unit/components/docedit/core/korean-fieldwork-record-context-panel.component.spec.ts',
       'desktop/test/unit/components/resources/korean-fieldwork-priority-strip.component.spec.ts'
     ]
   },
@@ -3274,6 +3279,19 @@ function validateReportHandoffPreSaveValidation() {
   const desktopPriorityStripSpecText = readTextFile(
     'desktop/test/unit/components/resources/korean-fieldwork-priority-strip.component.spec.ts'
   );
+  const desktopRecordContextText = readTextFile(
+    'desktop/src/app/components/docedit/core/korean-fieldwork-record-context-panel.component.ts'
+  );
+  const desktopRecordContextTemplateText = readTextFile(
+    'desktop/src/app/components/docedit/core/korean-fieldwork-record-context-panel.html'
+  );
+  const desktopRecordContextStyleText = readTextFile(
+    'desktop/src/app/components/docedit/core/korean-fieldwork-record-context-panel.scss'
+  );
+  const desktopRecordContextSpecText = readTextFile(
+    'desktop/test/unit/components/docedit/core/korean-fieldwork-record-context-panel.component.spec.ts'
+  );
+  const desktopHwpClipboardText = readTextFile('desktop/src/app/util/korean-fieldwork-hwp-clipboard.ts');
 
   if (!coreReportHandoffText.includes('validateKoreanFieldworkReportHandoffCandidate')
       || !coreReportHandoffText.includes('KoreanFieldworkReportHandoffValidation')
@@ -3470,9 +3488,10 @@ function validateReportHandoffPreSaveValidation() {
       || !desktopPriorityStripText.includes('reportHandoffCopyAllText')) {
     findings.push('desktop report handoff panel must keep using the same core copy-block contract');
   }
-  if (!desktopPriorityStripText.includes('normalizeKoreanFieldworkHwpPlainText')
-      || !desktopPriorityStripText.includes('electronClipboard.clear?.()')
-      || !desktopPriorityStripText.includes("electronClipboard.write({ text: plainText, html: '' })")
+  if (!desktopHwpClipboardText.includes('normalizeKoreanFieldworkHwpPlainText')
+      || !desktopHwpClipboardText.includes('electronClipboard.clear?.()')
+      || !desktopHwpClipboardText.includes("electronClipboard.write({ text: plainText, html: '' })")
+      || !desktopPriorityStripText.includes('writeKoreanFieldworkHwpClipboardText')
       || !desktopPriorityStripSpecText.includes("write).toHaveBeenCalledWith({ text: featureItem.copyText, html: '' })")) {
     findings.push('desktop report handoff copy must use text-only clipboard writes for HWP-safe paste');
   }
@@ -3484,6 +3503,16 @@ function validateReportHandoffPreSaveValidation() {
       || !desktopPriorityStripSpecText.includes('copyReportHandoffSection')
       || !desktopPriorityStripSpecText.includes('evidenceSection.copyText')) {
     findings.push('desktop report handoff preview must support section-level HWP copy buttons for selective pasting');
+  }
+  if (!desktopRecordContextText.includes('makeKoreanFieldworkReportHandoff')
+      || !desktopRecordContextText.includes('writeKoreanFieldworkHwpClipboardText')
+      || !desktopRecordContextText.includes('copyReportHandoffSection')
+      || !desktopRecordContextTemplateText.includes('korean-fieldwork-record-context-hwp')
+      || !desktopRecordContextTemplateText.includes('reportItem.copySections')
+      || !desktopRecordContextStyleText.includes('.korean-fieldwork-record-context-hwp')
+      || !desktopRecordContextSpecText.includes('exposes current record HWP copy blocks in the desktop record context')
+      || !desktopRecordContextSpecText.includes('copyReportHandoffSection')) {
+    findings.push('desktop record context panel must expose current-record HWP copy blocks using the shared handoff contract');
   }
   if (!desktopPriorityStripTemplateText.includes('korean-fieldwork-report-handoff-details')
       || !desktopPriorityStripTemplateText.includes('item.relationDetails')
