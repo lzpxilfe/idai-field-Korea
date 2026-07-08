@@ -37,6 +37,11 @@ export interface SoilProfileColorSamplePoint {
   yPercent: number;
 }
 
+export interface SoilProfileColorPhotoSamplePoint {
+  x: number;
+  y: number;
+}
+
 export interface SoilProfileColorSampleSummary {
   blue: number;
   green: number;
@@ -69,6 +74,8 @@ const RGB_SAMPLE_PATTERN = /\bRGB\s+(\d{1,3})\/(\d{1,3})\/(\d{1,3})\b/i;
 const RGB_SAMPLE_NOTE_PATTERN =
   /\s*\bRGB\s+\d{1,3}\/\d{1,3}\/\d{1,3}(?:\s*@\s*\d{1,3}%\/\d{1,3}%)?/gi;
 const SAMPLE_POINT_PATTERN = /(\d{1,3})%\/(\d{1,3})%/;
+export const SOIL_PROFILE_COLOR_CENTRAL_SAMPLE_SOURCE_LABEL =
+  '\uc0ac\uc9c4 \uc911\uc559\ubd80 \ud3c9\uade0 RGB';
 
 const WHITE_POINT_C: XyzColor = { X: 0.98074, Y: 1, Z: 1.18232 };
 const WHITE_POINT_D65: XyzColor = { X: 0.95047, Y: 1, Z: 1.08883 };
@@ -474,6 +481,24 @@ export const formatSoilProfileColorSampleLabel = (
     .filter(Boolean)
     .join(' ');
 
+export const normalizeSoilProfileColorPhotoSampleCoordinate = (
+  value: number
+): number =>
+  Number.isFinite(value)
+    ? clampSampleCoordinate(value)
+    : 0;
+
+export const formatSoilProfileColorPhotoSamplePointLabel = (
+  point: SoilProfileColorPhotoSamplePoint
+): string =>
+  `${Math.round(normalizeSoilProfileColorPhotoSampleCoordinate(point.x) / 100)}%/`
+  + `${Math.round(normalizeSoilProfileColorPhotoSampleCoordinate(point.y) / 100)}%`;
+
+export const formatSoilProfileColorPhotoSampleSourceLabel = (
+  point: SoilProfileColorPhotoSamplePoint
+): string =>
+  `\uc0ac\uc9c4 \uc120\ud0dd \uc9c0\uc810 ${formatSoilProfileColorPhotoSamplePointLabel(point)} \ud3c9\uade0 RGB`;
+
 export const formatSoilProfileColorSwatchValue = (
   munsell: string,
   note: string,
@@ -609,6 +634,9 @@ const clampSamplePercent = (value: number): number =>
   Number.isFinite(value)
     ? Math.max(0, Math.min(100, Math.round(value)))
     : 0;
+
+const clampSampleCoordinate = (value: number): number =>
+  Math.max(0, Math.min(10000, Math.round(value)));
 
 function hexToRgb(hex: string): RgbSample {
   return {

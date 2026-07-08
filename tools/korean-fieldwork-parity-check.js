@@ -4184,6 +4184,15 @@ function validateSoilColorReviewWorkflow() {
       || !desktopCandidateSpecText.includes('tablet eyedropper sample locations')) {
     findings.push('desktop soil color candidate parser must preserve tablet eyedropper sample locations');
   }
+  if (!sharedSoilColorText.includes('formatSoilProfileColorPhotoSampleSourceLabel')
+      || !sharedSoilColorText.includes('normalizeSoilProfileColorPhotoSampleCoordinate')
+      || !sharedSoilColorSpecText.includes('formats shared soil-profile eyedropper sample locations')
+      || !tabletAssistText.includes('formatSoilProfileColorPhotoSampleSourceLabel')
+      || !tabletAssistText.includes('normalizeSoilProfileColorPhotoSampleCoordinate')
+      || !desktopAssistText.includes('formatSoilProfileColorPhotoSampleSourceLabel')
+      || !desktopAssistText.includes('normalizeSoilProfileColorPhotoSampleCoordinate')) {
+    findings.push('tablet and desktop soil photo assist must share eyedropper sample point labels and coordinate normalization through core');
+  }
   if (!desktopSoilColorPanelText.includes('getAssistSampleSourceLabel')
       || !readTextFile('desktop/src/app/components/docedit/core/korean-fieldwork-soil-color-panel.html')
         .includes('korean-fieldwork-soil-color-sample-source')
@@ -4215,8 +4224,7 @@ function validateSoilColorReviewWorkflow() {
     findings.push('desktop evidence review must carry tablet eyedropper sample locations into review and narrative append text');
   }
   if (!desktopAssistText.includes('createSoilColorAssistUpdatesForImageUploadAtPoint')
-      || !desktopAssistText.includes('getPointSampleLabel')
-      || !desktopAssistText.includes('사진 선택 지점')
+      || !desktopAssistText.includes('formatSoilProfileColorPhotoSampleSourceLabel')
       || !desktopAssistSpecText.includes('selected uploaded image point')
       || !desktopAssistSpecText.includes('사진 선택 지점 20%/50%')
       || !desktopAssistSpecText.includes('사진 선택 지점 80%/50%')) {

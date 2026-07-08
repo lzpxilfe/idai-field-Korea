@@ -1,9 +1,12 @@
 import jpeg, { RawImageData } from 'jpeg-js';
 import {
   extractMunsellCandidateOptions as extractCoreMunsellCandidateOptions,
+  formatSoilProfileColorPhotoSampleSourceLabel,
   getNearestMunsellCandidates as getCoreNearestMunsellCandidates,
   hasMunsellCandidateOptions as hasCoreMunsellCandidateOptions,
+  normalizeSoilProfileColorPhotoSampleCoordinate,
   SOIL_COLOR_MUNSELL_REFERENCES as CORE_SOIL_COLOR_MUNSELL_REFERENCES,
+  SOIL_PROFILE_COLOR_CENTRAL_SAMPLE_SOURCE_LABEL,
 } from 'idai-field-core';
 import type {
   MunsellReference,
@@ -93,7 +96,7 @@ export const createSoilColorAssistUpdatesFromRgbSampleAtPoint = (
     soilColorAssistCandidates: formatCandidates(
       averageRgb,
       candidates,
-      getPointSampleLabel(point)
+      formatSoilProfileColorPhotoSampleSourceLabel(point)
     ),
     soilColorAssistStatus: status,
   };
@@ -118,7 +121,7 @@ export const getSoilColorPhotoAssistFromJpegBase64 = (
       formattedCandidates: formatCandidates(
         averageRgb,
         candidates,
-        '사진 중앙부 평균 RGB'
+        SOIL_PROFILE_COLOR_CENTRAL_SAMPLE_SOURCE_LABEL
       ),
       status,
     };
@@ -151,7 +154,7 @@ export const getSoilColorPhotoAssistFromJpegBase64AtPoint = (
       formattedCandidates: formatCandidates(
         averageRgb,
         candidates,
-        getPointSampleLabel(point)
+        formatSoilProfileColorPhotoSampleSourceLabel(point)
       ),
       status,
     };
@@ -207,12 +210,12 @@ const getPointAverageRgb = (
   point: SoilColorSamplePoint
 ): RgbSample => {
   const centerX = clamp(
-    Math.round((normalizeSampleCoordinate(point.x) / 10000) * (image.width - 1)),
+    Math.round((normalizeSoilProfileColorPhotoSampleCoordinate(point.x) / 10000) * (image.width - 1)),
     0,
     image.width - 1
   );
   const centerY = clamp(
-    Math.round((normalizeSampleCoordinate(point.y) / 10000) * (image.height - 1)),
+    Math.round((normalizeSoilProfileColorPhotoSampleCoordinate(point.y) / 10000) * (image.height - 1)),
     0,
     image.height - 1
   );
@@ -257,15 +260,7 @@ const formatCandidates = (
 ].join('\n');
 
 const formatSampleUnavailable = (point: SoilColorSamplePoint): string =>
-  `${getPointSampleLabel(point)}: RGB를 읽지 못했습니다. 사진을 다시 열거나 다른 지점을 선택하세요.`;
-
-const getPointSampleLabel = (point: SoilColorSamplePoint): string =>
-  `사진 선택 지점 ${Math.round(normalizeSampleCoordinate(point.x) / 100)}%/${Math.round(normalizeSampleCoordinate(point.y) / 100)}% 평균 RGB`;
-
-const normalizeSampleCoordinate = (value: number): number =>
-  Number.isFinite(value)
-    ? clamp(Math.round(value), 0, 10000)
-    : 0;
+  `${formatSoilProfileColorPhotoSampleSourceLabel(point)}: RGB를 읽지 못했습니다. 사진을 다시 열거나 다른 지점을 선택하세요.`;
 
 const clamp = (value: number, min: number, max: number): number =>
   Math.max(min, Math.min(max, value));

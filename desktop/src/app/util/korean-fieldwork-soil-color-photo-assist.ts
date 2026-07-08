@@ -1,10 +1,13 @@
 import * as sharpModule from 'sharp';
 
 import {
+    formatSoilProfileColorPhotoSampleSourceLabel,
     getNearestMunsellCandidates,
+    normalizeSoilProfileColorPhotoSampleCoordinate,
     RgbSample,
     SoilColorCandidate,
-    SoilColorConfidence
+    SoilColorConfidence,
+    SOIL_PROFILE_COLOR_CENTRAL_SAMPLE_SOURCE_LABEL
 } from 'idai-field-core';
 import { ImageManipulation } from '../services/imagestore/manipulation/image-manipulation';
 
@@ -38,7 +41,8 @@ export async function createSoilColorAssistUpdatesForImageUpload(
         const candidates: SoilColorCandidate[] = getNearestMunsellCandidates(averageRgb);
 
         return {
-            soilColorAssistCandidates: formatCandidates(averageRgb, candidates, '사진 중앙부 평균 RGB'),
+            soilColorAssistCandidates:
+                formatCandidates(averageRgb, candidates, SOIL_PROFILE_COLOR_CENTRAL_SAMPLE_SOURCE_LABEL),
             soilColorAssistStatus: getAssistStatus(candidates[0])
         };
     } catch (_err) {
@@ -60,7 +64,8 @@ export async function createSoilColorAssistUpdatesForImageUploadAtPoint(
         const candidates: SoilColorCandidate[] = getNearestMunsellCandidates(averageRgb);
 
         return {
-            soilColorAssistCandidates: formatCandidates(averageRgb, candidates, getPointSampleLabel(point)),
+            soilColorAssistCandidates:
+                formatCandidates(averageRgb, candidates, formatSoilProfileColorPhotoSampleSourceLabel(point)),
             soilColorAssistStatus: getAssistStatus(candidates[0])
         };
     } catch (_err) {
@@ -85,12 +90,12 @@ async function getPointAverageRgb(buffer: Buffer, point: SoilColorSamplePoint): 
         .toBuffer({ resolveWithObject: true });
 
     const centerX: number = clamp(
-        Math.round((normalizeSampleCoordinate(point.x) / 10000) * (info.width - 1)),
+        Math.round((normalizeSoilProfileColorPhotoSampleCoordinate(point.x) / 10000) * (info.width - 1)),
         0,
         info.width - 1
     );
     const centerY: number = clamp(
-        Math.round((normalizeSampleCoordinate(point.y) / 10000) * (info.height - 1)),
+        Math.round((normalizeSoilProfileColorPhotoSampleCoordinate(point.y) / 10000) * (info.height - 1)),
         0,
         info.height - 1
     );
@@ -187,21 +192,6 @@ function getAssistStatus(candidate: SoilColorCandidate|undefined): SoilColorAssi
     return candidate?.confidence === 'low'
         ? 'lowConfidence'
         : 'candidatesAvailable';
-}
-
-
-function getPointSampleLabel(point: SoilColorSamplePoint): string {
-
-    return `사진 선택 지점 ${Math.round(normalizeSampleCoordinate(point.x) / 100)}%/`
-        + `${Math.round(normalizeSampleCoordinate(point.y) / 100)}% 평균 RGB`;
-}
-
-
-function normalizeSampleCoordinate(value: number): number {
-
-    return Number.isFinite(value)
-        ? clamp(Math.round(value), 0, 10000)
-        : 0;
 }
 
 

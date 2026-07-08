@@ -1,8 +1,12 @@
 import {
     extractMunsellCandidateOptions,
+    formatSoilProfileColorPhotoSamplePointLabel,
+    formatSoilProfileColorPhotoSampleSourceLabel,
     getNearestMunsellCandidates,
     hasMunsellCandidateOptions,
+    normalizeSoilProfileColorPhotoSampleCoordinate,
     parseSoilProfileColorSwatchRows,
+    SOIL_PROFILE_COLOR_CENTRAL_SAMPLE_SOURCE_LABEL,
     SOIL_COLOR_MUNSELL_REFERENCES,
     updateSoilProfileColorSwatchMunsellValue,
     updateSoilProfileColorSwatchNoteValue,
@@ -35,6 +39,19 @@ describe('Korean fieldwork soil color candidate engine', () => {
         expect(candidates[0].munsell).toBe('2.5Y 5/4');
         expect(candidates[0].confidence).toBe('high');
         expect(candidates.length).toBe(5);
+    });
+
+
+    it('formats shared soil-profile eyedropper sample locations for tablet and desktop', () => {
+
+        expect(SOIL_PROFILE_COLOR_CENTRAL_SAMPLE_SOURCE_LABEL)
+            .toBe('사진 중앙부 평균 RGB');
+        expect(normalizeSoilProfileColorPhotoSampleCoordinate(12500)).toBe(10000);
+        expect(normalizeSoilProfileColorPhotoSampleCoordinate(-50)).toBe(0);
+        expect(formatSoilProfileColorPhotoSamplePointLabel({ x: 2049, y: 4951 }))
+            .toBe('20%/50%');
+        expect(formatSoilProfileColorPhotoSampleSourceLabel({ x: 8000, y: 5000 }))
+            .toBe('사진 선택 지점 80%/50% 평균 RGB');
     });
 
 
