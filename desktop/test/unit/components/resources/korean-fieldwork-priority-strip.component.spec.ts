@@ -200,6 +200,11 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
                                 '1: 10YR 4/3 (\ubcf4\ud1b5, \ucc28\uc774 0.0)'
                             ].join('\n'),
                             relations: { depicts: ['feature-1'] }
+                        }),
+                        createDocument('memo-handwritten', 'PenMemo', {
+                            penMemoStrokes: '{"version":1,"strokes":[{"points":[{"x":10,"y":20},{"x":30,"y":40}]}]}',
+                            penMemoTranscriptionStatus: 'pending',
+                            relations: { depicts: ['feature-1'] }
                         })
                     ]
                 }),
@@ -210,14 +215,14 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
 
             expect(component.getPanelOptions().map(panel => panel.id)).toContain('report');
             expect(component.hasReportHandoffItems()).toBe(true);
-            expect(component.getReportHandoffSummaryLabel()).toContain('3');
+            expect(component.getReportHandoffSummaryLabel()).toContain('4');
 
             const [featureItem] = component.getReportHandoffItems();
             expect(featureItem).toMatchObject({
                 documentId: 'feature-1',
                 identifier: 'pit-001',
                 summary: 'round pit with dark fill',
-                evidenceCount: 2,
+                evidenceCount: 3,
                 tone: 'review'
             });
             expect(component.getReportHandoffPreviewItem()?.documentId).toBe('feature-1');
@@ -230,6 +235,10 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
                 .toContain('\uc2a4\ud3ec\uc774\ub4dc \uc704\uce58');
             expect(featureItem.copyText)
                 .toContain('\uc0ac\uc9c4 \uc120\ud0dd \uc9c0\uc810 20%/50% \ud3c9\uade0 RGB 111/87/61');
+            expect(featureItem.copyText)
+                .toContain('\ud544\uae30 \uc6d0\ubcf8: \uc788\uc74c');
+            expect(featureItem.copyText)
+                .not.toContain('"strokes"');
             expect(featureItem.issueDetails.join('\n'))
                 .toContain('fieldwork-photo-upload-missing');
             expect(featureItem.copyText).toContain('pit-001');

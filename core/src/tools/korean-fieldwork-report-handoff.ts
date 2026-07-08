@@ -297,6 +297,7 @@ const EVIDENCE_DETAILS: EvidenceDetailDefinition[] = [
     {
         label: '\ud604\uc7a5\uba54\ubaa8',
         getDocuments: bundle => bundle.penMemos,
+        getSummary: getPenMemoEvidenceSummary,
         fields: ['penMemoReviewedTranscript', 'penMemoAutoTranscript', 'description', 'shortDescription']
     },
     {
@@ -433,7 +434,7 @@ function getValidationMessages(
     if (category && MEDIA_URI_FIELDS[category] && !hasPrintableField(resource, MEDIA_URI_FIELDS[category])) {
         messages.push('\uc0ac\uc9c4/\ub3c4\uba74 \uc6d0\ubcf8 \uacbd\ub85c\ub098 \uc2a4\ucf00\uce58 \ub370\uc774\ud130\uac00 \ube44\uc5b4 \uc788\uc2b5\ub2c8\ub2e4.');
     }
-    if (category === 'PenMemo' && !hasPrintableField(resource, PEN_MEMO_CONTENT_FIELDS)) {
+    if (category === 'PenMemo' && !hasPenMemoContent(resource)) {
         messages.push('\ud604\uc7a5\uba54\ubaa8 \ub0b4\uc6a9\uc774\ub098 \ud544\uae30 \uc2a4\ud2b8\ub85c\ud06c\uac00 \ube44\uc5b4 \uc788\uc2b5\ub2c8\ub2e4.');
     }
 
@@ -481,6 +482,13 @@ function hasPrintableField(resource: NewResource, fieldNames: string[]): boolean
         const value = getPrintableValue(resource[fieldName]);
         return !!value && value !== '[]';
     });
+}
+
+
+function hasPenMemoContent(resource: NewResource): boolean {
+
+    return hasPrintableField(resource, PEN_MEMO_CONTENT_FIELDS.filter(fieldName => fieldName !== 'penMemoStrokes'))
+        || hasPenMemoStrokeEvidence(resource.penMemoStrokes);
 }
 
 
@@ -710,6 +718,80 @@ function getSoilProfilePhotoEvidenceSummary(document: Document): string|undefine
         )),
         getLabeledEvidenceValue('\uc694\uc57d', getPrintableValue(document.resource.shortDescription))
     ].filter((value): value is string => !!value).join(' / ') || undefined;
+}
+
+
+function getPenMemoEvidenceSummary(document: Document): string|undefined {
+
+    return [
+        getLabeledEvidenceValue('\uac80\ud1a0 \ud544\uc0ac', getPrintableValue(
+            document.resource.penMemoReviewedTranscript
+        )),
+        getLabeledEvidenceValue('\uc790\ub3d9 \ud544\uc0ac', getPrintableValue(
+            document.resource.penMemoAutoTranscript
+        )),
+        getLabeledEvidenceValue('\uba54\ubaa8', getPrintableValue(document.resource.description)),
+        getLabeledEvidenceValue('\uc694\uc57d', getPrintableValue(document.resource.shortDescription)),
+        getPenMemoStrokeEvidenceLabel(document.resource.penMemoStrokes)
+    ].filter((value): value is string => !!value).join(' / ') || undefined;
+}
+
+
+function getPenMemoStrokeEvidenceLabel(value: any): string|undefined {
+
+    return hasPenMemoStrokeEvidence(value)
+        ? '\ud544\uae30 \uc6d0\ubcf8: \uc788\uc74c'
+        : undefined;
+}
+
+
+function hasPenMemoStrokeEvidence(value: any): boolean {
+
+    if (value === undefined || value === null) return false;
+
+    if (typeof value === 'string') {
+        const text = value.trim();
+        if (!text || text === '[]' || text === '{}') return false;
+
+        const parsed = parseJsonValue(text);
+        return parsed === undefined ? true : hasPenMemoStrokeEvidence(parsed);
+    }
+
+    if (Array.isArray(value)) return value.some(hasStrokeValue);
+
+    if (typeof value === 'object') {
+        if (Array.isArray(value.strokes)) return value.strokes.some(hasStrokeValue);
+
+        return Object.keys(value)
+            .filter(key => key !== 'version')
+            .some(key => hasPenMemoStrokeEvidence(value[key]));
+    }
+
+    return !!String(value).trim();
+}
+
+
+function hasStrokeValue(value: any): boolean {
+
+    if (value === undefined || value === null) return false;
+    if (Array.isArray(value)) return value.some(hasStrokeValue);
+
+    if (typeof value === 'object') {
+        if (Array.isArray(value.points)) return value.points.length > 0;
+        return Object.keys(value).some(key => hasStrokeValue(value[key]));
+    }
+
+    return !!String(value).trim();
+}
+
+
+function parseJsonValue(value: string): any|undefined {
+
+    try {
+        return JSON.parse(value);
+    } catch {
+        return undefined;
+    }
 }
 
 

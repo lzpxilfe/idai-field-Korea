@@ -3287,6 +3287,14 @@ function validateReportHandoffPreSaveValidation() {
       || !desktopPriorityStripSpecText.includes('\\uc2a4\\ud3ec\\uc774\\ub4dc \\uc704\\uce58')) {
     findings.push('report handoff HWP copy blocks must carry soil profile color swatches and tablet eyedropper sample locations');
   }
+  if (!coreReportHandoffText.includes('getPenMemoEvidenceSummary')
+      || !coreReportHandoffText.includes('hasPenMemoStrokeEvidence')
+      || !coreReportHandoffSpecText.includes('handwritten tablet pen memos without dumping stroke JSON')
+      || !coreReportHandoffSpecText.includes('empty tablet handwriting stroke containers')
+      || !desktopPriorityStripSpecText.includes('\\ud544\\uae30 \\uc6d0\\ubcf8: \\uc788\\uc74c')
+      || !desktopPriorityStripSpecText.includes("not.toContain('\"strokes\"')")) {
+    findings.push('report handoff HWP copy blocks must summarize tablet handwritten PenMemo strokes without leaking stroke JSON');
+  }
   if (!coreReportHandoffText.includes('buildEvidenceBundle')
       || !coreReadinessText.includes('getKoreanFieldworkCloseoutReviewIssues')
       || !coreReadinessText.includes('fieldwork-photo-annotation-review')

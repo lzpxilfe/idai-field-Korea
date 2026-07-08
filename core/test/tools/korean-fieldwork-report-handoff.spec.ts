@@ -173,6 +173,37 @@ describe('Korean fieldwork report handoff', () => {
     });
 
 
+    it('summarizes handwritten tablet pen memos without dumping stroke JSON into HWP copy blocks', () => {
+
+        const documents = [
+            makeDocument('feature-1', 'Feature', {
+                identifier: 'pit-001',
+                shortDescription: 'round pit with dark fill',
+                featureRecordingStatus: 'confirmed',
+                featureInvestigationChecklist: []
+            }),
+            makeDocument('memo-handwritten', 'PenMemo', {
+                penMemoStrokes: '{"version":1,"strokes":[{"points":[{"x":10,"y":20},{"x":30,"y":40}]}]}',
+                penMemoTranscriptionStatus: 'pending',
+                relations: { depicts: ['feature-1'] }
+            })
+        ];
+
+        const handoff = makeKoreanFieldworkReportHandoff(documents as any);
+        const featureItem = handoff.items.find(item => item.documentId === 'feature-1');
+        const evidenceDetails = featureItem?.evidenceDetails.join('\n') ?? '';
+
+        expect(evidenceDetails)
+            .toContain('\ud544\uae30 \uc6d0\ubcf8: \uc788\uc74c');
+        expect(featureItem?.copyText)
+            .toContain('\ud544\uae30 \uc6d0\ubcf8: \uc788\uc74c');
+        expect(featureItem?.copyText)
+            .toContain('pen-memo-handwriting-transcription');
+        expect(featureItem?.copyText)
+            .not.toContain('"strokes"');
+    });
+
+
     it('carries linked record labels into desktop HWP copy blocks', () => {
 
         const documents = [
@@ -301,6 +332,23 @@ describe('Korean fieldwork report handoff', () => {
         expect(validation.messages.join('\n')).toContain('\uc0ac\uc9c4/\ub3c4\uba74');
         expect(validation.relatedFields).toContain('fieldworkPhotoUri');
         expect(validation.relatedFields).toContain('relations');
+    });
+
+
+    it('does not treat empty tablet handwriting stroke containers as PenMemo content', () => {
+
+        const validation = validateKoreanFieldworkReportHandoffCandidate({
+            identifier: 'memo-001',
+            category: 'PenMemo',
+            relations: { depicts: ['feature-1'] },
+            penMemoStrokes: '{"version":1,"strokes":[]}',
+            penMemoTranscriptionStatus: 'pending'
+        } as any);
+
+        expect(validation.status).toBe('review');
+        expect(validation.messages.join('\n'))
+            .toContain('\ud604\uc7a5\uba54\ubaa8 \ub0b4\uc6a9\uc774\ub098 \ud544\uae30 \uc2a4\ud2b8\ub85c\ud06c\uac00 \ube44\uc5b4 \uc788\uc2b5\ub2c8\ub2e4.');
+        expect(validation.relatedFields).toContain('penMemoStrokes');
     });
 
 
