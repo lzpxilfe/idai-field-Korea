@@ -210,6 +210,15 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
                             recordCreationTiming: 'sameDayFieldRecord',
                             fieldRecordQuality: ['immediateRecording'],
                             verificationState: 'observedInField',
+                            fieldOnlyMissingCheck: [
+                                'stratigraphicBoundary',
+                                'photoAngleAndScale'
+                            ],
+                            firstExposureRecord: [
+                                'firstExposurePhoto',
+                                'featureLineVisible',
+                                'confirmedBeforeInternalExcavation'
+                            ],
                             featureInvestigationChecklist: [
                                 'findsRecovered',
                                 'preInvestigationPhotoTaken',
@@ -336,7 +345,12 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
                     + '\uc720\uad6c \uc9c4\ud589: \uc644\ub8cc, '
                     + '\uae30\ub85d \uc2dc\uc810: \ub2f9\uc77c \uae30\ub85d, '
                     + '\uae30\ub85d \uad6c\ubd84: \ud604\uc7a5 \uae30\ub85d, '
-                    + '\ud655\uc778 \uc0c1\ud0dc: \ud604\uc7a5 \ud655\uc778'
+                    + '\ud655\uc778 \uc0c1\ud0dc: \ud604\uc7a5 \ud655\uc778, '
+                    + '\ud604\uc7a5\uc2dc\uc810 \ub204\ub77d\uc810\uac80: '
+                    + '\uce35 \uacbd\uacc4 \ud655\uc778 \u00b7 \uc0ac\uc9c4 \uac01\ub3c4\u00b7\uc2a4\ucf00\uc77c, '
+                    + '\ucd5c\ucd08 \ub178\ucd9c \uae30\ub85d: '
+                    + '\ucd5c\ucd08 \ub178\ucd9c \uc0ac\uc9c4 \u00b7 '
+                    + '\uc720\uad6c\uc120 \uac00\uc2dc \u00b7 \ub0b4\ubd80\uc870\uc0ac \uc804 \ud655\uc815'
                 );
             expect(featureItem.details.join('\n'))
                 .toContain(
@@ -423,6 +437,17 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
                 .toContain('\uae30\ub85d \uad6c\ubd84: \ud604\uc7a5 \uae30\ub85d');
             expect(featureItem.copyText)
                 .toContain(
+                    '\ud604\uc7a5\uc2dc\uc810 \ub204\ub77d\uc810\uac80: '
+                    + '\uce35 \uacbd\uacc4 \ud655\uc778 \u00b7 \uc0ac\uc9c4 \uac01\ub3c4\u00b7\uc2a4\ucf00\uc77c'
+                );
+            expect(featureItem.copyText)
+                .toContain(
+                    '\ucd5c\ucd08 \ub178\ucd9c \uae30\ub85d: '
+                    + '\ucd5c\ucd08 \ub178\ucd9c \uc0ac\uc9c4 \u00b7 '
+                    + '\uc720\uad6c\uc120 \uac00\uc2dc \u00b7 \ub0b4\ubd80\uc870\uc0ac \uc804 \ud655\uc815'
+                );
+            expect(featureItem.copyText)
+                .toContain(
                     '\uc870\uc0ac \ub2e8\uacc4 \ud655\uc778: '
                     + '\uc870\uc0ac \uc804 \uc0ac\uc9c4 \u00b7 \ud1a0\uce35\uc0ac\uc9c4 \u00b7 \uc720\ubb3c \uc218\uc2b5'
                 );
@@ -438,6 +463,16 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
                 .not.toContain('immediateRecording');
             expect(featureItem.copyText)
                 .not.toContain('observedInField');
+            expect(featureItem.copyText)
+                .not.toContain('stratigraphicBoundary');
+            expect(featureItem.copyText)
+                .not.toContain('photoAngleAndScale');
+            expect(featureItem.copyText)
+                .not.toContain('firstExposurePhoto');
+            expect(featureItem.copyText)
+                .not.toContain('featureLineVisible');
+            expect(featureItem.copyText)
+                .not.toContain('confirmedBeforeInternalExcavation');
             expect(featureItem.copyText)
                 .not.toContain('bronzeAge');
             expect(featureItem.copyText)

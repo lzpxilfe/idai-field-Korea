@@ -1130,6 +1130,20 @@ function getInvestigationStatusDetailSummary(document: Document): string|undefin
             )
         ),
         getLabeledEvidenceValue(
+            '\ud604\uc7a5\uc2dc\uc810 \ub204\ub77d\uc810\uac80',
+            getKoreanFieldworkRecordFieldValueSummary(
+                'fieldOnlyMissingCheck',
+                document.resource.fieldOnlyMissingCheck
+            )
+        ),
+        getLabeledEvidenceValue(
+            '\ucd5c\ucd08 \ub178\ucd9c \uae30\ub85d',
+            getKoreanFieldworkRecordFieldValueSummary(
+                'firstExposureRecord',
+                document.resource.firstExposureRecord
+            )
+        ),
+        getLabeledEvidenceValue(
             '\uc870\uc0ac \ub2e8\uacc4 \ud655\uc778',
             getKoreanFieldworkFeatureInvestigationChecklistSummary(
                 document.resource.featureInvestigationChecklist
