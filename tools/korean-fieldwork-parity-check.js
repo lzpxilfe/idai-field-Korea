@@ -3846,6 +3846,13 @@ function validateSoilColorReviewWorkflow() {
       || !desktopSoilColorPanelSpecText.includes('keeps accepted eyedropper sample locations')) {
     findings.push('desktop soil color panel must carry tablet eyedropper locations into accepted layer rows and preserve them during review edits');
   }
+  if (!desktopSoilColorPanelText.includes('getSoilColorPhotoSampleRows')
+      || !desktopSoilColorPanelText.includes('sampleMarkerStyle')
+      || !desktopSoilColorPanelTemplateText.includes('korean-fieldwork-soil-color-photo-sample-map')
+      || !desktopSoilColorPanelTemplateText.includes('토층 사진 스포이드 위치')
+      || !desktopSoilColorPanelSpecText.includes('numbered markers over the desktop soil profile photo')) {
+    findings.push('desktop soil color panel must show accepted tablet eyedropper locations as markers over the soil profile photo');
+  }
   if (!desktopEvidenceReviewText.includes('sampleSourceLabel')
       || !desktopEvidenceReviewSpecText.includes('sampleSourceLabel')
       || !desktopRecordContextPanelText.includes('샘플 위치')

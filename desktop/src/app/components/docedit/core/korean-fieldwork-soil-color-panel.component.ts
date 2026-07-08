@@ -14,6 +14,11 @@ type SoilColorOption = {
 type SoilColorLayerRow = {
     number: number;
     sampleLocationLabel?: string;
+    sampleMarkerStyle?: Record<string, string>;
+    samplePoint?: {
+        xPercent: number;
+        yPercent: number;
+    };
     sampleRgbLabel?: string;
     value: string;
 };
@@ -38,6 +43,11 @@ const SOIL_COLOR_FIELDS = {
     profileColorSwatches: 'soilProfileColorSwatches',
     soilColorNote: 'soilColorNote'
 };
+const SOIL_PROFILE_PHOTO_URI_FIELDS = [
+    'soilProfilePhotoUri',
+    'imageUri',
+    'fieldworkPhotoUri'
+];
 
 
 @Component({
@@ -127,6 +137,26 @@ export class KoreanFieldworkSoilColorPanelComponent {
         const value: unknown = this.document?.resource?.[fieldName];
 
         return typeof value === 'string' ? value : '';
+    }
+
+
+    public getSoilProfilePhotoUri(): string {
+
+        if (!this.canRecordPhotoSwatches()) return '';
+
+        return SOIL_PROFILE_PHOTO_URI_FIELDS
+            .map(fieldName => this.document?.resource?.[fieldName])
+            .find((value): value is string => typeof value === 'string' && value.trim().length > 0)
+            ?? '';
+    }
+
+
+    public getSoilColorPhotoSampleRows(): SoilColorLayerRow[] {
+
+        if (!this.getSoilProfilePhotoUri()) return [];
+
+        return this.getSoilColorRows()
+            .filter(row => !!row.samplePoint && !!row.sampleMarkerStyle);
     }
 
 
@@ -431,9 +461,24 @@ export class KoreanFieldworkSoilColorPanelComponent {
         const sampleLocationLabel = xPercent !== undefined && yPercent !== undefined
             ? `사진 선택 위치 ${xPercent}%/${yPercent}%`
             : undefined;
+        const samplePoint = xPercent !== undefined && yPercent !== undefined
+            ? {
+                xPercent,
+                yPercent
+            }
+            : undefined;
 
         return {
             sampleLocationLabel,
+            ...(samplePoint
+                ? {
+                    sampleMarkerStyle: {
+                        left: `${samplePoint.xPercent}%`,
+                        top: `${samplePoint.yPercent}%`
+                    },
+                    samplePoint
+                }
+                : {}),
             sampleRawValue: sampleLocationLabel
                 ? `${rgb} @ ${xPercent}%/${yPercent}%`
                 : rgb,

@@ -34,6 +34,8 @@ describe('KoreanFieldworkSoilColorPanelComponent', () => {
         expect(template).toContain('사진에서 읽은 먼셀 후보');
         expect(template).toContain('getAssistSampleSourceLabel()');
         expect(template).toContain('korean-fieldwork-soil-color-layer-sample-source');
+        expect(template).toContain('korean-fieldwork-soil-color-photo-sample-map');
+        expect(template).toContain('getSoilColorPhotoSampleRows()');
         expect(template).toContain('토색 메모');
         expect(template).toContain('보정판 위치');
         expect(template).not.toContain('촬영 조건');
@@ -332,6 +334,14 @@ describe('KoreanFieldworkSoilColorPanelComponent', () => {
             .toBe('1: 10YR 4/3 RGB 111/87/61 @ 20%/50%');
         expect(component.getSoilColorRows()[0]).toMatchObject({
             number: 1,
+            sampleMarkerStyle: {
+                left: '20%',
+                top: '50%'
+            },
+            samplePoint: {
+                xPercent: 20,
+                yPercent: 50
+            },
             sampleLocationLabel: '사진 선택 위치 20%/50%',
             sampleRgbLabel: 'RGB 111/87/61',
             value: '10YR 4/3 RGB 111/87/61 @ 20%/50%'
@@ -357,6 +367,44 @@ describe('KoreanFieldworkSoilColorPanelComponent', () => {
             .toBe('1: 7.5YR 4/4 RGB 111/87/61 @ 20%/50%');
         expect(component.getSoilColorRows()[0].sampleLocationLabel)
             .toBe('사진 선택 위치 20%/50%');
+    });
+
+
+    it('shows accepted eyedropper locations as numbered markers over the desktop soil profile photo', () => {
+
+        component.document = {
+            resource: {
+                category: 'SoilProfilePhoto',
+                soilProfilePhotoUri: 'file:///tablet/photos/profile-1.jpg',
+                soilProfileColorSwatches: [
+                    '1: 10YR 4/3 RGB 111/87/61 @ 20%/50%',
+                    '2: 2.5Y 5/3',
+                    '3: 7.5YR 4/4 RGB 139/128/88 @ 80%/45%'
+                ].join('\n')
+            }
+        } as any;
+        component.fieldDefinitions = [
+            { name: 'soilProfileColorSwatches', editable: true }
+        ] as any;
+
+        expect(component.getSoilProfilePhotoUri())
+            .toBe('file:///tablet/photos/profile-1.jpg');
+        expect(component.getSoilColorPhotoSampleRows().map(row => ({
+            location: row.sampleLocationLabel,
+            number: row.number,
+            style: row.sampleMarkerStyle
+        }))).toEqual([
+            {
+                location: '사진 선택 위치 20%/50%',
+                number: 1,
+                style: { left: '20%', top: '50%' }
+            },
+            {
+                location: '사진 선택 위치 80%/45%',
+                number: 3,
+                style: { left: '80%', top: '45%' }
+            }
+        ]);
     });
 
 

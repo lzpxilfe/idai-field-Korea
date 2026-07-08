@@ -162,6 +162,43 @@ korean-fieldwork-soil-color-panel {
     margin-top: 8px;
   }
 
+  .korean-fieldwork-soil-color-photo-sample-map {
+    background: #111827;
+    border: 1px solid #344054;
+    border-radius: 6px;
+    display: inline-block;
+    margin-top: 10px;
+    max-width: 100%;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .korean-fieldwork-soil-color-photo-sample-image {
+    display: block;
+    height: auto;
+    max-height: 260px;
+    max-width: 100%;
+    object-fit: contain;
+  }
+
+  .korean-fieldwork-soil-color-photo-sample-marker {
+    align-items: center;
+    background: #175cd3;
+    border: 2px solid #fff;
+    border-radius: 999px;
+    box-shadow: 0 2px 5px rgba(16, 24, 40, 0.32);
+    color: #fff;
+    display: inline-flex;
+    font-size: 12px;
+    font-weight: 900;
+    height: 24px;
+    justify-content: center;
+    min-width: 24px;
+    padding: 0 6px;
+    position: absolute;
+    transform: translate(-50%, -50%);
+  }
+
   .korean-fieldwork-soil-color-layer-item {
     display: flex;
     flex-direction: column;

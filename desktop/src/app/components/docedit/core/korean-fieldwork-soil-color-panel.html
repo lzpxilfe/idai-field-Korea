@@ -92,6 +92,19 @@
             </button>
         </div>
 
+        <div *ngIf="getSoilColorPhotoSampleRows().length > 0"
+             class="korean-fieldwork-soil-color-photo-sample-map">
+            <img [src]="getSoilProfilePhotoUri()"
+                 alt="토층 사진 스포이드 위치"
+                 class="korean-fieldwork-soil-color-photo-sample-image">
+            <div *ngFor="let row of getSoilColorPhotoSampleRows()"
+                 class="korean-fieldwork-soil-color-photo-sample-marker"
+                 [ngStyle]="row.sampleMarkerStyle"
+                 [title]="(row.sampleLocationLabel || '') + ' ' + (row.sampleRgbLabel || '')">
+                <span>{{row.number}}</span>
+            </div>
+        </div>
+
         <div *ngIf="canRecordPhotoSwatches()"
              class="korean-fieldwork-soil-color-layer-list">
             <div *ngFor="let row of getSoilColorRows()"
