@@ -366,6 +366,8 @@ const featureRows = [
 
 const releaseCriticalPatterns = [
   /^\.github\/workflows\/(desktop|mobile)\.yml$/,
+  /^install-idai-field-android-apk\.ps1$/,
+  /^mobile\/README\.md$/,
   /^tools\/korean-fieldwork-(media-contract-check|parity-check|verify)\.js$/,
   /^core\/src\/datastore\/image\/(field-hub-file-url|image-sync-service)\.ts$/,
   /^core\/test\/datastore\/image\/(field-hub-file-url|image-sync-service)\.spec\.ts$/,
@@ -3250,6 +3252,8 @@ function validateReportHandoffPreSaveValidation() {
   const tabletEditText = readTextFile('mobile/app/(tabs)/ProjectScreen/DocumentEdit.tsx');
   const tabletPackageText = readTextFile('mobile/package.json');
   const tabletWorkflowText = readTextFile('.github/workflows/mobile.yml');
+  const tabletInstallScriptText = readTextFile('install-idai-field-android-apk.ps1');
+  const tabletReadmeText = readTextFile('mobile/README.md');
   const desktopPriorityStripText = readTextFile(
     'desktop/src/app/components/resources/korean-fieldwork-priority-strip.component.ts'
   );
@@ -3458,6 +3462,14 @@ function validateReportHandoffPreSaveValidation() {
       || !desktopPriorityStripText.includes("electronClipboard.write({ text: plainText, html: '' })")
       || !desktopPriorityStripSpecText.includes("write).toHaveBeenCalledWith({ text: featureItem.copyText, html: '' })")) {
     findings.push('desktop report handoff copy must use text-only clipboard writes for HWP-safe paste');
+  }
+  if (!tabletInstallScriptText.includes('[switch]$FromLatestArtifact')
+      || !tabletInstallScriptText.includes('[switch]$DownloadOnly')
+      || !tabletInstallScriptText.includes('gh run download')
+      || !tabletInstallScriptText.includes('run-$($artifactRun.Run.databaseId)')
+      || !tabletReadmeText.includes('-FromLatestArtifact -DownloadPlatformTools')
+      || !tabletReadmeText.includes('-FromLatestArtifact -DownloadOnly')) {
+    findings.push('tablet APK installer must install or download the newest Mobile GitHub Actions APK artifact for post-change tablet checks');
   }
   if (!desktopPriorityStripTemplateText.includes('korean-fieldwork-report-handoff-details')
       || !desktopPriorityStripTemplateText.includes('item.relationDetails')

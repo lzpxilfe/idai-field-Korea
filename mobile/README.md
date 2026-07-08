@@ -40,6 +40,18 @@ From the repository root on Windows:
 .\install-idai-field-android-apk.ps1 -ApkPath .\dist\android\idai-field-mobile-release.apk
 ```
 
+To install the newest APK produced by the Mobile GitHub Actions workflow:
+
+```powershell
+.\install-idai-field-android-apk.ps1 -FromLatestArtifact -DownloadPlatformTools
+```
+
+To only download that APK for manual transfer to a tablet:
+
+```powershell
+.\install-idai-field-android-apk.ps1 -FromLatestArtifact -DownloadOnly
+```
+
 For USB development on an installed development build:
 
 ```powershell

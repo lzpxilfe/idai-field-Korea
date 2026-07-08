@@ -1,6 +1,11 @@
 param(
     [string]$ApkPath = '.\dist\android\idai-field-mobile-release.apk',
     [string]$DeviceSerial,
+    [switch]$FromLatestArtifact,
+    [string]$Repo = 'lzpxilfe/idai-field',
+    [string]$ArtifactName = 'idai-field-mobile-android-apk',
+    [string]$DownloadDirectory = '.\dist\android',
+    [switch]$DownloadOnly,
     [switch]$DownloadPlatformTools,
     [switch]$NoLaunch,
     [switch]$Help
@@ -19,9 +24,12 @@ function Show-Usage {
     Write-Host 'Usage:'
     Write-Host '  .\install-idai-field-android-apk.ps1 -ApkPath .\dist\android\idai-field-mobile-release.apk'
     Write-Host '  .\install-idai-field-android-apk.ps1 -ApkPath .\idai-field-mobile-release.apk -DownloadPlatformTools'
+    Write-Host '  .\install-idai-field-android-apk.ps1 -FromLatestArtifact -DownloadPlatformTools'
+    Write-Host '  .\install-idai-field-android-apk.ps1 -FromLatestArtifact -DownloadOnly'
     Write-Host '  .\install-idai-field-android-apk.ps1 -DeviceSerial R83Y70CADYP'
     Write-Host ''
     Write-Host 'Enable Developer options and USB debugging on the tablet, then approve the USB debugging prompt.'
+    Write-Host 'Use -FromLatestArtifact to download the newest APK artifact from GitHub Actions before installing.'
 }
 
 function Resolve-FullPath {
@@ -97,6 +105,87 @@ function Resolve-Adb {
     throw 'adb was not found. Install Android SDK platform-tools or rerun with -DownloadPlatformTools.'
 }
 
+function Resolve-GitHubCli {
+    $ghCommand = Get-Command gh.exe -ErrorAction SilentlyContinue
+    if (-not $ghCommand) {
+        $ghCommand = Get-Command gh -ErrorAction SilentlyContinue
+    }
+    if ($ghCommand) {
+        return $ghCommand.Source
+    }
+
+    throw 'GitHub CLI (gh) was not found. Install GitHub CLI or pass -ApkPath to a downloaded APK.'
+}
+
+function Get-LatestArtifactRun {
+    param(
+        [string]$Gh,
+        [string]$Repository,
+        [string]$ExpectedArtifactName
+    )
+
+    $runsJson = & $Gh run list `
+        --repo $Repository `
+        --workflow Mobile `
+        --status success `
+        --json databaseId,displayTitle,createdAt,headSha,event `
+        --limit 50
+    if ($LASTEXITCODE -ne 0) { throw 'Could not list successful Mobile workflow runs.' }
+
+    $runs = $runsJson | ConvertFrom-Json
+    foreach ($run in $runs) {
+        $artifactsJson = & $Gh api "repos/$Repository/actions/runs/$($run.databaseId)/artifacts"
+        if ($LASTEXITCODE -ne 0) { continue }
+
+        $artifacts = ($artifactsJson | ConvertFrom-Json).artifacts
+        $artifact = $artifacts | Where-Object { $_.name -eq $ExpectedArtifactName } | Select-Object -First 1
+        if ($artifact) {
+            return [pscustomobject]@{
+                Run = $run
+                Artifact = $artifact
+            }
+        }
+    }
+
+    throw "No successful Mobile workflow run with artifact '$ExpectedArtifactName' was found. Run the Mobile workflow manually or push an android-* tag first."
+}
+
+function Get-ApkFromLatestArtifact {
+    param(
+        [string]$Repository,
+        [string]$ExpectedArtifactName,
+        [string]$TargetDirectory
+    )
+
+    $gh = Resolve-GitHubCli
+    $downloadDir = Resolve-FullPath -Path $TargetDirectory
+    New-Item -ItemType Directory -Force -Path $downloadDir | Out-Null
+
+    $artifactRun = Get-LatestArtifactRun `
+        -Gh $gh `
+        -Repository $Repository `
+        -ExpectedArtifactName $ExpectedArtifactName
+
+    $runDownloadDir = Join-Path $downloadDir "run-$($artifactRun.Run.databaseId)"
+    New-Item -ItemType Directory -Force -Path $runDownloadDir | Out-Null
+
+    Write-Host "Downloading APK artifact from Mobile run $($artifactRun.Run.databaseId): $($artifactRun.Run.displayTitle)"
+    & $gh run download $artifactRun.Run.databaseId `
+        --repo $Repository `
+        --name $ExpectedArtifactName `
+        --dir $runDownloadDir
+    if ($LASTEXITCODE -ne 0) { throw 'GitHub Actions artifact download failed.' }
+
+    $apk = Get-ChildItem -LiteralPath $runDownloadDir -Recurse -Filter '*.apk' |
+        Sort-Object LastWriteTime -Descending |
+        Select-Object -First 1
+    if (-not $apk) {
+        throw "Downloaded artifact did not contain an APK file: $runDownloadDir"
+    }
+
+    return $apk.FullName
+}
+
 function Get-ConnectedDevices {
     param([string]$Adb)
 
@@ -156,9 +245,20 @@ if ($Help) {
 }
 
 try {
-    $fullApkPath = Resolve-FullPath -Path $ApkPath
+    $fullApkPath = if ($FromLatestArtifact) {
+        Get-ApkFromLatestArtifact `
+            -Repository $Repo `
+            -ExpectedArtifactName $ArtifactName `
+            -TargetDirectory $DownloadDirectory
+    } else {
+        Resolve-FullPath -Path $ApkPath
+    }
     if (-not (Test-Path -LiteralPath $fullApkPath)) {
         throw "APK file was not found: $fullApkPath"
+    }
+    if ($DownloadOnly) {
+        Write-Host "APK ready: $fullApkPath"
+        exit 0
     }
 
     $adb = Resolve-Adb
