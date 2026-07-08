@@ -4434,6 +4434,14 @@ function validateProgressModeAwareness() {
       || !desktopWorkbenchSpecText.includes('uses the investigation mode to surface trial-trench workflow progress on desktop')) {
     findings.push('desktop workbench tests must cover PenMemo review and trial-trench progress');
   }
+  if (!desktopWorkbenchText.includes('getFieldRecordQualityReviewReasons')
+      || !desktopWorkbenchText.includes('FIELD_RECORD_QUALITY_REVIEW_REASON_FIELDS')
+      || !desktopWorkbenchText.includes('getKoreanFieldworkRecordFieldValueSummary')
+      || !desktopWorkbenchSpecText.includes('field record quality review details with shared Korean labels')
+      || !desktopWorkbenchSpecText.includes("not.toContain('sourceRecordCorrection')")
+      || !desktopWorkbenchSpecText.includes("not.toContain('supplementRequestTracked')")) {
+    findings.push('desktop workbench must show tablet FieldRecordQualityReview details with shared Korean labels before opening the record');
+  }
 
   return findings;
 }

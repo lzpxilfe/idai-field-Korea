@@ -1,6 +1,7 @@
 import {
     makeKoreanFieldworkWorkbenchItems
 } from '../../../src/app/util/korean-fieldwork-workbench';
+import { getKoreanFieldworkRecordFieldValueSummary } from 'idai-field-core';
 
 
 describe('korean-fieldwork-workbench', () => {
@@ -118,6 +119,62 @@ describe('korean-fieldwork-workbench', () => {
                 tone: 'info'
             })
         ]);
+    });
+
+
+    it('surfaces field record quality review details with shared Korean labels', () => {
+
+        const operation = createCompleteRecord('operation-1', 'Operation', '\uc870\uc0ac\uad6c\uc5ed 1');
+        const qualityReview = createDocument('quality-review-1', 'FieldRecordQualityReview', 'quality-001', {
+            isRecordedIn: ['operation-1']
+        }, {
+            reviewedRecordUnit: ['featureRecord', 'dailyLog'],
+            qualityReviewStage: ['sameDayReview', 'sourceRecordCorrection'],
+            qualityCorrectionBasis: ['correctionReasonLinked', 'originalRecordPreserved'],
+            recordCreationTiming: 'sameDayFieldRecord',
+            fieldRecordQuality: ['correctionNeeded'],
+            reportEvaluationFeedback: ['fieldRecordReview', 'supplementRequestTracked'],
+            verificationState: 'needsRecheck'
+        });
+        const reviewedRecordUnit = getKoreanFieldworkRecordFieldValueSummary(
+            'reviewedRecordUnit',
+            ['featureRecord', 'dailyLog']
+        )!;
+        const reviewStage = getKoreanFieldworkRecordFieldValueSummary(
+            'qualityReviewStage',
+            ['sameDayReview', 'sourceRecordCorrection']
+        )!;
+        const correctionBasis = getKoreanFieldworkRecordFieldValueSummary(
+            'qualityCorrectionBasis',
+            ['correctionReasonLinked', 'originalRecordPreserved']
+        )!;
+        const reportFeedback = getKoreanFieldworkRecordFieldValueSummary(
+            'reportEvaluationFeedback',
+            ['fieldRecordReview', 'supplementRequestTracked']
+        )!;
+
+        const [item] = makeKoreanFieldworkWorkbenchItems([
+            operation,
+            qualityReview
+        ] as any);
+        const reasonsText = item.reasons.join('\n');
+
+        expect(item).toEqual(expect.objectContaining({
+            id: 'quality-review-1',
+            parentPath: '\uc870\uc0ac\uad6c\uc5ed 1',
+            tone: 'warning',
+            actionLabel: '\uac80\ud1a0 \uc5f4\uae30'
+        }));
+        expect(item.reasons).toEqual([
+            `\uac80\ud1a0 \ub300\uc0c1 ${reviewedRecordUnit}`,
+            `\uac80\ud1a0 \ub2e8\uacc4 ${reviewStage}`,
+            `\uc218\uc815\u00b7\ubcf4\uc644 \uadfc\uac70 ${correctionBasis}`,
+            `\ud3c9\uac00 \ud658\ub958 ${reportFeedback}`
+        ]);
+        expect(reasonsText).not.toContain('featureRecord');
+        expect(reasonsText).not.toContain('sourceRecordCorrection');
+        expect(reasonsText).not.toContain('correctionReasonLinked');
+        expect(reasonsText).not.toContain('supplementRequestTracked');
     });
 
 

@@ -1,5 +1,6 @@
 import {
     Document,
+    getKoreanFieldworkRecordFieldValueSummary,
     getKoreanFieldworkTodaySummary,
     KoreanFieldworkReadinessIssue
 } from 'idai-field-core';
@@ -58,6 +59,7 @@ const QUALITY_TRACKED_CATEGORIES = new Set<string>([
 ]);
 
 const FEATURE_WORKFLOW_CATEGORIES = new Set<string>(['Feature', 'FeatureSegment']);
+const FIELD_RECORD_QUALITY_REVIEW_CATEGORY = 'FieldRecordQualityReview';
 const PEN_MEMO_CATEGORY = 'PenMemo';
 const SOIL_PROFILE_PHOTO_CATEGORY = 'SoilProfilePhoto';
 
@@ -95,6 +97,25 @@ const CATEGORY_LABELS: Readonly<Record<string, string>> = {
     SoilProfilePhoto: '토층사진',
     Trench: '트렌치'
 };
+
+const FIELD_RECORD_QUALITY_REVIEW_REASON_FIELDS = [
+    {
+        fieldName: 'reviewedRecordUnit',
+        prefix: '\uac80\ud1a0 \ub300\uc0c1'
+    },
+    {
+        fieldName: 'qualityReviewStage',
+        prefix: '\uac80\ud1a0 \ub2e8\uacc4'
+    },
+    {
+        fieldName: 'qualityCorrectionBasis',
+        prefix: '\uc218\uc815\u00b7\ubcf4\uc644 \uadfc\uac70'
+    },
+    {
+        fieldName: 'reportEvaluationFeedback',
+        prefix: '\ud3c9\uac00 \ud658\ub958'
+    }
+];
 
 
 export function makeKoreanFieldworkWorkbenchItems(documents: Document[],
@@ -164,6 +185,10 @@ function getWorkbenchReasons(document: Document,
         }
     }
 
+    if (document.resource.category === FIELD_RECORD_QUALITY_REVIEW_CATEGORY) {
+        reasons.push(...getFieldRecordQualityReviewReasons(document));
+    }
+
     if (document.resource.verificationState === 'pendingDecision') {
         reasons.push('추가 확인');
     } else if (isTrackedValue(document.resource.verificationState, REVIEW_VERIFICATION_STATES)) {
@@ -215,6 +240,21 @@ function getSoilProfilePhotoReasons(document: Document): string[] {
 }
 
 
+function getFieldRecordQualityReviewReasons(document: Document): string[] {
+
+    return FIELD_RECORD_QUALITY_REVIEW_REASON_FIELDS
+        .map(({ fieldName, prefix }) => {
+            const summary = getKoreanFieldworkRecordFieldValueSummary(
+                fieldName,
+                document.resource[fieldName]
+            );
+
+            return summary ? `${prefix} ${summary}` : undefined;
+        })
+        .filter((reason): reason is string => !!reason);
+}
+
+
 function getPenMemoReasons(document: Document): string[] {
 
     const reasons: string[] = [];
@@ -253,6 +293,11 @@ function getWorkbenchTone(document: Document,
         if (reasons.includes('토색 후보')) return 'info';
     }
     if (reasons.includes('조사 전') || reasons.includes('조사 중')) return 'info';
+    if (document.resource.category === FIELD_RECORD_QUALITY_REVIEW_CATEGORY) {
+        return isTrackedValue(document.resource.verificationState, REVIEW_VERIFICATION_STATES)
+            ? 'warning'
+            : 'info';
+    }
     if (isKoreanFieldworkChecklistRecord(document.resource.category, investigationMode)) return 'info';
 
     return 'neutral';
@@ -264,6 +309,10 @@ function getWorkbenchActionLabel(document: Document, reasons: string[]): string 
     if (document.resource.category === PEN_MEMO_CATEGORY
             && reasons.some(isPenMemoReviewReason)) {
         return '메모 검토';
+    }
+
+    if (document.resource.category === FIELD_RECORD_QUALITY_REVIEW_CATEGORY) {
+        return '\uac80\ud1a0 \uc5f4\uae30';
     }
 
     return document.resource.category === SOIL_PROFILE_PHOTO_CATEGORY
@@ -360,9 +409,27 @@ function getParentIds(document: Document): string[] {
 
 function getStringArray(value: unknown): string[] {
 
-    return Array.isArray(value)
-        ? value.filter(item => typeof item === 'string')
-        : [];
+    const values = Array.isArray(value) ? value : parseStringArray(value);
+
+    return values.filter(item => typeof item === 'string');
+}
+
+
+function parseStringArray(value: unknown): unknown[] {
+
+    if (typeof value !== 'string') return [];
+
+    const trimmedValue = value.trim();
+    if (trimmedValue.length === 0) return [];
+
+    try {
+        const parsedValue = JSON.parse(trimmedValue);
+        if (Array.isArray(parsedValue)) return parsedValue;
+    } catch {
+        // Imported checkbox values can arrive as a single plain string.
+    }
+
+    return [trimmedValue];
 }
 
 
