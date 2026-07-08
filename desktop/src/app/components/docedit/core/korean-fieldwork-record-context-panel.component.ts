@@ -1169,7 +1169,10 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
                 this.document,
                 categoryName,
                 this.projectConfiguration,
-                { featureType }
+                {
+                    existingDocuments: this.projectDocuments,
+                    featureType
+                }
             )
         } as any;
         const modalRef = this.modalService.open(

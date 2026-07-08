@@ -1,4 +1,9 @@
 import {
+  createKoreanFieldworkDraftBaseResource,
+  createKoreanFieldworkDraftIdentifier,
+  createKoreanFieldworkDraftRelations as createCoreKoreanFieldworkDraftRelations,
+  getKoreanFieldworkFeatureDraftValues,
+  parseKoreanFieldworkFeatureGeometryOption,
   Document,
   getKoreanFieldworkDraftFieldDefaults,
   NewResource,
@@ -7,32 +12,10 @@ import {
 } from 'idai-field-core';
 import { KOREAN_FIELDWORK_CATEGORIES } from './korean-fieldwork-categories';
 import {
-  getKoreanFieldworkFeatureInterpretationTypeValue,
   getKoreanFieldworkFeatureTypeOption,
 } from './korean-fieldwork-feature-types';
 
 const C = KOREAN_FIELDWORK_CATEGORIES;
-
-const DRAFT_IDENTIFIER_PREFIXES: Readonly<Record<string, string>> = {
-  [C.AERIAL_MAP_LAYER]: 'aerial-map-layer',
-  [C.DAILY_LOG]: 'daily-log',
-  [C.DRAWING]: 'drawing',
-  [C.FEATURE]: 'feature',
-  [C.FEATURE_GROUP]: 'feature-group',
-  [C.FEATURE_SEGMENT]: 'feature-segment',
-  [C.FIELD_RECORD_QUALITY_REVIEW]: 'field-record-review',
-  [C.FIND]: 'find',
-  [C.FIND_COLLECTION]: 'find-collection',
-  [C.LAYER]: 'layer',
-  [C.PEN_MEMO]: 'pen-memo',
-  [C.PHOTO]: 'photo',
-  [C.SAMPLE]: 'sample',
-  [C.SOIL_PROFILE_PHOTO]: 'soil-profile-photo',
-  [C.SOURCE_EVIDENCE_INDEX]: 'source-evidence-index',
-  [C.SURVEY]: 'survey',
-  [C.SURVEY_BOUNDARY]: 'survey-boundary',
-  [C.TRENCH]: 'trench',
-};
 
 export interface KoreanFieldworkDraftResourceOptions {
   existingDocuments?: readonly Document[];
@@ -55,36 +38,22 @@ export const createKoreanFieldworkDraftResource = (
   const featureTypeOption = categoryName === C.FEATURE
     ? getKoreanFieldworkFeatureTypeOption(options.featureType)
     : undefined;
-  const resource: NewResource = {
-    identifier: categoryName === C.SOIL_PROFILE_PHOTO
-      ? createLinkedPhotoDraftIdentifier(
-        parentDoc,
-        categoryName,
-        '\ud1a0\uce35\uc0ac\uc9c4',
-        options.existingDocuments,
-        options.identifier
-      )
-      : categoryName === C.PHOTO
-        ? createLinkedPhotoDraftIdentifier(
-          parentDoc,
-          categoryName,
-          '\uc0ac\uc9c4',
-          options.existingDocuments,
-          options.identifier
-        )
-      : createDraftIdentifier(
-        categoryName,
-        featureTypeOption?.value,
-        options.identifier
-      ),
-    relations: createKoreanFieldworkDraftRelations(parentDoc, categoryName, config),
-    category: categoryName,
-  };
+  const resource = createKoreanFieldworkDraftBaseResource(
+    parentDoc,
+    categoryName,
+    config,
+    {
+      existingDocuments: options.existingDocuments,
+      featureType: featureTypeOption?.value,
+      identifier: options.identifier,
+      linkedIdentifierLabel: getLinkedIdentifierLabel(categoryName),
+    }
+  );
 
   if (isFeatureWorkflowCategory(categoryName)) {
-    const featureInterpretationTypeValue = getKoreanFieldworkFeatureInterpretationTypeValue(
-      featureTypeOption?.value
-    );
+    const featureDraftValues = featureTypeOption
+      ? getKoreanFieldworkFeatureDraftValues(featureTypeOption.value)
+      : undefined;
     const normalizedFeatureGeometryRevisionNote =
       options.featureGeometryRevisionNote?.trim();
     const normalizedFeatureLocationSketch =
@@ -92,15 +61,12 @@ export const createKoreanFieldworkDraftResource = (
     const normalizedGeometryConfidence = options.geometryConfidence?.trim();
     const normalizedGeometrySource = options.geometrySource?.trim();
     const normalizedShortDescription = options.shortDescription?.trim();
-    const featureGeometry = parseFeatureGeometryOption(options.featureGeometry);
+    const featureGeometry = parseKoreanFieldworkFeatureGeometryOption(options.featureGeometry);
 
     return {
       ...resource,
       ...(featureGeometry ? { geometry: featureGeometry } : {}),
-      ...(featureTypeOption ? { featureType: featureTypeOption.value } : {}),
-      ...(featureInterpretationTypeValue
-        ? { featureInterpretationType: [featureInterpretationTypeValue] }
-        : {}),
+      ...(featureDraftValues ?? {}),
       ...getKoreanFieldworkDraftFieldDefaults(categoryName, {
         geometryConfidence: normalizedGeometryConfidence,
         geometrySource: normalizedGeometrySource,
@@ -180,43 +146,7 @@ export const createKoreanFieldworkDraftRelations = (
   categoryName: string,
   config: ProjectConfiguration
 ): Resource.Relations => {
-  const parentCategoryName = parentDoc.resource.category;
-  const parentRecordedIn = parentDoc.resource.relations?.isRecordedIn?.[0];
-  const isAllowedRelation = (relationName: string) =>
-    config.isAllowedRelationDomainCategory(
-      categoryName,
-      parentCategoryName,
-      relationName
-    );
-
-  if (
-    categoryName === C.AERIAL_MAP_LAYER
-    && isAllowedRelation('isMapLayerOf')
-  ) {
-    return { isMapLayerOf: [parentDoc.resource.id] };
-  }
-
-  if (isAllowedRelation('depicts')) {
-    return { depicts: [parentDoc.resource.id] };
-  }
-
-  if (isAllowedRelation('liesWithin')) {
-    const recordedInTarget = parentRecordedIn
-      ?? (isAllowedRelation('isRecordedIn') ? parentDoc.resource.id : undefined);
-
-    return {
-      ...(recordedInTarget ? { isRecordedIn: [recordedInTarget] } : {}),
-      liesWithin: [parentDoc.resource.id],
-    };
-  }
-
-  if (isAllowedRelation('isRecordedIn')) {
-    return { isRecordedIn: [parentDoc.resource.id] };
-  }
-
-  return parentRecordedIn
-    ? { isRecordedIn: [parentRecordedIn], liesWithin: [parentDoc.resource.id] }
-    : { isRecordedIn: [parentDoc.resource.id] };
+  return createCoreKoreanFieldworkDraftRelations(parentDoc, categoryName, config);
 };
 
 export const createDraftIdentifier = (
@@ -224,121 +154,17 @@ export const createDraftIdentifier = (
   featureType?: string,
   preferredIdentifier?: string
 ): string => {
-  const normalizedPreferredIdentifier = preferredIdentifier?.trim();
-  if (normalizedPreferredIdentifier) return normalizedPreferredIdentifier;
-
-  const featureTypeOption = categoryName === C.FEATURE
-    ? getKoreanFieldworkFeatureTypeOption(featureType)
-    : undefined;
-  const prefix = featureTypeOption?.identifierPrefix
-    ?? DRAFT_IDENTIFIER_PREFIXES[categoryName]
-    ?? toKebabCase(categoryName);
-
-  return `${prefix}-${Date.now()}`;
+  return createKoreanFieldworkDraftIdentifier(categoryName, featureType, preferredIdentifier);
 };
 
-const createLinkedPhotoDraftIdentifier = (
-  parentDoc: Document,
-  categoryName: string,
-  label: string,
-  existingDocuments: readonly Document[] = [],
-  preferredIdentifier?: string
-): string => {
-  const normalizedPreferredIdentifier = preferredIdentifier?.trim();
-  if (normalizedPreferredIdentifier) return normalizedPreferredIdentifier;
+const getLinkedIdentifierLabel = (categoryName: string): string | undefined => {
+  if (categoryName === C.PHOTO) return '사진';
+  if (categoryName === C.SOIL_PROFILE_PHOTO) return '토층사진';
 
-  const parentIdentifier = getParentIdentifier(parentDoc);
-  const nextNumber = getNextLinkedPhotoNumber(
-    parentDoc.resource.id,
-    parentIdentifier,
-    categoryName,
-    label,
-    existingDocuments
-  );
-
-  return `${parentIdentifier} ${label} ${nextNumber}`;
-};
-
-const getParentIdentifier = (parentDoc: Document): string => {
-  const identifier = parentDoc.resource.identifier?.trim()
-    || parentDoc.resource.id?.trim();
-
-  return identifier || '\uc720\uad6c';
-};
-
-const getNextLinkedPhotoNumber = (
-  parentId: string | undefined,
-  parentIdentifier: string,
-  categoryName: string,
-  label: string,
-  documents: readonly Document[]
-): number => {
-  const prefix = `${parentIdentifier} ${label} `;
-  const linkedNumbers = documents
-    .filter((document) =>
-      document.resource.category === categoryName
-      && (
-        isRelationLinkedToParent(document.resource.relations?.depicts, parentId)
-        || isRelationLinkedToParent(document.resource.relations?.liesWithin, parentId)
-      ))
-    .map((document) => getLinkedPhotoSuffixNumber(
-      document.resource.identifier,
-      prefix
-    ))
-    .filter((value): value is number => value !== undefined);
-
-  return linkedNumbers.length > 0
-    ? Math.max(...linkedNumbers) + 1
-    : 1;
-};
-
-const isRelationLinkedToParent = (
-  relationTargets: string[] | undefined,
-  parentId: string | undefined
-): boolean =>
-  !!parentId && !!relationTargets?.includes(parentId);
-
-const getLinkedPhotoSuffixNumber = (
-  identifier: string | undefined,
-  prefix: string
-): number | undefined => {
-  const normalizedIdentifier = identifier?.trim();
-  if (!normalizedIdentifier?.startsWith(prefix)) return undefined;
-
-  const suffix = normalizedIdentifier.slice(prefix.length).trim();
-  const parsedNumber = Number.parseInt(suffix, 10);
-
-  return Number.isFinite(parsedNumber) && parsedNumber > 0
-    ? parsedNumber
-    : undefined;
+  return undefined;
 };
 
 const isFeatureWorkflowCategory = (categoryName: string): boolean =>
   categoryName === C.FEATURE
   || categoryName === C.FEATURE_GROUP
   || categoryName === C.FEATURE_SEGMENT;
-
-const parseFeatureGeometryOption = (
-  featureGeometry?: string
-): Record<string, unknown> | undefined => {
-  const normalizedFeatureGeometry = featureGeometry?.trim();
-  if (!normalizedFeatureGeometry) return undefined;
-
-  try {
-    const parsedGeometry = JSON.parse(normalizedFeatureGeometry);
-    return isJsonObject(parsedGeometry) && typeof parsedGeometry.type === 'string'
-      ? parsedGeometry
-      : undefined;
-  } catch {
-    return undefined;
-  }
-};
-
-const isJsonObject = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
-
-const toKebabCase = (value: string): string =>
-  value
-    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
-    .replace(/[\s_]+/g, '-')
-    .toLowerCase();

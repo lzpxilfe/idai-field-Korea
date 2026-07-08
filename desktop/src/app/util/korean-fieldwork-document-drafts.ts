@@ -1,8 +1,14 @@
 import {
     CategoryForm,
+    canCreateKoreanFieldworkChildRecord as canCreateCoreKoreanFieldworkChildRecord,
+    createKoreanFieldworkDraftBaseResource as createCoreKoreanFieldworkDraftBaseResource,
+    createKoreanFieldworkDraftIdentifier as createCoreKoreanFieldworkDraftIdentifier,
+    createKoreanFieldworkDraftRelations as createCoreKoreanFieldworkDraftRelations,
+    createNextKoreanFieldworkFeatureIdentifier as createCoreNextKoreanFieldworkFeatureIdentifier,
     Document,
-    getKoreanFieldworkFeatureIdentifierPrefix,
-    getKoreanFieldworkFeatureInterpretationTypeValue,
+    getKoreanFieldworkContinuationActions as getCoreKoreanFieldworkContinuationActions,
+    getKoreanFieldworkFeatureDraftValues,
+    KoreanFieldworkContinuationAction,
     NewResource,
     ProjectConfiguration,
     Resource
@@ -20,16 +26,11 @@ import {
 } from './korean-fieldwork-notebook-digest';
 
 
-export interface KoreanFieldworkContinuationAction {
-    id: string;
-    categoryName: string;
-    relationName: string;
-}
-
 export interface KoreanFieldworkDraftResourceOptions {
     boundaryAccuracy?: string;
     boundarySummary?: string;
     boundarySource?: string;
+    existingDocuments?: readonly Document[];
     featureType?: string;
     identifier?: string;
     recordMemoContinuation?: KoreanFieldworkFieldNoteContinuationSeed;
@@ -57,117 +58,13 @@ const CATEGORIES = {
     OPERATION: 'Operation'
 };
 
-const DRAFT_IDENTIFIER_PREFIXES: Readonly<Record<string, string>> = {
-    [CATEGORIES.DAILY_LOG]: 'daily-log',
-    [CATEGORIES.DRAWING]: 'drawing',
-    [CATEGORIES.FEATURE]: 'feature',
-    [CATEGORIES.FEATURE_GROUP]: 'feature-group',
-    [CATEGORIES.FEATURE_SEGMENT]: 'feature-segment',
-    [CATEGORIES.FIELD_RECORD_QUALITY_REVIEW]: 'field-record-review',
-    [CATEGORIES.FIND]: 'find',
-    [CATEGORIES.FIND_COLLECTION]: 'find-collection',
-    [CATEGORIES.LAYER]: 'layer',
-    [CATEGORIES.PEN_MEMO]: 'pen-memo',
-    [CATEGORIES.PHOTO]: 'photo',
-    [CATEGORIES.SAMPLE]: 'sample',
-    [CATEGORIES.SOIL_PROFILE_PHOTO]: 'soil-profile-photo',
-    [CATEGORIES.SURVEY]: 'survey',
-    [CATEGORIES.SURVEY_BOUNDARY]: 'survey-boundary',
-    [CATEGORIES.TRENCH]: 'trench'
-};
-
-const CONTINUATION_CATEGORIES = new Set<string>([
-    CATEGORIES.OPERATION,
-    CATEGORIES.TRENCH,
-    CATEGORIES.FEATURE_GROUP,
-    CATEGORIES.FEATURE,
-    CATEGORIES.FEATURE_SEGMENT,
-    CATEGORIES.LAYER,
-    CATEGORIES.SURVEY,
-    CATEGORIES.SURVEY_BOUNDARY,
-    CATEGORIES.FIND,
-    CATEGORIES.FIND_COLLECTION,
-    CATEGORIES.SAMPLE,
-    CATEGORIES.PHOTO,
-    CATEGORIES.SOIL_PROFILE_PHOTO,
-    CATEGORIES.DRAWING,
-    CATEGORIES.PEN_MEMO,
-    CATEGORIES.DAILY_LOG,
-    CATEGORIES.FIELD_RECORD_QUALITY_REVIEW
-]);
-
-const NEXT_CHILD_CATEGORY: Readonly<Record<string, string|undefined>> = {
-    [CATEGORIES.OPERATION]: CATEGORIES.TRENCH,
-    [CATEGORIES.TRENCH]: CATEGORIES.FEATURE,
-    [CATEGORIES.FEATURE_GROUP]: CATEGORIES.FEATURE,
-    [CATEGORIES.FEATURE]: CATEGORIES.FEATURE_SEGMENT,
-    [CATEGORIES.FEATURE_SEGMENT]: CATEGORIES.LAYER
-};
-
-const EVIDENCE_CATEGORY_PRIORITY: Readonly<Record<string, readonly string[]>> = {
-    [CATEGORIES.OPERATION]: [CATEGORIES.SURVEY_BOUNDARY, CATEGORIES.DAILY_LOG, CATEGORIES.PEN_MEMO],
-    [CATEGORIES.TRENCH]: [
-        CATEGORIES.PHOTO,
-        CATEGORIES.DRAWING,
-        CATEGORIES.SOIL_PROFILE_PHOTO,
-        CATEGORIES.PEN_MEMO
-    ],
-    [CATEGORIES.FEATURE_GROUP]: [CATEGORIES.PHOTO, CATEGORIES.DRAWING, CATEGORIES.PEN_MEMO],
-    [CATEGORIES.FEATURE]: [
-        CATEGORIES.PHOTO,
-        CATEGORIES.SOIL_PROFILE_PHOTO,
-        CATEGORIES.DRAWING,
-        CATEGORIES.PEN_MEMO,
-        CATEGORIES.FIND,
-        CATEGORIES.SAMPLE
-    ],
-    [CATEGORIES.FEATURE_SEGMENT]: [
-        CATEGORIES.PHOTO,
-        CATEGORIES.SOIL_PROFILE_PHOTO,
-        CATEGORIES.DRAWING,
-        CATEGORIES.PEN_MEMO,
-        CATEGORIES.FIND,
-        CATEGORIES.SAMPLE
-    ],
-    [CATEGORIES.LAYER]: [
-        CATEGORIES.SOIL_PROFILE_PHOTO,
-        CATEGORIES.SAMPLE,
-        CATEGORIES.PHOTO,
-        CATEGORIES.DRAWING,
-        CATEGORIES.PEN_MEMO
-    ],
-    [CATEGORIES.SURVEY]: [
-        CATEGORIES.SURVEY_BOUNDARY,
-        CATEGORIES.FIND_COLLECTION,
-        CATEGORIES.FIND,
-        CATEGORIES.PHOTO,
-        CATEGORIES.PEN_MEMO
-    ],
-    [CATEGORIES.FIND_COLLECTION]: [CATEGORIES.FIND, CATEGORIES.PHOTO, CATEGORIES.PEN_MEMO],
-    [CATEGORIES.FIND]: [CATEGORIES.PHOTO, CATEGORIES.DRAWING, CATEGORIES.SAMPLE, CATEGORIES.PEN_MEMO],
-    [CATEGORIES.SAMPLE]: [CATEGORIES.PHOTO, CATEGORIES.PEN_MEMO]
-};
-
-const RELATION_LABEL_ORDER = ['liesWithin', 'depicts', 'isRecordedIn', 'isMapLayerOf'];
-
 
 export function getKoreanFieldworkContinuationActions(
         parentDoc: Document,
         projectConfiguration: ProjectConfiguration
 ): KoreanFieldworkContinuationAction[] {
 
-    const parentCategoryName = parentDoc?.resource?.category;
-    if (!parentDoc?.resource?.id || !CONTINUATION_CATEGORIES.has(parentCategoryName)) return [];
-
-    const candidateCategoryNames = dedupe([
-        NEXT_CHILD_CATEGORY[parentCategoryName],
-        ...(EVIDENCE_CATEGORY_PRIORITY[parentCategoryName] ?? [])
-    ].filter((categoryName): categoryName is string => !!categoryName));
-
-    return candidateCategoryNames
-        .map(categoryName => makeContinuationAction(categoryName, parentDoc, projectConfiguration))
-        .filter((action): action is KoreanFieldworkContinuationAction => action !== undefined)
-        .slice(0, 5);
+    return getCoreKoreanFieldworkContinuationActions(parentDoc, projectConfiguration);
 }
 
 
@@ -182,11 +79,20 @@ export function createKoreanFieldworkDraftResource(
     const featurePreset = categoryName === CATEGORIES.FEATURE
         ? getFeatureGuidancePreset(options.featureType ?? 'unknown')
         : undefined;
+    const baseResource = createCoreKoreanFieldworkDraftBaseResource(
+        parentDoc,
+        categoryName,
+        projectConfiguration,
+        {
+            existingDocuments: options.existingDocuments,
+            featureType: featurePreset?.featureType,
+            identifier: options.identifier,
+            linkedIdentifierLabel: getLinkedIdentifierLabel(categoryName)
+        }
+    );
 
     return {
-        identifier: createDraftIdentifier(categoryName, featurePreset?.featureType, options.identifier),
-        relations: createKoreanFieldworkDraftRelations(parentDoc, categoryName, projectConfiguration),
-        category: categoryName,
+        ...baseResource,
         ...getKoreanFieldworkDefaultFieldValues(category, {
             boundaryAccuracy: options.boundaryAccuracy,
             boundarySummary: options.boundarySummary,
@@ -211,33 +117,7 @@ export function createKoreanFieldworkDraftRelations(
         projectConfiguration: ProjectConfiguration
 ): Resource.Relations {
 
-    const parentCategoryName = parentDoc.resource.category;
-    const parentRecordedIn = parentDoc.resource.relations?.isRecordedIn?.[0];
-    const isAllowedRelation = (relationName: string) =>
-        projectConfiguration.isAllowedRelationDomainCategory(
-            categoryName,
-            parentCategoryName,
-            relationName
-        );
-
-    if (isAllowedRelation('isMapLayerOf')) return { isMapLayerOf: [parentDoc.resource.id] };
-    if (isAllowedRelation('depicts')) return { depicts: [parentDoc.resource.id] };
-
-    if (isAllowedRelation('liesWithin')) {
-        const recordedInTarget = parentRecordedIn
-            ?? (isAllowedRelation('isRecordedIn') ? parentDoc.resource.id : undefined);
-
-        return {
-            ...(recordedInTarget ? { isRecordedIn: [recordedInTarget] } : {}),
-            liesWithin: [parentDoc.resource.id]
-        };
-    }
-
-    if (isAllowedRelation('isRecordedIn')) return { isRecordedIn: [parentDoc.resource.id] };
-
-    return parentRecordedIn
-        ? { isRecordedIn: [parentRecordedIn], liesWithin: [parentDoc.resource.id] }
-        : { isRecordedIn: [parentDoc.resource.id] };
+    return createCoreKoreanFieldworkDraftRelations(parentDoc, categoryName, projectConfiguration);
 }
 
 
@@ -249,19 +129,7 @@ export function canCreateKoreanFieldworkChildRecord(
 
     if (!category || category.name === 'Image') return false;
 
-    const canUseRelation = (relationName: string) =>
-        projectConfiguration.isAllowedRelationDomainCategory(
-            category.name,
-            parentDoc.resource.category,
-            relationName
-        );
-
-    return (
-        (canUseRelation('isRecordedIn') && !category.mustLieWithin)
-        || canUseRelation('liesWithin')
-        || canUseRelation('depicts')
-        || canUseRelation('isMapLayerOf')
-    );
+    return canCreateCoreKoreanFieldworkChildRecord(category, parentDoc, projectConfiguration);
 }
 
 
@@ -271,58 +139,23 @@ export function createDraftIdentifier(
         preferredIdentifier?: string): string {
 
     const normalizedPreferredIdentifier = preferredIdentifier?.trim();
-    if (normalizedPreferredIdentifier) return normalizedPreferredIdentifier;
-
-    const prefix = categoryName === CATEGORIES.FEATURE && featureType
-        ? getKoreanFieldworkFeatureIdentifierPrefix(featureType)
-        : DRAFT_IDENTIFIER_PREFIXES[categoryName] ?? toKebabCase(categoryName);
-
-    return `${prefix}-${Date.now()}`;
+    return createCoreKoreanFieldworkDraftIdentifier(categoryName, featureType, normalizedPreferredIdentifier);
 }
 
 
 export function createNextFeatureIdentifier(featureType: string|undefined,
                                             existingDocuments: readonly Document[]): string {
 
-    const prefix = getFeatureIdentifierPrefix(featureType);
-    const nextNumber = getNextFeatureIdentifierNumber(featureType, prefix, existingDocuments);
-
-    return `${nextNumber}호 ${prefix}`;
+    return createCoreNextKoreanFieldworkFeatureIdentifier(featureType, existingDocuments);
 }
 
 
-function makeContinuationAction(categoryName: string,
-                                parentDoc: Document,
-                                projectConfiguration: ProjectConfiguration)
-        : KoreanFieldworkContinuationAction|undefined {
+function getLinkedIdentifierLabel(categoryName: string): string|undefined {
 
-    const category = getCategory(categoryName, projectConfiguration);
-    if (!category || !canCreateKoreanFieldworkChildRecord(category, parentDoc, projectConfiguration)) {
-        return undefined;
-    }
+    if (categoryName === CATEGORIES.PHOTO) return '사진';
+    if (categoryName === CATEGORIES.SOIL_PROFILE_PHOTO) return '토층사진';
 
-    const relationName = getPreferredRelationName(categoryName, parentDoc, projectConfiguration);
-    if (!relationName) return undefined;
-
-    return {
-        id: `${categoryName}:${relationName}`,
-        categoryName,
-        relationName
-    };
-}
-
-
-function getPreferredRelationName(categoryName: string,
-                                  parentDoc: Document,
-                                  projectConfiguration: ProjectConfiguration): string|undefined {
-
-    return RELATION_LABEL_ORDER.find(relationName =>
-        projectConfiguration.isAllowedRelationDomainCategory(
-            categoryName,
-            parentDoc.resource.category,
-            relationName
-        )
-    );
+    return undefined;
 }
 
 
@@ -348,11 +181,12 @@ function getFeatureGuidanceDraftValues(
 
     if (!category || !preset) return {};
 
-    const interpretationValue = getKoreanFieldworkFeatureInterpretationTypeValue(preset.featureType)
+    const draftValues = getKoreanFieldworkFeatureDraftValues(preset.featureType);
+    const interpretationValue = draftValues.featureInterpretationType?.[0]
         ?? preset.interpretationValue;
 
     return {
-        ...(CategoryForm.getField(category, 'featureType') ? { featureType: preset.featureType } : {}),
+        ...(CategoryForm.getField(category, 'featureType') ? { featureType: draftValues.featureType } : {}),
         ...(interpretationValue && CategoryForm.getField(category, 'featureInterpretationType')
             ? { featureInterpretationType: [interpretationValue] }
             : {})
@@ -396,99 +230,4 @@ function makeRecordMemoTemplate(input: KoreanFieldworkFieldNoteInput|undefined):
 function makeFieldNoteSectionLine(label: string, value: string|undefined): string {
 
     return `[${label}]${value ? ` ${value}` : ''}`;
-}
-
-
-function getFeatureIdentifierPrefix(featureType: string|undefined): string {
-
-    return getKoreanFieldworkFeatureIdentifierPrefix(featureType ?? 'unknown');
-}
-
-
-function getNextFeatureIdentifierNumber(featureType: string|undefined,
-                                        prefix: string,
-                                        existingDocuments: readonly Document[]): number {
-
-    const maxNumber = existingDocuments
-        .filter(document => document.resource.category === CATEGORIES.FEATURE)
-        .reduce((maxIdentifierNumber, document) => {
-            const identifier = document.resource.identifier ?? '';
-            const identifierNumber = getFeatureIdentifierNumber(identifier, prefix);
-            if (identifierNumber !== undefined) {
-                return Math.max(maxIdentifierNumber, identifierNumber);
-            }
-
-            if (getDocumentFeatureType(document) !== featureType) {
-                return maxIdentifierNumber;
-            }
-
-            return Math.max(
-                maxIdentifierNumber,
-                getFirstPositiveNumber(identifier) ?? 0
-            );
-        }, 0);
-
-    return maxNumber + 1;
-}
-
-
-function getDocumentFeatureType(document: Document): string {
-
-    const featureType = (document.resource as Record<string, unknown>).featureType;
-
-    return typeof featureType === 'string' ? featureType : '';
-}
-
-
-function getFeatureIdentifierNumber(identifier: string, prefix: string): number|undefined {
-
-    const normalizedIdentifier = identifier.replace(/\s+/g, ' ').trim();
-    if (!normalizedIdentifier) return undefined;
-
-    const escapedPrefix = escapeRegExp(prefix);
-    const patterns = [
-        new RegExp(`(?:^|\\s)(\\d+)\\s*호\\s*${escapedPrefix}(?:\\s|$)`),
-        new RegExp(`(?:^|\\s)${escapedPrefix}\\s*(\\d+)\\s*호(?:\\s|$)`),
-        new RegExp(`(?:^|\\s)${escapedPrefix}[-_\\s]*(\\d+)(?:\\s|$)`)
-    ];
-
-    for (const pattern of patterns) {
-        const match = normalizedIdentifier.match(pattern);
-        const number = match ? Number.parseInt(match[1], 10) : 0;
-        if (number > 0) return number;
-    }
-
-    return normalizedIdentifier.includes(prefix)
-        ? getFirstPositiveNumber(normalizedIdentifier)
-        : undefined;
-}
-
-
-function getFirstPositiveNumber(value: string): number|undefined {
-
-    const match = value.match(/\d+/);
-    const number = match ? Number.parseInt(match[0], 10) : 0;
-
-    return number > 0 ? number : undefined;
-}
-
-
-function escapeRegExp(value: string): string {
-
-    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-
-function dedupe<T>(values: T[]): T[] {
-
-    return values.filter((value, index) => values.indexOf(value) === index);
-}
-
-
-function toKebabCase(value: string): string {
-
-    return value
-        .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
-        .replace(/[\s_]+/g, '-')
-        .toLowerCase();
 }

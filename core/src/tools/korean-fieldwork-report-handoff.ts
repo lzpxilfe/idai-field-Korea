@@ -61,6 +61,22 @@ export interface KoreanFieldworkReportHandoffValidation {
     copyText?: string;
 }
 
+export function normalizeKoreanFieldworkHwpPlainText(text: string): string {
+
+    const normalized = (text ?? '')
+        .normalize('NFC')
+        .replace(/\u00a0/g, ' ')
+        .replace(/[\u200B-\u200D\uFEFF]/g, '')
+        .replace(/\r\n?/g, '\n')
+        .split('\n')
+        .map(line => line.replace(/[ \t]+$/g, ''))
+        .join('\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+
+    return normalized.replace(/\n/g, '\r\n');
+}
+
 interface DetailFieldDefinition {
     label: string;
     fields: string[];
@@ -357,7 +373,7 @@ export function makeKoreanFieldworkReportHandoff(documents: Document[]): KoreanF
         readyCount: items.filter(item => item.tone === 'ready').length,
         reviewCount: items.filter(item => item.tone === 'review').length,
         issueCount: items.reduce((count, item) => count + item.issueCount, 0),
-        copyAllText: items.map(item => item.copyText).join('\n\n')
+        copyAllText: normalizeKoreanFieldworkHwpPlainText(items.map(item => item.copyText).join('\n\n'))
     };
 }
 
@@ -533,7 +549,7 @@ function makeCopyText({
     summary: string;
 }): string {
 
-    return [
+    return normalizeKoreanFieldworkHwpPlainText([
         `[${categoryLabel}] ${identifier}`,
         `${KO.SUMMARY}: ${summary}`,
         `${KO.DETAILS}: ${details.length > 0 ? details.join(' / ') : KO.NO_DETAILS}`,
@@ -542,7 +558,7 @@ function makeCopyText({
         ...(evidenceDetails.length > 0 ? [makeListBlock(KO.EVIDENCE_DETAILS, evidenceDetails)] : []),
         `${KO.ISSUES}: ${issueLabel}`,
         ...(issueDetails.length > 0 ? [makeListBlock(KO.ISSUE_DETAILS, issueDetails)] : [])
-    ].join('\n');
+    ].join('\n'));
 }
 
 

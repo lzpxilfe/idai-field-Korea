@@ -143,7 +143,7 @@ describe('Korean fieldwork document drafts', () => {
 
     it('creates photo and survey boundary drafts with Korean fieldwork defaults', () => {
 
-        const featureDoc = createDoc('feature-1', 'Feature');
+        const featureDoc = createDoc('feature-1', 'Feature', {}, { identifier: '1호 수혈' });
         const operationDoc = createDoc('operation-1', 'Operation');
         const config = createConfig({
             'Photo:Feature': ['depicts'],
@@ -151,7 +151,7 @@ describe('Korean fieldwork document drafts', () => {
         });
 
         expect(createKoreanFieldworkDraftResource(featureDoc, 'Photo', config)).toMatchObject({
-            identifier: 'photo-1700000000000',
+            identifier: '1호 수혈 사진 1',
             category: 'Photo',
             relations: { depicts: ['feature-1'] },
             fieldworkPhotoAnnotationStrokes: '[]',
@@ -171,6 +171,26 @@ describe('Korean fieldwork document drafts', () => {
             surveyBoundaryNote: '1구역 북쪽 능선부터 남쪽 농로까지',
             surveyBoundarySource: 'manualBasemapTrace',
             surveyBoundaryType: 'operationBoundary'
+        });
+    });
+
+
+    it('continues desktop photo numbering below the same parent record', () => {
+
+        const featureDoc = createDoc('feature-1', 'Feature', {}, { identifier: '1호 수혈' });
+        const config = createConfig({
+            'Photo:Feature': ['depicts']
+        });
+
+        expect(createKoreanFieldworkDraftResource(featureDoc, 'Photo', config, {
+            existingDocuments: [
+                createDoc('photo-1', 'Photo', { depicts: ['feature-1'] }, { identifier: '1호 수혈 사진 1' }),
+                createDoc('photo-2', 'Photo', { depicts: ['feature-1'] }, { identifier: '1호 수혈 사진 2' }),
+                createDoc('other-photo', 'Photo', { depicts: ['feature-2'] }, { identifier: '2호 수혈 사진 1' })
+            ]
+        })).toMatchObject({
+            identifier: '1호 수혈 사진 3',
+            category: 'Photo'
         });
     });
 

@@ -8,6 +8,7 @@ import {
     KoreanFieldworkReportHandoffItem,
     KoreanFieldworkReadinessIssue,
     makeKoreanFieldworkReportHandoff,
+    normalizeKoreanFieldworkHwpPlainText,
     PouchdbDatastore,
     ProjectConfiguration
 } from 'idai-field-core';
@@ -1560,6 +1561,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
             this.projectConfiguration,
             {
                 boundarySummary: this.getProjectBoundarySummaryDraftValue(categoryName),
+                existingDocuments: this.projectDocuments,
                 featureType,
                 identifier: options.identifier,
                 recordMemoContinuation: options.recordMemoContinuation,
@@ -1619,20 +1621,25 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
 
     private async writeClipboardText(text: string) {
 
+        const plainText = normalizeKoreanFieldworkHwpPlainText(text);
         const nodeRequire = typeof window !== 'undefined'
             ? (window as any).require
             : undefined;
 
         try {
             const electronClipboard = nodeRequire?.('electron')?.clipboard;
+            if (electronClipboard?.write) {
+                electronClipboard.write({ text: plainText });
+                return;
+            }
             if (electronClipboard?.writeText) {
-                electronClipboard.writeText(text);
+                electronClipboard.writeText(plainText);
                 return;
             }
         } catch (_) {}
 
         if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-            await navigator.clipboard.writeText(text);
+            await navigator.clipboard.writeText(plainText);
             return;
         }
 

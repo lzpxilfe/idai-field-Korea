@@ -326,6 +326,7 @@ const featureRows = [
       'mobile/hooks/use-fieldwork-image-sync.ts'
     ],
     desktop: [
+      'core/src/tools/korean-fieldwork-document-drafts.ts',
       'core/src/tools/korean-fieldwork-record-contract.ts',
       'core/src/tools/korean-fieldwork-report-handoff.ts',
       'desktop/src/app/components/resources/korean-fieldwork-priority-strip.component.ts',
@@ -941,15 +942,22 @@ function compareGuidedFeatureTypes() {
   ]);
   const findings = [];
   const tabletWrapperText = readTextFile('mobile/components/Project/korean-fieldwork-feature-types.ts');
+  const tabletDraftText = readTextFile('mobile/components/Project/korean-fieldwork-document-drafts.ts');
   const desktopDraftText = readTextFile('desktop/src/app/util/korean-fieldwork-document-drafts.ts');
+  const coreDocumentDraftText = readTextFile('core/src/tools/korean-fieldwork-document-drafts.ts');
 
   if (!tabletWrapperText.includes("from 'idai-field-core'")
       || !tabletWrapperText.includes('KOREAN_FIELDWORK_FEATURE_TYPE_OPTIONS')
       || tabletWrapperText.includes('identifierPrefix:')) {
     findings.push('tablet feature type options must re-export the shared core feature type contract');
   }
-  if (!desktopDraftText.includes('getKoreanFieldworkFeatureIdentifierPrefix')
-      || !desktopDraftText.includes('getKoreanFieldworkFeatureInterpretationTypeValue')
+  if (!coreDocumentDraftText.includes('getKoreanFieldworkFeatureIdentifierPrefix')
+      || !coreDocumentDraftText.includes('getKoreanFieldworkFeatureInterpretationTypeValue')
+      || !coreDocumentDraftText.includes('getKoreanFieldworkFeatureDraftValues')) {
+    findings.push('core document drafts must own feature type prefixes and interpretation values');
+  }
+  if (!desktopDraftText.includes('getKoreanFieldworkFeatureDraftValues')
+      || !tabletDraftText.includes('getKoreanFieldworkFeatureDraftValues')
       || desktopDraftText.includes('FEATURE_TYPE_IDENTIFIER_PREFIXES')) {
     findings.push('desktop feature drafts must use core feature type prefixes and interpretation values');
   }
@@ -1068,6 +1076,8 @@ function validateGuidedFeatureDraftDefaults() {
   const tabletFieldNoteText = readTextFile('mobile/components/Project/KoreanFieldworkFieldNotePanel.tsx');
   const tabletMapBottomSheetText = readTextFile('mobile/components/Project/Map/MapBottomSheet.tsx');
   const desktopDraftText = readTextFile('desktop/src/app/util/korean-fieldwork-document-drafts.ts');
+  const coreDocumentDraftText = readTextFile('core/src/tools/korean-fieldwork-document-drafts.ts');
+  const coreDocumentDraftSpecText = readTextFile('core/test/tools/korean-fieldwork-document-drafts.spec.ts');
   const desktopDraftDefaultsText = readTextFile('desktop/src/app/util/korean-fieldwork-draft-defaults.ts');
   const coreDraftDefaultsText = readTextFile('core/src/tools/korean-fieldwork-draft-defaults.ts');
   const coreDraftDefaultsSpecText = readTextFile('core/test/tools/korean-fieldwork-draft-defaults.spec.ts');
@@ -1142,8 +1152,27 @@ function validateGuidedFeatureDraftDefaults() {
       || !coreDraftDefaultsSpecText.includes('Korean fieldwork draft defaults')) {
     findings.push('core draft defaults must define shared tablet and desktop draft field defaults');
   }
+  if (!coreDocumentDraftText.includes('createKoreanFieldworkDraftBaseResource')
+      || !coreDocumentDraftText.includes('createKoreanFieldworkDraftRelations')
+      || !coreDocumentDraftText.includes('createKoreanFieldworkLinkedDraftIdentifier')
+      || !coreDocumentDraftText.includes('createNextKoreanFieldworkFeatureIdentifier')
+      || !coreDocumentDraftSpecText.includes('Korean fieldwork document drafts')) {
+    findings.push('core document drafts must define shared tablet and desktop draft creation rules');
+  }
   if (!tabletDraftText.includes('categoryName === C.FEATURE_GROUP')) {
     findings.push('tablet document drafts must treat FeatureGroup as a shared feature workflow draft category');
+  }
+  for (const [label, text] of [
+    ['tablet document drafts', tabletDraftText],
+    ['desktop document drafts', desktopDraftText]
+  ]) {
+    if (!text.includes('createKoreanFieldworkDraftBaseResource')
+        || !text.includes('createKoreanFieldworkDraftRelations')) {
+      findings.push(`${label} must reuse the shared core document draft contract`);
+    }
+    if (text.includes('DRAFT_IDENTIFIER_PREFIXES')) {
+      findings.push(`${label} must not keep a local draft identifier prefix table`);
+    }
   }
   for (const [label, text] of [
     ['tablet map drafts', readTextFile('mobile/components/Project/Map/korean-fieldwork-drafts.ts')],
@@ -1166,7 +1195,8 @@ function validateGuidedFeatureDraftDefaults() {
     if (!text.includes('options.featureType')) {
       findings.push(`${label} draft resource does not read featureType options`);
     }
-    if (!text.includes('featureInterpretationType')) {
+    if (!text.includes('featureInterpretationType')
+        && !text.includes('getKoreanFieldworkFeatureDraftValues')) {
       findings.push(`${label} feature drafts do not seed feature interpretation type`);
     }
   }
@@ -3232,6 +3262,12 @@ function validateReportHandoffPreSaveValidation() {
       || !coreReportHandoffText.includes('MEDIA_URI_FIELDS')) {
     findings.push('core report handoff must expose reusable pre-save validation for tablet and desktop report copy readiness');
   }
+  if (!coreReportHandoffText.includes('normalizeKoreanFieldworkHwpPlainText')
+      || !coreReportHandoffText.includes(".replace(/\\r\\n?/g, '\\n')")
+      || !coreReportHandoffText.includes(".replace(/\\n/g, '\\r\\n')")
+      || !coreReportHandoffSpecText.includes('normalizes HWP copy text as plain Windows clipboard text')) {
+    findings.push('core report handoff must normalize HWP copy blocks as plain Windows clipboard text');
+  }
   if (!coreReportHandoffText.includes('evidenceDetails')
       || !coreReportHandoffText.includes('issueDetails')
       || !coreReportHandoffText.includes('relationDetails')
@@ -3274,6 +3310,11 @@ function validateReportHandoffPreSaveValidation() {
       || !desktopPriorityStripText.includes('copyReportHandoffItem')
       || !desktopPriorityStripText.includes('reportHandoffCopyAllText')) {
     findings.push('desktop report handoff panel must keep using the same core copy-block contract');
+  }
+  if (!desktopPriorityStripText.includes('normalizeKoreanFieldworkHwpPlainText')
+      || !desktopPriorityStripText.includes('electronClipboard.write({ text: plainText })')
+      || !desktopPriorityStripSpecText.includes('write).toHaveBeenCalledWith({ text: featureItem.copyText })')) {
+    findings.push('desktop report handoff copy must use text-only clipboard writes for HWP-safe paste');
   }
   if (!desktopPriorityStripTemplateText.includes('korean-fieldwork-report-handoff-details')
       || !desktopPriorityStripTemplateText.includes('item.relationDetails')
@@ -4016,6 +4057,7 @@ function validateRecordActionEvidencePriority() {
   );
   const desktopDocumentDraftText = readTextFile(desktopDocumentDraftSource);
   const desktopDocumentDraftSpecText = readTextFile(desktopDocumentDraftSpec);
+  const coreDocumentDraftText = readTextFile('core/src/tools/korean-fieldwork-document-drafts.ts');
   const mobileDraftContinuationText = readTextFile(mobileDraftContinuationSource);
   const mobileDraftContinuationSpecText = readTextFile(mobileDraftContinuationSpec);
   const mobileRecordEvidenceText = readTextFile(
@@ -4254,9 +4296,10 @@ function validateRecordActionEvidencePriority() {
   }
   for (const categoryToken of ['FEATURE', 'FEATURE_SEGMENT']) {
     if (!new RegExp(
-      `\\[CATEGORIES\\.${categoryToken}\\]: \\[[\\s\\S]*?CATEGORIES\\.DRAWING,[\\s\\S]*?CATEGORIES\\.PEN_MEMO,[\\s\\S]*?CATEGORIES\\.FIND`
-    ).test(desktopDocumentDraftText)) {
-      findings.push(`desktop continuation priority must keep PenMemo before finds/samples for ${categoryToken}`);
+      `\\[C\\.${categoryToken}\\]: \\[[\\s\\S]*?C\\.DRAWING,[\\s\\S]*?C\\.PEN_MEMO,[\\s\\S]*?C\\.FIND`
+    ).test(coreDocumentDraftText)
+        || !desktopDocumentDraftText.includes('getCoreKoreanFieldworkContinuationActions')) {
+      findings.push(`core/desktop continuation priority must keep PenMemo before finds/samples for ${categoryToken}`);
     }
     if (!new RegExp(
       `\\[C\\.${categoryToken}\\]: \\[[\\s\\S]*?C\\.DRAWING,[\\s\\S]*?C\\.PEN_MEMO,[\\s\\S]*?C\\.FIND`

@@ -171,10 +171,11 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
 
     it('exposes report handoff copy blocks for HWP drafting', async () => {
 
+        const write = jest.fn();
         const writeText = jest.fn();
         const testWindow = (global as any).window ?? ((global as any).window = {});
         const previousRequire = testWindow.require;
-        testWindow.require = jest.fn().mockReturnValue({ clipboard: { writeText } });
+        testWindow.require = jest.fn().mockReturnValue({ clipboard: { write, writeText } });
 
         try {
             const component = createComponent({
@@ -233,7 +234,8 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
 
             await component.copyReportHandoffItem(featureItem);
 
-            expect(writeText).toHaveBeenCalledWith(featureItem.copyText);
+            expect(write).toHaveBeenCalledWith({ text: featureItem.copyText });
+            expect(writeText).not.toHaveBeenCalled();
             expect(component.getReportHandoffPreviewItem()?.documentId).toBe('feature-1');
             expect(component.getReportHandoffCopyActionLabel(featureItem)).toBe('\ubcf5\uc0ac\ub428');
         } finally {

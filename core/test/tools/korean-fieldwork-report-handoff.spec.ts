@@ -1,5 +1,6 @@
 import {
     makeKoreanFieldworkReportHandoff,
+    normalizeKoreanFieldworkHwpPlainText,
     validateKoreanFieldworkReportHandoffCandidate
 } from '../../src/tools/korean-fieldwork-report-handoff';
 
@@ -58,6 +59,16 @@ describe('Korean fieldwork report handoff', () => {
         expect(featureItem?.copyText).toContain('fieldwork-photo-upload-missing');
         expect(handoff.reviewCount).toBeGreaterThan(0);
         expect(handoff.copyAllText).toContain(featureItem!.copyText);
+        expect(featureItem?.copyText).not.toContain('\u200B');
+        expect(featureItem?.copyText).not.toMatch(/(^|[^\r])\n/);
+        expect(featureItem?.copyText).toContain('\r\n');
+    });
+
+
+    it('normalizes HWP copy text as plain Windows clipboard text', () => {
+
+        expect(normalizeKoreanFieldworkHwpPlainText('  [유구] 1호 수혈  \n\n\n요약: 값\u200B\n'))
+            .toBe('[유구] 1호 수혈\r\n\r\n요약: 값');
     });
 
 
