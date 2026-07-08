@@ -3314,6 +3314,7 @@ function validateReportHandoffPreSaveValidation() {
       || !coreReportHandoffSpecText.includes('\\uc0ac\\uc9c4 \\ud45c\\uc2dc: \\uc788\\uc74c')
       || !coreReportHandoffSpecText.includes('1\\uce35: RGB')
       || !desktopPriorityStripSpecText.includes('RGB 111/87/61 @ 20%/50%')
+      || !desktopPriorityStripSpecText.includes('1\\uce35: RGB')
       || !desktopPriorityStripSpecText.includes('\\uc2a4\\ud3ec\\uc774\\ub4dc \\uc704\\uce58')
       || !desktopPriorityStripSpecText.includes('\\uc704\\uce58 \\uc57d\\ub3c4: \\uc788\\uc74c')
       || !desktopPriorityStripSpecText.includes('\\uc790\\uc720 \\uc2a4\\ucf00\\uce58: \\uc788\\uc74c')
