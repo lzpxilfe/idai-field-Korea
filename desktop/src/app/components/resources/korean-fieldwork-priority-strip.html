@@ -292,6 +292,22 @@
                     </button>
                 </span>
             </div>
+            <div *ngIf="previewItem.copySections.length > 0"
+                 class="korean-fieldwork-report-handoff-copy-sections">
+                <button *ngFor="let section of previewItem.copySections"
+                        type="button"
+                        class="korean-fieldwork-report-handoff-copy-section"
+                        [class.copied]="isReportHandoffSectionCopied(previewItem, section)"
+                        (click)="copyReportHandoffSection(previewItem, section, $event)">
+                    <span class="mdi"
+                          [class.mdi-check]="isReportHandoffSectionCopied(previewItem, section)"
+                          [class.mdi-content-copy]="!isReportHandoffSectionCopied(previewItem, section)"></span>
+                    <span>{{getReportHandoffSectionCopyActionLabel(previewItem, section)}}</span>
+                    <span class="korean-fieldwork-report-handoff-copy-section-lines">
+                        {{section.lineCount}}
+                    </span>
+                </button>
+            </div>
             <pre class="korean-fieldwork-report-handoff-copy-preview">{{previewItem.copyText}}</pre>
         </div>
     </div>

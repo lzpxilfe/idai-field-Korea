@@ -67,6 +67,20 @@ describe('Korean fieldwork report handoff', () => {
         expect(featureItem?.copyText).not.toContain('\u200B');
         expect(featureItem?.copyText).not.toMatch(/(^|[^\r])\n/);
         expect(featureItem?.copyText).toContain('\r\n');
+        expect(featureItem?.copySections.map(section => section.id)).toEqual([
+            'summary',
+            'details',
+            'evidence',
+            'issues'
+        ]);
+        expect(featureItem?.copySections.find(section => section.id === 'summary')?.copyText)
+            .toContain('[\uc720\uad6c] pit-001\r\n\uc694\uc57d: round pit with dark fill');
+        expect(featureItem?.copySections.find(section => section.id === 'evidence')?.copyText)
+            .toContain('\uc790\ub8cc \uc0c1\uc138:\r\n- \uc0ac\uc9c4');
+        expect(featureItem?.copySections.find(section => section.id === 'issues')?.copyText)
+            .toContain('\ud655\uc778 \uc0c1\uc138:\r\n- ');
+        expect(featureItem?.copySections.every(section => !/(^|[^\r])\n/.test(section.copyText)))
+            .toBe(true);
     });
 
 

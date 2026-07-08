@@ -24,6 +24,15 @@ import {
 
 export type KoreanFieldworkReportHandoffTone = 'ready'|'review';
 
+export type KoreanFieldworkReportHandoffCopySectionId = 'summary'|'details'|'relations'|'evidence'|'issues';
+
+export interface KoreanFieldworkReportHandoffCopySection {
+    id: KoreanFieldworkReportHandoffCopySectionId;
+    label: string;
+    copyText: string;
+    lineCount: number;
+}
+
 export interface KoreanFieldworkReportHandoffItem {
     documentId: string;
     category: string;
@@ -39,6 +48,7 @@ export interface KoreanFieldworkReportHandoffItem {
     issueDetails: string[];
     evidenceCount: number;
     issueCount: number;
+    copySections: KoreanFieldworkReportHandoffCopySection[];
     copyText: string;
     tone: KoreanFieldworkReportHandoffTone;
 }
@@ -837,6 +847,17 @@ function makeReportHandoffItem(document: Document, documents: Document[]): Korea
         : KO.NO_ISSUES;
     const title = `${categoryLabel} ${identifier}`;
     const tone: KoreanFieldworkReportHandoffTone = issueCount > 0 ? 'review' : 'ready';
+    const copyTextParts = {
+        categoryLabel,
+        details,
+        evidenceDetails,
+        evidenceLabel,
+        identifier,
+        issueDetails,
+        issueLabel,
+        relationDetails,
+        summary
+    };
 
     return {
         documentId: document.resource.id,
@@ -853,19 +874,23 @@ function makeReportHandoffItem(document: Document, documents: Document[]): Korea
         issueDetails,
         evidenceCount: getEvidenceCount(bundle),
         issueCount,
-        copyText: makeCopyText({
-            categoryLabel,
-            details,
-            evidenceDetails,
-            evidenceLabel,
-            identifier,
-            issueDetails,
-            issueLabel,
-            relationDetails,
-            summary
-        }),
+        copySections: makeCopySections(copyTextParts),
+        copyText: makeCopyText(copyTextParts),
         tone
     };
+}
+
+
+interface ReportHandoffCopyTextParts {
+    categoryLabel: string;
+    details: string[];
+    evidenceDetails: string[];
+    evidenceLabel: string;
+    identifier: string;
+    issueDetails: string[];
+    issueLabel: string;
+    relationDetails: string[];
+    summary: string;
 }
 
 
@@ -879,17 +904,7 @@ function makeCopyText({
     issueLabel,
     relationDetails,
     summary
-}: {
-    categoryLabel: string;
-    details: string[];
-    evidenceDetails: string[];
-    evidenceLabel: string;
-    identifier: string;
-    issueDetails: string[];
-    issueLabel: string;
-    relationDetails: string[];
-    summary: string;
-}): string {
+}: ReportHandoffCopyTextParts): string {
 
     return normalizeKoreanFieldworkHwpPlainText([
         `[${categoryLabel}] ${identifier}`,
@@ -901,6 +916,60 @@ function makeCopyText({
         `${KO.ISSUES}: ${issueLabel}`,
         ...(issueDetails.length > 0 ? [makeListBlock(KO.ISSUE_DETAILS, issueDetails)] : [])
     ].join('\n'));
+}
+
+
+function makeCopySections({
+    categoryLabel,
+    details,
+    evidenceDetails,
+    evidenceLabel,
+    identifier,
+    issueDetails,
+    issueLabel,
+    relationDetails,
+    summary
+}: ReportHandoffCopyTextParts): KoreanFieldworkReportHandoffCopySection[] {
+
+    return [
+        makeCopySection('summary', KO.SUMMARY, [
+            `[${categoryLabel}] ${identifier}`,
+            `${KO.SUMMARY}: ${summary}`
+        ]),
+        makeCopySection('details', KO.DETAILS, [
+            `${KO.DETAILS}: ${details.length > 0 ? details.join(' / ') : KO.NO_DETAILS}`
+        ]),
+        ...(relationDetails.length > 0
+            ? [makeCopySection('relations', KO.RELATIONS, [
+                `${KO.RELATIONS}: ${relationDetails.join(' / ')}`
+            ])]
+            : []),
+        makeCopySection('evidence', KO.EVIDENCE, [
+            `${KO.EVIDENCE}: ${evidenceLabel}`,
+            ...(evidenceDetails.length > 0 ? [makeListBlock(KO.EVIDENCE_DETAILS, evidenceDetails)] : [])
+        ]),
+        makeCopySection('issues', KO.ISSUES, [
+            `${KO.ISSUES}: ${issueLabel}`,
+            ...(issueDetails.length > 0 ? [makeListBlock(KO.ISSUE_DETAILS, issueDetails)] : [])
+        ])
+    ];
+}
+
+
+function makeCopySection(
+        id: KoreanFieldworkReportHandoffCopySectionId,
+        label: string,
+        lines: string[]
+): KoreanFieldworkReportHandoffCopySection {
+
+    const copyText = normalizeKoreanFieldworkHwpPlainText(lines.join('\n'));
+
+    return {
+        id,
+        label,
+        copyText,
+        lineCount: copyText ? copyText.split('\r\n').length : 0
+    };
 }
 
 

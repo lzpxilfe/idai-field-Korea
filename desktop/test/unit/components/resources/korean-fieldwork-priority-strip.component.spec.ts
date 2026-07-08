@@ -462,6 +462,18 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
             expect(featureItem.copyText).toContain('round pit with dark fill');
             expect(featureItem.copyText).toContain('\uc790\ub8cc \uc0c1\uc138');
             expect(featureItem.copyText).toContain('\ud655\uc778 \uc0c1\uc138');
+            expect(featureItem.copySections.map(section => section.id)).toEqual([
+                'summary',
+                'details',
+                'evidence',
+                'issues'
+            ]);
+            expect(featureItem.copySections.find(section => section.id === 'summary')?.copyText)
+                .toContain('[\uc720\uad6c] pit-001\r\n\uc694\uc57d: round pit with dark fill');
+            expect(featureItem.copySections.find(section => section.id === 'evidence')?.copyText)
+                .toContain('\uc790\ub8cc \uc0c1\uc138:\r\n- \uc0ac\uc9c4');
+            expect(featureItem.copySections.find(section => section.id === 'issues')?.copyText)
+                .toContain('\ud655\uc778 \uc0c1\uc138:\r\n- ');
 
             const photoItem = component.getReportHandoffItems()
                 .find(item => item.documentId === 'photo-1');
@@ -512,6 +524,16 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
             expect(writeText).not.toHaveBeenCalled();
             expect(component.getReportHandoffPreviewItem()?.documentId).toBe('feature-1');
             expect(component.getReportHandoffCopyActionLabel(featureItem)).toBe('\ubcf5\uc0ac\ub428');
+
+            const evidenceSection = featureItem.copySections.find(section => section.id === 'evidence')!;
+            await component.copyReportHandoffSection(featureItem, evidenceSection);
+
+            expect(clear).toHaveBeenCalledTimes(2);
+            expect(write).toHaveBeenLastCalledWith({ text: evidenceSection.copyText, html: '' });
+            expect(writeText).not.toHaveBeenCalled();
+            expect(component.getReportHandoffPreviewItem()?.documentId).toBe('feature-1');
+            expect(component.getReportHandoffSectionCopyActionLabel(featureItem, evidenceSection))
+                .toBe('\ubcf5\uc0ac\ub428');
         } finally {
             testWindow.require = previousRequire;
         }

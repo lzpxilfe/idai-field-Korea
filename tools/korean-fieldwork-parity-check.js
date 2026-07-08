@@ -3305,6 +3305,11 @@ function validateReportHandoffPreSaveValidation() {
       || !coreReportHandoffSpecText.includes('normalizes HWP copy text as plain Windows clipboard text')) {
     findings.push('core report handoff must normalize HWP copy blocks as plain Windows clipboard text');
   }
+  if (!coreReportHandoffText.includes('KoreanFieldworkReportHandoffCopySection')
+      || !coreReportHandoffText.includes('copySections: makeCopySections')
+      || !coreReportHandoffSpecText.includes('copySections.map(section => section.id)')) {
+    findings.push('core report handoff must expose section-level HWP copy blocks for selective desktop pasting');
+  }
   if (!coreReportHandoffText.includes('evidenceDetails')
       || !coreReportHandoffText.includes('issueDetails')
       || !coreReportHandoffText.includes('relationDetails')
@@ -3470,6 +3475,15 @@ function validateReportHandoffPreSaveValidation() {
       || !desktopPriorityStripText.includes("electronClipboard.write({ text: plainText, html: '' })")
       || !desktopPriorityStripSpecText.includes("write).toHaveBeenCalledWith({ text: featureItem.copyText, html: '' })")) {
     findings.push('desktop report handoff copy must use text-only clipboard writes for HWP-safe paste');
+  }
+  if (!desktopPriorityStripTemplateText.includes('previewItem.copySections')
+      || !desktopPriorityStripTemplateText.includes('korean-fieldwork-report-handoff-copy-section')
+      || !desktopPriorityStripText.includes('copyReportHandoffSection')
+      || !desktopPriorityStripText.includes('getReportHandoffSectionCopyActionLabel')
+      || !desktopPriorityStripStyleText.includes('.korean-fieldwork-report-handoff-copy-section')
+      || !desktopPriorityStripSpecText.includes('copyReportHandoffSection')
+      || !desktopPriorityStripSpecText.includes('evidenceSection.copyText')) {
+    findings.push('desktop report handoff preview must support section-level HWP copy buttons for selective pasting');
   }
   if (!desktopPriorityStripTemplateText.includes('korean-fieldwork-report-handoff-details')
       || !desktopPriorityStripTemplateText.includes('item.relationDetails')
