@@ -3277,6 +3277,16 @@ function validateReportHandoffPreSaveValidation() {
       || !coreReportHandoffText.includes('EVIDENCE_DETAILS')) {
     findings.push('core report handoff copy blocks must include concrete relation, evidence, and issue details, not only counts');
   }
+  if (!coreReportHandoffText.includes('getSoilProfilePhotoEvidenceSummary')
+      || !coreReportHandoffText.includes('soilProfileColorSwatches')
+      || !coreReportHandoffText.includes('SOIL_COLOR_SAMPLE_SOURCE_PATTERN')
+      || !coreReportHandoffText.includes('RGB_SAMPLE_LOCATION_PATTERN')
+      || !coreReportHandoffSpecText.includes('soil profile color sample locations into HWP copy blocks')
+      || !coreReportHandoffSpecText.includes('recovers soil profile eyedropper locations from layer swatches')
+      || !desktopPriorityStripSpecText.includes('RGB 111/87/61 @ 20%/50%')
+      || !desktopPriorityStripSpecText.includes('\\uc2a4\\ud3ec\\uc774\\ub4dc \\uc704\\uce58')) {
+    findings.push('report handoff HWP copy blocks must carry soil profile color swatches and tablet eyedropper sample locations');
+  }
   if (!coreReportHandoffText.includes('buildEvidenceBundle')
       || !coreReadinessText.includes('getKoreanFieldworkCloseoutReviewIssues')
       || !coreReadinessText.includes('fieldwork-photo-annotation-review')

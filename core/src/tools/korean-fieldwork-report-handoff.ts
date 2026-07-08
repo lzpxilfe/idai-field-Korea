@@ -90,6 +90,7 @@ interface EvidenceCountDefinition {
 interface EvidenceDetailDefinition {
     label: string;
     getDocuments: (bundle: EvidenceBundle) => Document[];
+    getSummary?: (document: Document) => string|undefined;
     fields: string[];
 }
 
@@ -211,6 +212,11 @@ const MEDIA_URI_FIELDS: Readonly<Record<string, string[]>> = {
     SoilProfilePhoto: ['soilProfilePhotoUri', 'imageUri', 'fieldworkPhotoUri']
 };
 
+const SOIL_COLOR_SAMPLE_SOURCE_PATTERN =
+    /^\uc0ac\uc9c4 (?:\uc911\uc559\ubd80|\uc120\ud0dd \uc9c0\uc810 \d{1,3}%\/\d{1,3}%) \ud3c9\uade0 RGB \d{1,3}\/\d{1,3}\/\d{1,3}$/;
+const RGB_SAMPLE_LOCATION_PATTERN = /RGB\s+(\d{1,3})\/(\d{1,3})\/(\d{1,3})\s+@\s*(\d{1,3})%\/(\d{1,3})%/i;
+const SOIL_COLOR_ROW_NUMBER_PATTERN = /^\s*(\d+)\s*:/;
+
 const PEN_MEMO_CONTENT_FIELDS = [
     'description',
     'penMemoAutoTranscript',
@@ -273,7 +279,15 @@ const EVIDENCE_DETAILS: EvidenceDetailDefinition[] = [
     {
         label: '\ud1a0\uce35\uc0ac\uc9c4',
         getDocuments: bundle => bundle.soilProfilePhotos,
-        fields: ['soilProfilePhotoUri', 'soilProfileColorNote', 'soilProfileCaptureNote', 'shortDescription']
+        getSummary: getSoilProfilePhotoEvidenceSummary,
+        fields: [
+            'soilProfilePhotoUri',
+            'soilProfileColorSwatches',
+            'soilColorAssistCandidates',
+            'soilProfileColorNote',
+            'soilProfileCaptureNote',
+            'shortDescription'
+        ]
     },
     {
         label: '\ub3c4\uba74',
@@ -664,11 +678,99 @@ function getEvidenceDetails(bundle: EvidenceBundle): string[] {
 function getEvidenceDetailLine(document: Document, definition: EvidenceDetailDefinition): string {
 
     const identifier = getDocumentIdentifier(document);
-    const summary = getEvidenceDetailSummary(document, definition.fields);
+    const summary = definition.getSummary?.(document)
+        ?? getEvidenceDetailSummary(document, definition.fields);
 
     return summary
         ? `${definition.label} ${identifier}: ${summary}`
         : `${definition.label} ${identifier}`;
+}
+
+
+function getSoilProfilePhotoEvidenceSummary(document: Document): string|undefined {
+
+    return [
+        getLabeledEvidenceValue('\uc6d0\ubcf8', getFirstPrintableField(document, [
+            'soilProfilePhotoUri',
+            'imageUri',
+            'fieldworkPhotoUri'
+        ])),
+        getLabeledEvidenceValue('\uce35\ubcc4 \ud1a0\uc0c9', getPrintableValue(
+            document.resource.soilProfileColorSwatches
+        )),
+        getLabeledEvidenceValue('\uc2a4\ud3ec\uc774\ub4dc \uc704\uce58', getSoilColorSampleSourceLabel(
+            document.resource.soilColorAssistCandidates,
+            document.resource.soilProfileColorSwatches
+        )),
+        getLabeledEvidenceValue('\ud1a0\uc0c9 \uba54\ubaa8', getPrintableValue(
+            document.resource.soilProfileColorNote
+        )),
+        getLabeledEvidenceValue('\ucd2c\uc601 \uba54\ubaa8', getPrintableValue(
+            document.resource.soilProfileCaptureNote
+        )),
+        getLabeledEvidenceValue('\uc694\uc57d', getPrintableValue(document.resource.shortDescription))
+    ].filter((value): value is string => !!value).join(' / ') || undefined;
+}
+
+
+function getFirstPrintableField(document: Document, fieldNames: string[]): string|undefined {
+
+    return fieldNames
+        .map(fieldName => getPrintableValue(document.resource[fieldName]))
+        .find(value => !!value && value !== '[]');
+}
+
+
+function getLabeledEvidenceValue(label: string, value: string|undefined): string|undefined {
+
+    if (!value || value === '[]') return undefined;
+
+    return `${label}: ${value}`;
+}
+
+
+function getSoilColorSampleSourceLabel(value: any, swatchValue?: any): string|undefined {
+
+    const sourceLine = getTextLines(value)
+        .map(line => line.trim())
+        .find(line => SOIL_COLOR_SAMPLE_SOURCE_PATTERN.test(line));
+
+    return sourceLine ?? getSoilColorSampleLocationFromSwatches(swatchValue);
+}
+
+
+function getSoilColorSampleLocationFromSwatches(value: any): string|undefined {
+
+    const locations = getTextLines(value)
+        .map(line => line.trim())
+        .map(line => {
+            const sampleMatch = line.match(RGB_SAMPLE_LOCATION_PATTERN);
+            if (!sampleMatch) return undefined;
+
+            const rowMatch = line.match(SOIL_COLOR_ROW_NUMBER_PATTERN);
+            const rowLabel = rowMatch ? `${rowMatch[1]}: ` : '';
+
+            return `${rowLabel}RGB ${sampleMatch[1]}/${sampleMatch[2]}/${sampleMatch[3]} @ `
+                + `${sampleMatch[4]}%/${sampleMatch[5]}%`;
+        })
+        .filter((location): location is string => !!location);
+
+    return locations.length > 0 ? locations.join(', ') : undefined;
+}
+
+
+function getTextLines(value: any): string[] {
+
+    if (value === undefined || value === null) return [];
+    if (Array.isArray(value)) return value.flatMap(getTextLines);
+
+    if (typeof value === 'object') {
+        if (typeof value.inputValue === 'string') return value.inputValue.split(/\r?\n/);
+        if (typeof value.value === 'string') return value.value.split(/\r?\n/);
+        return [];
+    }
+
+    return String(value).split(/\r?\n/);
 }
 
 

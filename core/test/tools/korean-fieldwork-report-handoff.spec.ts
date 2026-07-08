@@ -65,6 +65,73 @@ describe('Korean fieldwork report handoff', () => {
     });
 
 
+    it('carries soil profile color sample locations into HWP copy blocks', () => {
+
+        const documents = [
+            makeDocument('feature-1', 'Feature', {
+                identifier: 'pit-001',
+                shortDescription: 'round pit with dark fill',
+                featureRecordingStatus: 'confirmed',
+                featureInvestigationChecklist: []
+            }),
+            makeDocument('soil-photo-1', 'SoilProfilePhoto', {
+                soilProfilePhotoUri: 'file:///tablet/photos/soil-photo-1.jpg',
+                soilProfileColorSwatches: '1: 10YR 4/3 RGB 111/87/61 @ 20%/50%',
+                soilColorAssistCandidates: [
+                    '\uc0ac\uc9c4 \uc120\ud0dd \uc9c0\uc810 20%/50% \ud3c9\uade0 RGB 111/87/61',
+                    '1: 10YR 4/3 (\ubcf4\ud1b5, \ucc28\uc774 0.0)'
+                ].join('\n'),
+                soilProfileColorNote: 'dark fill sample from lower layer',
+                relations: { depicts: ['feature-1'] }
+            })
+        ];
+
+        const handoff = makeKoreanFieldworkReportHandoff(documents as any);
+        const featureItem = handoff.items.find(item => item.documentId === 'feature-1');
+        const evidenceDetails = featureItem?.evidenceDetails.join('\n') ?? '';
+
+        expect(evidenceDetails)
+            .toContain('\uce35\ubcc4 \ud1a0\uc0c9: 1: 10YR 4/3 RGB 111/87/61 @ 20%/50%');
+        expect(evidenceDetails)
+            .toContain('\uc2a4\ud3ec\uc774\ub4dc \uc704\uce58: \uc0ac\uc9c4 \uc120\ud0dd \uc9c0\uc810 20%/50% \ud3c9\uade0 RGB 111/87/61');
+        expect(featureItem?.copyText)
+            .toContain('RGB 111/87/61 @ 20%/50%');
+        expect(featureItem?.copyText)
+            .toContain('\uc2a4\ud3ec\uc774\ub4dc \uc704\uce58');
+        expect(featureItem?.copyText).not.toMatch(/(^|[^\r])\n/);
+    });
+
+
+    it('recovers soil profile eyedropper locations from layer swatches when assist text is missing', () => {
+
+        const documents = [
+            makeDocument('feature-1', 'Feature', {
+                identifier: 'pit-001',
+                shortDescription: 'round pit with dark fill',
+                featureRecordingStatus: 'confirmed',
+                featureInvestigationChecklist: []
+            }),
+            makeDocument('soil-photo-1', 'SoilProfilePhoto', {
+                soilProfilePhotoUri: 'file:///tablet/photos/soil-photo-1.jpg',
+                soilProfileColorSwatches: [
+                    '1: 10YR 4/3 RGB 111/87/61 @ 20%/50%',
+                    '2: 2.5Y 5/3 RGB 139/128/88 @ 80%/50%'
+                ].join('\n'),
+                relations: { depicts: ['feature-1'] }
+            })
+        ];
+
+        const handoff = makeKoreanFieldworkReportHandoff(documents as any);
+        const featureItem = handoff.items.find(item => item.documentId === 'feature-1');
+        const evidenceDetails = featureItem?.evidenceDetails.join('\n') ?? '';
+
+        expect(evidenceDetails)
+            .toContain('\uc2a4\ud3ec\uc774\ub4dc \uc704\uce58: 1: RGB 111/87/61 @ 20%/50%, 2: RGB 139/128/88 @ 80%/50%');
+        expect(featureItem?.copyText)
+            .toContain('2: RGB 139/128/88 @ 80%/50%');
+    });
+
+
     it('normalizes HWP copy text as plain Windows clipboard text', () => {
 
         expect(normalizeKoreanFieldworkHwpPlainText('  [유구] 1호 수혈  \n\n\n요약: 값\u200B\n'))
