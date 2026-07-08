@@ -190,9 +190,14 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
                             featureType: 'pit',
                             featureInterpretationType: ['pitFeature'],
                             period: 'bronzeAge',
+                            geometrySource: 'gpsApproximate',
+                            geometryConfidence: 'rough',
+                            featureGeometryEditStatus: 'roughSketch',
                             featureLocationSketch: '{"shape":"oval","center":{"x":75,"y":50},"scale":80}',
                             featureFreeDrawingStrokes:
                                 '{"version":1,"strokes":[{"points":[{"x":10,"y":20},{"x":40,"y":50}]}]}',
+                            surveyBoundaryAccuracy: 'importedReference',
+                            surveyBoundarySource: 'shpImport',
                             fieldNote: [
                                 '[\uad00\ucc30 \ub0b4\uc6a9] \ubc14\ub2e5\uba74\uc5d0\uc11c \uc6d0\ud615 \uc724\uacfd \ud655\uc778.',
                                 '[\ud574\uc11d] \uc8fc\uacf5 \uac00\ub2a5\uc131.',
@@ -289,6 +294,10 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
             expect(featureItem.details.join('\n'))
                 .toContain('\uc790\uc720 \uc2a4\ucf00\uce58: \uc788\uc74c');
             expect(featureItem.details.join('\n'))
+                .toContain('GPS \ub300\ub7b5 \uc704\uce58');
+            expect(featureItem.details.join('\n'))
+                .toContain('SHP \uac00\uc838\uc624\uae30');
+            expect(featureItem.details.join('\n'))
                 .toContain(`\uc131\uaca9: ${featureTypeLabel}`);
             expect(featureItem.details.join('\n'))
                 .toContain('\uc2dc\ub300: \uccad\ub3d9\uae30');
@@ -332,6 +341,10 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
             expect(featureItem.copyText)
                 .toContain('\uc790\uc720 \uc2a4\ucf00\uce58: \uc788\uc74c');
             expect(featureItem.copyText)
+                .toContain('GPS \ub300\ub7b5 \uc704\uce58');
+            expect(featureItem.copyText)
+                .toContain('SHP \uac00\uc838\uc624\uae30');
+            expect(featureItem.copyText)
                 .toContain(`\uc131\uaca9: ${featureTypeLabel}`);
             expect(featureItem.copyText)
                 .toContain('\uc2dc\ub300: \uccad\ub3d9\uae30');
@@ -358,6 +371,14 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
                 .not.toContain('observedInField');
             expect(featureItem.copyText)
                 .not.toContain('bronzeAge');
+            expect(featureItem.copyText)
+                .not.toContain('gpsApproximate');
+            expect(featureItem.copyText)
+                .not.toContain('roughSketch');
+            expect(featureItem.copyText)
+                .not.toContain('importedReference');
+            expect(featureItem.copyText)
+                .not.toContain('shpImport');
             expect(featureItem.copyText)
                 .not.toContain('"shape"');
             expect(featureItem.copyText)

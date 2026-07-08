@@ -3328,6 +3328,9 @@ function validateReportHandoffPreSaveValidation() {
       || !coreRecordContractText.includes('getKoreanFieldworkRecordFieldValueSummary')
       || !coreRecordContractText.includes('getKoreanFieldworkFeaturePeriodSummary')
       || !coreRecordContractText.includes('KOREAN_FIELDWORK_TRIAL_TRENCH_CHECKLIST_STEPS')
+      || !coreRecordContractText.includes('geometrySource')
+      || !coreRecordContractText.includes('featureGeometryEditStatus')
+      || !coreRecordContractText.includes('surveyBoundarySource')
       || !coreRecordContractSpecText.includes('tablet quick-record value labels')
       || !coreRecordContractSpecText.includes('tablet investigation checklist order and Korean labels')
       || !coreReportHandoffText.includes('getFeatureTypeDetailSummary')
@@ -3342,12 +3345,17 @@ function validateReportHandoffPreSaveValidation() {
       || !coreReportHandoffSpecText.includes("not.toContain('preInvestigationPhotoTaken')")
       || !coreReportHandoffSpecText.includes("not.toContain('duringFieldwork')")
       || !coreReportHandoffSpecText.includes("not.toContain('bronzeAge')")
+      || !coreReportHandoffSpecText.includes("not.toContain('gpsApproximate')")
+      || !coreReportHandoffSpecText.includes("not.toContain('roughSketch')")
+      || !coreReportHandoffSpecText.includes("not.toContain('shpImport')")
       || !desktopPriorityStripSpecText.includes("not.toContain('pitFeature')")
       || !desktopPriorityStripSpecText.includes("not.toContain('sameDayFieldRecord')")
       || !desktopPriorityStripSpecText.includes("not.toContain('bronzeAge')")
+      || !desktopPriorityStripSpecText.includes("not.toContain('gpsApproximate')")
+      || !desktopPriorityStripSpecText.includes("not.toContain('shpImport')")
       || !desktopChecklistText.includes('getSharedKoreanFieldworkChecklistSteps')
       || !desktopPriorityStripSpecText.includes("not.toContain('preInvestigationPhotoTaken')")) {
-    findings.push('report handoff HWP copy blocks must carry tablet feature type, period, status, quality, verification, and investigation checklist values with shared Korean labels instead of raw valuelist keys');
+    findings.push('report handoff HWP copy blocks must carry tablet feature type, period, status, quality, verification, geometry, and investigation checklist values with shared Korean labels instead of raw valuelist keys');
   }
   if (!coreReportHandoffText.includes('getPenMemoEvidenceSummary')
       || !coreReportHandoffText.includes('hasStrokeEvidence')

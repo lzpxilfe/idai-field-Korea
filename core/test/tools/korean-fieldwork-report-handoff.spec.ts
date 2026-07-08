@@ -144,8 +144,13 @@ describe('Korean fieldwork report handoff', () => {
         const handoff = makeKoreanFieldworkReportHandoff([
             makeDocument('feature-1', 'Feature', {
                 identifier: 'pit-001',
+                geometrySource: 'gpsApproximate',
+                geometryConfidence: 'rough',
+                featureGeometryEditStatus: 'roughSketch',
                 featureLocationSketch: '{"shape":"oval","center":{"x":75,"y":50},"scale":80}',
                 featureFreeDrawingStrokes: '{"version":1,"strokes":[{"points":[{"x":10,"y":20},{"x":40,"y":50}]}]}',
+                surveyBoundaryAccuracy: 'importedReference',
+                surveyBoundarySource: 'shpImport',
                 featureRecordingStatus: 'candidate',
                 featureInvestigationChecklist: []
             })
@@ -156,11 +161,28 @@ describe('Korean fieldwork report handoff', () => {
         expect(featureItem?.summary)
             .toBe('\uc704\uce58 \uc57d\ub3c4: \uc788\uc74c');
         expect(featureItem?.details.join('\n'))
-            .toContain('\uc704\uce58/\ub3c4\uba74: \uc704\uce58 \uc57d\ub3c4: \uc788\uc74c, \uc790\uc720 \uc2a4\ucf00\uce58: \uc788\uc74c');
+            .toContain(
+                '\uc704\uce58/\ub3c4\uba74: GPS \ub300\ub7b5 \uc704\uce58, '
+                + '\ub300\ub7b5, \ub300\ub7b5 \uc2a4\ucf00\uce58, '
+                + '\uac00\uc838\uc628 \ucc38\uace0\uc790\ub8cc, SHP \uac00\uc838\uc624\uae30, '
+                + '\uc704\uce58 \uc57d\ub3c4: \uc788\uc74c, \uc790\uc720 \uc2a4\ucf00\uce58: \uc788\uc74c'
+            );
         expect(featureItem?.copyText)
             .toContain('\uc694\uc57d: \uc704\uce58 \uc57d\ub3c4: \uc788\uc74c');
         expect(featureItem?.copyText)
             .toContain('\uc790\uc720 \uc2a4\ucf00\uce58: \uc788\uc74c');
+        expect(featureItem?.copyText)
+            .toContain('GPS \ub300\ub7b5 \uc704\uce58');
+        expect(featureItem?.copyText)
+            .toContain('SHP \uac00\uc838\uc624\uae30');
+        expect(featureItem?.copyText)
+            .not.toContain('gpsApproximate');
+        expect(featureItem?.copyText)
+            .not.toContain('roughSketch');
+        expect(featureItem?.copyText)
+            .not.toContain('importedReference');
+        expect(featureItem?.copyText)
+            .not.toContain('shpImport');
         expect(featureItem?.copyText)
             .not.toContain('"shape"');
         expect(featureItem?.copyText)

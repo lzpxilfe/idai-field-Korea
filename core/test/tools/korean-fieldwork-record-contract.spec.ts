@@ -79,6 +79,12 @@ describe('Korean fieldwork record contract', () => {
             value: 'bronzeAge',
             endValue: 'threeKingdoms'
         })).toBe('\uccad\ub3d9\uae30~\uc0bc\uad6d');
+        expect(getKoreanFieldworkRecordFieldValueSummary('geometrySource', 'gpsApproximate'))
+            .toBe('GPS \ub300\ub7b5 \uc704\uce58');
+        expect(getKoreanFieldworkRecordFieldValueSummary('featureGeometryEditStatus', 'roughSketch'))
+            .toBe('\ub300\ub7b5 \uc2a4\ucf00\uce58');
+        expect(getKoreanFieldworkRecordFieldValueSummary('surveyBoundarySource', 'shpImport'))
+            .toBe('SHP \uac00\uc838\uc624\uae30');
         expect(getKoreanFieldworkRecordValueLabel('unknownField', 'unknownValue'))
             .toBe('unknownValue');
     });

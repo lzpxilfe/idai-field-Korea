@@ -280,7 +280,12 @@ const KOREAN_FIELDWORK_LABELLED_RECORD_FIELDS = [
     'featureRecordingStatus',
     'recordCreationTiming',
     'fieldRecordQuality',
-    'verificationState'
+    'verificationState',
+    'geometrySource',
+    'geometryConfidence',
+    'featureGeometryEditStatus',
+    'surveyBoundaryAccuracy',
+    'surveyBoundarySource'
 ];
 
 const DAILY_LOG_CONTENT_LABELS: Readonly<Record<string, string>> = {
@@ -926,7 +931,7 @@ function getLocationDrawingDetailSummary(document: Document): string|undefined {
             'featureGeometryRevisionNote',
             'surveyBoundaryAccuracy',
             'surveyBoundarySource'
-        ].map(fieldName => getPrintableValue(document.resource[fieldName])),
+        ].map(fieldName => getHandoffPrintableFieldValue(document.resource, fieldName)),
         getStrokeEvidenceLabel('\uc704\uce58 \uc57d\ub3c4', document.resource.featureLocationSketch),
         getStrokeEvidenceLabel('\uc790\uc720 \uc2a4\ucf00\uce58', document.resource.featureFreeDrawingStrokes)
     ].filter((value): value is string => !!value).join(', ') || undefined;

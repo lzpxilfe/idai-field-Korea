@@ -169,6 +169,47 @@ export const KOREAN_FIELDWORK_RECORD_VALUE_LABELS: Readonly<Record<string, Reado
         goryeo: '\uace0\ub824',
         joseon: '\uc870\uc120',
         modernContemporary: '\uadfc\ud604\ub300'
+    },
+    geometrySource: {
+        tabletSketch: '\ud0dc\ube14\ub9bf \uc2a4\ucf00\uce58',
+        gpsApproximate: 'GPS \ub300\ub7b5 \uc704\uce58',
+        aerialLayerTrace: '\ub4dc\ub860 \ubc30\uacbd \ucd94\uc801',
+        drawnOnBoundarySketch: '\uacbd\uacc4\ub3c4 \uc704 \uc57d\ub3c4',
+        importedShp: 'SHP \uac00\uc838\uc624\uae30',
+        importedDxf: 'DXF \uac00\uc838\uc624\uae30',
+        surveyedFinal: '\uc815\uc2dd \uce21\ub7c9',
+        finalCad: '\ucd5c\uc885 CAD'
+    },
+    geometryConfidence: {
+        rough: '\ub300\ub7b5',
+        fieldSketch: '\ud604\uc7a5 \uc2a4\ucf00\uce58',
+        aerialAligned: '\ub4dc\ub860 \ubc30\uacbd \ub9de\ucda4',
+        surveyed: '\uce21\ub7c9 \ubc18\uc601',
+        final: '\ucd5c\uc885'
+    },
+    featureGeometryEditStatus: {
+        roughSketch: '\ub300\ub7b5 \uc2a4\ucf00\uce58',
+        needsAerialAlignment: '\ubcf4\uc815 \ud544\uc694',
+        adjustedToAerialLayer: '\ub4dc\ub860 \ubc30\uacbd \ub9de\ucda4',
+        adjustedToSurveyLine: '\uce21\ub7c9\uc120 \ub9de\ucda4',
+        finalAccepted: '\ucd5c\uc885 \ud655\uc815'
+    },
+    surveyBoundarySource: {
+        manualBasemapTrace: '\ubc30\uacbd\uc9c0\ub3c4 \uc218\ub3d9 \ucd94\uc801',
+        gpsWalkover: 'GPS \ub2f5\uc0ac \uae30\ub85d',
+        csvImport: 'CSV \uac00\uc838\uc624\uae30',
+        geoJsonImport: 'GeoJSON \uac00\uc838\uc624\uae30',
+        shpImport: 'SHP \uac00\uc838\uc624\uae30',
+        dxfImport: 'DXF \uac00\uc838\uc624\uae30',
+        officialSurvey: '\uc815\uc2dd \uce21\ub7c9',
+        finalCad: '\ucd5c\uc885 CAD'
+    },
+    surveyBoundaryAccuracy: {
+        visualReference: '\ucc38\uace0\uc6a9',
+        approximateGps: 'GPS \ub300\ub7b5',
+        importedReference: '\uac00\uc838\uc628 \ucc38\uace0\uc790\ub8cc',
+        surveyed: '\uce21\ub7c9 \ubc18\uc601',
+        final: '\ucd5c\uc885'
     }
 };
 
