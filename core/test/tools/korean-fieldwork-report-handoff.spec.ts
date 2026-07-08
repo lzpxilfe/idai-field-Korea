@@ -571,14 +571,14 @@ describe('Korean fieldwork report handoff', () => {
         const issueDetails = featureItem?.issueDetails.join('\n') ?? '';
 
         expect(issueDetails).toContain('사진 위 표시가 보고서용 설명으로 정리되지 않았습니다');
-        expect(issueDetails).toContain('자동 필사된 현장메모가 아직 검토되지 않았습니다');
+        expect(issueDetails).toContain('자동 전사된 야장 메모가 검토되지 않았습니다');
         expect(featureItem?.copyText).toContain('\ud655\uc778 \uc0c1\uc138');
         expect(featureItem?.copyText).toContain('\uc0ac\uc9c4 \ud45c\uc2dc: \uc788\uc74c');
         expect(featureItem?.copyText).toContain('\uc6d0\ubcf8 \ud30c\uc77c: photo-annotated.jpg');
         expect(featureItem?.copyText).toContain('\ucd2c\uc601: 2026-06-23 01:02');
         expect(featureItem?.copyText).toContain('\ud06c\uae30: 4032x3024');
         expect(featureItem?.copyText).toContain('사진 위 표시가 보고서용 설명으로 정리되지 않았습니다');
-        expect(featureItem?.copyText).toContain('자동 필사된 현장메모가 아직 검토되지 않았습니다');
+        expect(featureItem?.copyText).toContain('자동 전사된 야장 메모가 검토되지 않았습니다');
         expect(featureItem?.copyText).not.toContain('fieldwork-photo-annotation-review');
         expect(featureItem?.copyText).not.toContain('pen-memo-auto-transcript-review');
         expect(featureItem?.copyText).not.toContain('"strokes"');
@@ -723,7 +723,7 @@ describe('Korean fieldwork report handoff', () => {
         expect(featureItem?.copyText)
             .toContain('\ud544\uae30 \uc6d0\ubcf8: \uc788\uc74c');
         expect(featureItem?.copyText)
-            .toContain('\ud0dc\ube14\ub9bf \ud544\uae30 \ud604\uc7a5\uba54\ubaa8');
+            .toContain('\ud0dc\ube14\ub9bf \uc190\uae00\uc528 \uc57c\uc7a5 \uba54\ubaa8');
         expect(featureItem?.copyText)
             .not.toContain('pen-memo-handwriting-transcription');
         expect(featureItem?.copyText)
