@@ -2,6 +2,7 @@ import {
     getKoreanFieldworkCloseoutSummary,
     makeKoreanFieldworkCloseoutSummary
 } from '../../../src/app/util/korean-fieldwork-closeout';
+import { getKoreanFieldworkRecordFieldValueSummary } from 'idai-field-core';
 
 
 describe('korean-fieldwork-closeout', () => {
@@ -319,6 +320,70 @@ describe('korean-fieldwork-closeout', () => {
             documentId: 'soil-photo-annotated',
             relatedFields: ['soilProfilePhotoAnnotationStrokes', 'description', 'shortDescription']
         });
+    });
+
+
+    it('adds field record quality review details to closeout with shared labels', () => {
+
+        const qualityReview = createDocument('quality-review-1', 'FieldRecordQualityReview', 'quality-001', {
+            reviewedRecordUnit: ['featureRecord', 'dailyLog'],
+            qualityReviewStage: ['sameDayReview', 'sourceRecordCorrection'],
+            qualityCorrectionBasis: ['correctionReasonLinked', 'sourceMediaChecked'],
+            reportEvaluationFeedback: ['fieldRecordReview', 'supplementRequestTracked'],
+            recordCreationTiming: 'duringFieldwork',
+            fieldRecordQuality: ['immediateRecording'],
+            verificationState: 'observedInField'
+        });
+        const closedReview = createDocument('quality-review-2', 'FieldRecordQualityReview', 'quality-002', {
+            reviewedRecordUnit: ['featureRecord'],
+            qualityReviewStage: ['closedAfterCorrection'],
+            qualityCorrectionBasis: ['sourceMediaChecked'],
+            recordCreationTiming: 'duringFieldwork',
+            fieldRecordQuality: ['immediateRecording'],
+            verificationState: 'observedInField'
+        });
+
+        const summary = makeKoreanFieldworkCloseoutSummary([
+            qualityReview,
+            closedReview
+        ] as any);
+
+        const reviewedRecordUnit = getKoreanFieldworkRecordFieldValueSummary(
+            'reviewedRecordUnit',
+            qualityReview.resource.reviewedRecordUnit
+        );
+        const reviewStage = getKoreanFieldworkRecordFieldValueSummary(
+            'qualityReviewStage',
+            qualityReview.resource.qualityReviewStage
+        );
+        const correctionBasis = getKoreanFieldworkRecordFieldValueSummary(
+            'qualityCorrectionBasis',
+            qualityReview.resource.qualityCorrectionBasis
+        );
+        const reportFeedback = getKoreanFieldworkRecordFieldValueSummary(
+            'reportEvaluationFeedback',
+            qualityReview.resource.reportEvaluationFeedback
+        );
+
+        expect(summary.status).toBe('needsReview');
+        expect(summary.issues.map(issue => issue.ruleId)).toEqual([
+            'field-record-quality-review-follow-up'
+        ]);
+        expect(summary.issues[0]).toMatchObject({
+            documentId: 'quality-review-1',
+            relatedFields: expect.arrayContaining([
+                'reviewedRecordUnit',
+                'qualityReviewStage',
+                'qualityCorrectionBasis',
+                'reportEvaluationFeedback'
+            ])
+        });
+        expect(summary.issues[0].recommendedAction).toContain(`\uac80\ud1a0 \ub300\uc0c1: ${reviewedRecordUnit}`);
+        expect(summary.issues[0].recommendedAction).toContain(`\uac80\ud1a0 \ub2e8\uacc4: ${reviewStage}`);
+        expect(summary.issues[0].recommendedAction).toContain(`\uc218\uc815\u00b7\ubcf4\uc644 \uadfc\uac70: ${correctionBasis}`);
+        expect(summary.issues[0].recommendedAction).toContain(`\ud3c9\uac00 \ud658\ub958: ${reportFeedback}`);
+        expect(summary.issues[0].recommendedAction).not.toContain('sourceRecordCorrection');
+        expect(summary.issues[0].recommendedAction).not.toContain('supplementRequestTracked');
     });
 
 

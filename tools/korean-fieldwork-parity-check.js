@@ -4256,6 +4256,15 @@ function validateSoilColorReviewWorkflow() {
         || !text.includes('shortDescription')) {
       findings.push(`${label} must turn tablet photo annotations into closeout review work until they are described`);
     }
+    if (!text.includes('getFieldRecordQualityReviewCloseoutIssues')
+        || !text.includes('field-record-quality-review-follow-up')
+        || !text.includes('reviewedRecordUnit')
+        || !text.includes('qualityReviewStage')
+        || !text.includes('qualityCorrectionBasis')
+        || !text.includes('reportEvaluationFeedback')
+        || !text.includes('getKoreanFieldworkRecordFieldValueSummary')) {
+      findings.push(`${label} must carry tablet FieldRecordQualityReview details into closeout with shared Korean labels`);
+    }
   }
   for (const [label, text] of [
     ['desktop closeout test', desktopCloseoutSpecText],
@@ -4265,6 +4274,11 @@ function validateSoilColorReviewWorkflow() {
         || !text.includes('fieldwork-photo-annotation-review')
         || !text.includes('soil-profile-photo-annotation-review')) {
       findings.push(`${label} must cover annotated tablet photos in closeout`);
+    }
+    if (!text.includes('adds field record quality review details to closeout with shared labels')
+        || !text.includes("not.toContain('sourceRecordCorrection')")
+        || !text.includes("not.toContain('supplementRequestTracked')")) {
+      findings.push(`${label} must cover FieldRecordQualityReview closeout labels without leaking internal value keys`);
     }
   }
 
@@ -4426,6 +4440,14 @@ function validateProgressModeAwareness() {
   if (!tabletWorkbenchSpecText.includes('counts pen memo review as a tablet workflow step')
       || !tabletWorkbenchSpecText.includes('uses the investigation mode to surface trial-trench workflow progress')) {
     findings.push('tablet workbench tests must cover PenMemo review and trial-trench progress');
+  }
+  if (!tabletWorkbenchText.includes('getFieldRecordQualityReviewReasons')
+      || !tabletWorkbenchText.includes('FIELD_RECORD_QUALITY_REVIEW_REASON_FIELDS')
+      || !tabletWorkbenchText.includes('getKoreanFieldworkRecordFieldValueSummary')
+      || !tabletWorkbenchSpecText.includes('field record quality review details with shared Korean labels')
+      || !tabletWorkbenchSpecText.includes("not.toContain('sourceRecordCorrection')")
+      || !tabletWorkbenchSpecText.includes("not.toContain('supplementRequestTracked')")) {
+    findings.push('tablet workbench must show FieldRecordQualityReview details with shared Korean labels before opening the record');
   }
   if (!tabletWorkbenchPanelSpecText.includes('passes the investigation mode into tablet workbench progress')) {
     findings.push('tablet workbench panel tests must prove investigation mode is passed through');

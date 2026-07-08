@@ -1,5 +1,6 @@
 import {
   Document,
+  getKoreanFieldworkRecordFieldValueSummary,
   getKoreanFieldworkTodaySummary,
   hasConfirmedKoreanFieldworkImageUpload,
   KoreanFieldworkReadinessIssue,
@@ -35,11 +36,12 @@ const PHOTO_CATEGORY = 'Photo';
 const DRAWING_CATEGORY = 'Drawing';
 const PEN_MEMO_CATEGORY = 'PenMemo';
 const SOIL_PROFILE_PHOTO_CATEGORY = 'SoilProfilePhoto';
+const FIELD_RECORD_QUALITY_REVIEW_CATEGORY = 'FieldRecordQualityReview';
 const DIRECT_FIELDWORK_PHOTO_CATEGORIES = new Set([
   'DailyLog',
   'Feature',
   'FeatureSegment',
-  'FieldRecordQualityReview',
+  FIELD_RECORD_QUALITY_REVIEW_CATEGORY,
   'Find',
   'FindCollection',
   'Layer',
@@ -53,6 +55,31 @@ const FIELDWORK_PHOTO_ANNOTATION_FIELDS = ['fieldworkPhotoAnnotationStrokes'];
 const SOIL_PROFILE_PHOTO_ANNOTATION_FIELDS = [
   'soilProfilePhotoAnnotationStrokes',
   'soilProfileAnnotationStrokes',
+];
+const FIELD_RECORD_QUALITY_REVIEW_CLOSED_STAGE = 'closedAfterCorrection';
+const FIELD_RECORD_QUALITY_REVIEW_REPORT_FEEDBACK_STAGE = 'postEvaluationFeedback';
+const FIELD_RECORD_QUALITY_REVIEW_DETAIL_FIELDS = [
+  {
+    fieldName: 'reviewedRecordUnit',
+    label: '\uac80\ud1a0 \ub300\uc0c1',
+  },
+  {
+    fieldName: 'qualityReviewStage',
+    label: '\uac80\ud1a0 \ub2e8\uacc4',
+  },
+  {
+    fieldName: 'qualityCorrectionBasis',
+    label: '\uc218\uc815\u00b7\ubcf4\uc644 \uadfc\uac70',
+  },
+  {
+    fieldName: 'reportEvaluationFeedback',
+    label: '\ud3c9\uac00 \ud658\ub958',
+  },
+];
+const FIELD_RECORD_QUALITY_REVIEW_REQUIRED_FIELD_NAMES = [
+  'reviewedRecordUnit',
+  'qualityReviewStage',
+  'qualityCorrectionBasis',
 ];
 const MUNSELL_CANDIDATE_PATTERN =
   /\b(?:GLEY\s*[12]\s*\d\/N|(?:10|7\.5|5|2\.5)(?:YR|Y|R)\s+\d(?:\.\d)?\/\d(?:\.\d)?)\b/g;
@@ -142,6 +169,12 @@ const getKoreanFieldworkCloseoutReviewIssues = (
   if (document.resource.category === PEN_MEMO_CATEGORY) {
     return getPenMemoCloseoutIssues(document);
   }
+  if (document.resource.category === FIELD_RECORD_QUALITY_REVIEW_CATEGORY) {
+    return [
+      ...getFieldRecordQualityReviewCloseoutIssues(document),
+      ...getDirectFieldworkPhotoCloseoutIssues(document),
+    ];
+  }
   if (DIRECT_FIELDWORK_PHOTO_CATEGORIES.has(String(document.resource.category))) {
     return getDirectFieldworkPhotoCloseoutIssues(document);
   }
@@ -189,6 +222,95 @@ const getDirectFieldworkPhotoCloseoutIssues = (
   'fieldwork-attached-photo-upload-missing',
   '기록에 직접 붙은 태블릿 사진 원본 보존 상태가 아직 확인되지 않았습니다.'
 );
+
+const getFieldRecordQualityReviewCloseoutIssues = (
+  document: Document
+): KoreanFieldworkReadinessIssue[] => {
+  const resource = document.resource as Record<string, unknown>;
+  const missingFields = getMissingFieldRecordQualityReviewFields(resource);
+  const qualityReviewStages = getStringListValue(resource.qualityReviewStage);
+  const isClosed = qualityReviewStages.includes(FIELD_RECORD_QUALITY_REVIEW_CLOSED_STAGE);
+
+  if (isClosed && missingFields.length === 0) return [];
+
+  const detailSummary = getFieldRecordQualityReviewDetailSummary(resource);
+  const missingLabels = getFieldRecordQualityReviewFieldLabels(missingFields);
+  const issueFields = dedupeStrings([
+    ...missingFields,
+    ...FIELD_RECORD_QUALITY_REVIEW_DETAIL_FIELDS.map((field) => field.fieldName),
+    'recordCreationTiming',
+    'fieldRecordQuality',
+    'reportCrossCheck',
+    'verificationState',
+  ]);
+
+  return [createCloseoutReviewIssue(
+    document,
+    missingFields.length > 0
+      ? 'field-record-quality-review-context-missing'
+      : 'field-record-quality-review-follow-up',
+    missingFields.length > 0
+      ? '\uae30\ub85d \ubcf4\uc644 \uba54\ubaa8\uc5d0 \ubcf4\uace0\uc11c \uc791\uc131\uc5d0 \ud544\uc694\ud55c \uac80\ud1a0 \ub9e5\ub77d\uc774 \ube60\uc838 \uc788\uc2b5\ub2c8\ub2e4.'
+      : '\uae30\ub85d \ubcf4\uc644 \uba54\ubaa8\ub97c HWP \uc791\uc131 \uc804\uc5d0 \ud655\uc778\ud574\uc57c \ud569\ub2c8\ub2e4.',
+    getFieldRecordQualityReviewRecommendedAction(detailSummary, missingLabels),
+    issueFields
+  )];
+};
+
+const getMissingFieldRecordQualityReviewFields = (
+  resource: Record<string, unknown>
+): string[] => {
+  const missingFields = FIELD_RECORD_QUALITY_REVIEW_REQUIRED_FIELD_NAMES.filter((fieldName) =>
+    !getKoreanFieldworkRecordFieldValueSummary(fieldName, resource[fieldName])
+  );
+  const qualityReviewStages = getStringListValue(resource.qualityReviewStage);
+
+  if (qualityReviewStages.includes(FIELD_RECORD_QUALITY_REVIEW_REPORT_FEEDBACK_STAGE)
+      && !getKoreanFieldworkRecordFieldValueSummary(
+        'reportEvaluationFeedback',
+        resource.reportEvaluationFeedback
+      )) {
+    missingFields.push('reportEvaluationFeedback');
+  }
+
+  return missingFields;
+};
+
+const getFieldRecordQualityReviewDetailSummary = (
+  resource: Record<string, unknown>
+): string[] => FIELD_RECORD_QUALITY_REVIEW_DETAIL_FIELDS
+  .map(({ fieldName, label }) => {
+    const summary = getKoreanFieldworkRecordFieldValueSummary(
+      fieldName,
+      resource[fieldName]
+    );
+
+    return summary ? `${label}: ${summary}` : undefined;
+  })
+  .filter((summary): summary is string => !!summary);
+
+const getFieldRecordQualityReviewFieldLabels = (
+  fieldNames: string[]
+): string[] => fieldNames
+  .map((fieldName) =>
+    FIELD_RECORD_QUALITY_REVIEW_DETAIL_FIELDS.find((field) => field.fieldName === fieldName)?.label
+  )
+  .filter((label): label is string => !!label);
+
+const getFieldRecordQualityReviewRecommendedAction = (
+  detailSummary: string[],
+  missingLabels: string[]
+): string => {
+  const detailText = detailSummary.length > 0
+    ? `${detailSummary.join('. ')}. `
+    : '';
+
+  if (missingLabels.length > 0) {
+    return `${detailText}${missingLabels.join(', ')}\uc744 \ucc44\uc6b0\uace0, \ub370\uc2a4\ud06c\ud1b1 HWP \ubcf5\uc0ac \ube14\ub85d\uc5d0\uc11c \uac19\uc740 \ub77c\ubca8\ub85c \ubcf4\uc774\ub294\uc9c0 \ud655\uc778\ud558\uc138\uc694.`;
+  }
+
+  return `${detailText}\uc218\uc815 \ub0b4\uc5ed\uc774 \uc6d0\uae30\ub85d\uc744 \uc9c0\uc6b0\uc9c0 \uc54a\uace0 \ubcf4\uace0\uc11c \uc791\uc131\uc6a9 \ubcf5\uc0ac \ube14\ub85d\uacfc \uc77c\uce58\ud558\ub294\uc9c0 \ud655\uc778\ud558\uc138\uc694.`;
+};
 
 const getSoilProfilePhotoCloseoutIssues = (
   document: Document
@@ -524,6 +646,52 @@ const hasTextValue = (value: unknown): value is string =>
 
 const getTextValue = (value: unknown): string | undefined =>
   hasTextValue(value) ? value.trim() : undefined;
+
+const getStringListValue = (value: unknown): string[] => {
+  if (value === undefined || value === null) return [];
+
+  if (Array.isArray(value)) {
+    return value.flatMap(getStringListValue);
+  }
+
+  if (typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    if (typeof record.inputValue === 'string') return getStringListValue(record.inputValue);
+    if (typeof record.value === 'string') return getStringListValue(record.value);
+
+    return [];
+  }
+
+  const text = String(value).trim();
+  if (!text || text === '[]') return [];
+
+  const parsedValue = parseJsonValue(text);
+  if (parsedValue !== undefined) return getStringListValue(parsedValue);
+
+  return text.split(/\r?\n|,\s*/)
+    .map((item) => item.trim())
+    .filter((item) => !!item);
+};
+
+const parseJsonValue = (value: string): unknown | undefined => {
+  if (!/^\s*[\[{"]/.test(value)) return undefined;
+
+  try {
+    return JSON.parse(value);
+  } catch (_err) {
+    return undefined;
+  }
+};
+
+const dedupeStrings = (values: string[]): string[] => {
+  const seen = new Set<string>();
+
+  return values.filter((value) => {
+    if (seen.has(value)) return false;
+    seen.add(value);
+    return true;
+  });
+};
 
 const isUploadableLocalUri = (uri: string | undefined): boolean =>
   !!uri && /^(file|content):\/\//.test(uri);

@@ -1,5 +1,6 @@
 import {
   Document,
+  getKoreanFieldworkRecordFieldValueSummary,
   KoreanFieldworkReadinessIssue,
   KoreanFieldworkTodaySummary,
 } from 'idai-field-core';
@@ -67,6 +68,24 @@ const REVIEW_VERIFICATION_STATES = new Set([
   'conflictingEvidence',
   'needsRecheck',
 ]);
+const FIELD_RECORD_QUALITY_REVIEW_REASON_FIELDS = [
+  {
+    fieldName: 'reviewedRecordUnit',
+    prefix: '\uac80\ud1a0 \ub300\uc0c1',
+  },
+  {
+    fieldName: 'qualityReviewStage',
+    prefix: '\uac80\ud1a0 \ub2e8\uacc4',
+  },
+  {
+    fieldName: 'qualityCorrectionBasis',
+    prefix: '\uc218\uc815\u00b7\ubcf4\uc644 \uadfc\uac70',
+  },
+  {
+    fieldName: 'reportEvaluationFeedback',
+    prefix: '\ud3c9\uac00 \ud658\ub958',
+  },
+];
 
 const CATEGORY_ORDER: readonly string[] = [
   C.OPERATION,
@@ -155,6 +174,10 @@ const getWorkbenchReasons = (
     }
   }
 
+  if (document.resource.category === C.FIELD_RECORD_QUALITY_REVIEW) {
+    reasons.push(...getFieldRecordQualityReviewReasons(resource));
+  }
+
   if (resource.verificationState === 'pendingDecision') {
     reasons.push('추가 확인');
   } else if (isTrackedValue(resource.verificationState, REVIEW_VERIFICATION_STATES)) {
@@ -185,6 +208,7 @@ const getWorkbenchTone = (
   if (isKoreanFieldworkChecklistRecord(document.resource.category, investigationModeId)) {
     return 'info';
   }
+  if (document.resource.category === C.FIELD_RECORD_QUALITY_REVIEW) return 'info';
 
   return 'neutral';
 };
@@ -246,6 +270,19 @@ const isTrackedValue = (
   value: unknown,
   trackedValues: Set<string>
 ): boolean => typeof value === 'string' && trackedValues.has(value);
+
+const getFieldRecordQualityReviewReasons = (
+  resource: Record<string, unknown>
+): string[] => FIELD_RECORD_QUALITY_REVIEW_REASON_FIELDS
+  .map(({ fieldName, prefix }) => {
+    const summary = getKoreanFieldworkRecordFieldValueSummary(
+      fieldName,
+      resource[fieldName]
+    );
+
+    return summary ? `${prefix} ${summary}` : undefined;
+  })
+  .filter((reason): reason is string => !!reason);
 
 const dedupe = (values: string[]): string[] => {
   const seen = new Set<string>();

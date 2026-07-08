@@ -1,4 +1,5 @@
 import {
+  getKoreanFieldworkRecordFieldValueSummary,
   KoreanFieldworkReadinessIssue,
   KoreanFieldworkTodaySummary,
 } from 'idai-field-core';
@@ -114,6 +115,55 @@ describe('Korean fieldwork workbench', () => {
         tone: 'info',
       }),
     ]);
+  });
+
+  it('surfaces field record quality review details with shared Korean labels', () => {
+    const qualityReview = createDoc('quality-review-1', C.FIELD_RECORD_QUALITY_REVIEW, 'quality-001', {}, {
+      reviewedRecordUnit: ['featureRecord', 'dailyLog'],
+      qualityReviewStage: ['sameDayReview', 'sourceRecordCorrection'],
+      qualityCorrectionBasis: ['correctionReasonLinked', 'sourceMediaChecked'],
+      reportEvaluationFeedback: ['fieldRecordReview', 'supplementRequestTracked'],
+      recordCreationTiming: 'duringFieldwork',
+      fieldRecordQuality: ['immediateRecording'],
+      verificationState: 'observedInField',
+    });
+
+    const items = getKoreanFieldworkWorkbenchItems(
+      createSummary([]),
+      [qualityReview] as any
+    );
+    const reviewedRecordUnit = getKoreanFieldworkRecordFieldValueSummary(
+      'reviewedRecordUnit',
+      qualityReview.resource.reviewedRecordUnit
+    );
+    const reviewStage = getKoreanFieldworkRecordFieldValueSummary(
+      'qualityReviewStage',
+      qualityReview.resource.qualityReviewStage
+    );
+    const correctionBasis = getKoreanFieldworkRecordFieldValueSummary(
+      'qualityCorrectionBasis',
+      qualityReview.resource.qualityCorrectionBasis
+    );
+    const reportFeedback = getKoreanFieldworkRecordFieldValueSummary(
+      'reportEvaluationFeedback',
+      qualityReview.resource.reportEvaluationFeedback
+    );
+    const reasonText = items[0].reasons.join('\n');
+
+    expect(items).toEqual([
+      expect.objectContaining({
+        id: 'quality-review-1',
+        reasons: [
+          `\uac80\ud1a0 \ub300\uc0c1 ${reviewedRecordUnit}`,
+          `\uac80\ud1a0 \ub2e8\uacc4 ${reviewStage}`,
+          `\uc218\uc815\u00b7\ubcf4\uc644 \uadfc\uac70 ${correctionBasis}`,
+          `\ud3c9\uac00 \ud658\ub958 ${reportFeedback}`,
+        ],
+        tone: 'info',
+      }),
+    ]);
+    expect(reasonText).not.toContain('sourceRecordCorrection');
+    expect(reasonText).not.toContain('supplementRequestTracked');
   });
 
   it('uses the investigation mode to surface trial-trench workflow progress', () => {
