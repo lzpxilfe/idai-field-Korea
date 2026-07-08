@@ -3403,8 +3403,9 @@ function validateReportHandoffPreSaveValidation() {
     findings.push('desktop report handoff panel must keep using the same core copy-block contract');
   }
   if (!desktopPriorityStripText.includes('normalizeKoreanFieldworkHwpPlainText')
-      || !desktopPriorityStripText.includes('electronClipboard.write({ text: plainText })')
-      || !desktopPriorityStripSpecText.includes('write).toHaveBeenCalledWith({ text: featureItem.copyText })')) {
+      || !desktopPriorityStripText.includes('electronClipboard.clear?.()')
+      || !desktopPriorityStripText.includes("electronClipboard.write({ text: plainText, html: '' })")
+      || !desktopPriorityStripSpecText.includes("write).toHaveBeenCalledWith({ text: featureItem.copyText, html: '' })")) {
     findings.push('desktop report handoff copy must use text-only clipboard writes for HWP-safe paste');
   }
   if (!desktopPriorityStripTemplateText.includes('korean-fieldwork-report-handoff-details')

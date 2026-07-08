@@ -1629,10 +1629,18 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
         try {
             const electronClipboard = nodeRequire?.('electron')?.clipboard;
             if (electronClipboard?.write) {
-                electronClipboard.write({ text: plainText });
+                try {
+                    electronClipboard.clear?.();
+                } catch (_) {}
+
+                electronClipboard.write({ text: plainText, html: '' });
                 return;
             }
             if (electronClipboard?.writeText) {
+                try {
+                    electronClipboard.clear?.();
+                } catch (_) {}
+
                 electronClipboard.writeText(plainText);
                 return;
             }

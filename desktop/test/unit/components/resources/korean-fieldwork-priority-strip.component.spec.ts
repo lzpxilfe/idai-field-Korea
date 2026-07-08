@@ -174,9 +174,10 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
 
         const write = jest.fn();
         const writeText = jest.fn();
+        const clear = jest.fn();
         const testWindow = (global as any).window ?? ((global as any).window = {});
         const previousRequire = testWindow.require;
-        testWindow.require = jest.fn().mockReturnValue({ clipboard: { write, writeText } });
+        testWindow.require = jest.fn().mockReturnValue({ clipboard: { clear, write, writeText } });
 
         try {
             const featureTypeLabel = getKoreanFieldworkFeatureTypeLabel('pit');
@@ -420,7 +421,8 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
 
             await component.copyReportHandoffItem(featureItem);
 
-            expect(write).toHaveBeenCalledWith({ text: featureItem.copyText });
+            expect(clear).toHaveBeenCalledTimes(1);
+            expect(write).toHaveBeenCalledWith({ text: featureItem.copyText, html: '' });
             expect(writeText).not.toHaveBeenCalled();
             expect(component.getReportHandoffPreviewItem()?.documentId).toBe('feature-1');
             expect(component.getReportHandoffCopyActionLabel(featureItem)).toBe('\ubcf5\uc0ac\ub428');
