@@ -18,6 +18,24 @@
 
 보안상 APK는 저장소의 GitHub Releases 또는 Actions 산출물에서만 내려받는 것을 권장한다. 다른 경로로 전달받은 APK는 만든 사람과 출처를 확인해야 한다.
 
+## Windows에서 최신 APK 받기
+
+Windows PC에서 GitHub CLI가 로그인되어 있으면, 가장 최근에 성공한 Mobile Actions 산출물에서 APK를 직접 받을 수 있다.
+
+USB로 연결된 태블릿에 바로 설치:
+
+```powershell
+.\install-idai-field-android-apk.ps1 -FromLatestArtifact -DownloadPlatformTools
+```
+
+APK 파일만 내려받아 태블릿으로 직접 옮기기:
+
+```powershell
+.\install-idai-field-android-apk.ps1 -FromLatestArtifact -DownloadOnly
+```
+
+이 명령은 `idai-field-mobile-android-apk` 산출물을 찾아 `dist/android/run-<Actions 실행 번호>` 아래에 내려받는다.
+
 ## Windows에서 USB로 설치
 
 태블릿을 USB로 연결할 수 있으면 스크립트로 설치할 수 있다.

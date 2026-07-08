@@ -366,6 +366,8 @@ const featureRows = [
 
 const releaseCriticalPatterns = [
   /^\.github\/workflows\/(desktop|mobile)\.yml$/,
+  /^README\.md$/,
+  /^docs\/korean-fieldwork\/android-tablet-install\.ko\.md$/,
   /^install-idai-field-android-apk\.ps1$/,
   /^mobile\/README\.md$/,
   /^tools\/korean-fieldwork-(media-contract-check|parity-check|verify)\.js$/,
@@ -644,6 +646,7 @@ const projectInvestigationModeWordingFindings = validateProjectInvestigationMode
 const priorityTaskFindings = validatePriorityTaskIds();
 const rawFormFindings = validateRawFormFieldRules();
 const reportHandoffFindings = validateReportHandoffPreSaveValidation();
+const tabletInstallGuideFindings = validateTabletInstallGuide();
 const identifierRevisionFindings = validateIdentifierRevisionContract();
 const recordPanelOrderFindings = validateRecordPanelOrder();
 const connectedRecordWordingFindings = validateConnectedRecordWording();
@@ -670,6 +673,7 @@ printReport(
   priorityTaskFindings,
   rawFormFindings,
   reportHandoffFindings,
+  tabletInstallGuideFindings,
   identifierRevisionFindings,
   recordPanelOrderFindings,
   connectedRecordWordingFindings,
@@ -699,6 +703,7 @@ if (
     || priorityTaskFindings.length > 0
     || rawFormFindings.length > 0
     || reportHandoffFindings.length > 0
+    || tabletInstallGuideFindings.length > 0
     || identifierRevisionFindings.length > 0
     || recordPanelOrderFindings.length > 0
     || connectedRecordWordingFindings.length > 0
@@ -3252,8 +3257,6 @@ function validateReportHandoffPreSaveValidation() {
   const tabletEditText = readTextFile('mobile/app/(tabs)/ProjectScreen/DocumentEdit.tsx');
   const tabletPackageText = readTextFile('mobile/package.json');
   const tabletWorkflowText = readTextFile('.github/workflows/mobile.yml');
-  const tabletInstallScriptText = readTextFile('install-idai-field-android-apk.ps1');
-  const tabletReadmeText = readTextFile('mobile/README.md');
   const desktopPriorityStripText = readTextFile(
     'desktop/src/app/components/resources/korean-fieldwork-priority-strip.component.ts'
   );
@@ -3463,14 +3466,6 @@ function validateReportHandoffPreSaveValidation() {
       || !desktopPriorityStripSpecText.includes("write).toHaveBeenCalledWith({ text: featureItem.copyText, html: '' })")) {
     findings.push('desktop report handoff copy must use text-only clipboard writes for HWP-safe paste');
   }
-  if (!tabletInstallScriptText.includes('[switch]$FromLatestArtifact')
-      || !tabletInstallScriptText.includes('[switch]$DownloadOnly')
-      || !tabletInstallScriptText.includes('gh run download')
-      || !tabletInstallScriptText.includes('run-$($artifactRun.Run.databaseId)')
-      || !tabletReadmeText.includes('-FromLatestArtifact -DownloadPlatformTools')
-      || !tabletReadmeText.includes('-FromLatestArtifact -DownloadOnly')) {
-    findings.push('tablet APK installer must install or download the newest Mobile GitHub Actions APK artifact for post-change tablet checks');
-  }
   if (!desktopPriorityStripTemplateText.includes('korean-fieldwork-report-handoff-details')
       || !desktopPriorityStripTemplateText.includes('item.relationDetails')
       || !desktopPriorityStripTemplateText.includes('item.evidenceDetails')
@@ -3491,6 +3486,41 @@ function validateReportHandoffPreSaveValidation() {
       || !desktopPriorityStripSpecText.includes('getReportHandoffPreviewItem')
       || !desktopPriorityStripSpecText.includes('expands report handoff lists')) {
     findings.push('desktop report handoff panel must render and test relation details, evidence details, issue details, visible HWP copy previews, and expandable full record lists');
+  }
+
+  return findings;
+}
+
+function validateTabletInstallGuide() {
+  const findings = [];
+  const rootReadmeText = readTextFile('README.md');
+  const tabletInstallDocText = readTextFile('docs/korean-fieldwork/android-tablet-install.ko.md');
+  const tabletInstallScriptText = readTextFile('install-idai-field-android-apk.ps1');
+  const tabletReadmeText = readTextFile('mobile/README.md');
+  const tabletWorkflowText = readTextFile('.github/workflows/mobile.yml');
+
+  if (!tabletWorkflowText.includes('name: idai-field-mobile-android-apk')) {
+    findings.push('mobile workflow must publish the Android APK artifact under the documented name');
+  }
+  if (!tabletInstallScriptText.includes('[switch]$FromLatestArtifact')
+      || !tabletInstallScriptText.includes('[switch]$DownloadOnly')
+      || !tabletInstallScriptText.includes('gh run download')
+      || !tabletInstallScriptText.includes('run-$($artifactRun.Run.databaseId)')) {
+    findings.push('tablet APK installer must install or download the newest Mobile GitHub Actions APK artifact for post-change tablet checks');
+  }
+  for (const [label, text] of [
+    ['root README', rootReadmeText],
+    ['tablet README', tabletReadmeText],
+    ['Android tablet install guide', tabletInstallDocText]
+  ]) {
+    if (!text.includes('-FromLatestArtifact -DownloadPlatformTools')
+        || !text.includes('-FromLatestArtifact -DownloadOnly')) {
+      findings.push(`${label} must document both direct latest APK install and download-only tablet handoff commands`);
+    }
+  }
+  if (!rootReadmeText.includes('Field Desktop의 `보고서/HWP 복사` 패널')
+      || !rootReadmeText.includes('일반 텍스트 클립보드')) {
+    findings.push('root README must explain the tablet-to-Field-Desktop-to-HWP copy flow without making BridgeDesk the primary destination');
   }
 
   return findings;
@@ -4900,6 +4930,7 @@ function printReport(
   priorityTaskFindings,
   rawFormFindings,
   reportHandoffFindings,
+  tabletInstallGuideFindings,
   identifierRevisionFindings,
   recordPanelOrderFindings,
   connectedRecordWordingFindings,
@@ -5081,6 +5112,17 @@ function printReport(
   } else {
     console.log('Report handoff pre-save validation gaps:');
     for (const finding of reportHandoffFindings) {
+      console.log(`- ${finding}`);
+    }
+  }
+
+  console.log('');
+
+  if (tabletInstallGuideFindings.length === 0) {
+    console.log('No tablet install guide gaps were found.');
+  } else {
+    console.log('Tablet install guide gaps:');
+    for (const finding of tabletInstallGuideFindings) {
       console.log(`- ${finding}`);
     }
   }
