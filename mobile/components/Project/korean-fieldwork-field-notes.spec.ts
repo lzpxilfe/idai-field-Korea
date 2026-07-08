@@ -767,7 +767,7 @@ describe('korean-fieldwork-field-notes', () => {
       feature,
       '사진 12번 촬영 후 유물 수습은 추가 확인.',
       fakeConfig,
-      new Date(2026, 5, 23, 10, 5)
+      new Date('2026-06-23T01:05:00.000Z')
     );
 
     expect(draft.resource).toMatchObject({
@@ -801,18 +801,18 @@ describe('korean-fieldwork-field-notes', () => {
       dailyLog,
       feature,
       '배수 상태 재검토.',
-      new Date(2026, 5, 23, 11, 20)
+      new Date('2026-06-23T02:20:00.000Z')
     );
 
     expect(getKoreanFieldworkDailyLogForOperation(
       operation,
       [oldDailyLog, dailyLog],
-      new Date(2026, 5, 23, 12, 0)
+      new Date('2026-06-23T03:00:00.000Z')
     )).toBe(dailyLog);
     expect(getKoreanFieldworkDailyLogForOperation(
       operation,
       [oldDailyLog],
-      new Date(2026, 5, 23, 12, 0)
+      new Date('2026-06-23T03:00:00.000Z')
     )).toBeUndefined();
     expect(updates).toMatchObject({
       description: '08:30 A 구역 - 제토 시작.\n11:20 수혈 1 - 배수 상태 재검토.',
