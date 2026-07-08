@@ -3857,9 +3857,12 @@ function validateSoilColorReviewWorkflow() {
     findings.push('desktop soil color panel must show accepted tablet eyedropper locations as markers over the soil profile photo');
   }
   if (!desktopEvidenceReviewText.includes('sampleSourceLabel')
+      || !desktopEvidenceReviewText.includes('document.resource.soilProfileColorSwatches')
       || !desktopEvidenceReviewSpecText.includes('sampleSourceLabel')
+      || !desktopEvidenceReviewSpecText.includes('prefers accepted layer sample locations')
       || !desktopRecordContextPanelText.includes('샘플 위치')
-      || !desktopRecordContextPanelSpecText.includes('샘플 위치')) {
+      || !desktopRecordContextPanelSpecText.includes('샘플 위치')
+      || !desktopRecordContextPanelSpecText.includes('샘플 위치: 1층: RGB')) {
     findings.push('desktop evidence review must carry tablet eyedropper sample locations into review and narrative append text');
   }
   if (!desktopAssistText.includes('createSoilColorAssistUpdatesForImageUploadAtPoint')

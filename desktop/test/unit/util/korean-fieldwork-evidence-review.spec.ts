@@ -378,6 +378,35 @@ describe('korean-fieldwork-evidence-review', () => {
     });
 
 
+    it('prefers accepted layer sample locations in desktop soil color review labels', () => {
+
+        const summaries = getSoilColorCandidateSummaries([
+            createDocument('soil-photo-1', 'SoilProfilePhoto', {
+                soilColorAssistCandidates: [
+                    '사진 선택 지점 80%/45% 평균 RGB 139/128/88',
+                    '1: 2.5Y 5/3 (높음)',
+                    '2: 10YR 4/3 (보통)'
+                ].join('\n'),
+                soilProfileColorSwatches: [
+                    '1: 10YR 4/3 RGB 111/87/61 @ 20%/50%',
+                    '2: 2.5Y 5/3 RGB 139/128/88 @ 80%/45%'
+                ].join('\n')
+            })
+        ] as any);
+
+        expect(summaries).toEqual([
+            expect.objectContaining({
+                candidates: ['2.5Y 5/3', '10YR 4/3'],
+                label: '먼셀 후보 2.5Y 5/3, 10YR 4/3 · '
+                    + '1층: RGB 111/87/61 @ 20%/50%, 2층: RGB 139/128/88 @ 80%/45%',
+                sampleSourceLabel: '1층: RGB 111/87/61 @ 20%/50%, 2층: RGB 139/128/88 @ 80%/45%'
+            })
+        ]);
+        expect(summaries[0].label)
+            .not.toContain('사진 선택 지점 80%/45% 평균 RGB 139/128/88');
+    });
+
+
     it('summarizes tablet layer-by-layer soil color swatches without photo candidates', () => {
 
         const summaries = getSoilColorSwatchSummaries([

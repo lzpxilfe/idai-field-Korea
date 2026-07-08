@@ -211,7 +211,10 @@ export function getSoilColorCandidateSummaries(
         const candidates = extractMunsellCandidateOptions(document.resource.soilColorAssistCandidates);
         if (candidates.length === 0) return [];
         const label = getMunsellCandidateSummaryLabel(document.resource.soilColorAssistCandidates);
-        const sampleSourceLabel = getSoilColorSampleSourceLabel(document.resource.soilColorAssistCandidates);
+        const sampleSourceLabel = getSoilColorSampleSourceLabel(
+            document.resource.soilColorAssistCandidates,
+            document.resource.soilProfileColorSwatches
+        );
 
         return [{
             candidates,

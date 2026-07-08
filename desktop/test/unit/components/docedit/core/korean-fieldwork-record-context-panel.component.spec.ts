@@ -1041,7 +1041,7 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
                 '1: 10YR 4/3 (높음, 차이 0.0)',
                 '2: 7.5YR 4/3 (보통, 차이 2.1)'
             ].join('\n'),
-            soilProfileColorSwatches: '1: 10YR 4/3',
+            soilProfileColorSwatches: '1: 10YR 4/3 RGB 111/87/61 @ 20%/50%',
             soilProfileColorNote: '조명 보정 필요.',
             soilProfileCaptureNote: '오전 확산광.'
         });
@@ -1064,12 +1064,12 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
         expect(insight).toMatchObject({
             id: 'soilColor:soil-photo-1',
             label: '토색 후보',
-            detail: 'SP1 · 먼셀 후보 10YR 4/3, 7.5YR 4/3 · 사진 선택 지점 20%/50% 평균 RGB 111/87/61',
+            detail: 'SP1 · 먼셀 후보 10YR 4/3, 7.5YR 4/3 · 1층: RGB 111/87/61 @ 20%/50%',
             appendText: [
                 '[토층사진 SP1]',
                 '토색 후보: 10YR 4/3, 7.5YR 4/3',
-                '샘플 위치: 사진 선택 지점 20%/50% 평균 RGB 111/87/61',
-                '토색 번호: 1: 10YR 4/3',
+                '샘플 위치: 1층: RGB 111/87/61 @ 20%/50%',
+                '토색 번호: 1: 10YR 4/3 RGB 111/87/61 @ 20%/50%',
                 '토색 메모: 조명 보정 필요.',
                 '촬영 조건: 오전 확산광.'
             ].join('\n')
@@ -1083,8 +1083,10 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
         expect(feature.resource.description).toContain('기존 토층 관찰.');
         expect(feature.resource.description).toContain('[토층사진 SP1]');
         expect(feature.resource.description).toContain('토색 후보: 10YR 4/3, 7.5YR 4/3');
-        expect(feature.resource.description).toContain('샘플 위치: 사진 선택 지점 20%/50% 평균 RGB 111/87/61');
-        expect(feature.resource.description).toContain('토색 번호: 1: 10YR 4/3');
+        expect(feature.resource.description).toContain('샘플 위치: 1층: RGB 111/87/61 @ 20%/50%');
+        expect(feature.resource.description).toContain('토색 번호: 1: 10YR 4/3 RGB 111/87/61 @ 20%/50%');
+        expect(feature.resource.description)
+            .not.toContain('샘플 위치: 사진 선택 지점 20%/50% 평균 RGB 111/87/61');
         expect(feature.resource.description).toContain('토색 메모: 조명 보정 필요.');
         expect(feature.resource.description).toContain('촬영 조건: 오전 확산광.');
         expect(feature.resource.description.match(/\[토층사진 SP1\]/g)).toHaveLength(1);

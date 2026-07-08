@@ -43,4 +43,18 @@ describe('korean-fieldwork-soil-color-candidates', () => {
             '1: 10YR 4/3 (높음, 차이 0.0)'
         ].join('\n'))).toBe('사진 중앙부 평균 RGB 111/87/61');
     });
+
+
+    it('prefers accepted layer sample locations over temporary photo candidate source text', () => {
+
+        expect(getSoilColorSampleSourceLabel([
+            '사진 선택 지점 80%/45% 평균 RGB 139/128/88',
+            '1: 2.5Y 5/3 (높음, 차이 0.0)'
+        ].join('\n'), [
+            '1: 10YR 4/3 RGB 111/87/61 @ 20%/50%',
+            '2: 2.5Y 5/3 RGB 139/128/88 @ 80%/45%'
+        ].join('\n'))).toBe(
+            '1층: RGB 111/87/61 @ 20%/50%, 2층: RGB 139/128/88 @ 80%/45%'
+        );
+    });
 });
