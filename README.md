@@ -4,33 +4,49 @@
 
 원본은 독일고고학연구소(DAI)와 GBV가 개발한 [iDAI.field](https://github.com/dainst/idai-field)입니다. 이 저장소는 Apache-2.0 라이선스를 따르는 독립 포크이며, 한국 매장문화재 조사 업무에 맞춘 별도 버전으로 운영합니다.
 
-![Field Desktop 화면](desktop/img/README-1.png)
+![한국 현장기록 Field Desktop과 HWP 복사 흐름](docs/korean-fieldwork/images/readme-field-desktop-hwp-copy.png)
 
-## 바로 들어가기
+## 먼저 설치하고 실행하기
 
-Windows에서 저장소를 받은 뒤, 루트 폴더에서 아래 파일을 더블클릭합니다. 기본 입구는 Field Desktop입니다.
+Git에 익숙하지 않은 사용자는 GitHub의 초록색 `Code` 버튼을 누른 뒤 `Download ZIP`으로 내려받아 압축을 풉니다. 그 다음 압축을 푼 폴더 안에서 아래 파일을 더블클릭하면 됩니다. 기본 입구는 별도 시제품이 아니라 **원래 iDAI Field Desktop**입니다.
+
+### 데스크톱
 
 | 하고 싶은 일 | 실행 파일 | 결과 |
 | --- | --- | --- |
 | Field Desktop 열기 | `START_FIELD_DESKTOP.cmd` | 한국어 iDAI Field Desktop 실행 |
 | Field Desktop 열기(다른 드라이브 캐시) | `START_FIELD_DESKTOP_TO_OTHER_DRIVE.cmd` | 임시파일과 npm 캐시를 지정한 드라이브에 두고 Field Desktop 실행 |
 | 바탕화면 바로가기 만들기 | `INSTALL_FIELD_DESKTOP_SHORTCUT.cmd` | `Field Desktop` 및 `Field Desktop (other drive cache)` 바로가기 생성 |
+
+처음 실행할 때는 필요한 개발 의존성을 자동으로 설치하고 Angular 화면을 준비하므로 몇 분 걸릴 수 있습니다. C드라이브 용량이 부족하면 `START_FIELD_DESKTOP_TO_OTHER_DRIVE.cmd`를 사용해 `G:\idai-field-desktop-runtime` 같은 다른 드라이브 폴더를 지정합니다.
+
+자세한 데스크톱 안내는 [Field Desktop 설치와 실행 안내](docs/korean-fieldwork/field-desktop-install.ko.md)에 정리했습니다.
+
+### 태블릿
+
+Android 태블릿 앱은 APK로 설치합니다. Google Play 배포를 전제로 하지 않으므로, USB로 태블릿을 연결한 뒤 아래 파일을 실행합니다.
+
+| 하고 싶은 일 | 실행 파일 | 결과 |
+| --- | --- | --- |
+| 최신 태블릿 APK 설치 | `INSTALL_LATEST_TABLET_APK.cmd` | GitHub Actions APK를 받아 Android 태블릿에 설치 |
 | 수정 후 태블릿 APK 빌드+설치 | `BUILD_AND_INSTALL_TABLET_APK.cmd` | GitHub Actions에서 현재 `master` APK를 새로 만든 뒤 Android 태블릿에 설치 |
 | 수정 후 태블릿 APK 빌드+내려받기 | `BUILD_AND_DOWNLOAD_TABLET_APK.cmd` | 현재 `master` APK를 새로 만들어 파일만 내려받기 |
-| 최신 태블릿 APK 설치 | `INSTALL_LATEST_TABLET_APK.cmd` | GitHub Actions APK를 받아 Android 태블릿에 설치 |
 | 최신 태블릿 APK 내려받기 | `DOWNLOAD_LATEST_TABLET_APK.cmd` | APK만 내려받아 태블릿으로 직접 전달 |
-| 보고서 보조 시제품 확인 | `START_BRIDGEDESK_DESKTOP.cmd` | HWP 복사 흐름 검증용 임시 도구 실행 |
 
-`run-idai-field-ko.ps1`은 같은 실행 흐름을 PowerShell에서 직접 실행할 때 사용합니다. 처음 실행할 때는 Angular 개발 서버를 준비하므로 시간이 걸릴 수 있습니다.
+태블릿 APK나 Android 도구도 C드라이브가 부담되면 `INSTALL_LATEST_TABLET_APK_TO_OTHER_DRIVE.cmd`, `BUILD_AND_INSTALL_TABLET_APK_TO_OTHER_DRIVE.cmd`, `DOWNLOAD_LATEST_TABLET_APK_TO_OTHER_DRIVE.cmd`를 사용합니다. 기본 작업 폴더는 `G:\idai-field-android`입니다.
 
-C드라이브 용량이 부족하면 `START_FIELD_DESKTOP_TO_OTHER_DRIVE.cmd`를 더블클릭해 런타임/캐시 폴더를 지정합니다. 예를 들어 `G:\idai-field-desktop-runtime`를 입력하면 Angular 임시파일과 npm 캐시가 그 아래에 저장됩니다. PowerShell에서는 다음처럼 직접 지정할 수도 있습니다.
+자세한 태블릿 안내는 [Android 태블릿 설치 안내](docs/korean-fieldwork/android-tablet-install.ko.md)에 정리했습니다.
+
+### PowerShell에서 직접 실행하기
+
+`run-idai-field-ko.ps1`은 같은 데스크톱 실행 흐름을 PowerShell에서 직접 실행할 때 사용합니다.
 
 ```powershell
 $env:IDAI_FIELD_RUNTIME_DIR='G:\idai-field-desktop-runtime'
 .\run-idai-field-ko.ps1
 ```
 
-`INSTALL_FIELD_DESKTOP_SHORTCUT.cmd`를 실행하면 일반 실행 바로가기와 다른 드라이브 캐시용 바로가기가 함께 만들어집니다.
+보고서 보조 시제품을 따로 확인해야 할 때만 `START_BRIDGEDESK_DESKTOP.cmd`를 실행합니다. BridgeDesk는 Field Desktop을 대체하는 별도 제품이 아니라 HWP 복사 문장과 표 형식을 검증하는 임시 입구입니다.
 
 ## Field Desktop 중심 흐름
 
@@ -201,6 +217,7 @@ python -m unittest discover -s tests
 ## 문서
 
 - [BridgeDesk 설치와 실행 입구](docs/korean-fieldwork/bridgedesk-installation.md)
+- [Field Desktop 설치와 실행 안내](docs/korean-fieldwork/field-desktop-install.ko.md)
 - [Android 태블릿 설치 안내](docs/korean-fieldwork/android-tablet-install.ko.md)
 - [현장 적용 연구 노트](docs/korean-fieldwork/README.md)
 - [한국형 야장 구현 요구사항](docs/korean-fieldwork/field-notebook-requirements.md)
