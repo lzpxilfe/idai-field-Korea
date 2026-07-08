@@ -365,6 +365,7 @@ const featureRows = [
 ];
 
 const releaseCriticalPatterns = [
+  /^\.github\/workflows\/(desktop|mobile)\.yml$/,
   /^tools\/korean-fieldwork-(media-contract-check|parity-check|verify)\.js$/,
   /^core\/src\/datastore\/image\/(field-hub-file-url|image-sync-service)\.ts$/,
   /^core\/test\/datastore\/image\/(field-hub-file-url|image-sync-service)\.spec\.ts$/,
@@ -395,6 +396,7 @@ const releaseCriticalPatterns = [
   /^mobile\/contexts\/project-context(\.spec)?\.tsx$/,
   /^mobile\/hooks\/use-(fieldwork-image-sync|preferences|search|sync)(\.spec)?\.ts$/,
   /^mobile\/hooks\/use-korean-fieldwork-project-setup-defaults(\.spec)?\.ts$/,
+  /^mobile\/package\.json$/,
   /^mobile\/models\/project-settings(\.spec)?\.ts$/,
   /^mobile\/test\/screens\/.*\.spec\.tsx$/,
   /^desktop\/src\/app\/components\/docedit\/core\/edit-form\.(component\.ts|html|scss)$/,
@@ -3246,6 +3248,8 @@ function validateReportHandoffPreSaveValidation() {
   const desktopChecklistText = readTextFile('desktop/src/app/util/korean-fieldwork-checklist.ts');
   const tabletAddText = readTextFile('mobile/app/(tabs)/ProjectScreen/DocumentAdd.tsx');
   const tabletEditText = readTextFile('mobile/app/(tabs)/ProjectScreen/DocumentEdit.tsx');
+  const tabletPackageText = readTextFile('mobile/package.json');
+  const tabletWorkflowText = readTextFile('.github/workflows/mobile.yml');
   const desktopPriorityStripText = readTextFile(
     'desktop/src/app/components/resources/korean-fieldwork-priority-strip.component.ts'
   );
@@ -3273,6 +3277,15 @@ function validateReportHandoffPreSaveValidation() {
       || tabletAddText.includes('getReportHandoffSaveMessage')
       || tabletEditText.includes('getReportHandoffSaveMessage')) {
     findings.push('tablet save flows must use the shared core HWP handoff save message, including concrete review details');
+  }
+  if (!tabletPackageText.includes('"test:ci": "jest --watchAll=false --runInBand"')
+      || !tabletWorkflowText.includes('mobile-handoff-tests')
+      || !tabletWorkflowText.includes('branches:')
+      || !tabletWorkflowText.includes('Run tablet HWP handoff tests')
+      || !tabletWorkflowText.includes('npm run test:ci -- --runTestsByPath components/Project/DocumentAdd.spec.tsx components/Project/DocumentEdit.spec.tsx')
+      || !tabletWorkflowText.includes("startsWith(github.ref, 'refs/tags/')")
+      || !tabletWorkflowText.includes("github.event_name == 'workflow_dispatch'")) {
+    findings.push('mobile CI must run focused tablet HWP handoff tests on branch changes while keeping APK builds gated to tags, PRs, or manual runs');
   }
   if (!coreReportHandoffText.includes('normalizeKoreanFieldworkHwpPlainText')
       || !coreReportHandoffText.includes(".replace(/\\r\\n?/g, '\\n')")

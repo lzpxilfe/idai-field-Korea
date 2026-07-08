@@ -10,6 +10,7 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "test": "jest --watchAll",
+    "test:ci": "jest --watchAll=false --runInBand",
     "lint": "expo lint",
     "postinstall": "patch-package"
   },
