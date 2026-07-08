@@ -3045,6 +3045,18 @@ function validateRecordPanelOrder() {
       || !desktopRecordContextPanelSpecText.includes('opened DailyLog records')) {
     findings.push('desktop record context must preview tablet daily-journal boundary handwriting and imported boundary date on opened DailyLog records');
   }
+  if (!desktopRecordContextPanelText.includes('pushFieldRecordQualityReviewChip')
+      || !desktopRecordContextPanelText.includes('FIELD_RECORD_QUALITY_REVIEW_SUMMARY_FIELDS')
+      || !desktopRecordContextPanelText.includes('reviewedRecordUnit')
+      || !desktopRecordContextPanelText.includes('qualityReviewStage')
+      || !desktopRecordContextPanelText.includes('qualityCorrectionBasis')
+      || !desktopRecordContextPanelText.includes('reportEvaluationFeedback')
+      || !desktopRecordContextPanelText.includes('getKoreanFieldworkRecordFieldValueSummary')
+      || !desktopRecordContextPanelSpecText.includes('field record quality reviews in the desktop record context')
+      || !desktopRecordContextPanelSpecText.includes("not.toContain('sourceRecordCorrection')")
+      || !desktopRecordContextPanelSpecText.includes("not.toContain('supplementRequestTracked')")) {
+    findings.push('desktop record context must surface tablet FieldRecordQualityReview cards with shared Korean labels and HWP copy blocks');
+  }
   if (!tabletHierarchyBoardText.includes('이어진 기록')
       || !tabletHierarchyBoardText.includes('포함 위치')) {
     findings.push('tablet hierarchy board must describe connected records with field-facing wording');

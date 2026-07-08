@@ -12,7 +12,8 @@ import {
     KoreanFieldworkReportHandoffItem,
     Labels,
     makeKoreanFieldworkReportHandoff,
-    ProjectConfiguration
+    ProjectConfiguration,
+    getKoreanFieldworkRecordFieldValueSummary
 } from 'idai-field-core';
 import { Routing } from '../../../services/routing';
 import {
@@ -212,9 +213,13 @@ const KOREAN_FIELDWORK_CONTEXT_FIELDS = [
     'shortAxisOrientation',
     'projectBoundarySummary',
     'projectInvestigationMode',
+    'qualityCorrectionBasis',
+    'qualityReviewStage',
     'referenceBasemapProvider',
     'recordCreationTiming',
+    'reviewedRecordUnit',
     'reportCrossCheck',
+    'reportEvaluationFeedback',
     'sourceEvidenceVerification',
     'soilColorAssistStatus',
     'soilColorAssistCandidates',
@@ -265,6 +270,7 @@ const LINKED_EVIDENCE_RELATIONS = ['depicts', 'isDepictedIn', 'isMapLayerOf', 'i
 const NOTEBOOK_APPEND_TARGET_FIELDS = ['description', 'featureChecklistNote', 'interpretation', 'shortDescription'];
 const FEATURE_CATEGORY_NAME = 'Feature';
 const SURVEY_BOUNDARY_CATEGORY_NAME = 'SurveyBoundary';
+const FIELD_RECORD_QUALITY_REVIEW_CATEGORY_NAME = 'FieldRecordQualityReview';
 const FEATURE_SKETCH_SHAPES = new Set<FeatureSketchShape>(['point', 'polygon', 'rectangle', 'oval']);
 const FEATURE_SKETCH_VIEWBOX = '0 0 120 80';
 const FEATURE_SKETCH_WIDTH = 120;
@@ -694,6 +700,25 @@ const MEDIA_REVIEW_FIELDS: readonly ChecklistSummaryField[] = [
     }
 ];
 
+const FIELD_RECORD_QUALITY_REVIEW_SUMMARY_FIELDS = [
+    {
+        fieldName: 'reviewedRecordUnit',
+        prefix: '\uac80\ud1a0 \ub300\uc0c1'
+    },
+    {
+        fieldName: 'qualityReviewStage',
+        prefix: '\uac80\ud1a0 \ub2e8\uacc4'
+    },
+    {
+        fieldName: 'qualityCorrectionBasis',
+        prefix: '\uc218\uc815\u00b7\ubcf4\uc644 \uadfc\uac70'
+    },
+    {
+        fieldName: 'reportEvaluationFeedback',
+        prefix: '\ud3c9\uac00 \ud658\ub958'
+    }
+];
+
 @Component({
     selector: 'korean-fieldwork-record-context-panel',
     templateUrl: './korean-fieldwork-record-context-panel.html',
@@ -771,6 +796,7 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
         this.pushFeatureStratigraphyReviewChips(chips, resource);
         this.pushSurveyPredictionReviewChip(chips, resource);
         this.pushSourceEvidenceVerificationChip(chips, resource);
+        this.pushFieldRecordQualityReviewChip(chips, resource);
         this.pushMediaReviewChip(chips, resource);
         this.pushImageUploadChip(chips, resource);
         this.pushFeaturePeriodChip(chips, resource);
@@ -2432,6 +2458,30 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
         chips.push({
             label: this.shortenChipText(`검증 ${verificationSummary.label}`, 58),
             tone: verificationSummary.hasWarning ? 'warning' : 'info'
+        });
+    }
+
+
+    private pushFieldRecordQualityReviewChip(chips: ContextChip[], resource: any) {
+
+        if (resource.category !== FIELD_RECORD_QUALITY_REVIEW_CATEGORY_NAME) return;
+
+        const parts = FIELD_RECORD_QUALITY_REVIEW_SUMMARY_FIELDS
+            .map(({ fieldName, prefix }) => {
+                const summary = getKoreanFieldworkRecordFieldValueSummary(fieldName, resource[fieldName]);
+
+                return summary ? `${prefix} ${summary}` : undefined;
+            })
+            .filter((part): part is string => !!part);
+        if (parts.length === 0) return;
+
+        const hasReviewWarning = resource.verificationState === 'needsRecheck'
+            || this.getStringArrayResourceValues(resource.qualityReviewStage).includes('sourceRecordCorrection')
+            || this.getStringArrayResourceValues(resource.reportEvaluationFeedback).includes('supplementRequestTracked');
+
+        chips.push({
+            label: this.shortenChipText(parts.join(' / '), 58),
+            tone: hasReviewWarning ? 'warning' : 'info'
         });
     }
 

@@ -6,6 +6,7 @@ import {
     KoreanFieldworkRecordContextPanelComponent
 } from '../../../../../src/app/components/docedit/core/korean-fieldwork-record-context-panel.component';
 import { getPhotoAnnotationSummaryLabel } from '../../../../../src/app/util/korean-fieldwork-evidence-review';
+import { getKoreanFieldworkRecordFieldValueSummary } from 'idai-field-core';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -217,6 +218,82 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
         } finally {
             testWindow.require = previousRequire;
         }
+    });
+
+
+    it('surfaces tablet field record quality reviews in the desktop record context', async () => {
+
+        const operation = createDocument('operation-1', 'Operation', 'OP1');
+        const qualityReview = createDocument(
+            'quality-review-1',
+            'FieldRecordQualityReview',
+            'quality-001',
+            { isRecordedIn: ['operation-1'] },
+            {
+                reviewedRecordUnit: ['featureRecord', 'dailyLog'],
+                qualityReviewStage: ['sameDayReview', 'sourceRecordCorrection'],
+                qualityCorrectionBasis: ['correctionReasonLinked', 'originalRecordPreserved'],
+                recordCreationTiming: 'sameDayFieldRecord',
+                fieldRecordQuality: ['correctionNeeded'],
+                reportCrossCheck: ['manuscript', 'photoRegister'],
+                reportEvaluationFeedback: ['fieldRecordReview', 'supplementRequestTracked'],
+                verificationState: 'needsRecheck'
+            }
+        );
+        const reviewedRecordUnit = getKoreanFieldworkRecordFieldValueSummary(
+            'reviewedRecordUnit',
+            ['featureRecord', 'dailyLog']
+        )!;
+        const reviewStage = getKoreanFieldworkRecordFieldValueSummary(
+            'qualityReviewStage',
+            ['sameDayReview', 'sourceRecordCorrection']
+        )!;
+        const correctionBasis = getKoreanFieldworkRecordFieldValueSummary(
+            'qualityCorrectionBasis',
+            ['correctionReasonLinked', 'originalRecordPreserved']
+        )!;
+        const reportCrossCheck = getKoreanFieldworkRecordFieldValueSummary(
+            'reportCrossCheck',
+            ['manuscript', 'photoRegister']
+        )!;
+        const reportFeedback = getKoreanFieldworkRecordFieldValueSummary(
+            'reportEvaluationFeedback',
+            ['fieldRecordReview', 'supplementRequestTracked']
+        )!;
+        const component = createComponent({
+            find: jest.fn().mockResolvedValue({ documents: [operation, qualityReview] })
+        });
+        component.document = qualityReview as any;
+        component.fieldDefinitions = [
+            checkboxesField('reviewedRecordUnit'),
+            checkboxesField('qualityReviewStage'),
+            checkboxesField('qualityCorrectionBasis'),
+            field('recordCreationTiming'),
+            checkboxesField('fieldRecordQuality'),
+            checkboxesField('reportCrossCheck'),
+            checkboxesField('reportEvaluationFeedback'),
+            field('verificationState')
+        ] as any;
+
+        await component.ngOnChanges();
+
+        const statusText = component.getStatusChips().map(chip => chip.label).join('\n');
+        const copyText = component.getReportHandoffItem()?.copyText ?? '';
+
+        expect(component.shouldShow()).toBe(true);
+        expect(statusText).toContain(reviewedRecordUnit);
+        expect(statusText).toContain(reviewStage);
+        expect(statusText).not.toContain('featureRecord');
+        expect(statusText).not.toContain('sourceRecordCorrection');
+        expect(component.hasReportHandoffItem()).toBe(true);
+        expect(copyText).toContain(reviewedRecordUnit);
+        expect(copyText).toContain(reviewStage);
+        expect(copyText).toContain(correctionBasis);
+        expect(copyText).toContain(reportCrossCheck);
+        expect(copyText).toContain(reportFeedback);
+        expect(copyText).not.toContain('featureRecord');
+        expect(copyText).not.toContain('sourceRecordCorrection');
+        expect(copyText).not.toContain('supplementRequestTracked');
     });
 
 
