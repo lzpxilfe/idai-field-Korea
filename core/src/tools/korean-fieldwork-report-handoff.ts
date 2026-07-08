@@ -115,6 +115,24 @@ const KO = {
     SUMMARY: '\uc694\uc57d'
 };
 
+const DAILY_LOG_CATEGORY = 'DailyLog';
+const DAILY_LOG_DETAIL_FIELDS = [
+    'dailyLogInvestigatorCount',
+    'dailyLogLaborerCount',
+    'dailyLogWorkerCount',
+    'dailyLogEquipmentCount',
+    'dailyLogEquipmentSize',
+    'dailyLogSafetyEducationPhoto',
+    'dailyLogSafetyEducationStretching',
+    'dailyLogContent',
+    'dailyLogEvidenceRole',
+    'dailyLogReview',
+    'dailyLogBoundaryMemoImportedAt',
+    'dailyLogBoundaryMemoUpdatedAt',
+    'dailyLogWorkMemoUpdatedAt',
+    'dailyLogBoundaryMemoStrokes'
+];
+
 const DETAIL_FIELDS: DetailFieldDefinition[] = [
     {
         label: '\uc77c\uc790',
@@ -176,6 +194,11 @@ const DETAIL_FIELDS: DetailFieldDefinition[] = [
         ]
     },
     {
+        label: '\uc791\uc5c5\uc77c\uc9c0',
+        getSummary: getDailyLogDetailSummary,
+        fields: DAILY_LOG_DETAIL_FIELDS
+    },
+    {
         label: '\uba54\ubaa8',
         fields: ['description', 'penMemoReviewedTranscript', 'penMemoAutoTranscript']
     }
@@ -184,11 +207,14 @@ const DETAIL_FIELDS: DetailFieldDefinition[] = [
 const SUMMARY_FIELDS = [
     'shortDescription',
     'description',
+    'diaryAbstract',
     'penMemoReviewedTranscript',
     'penMemoAutoTranscript',
     'featureGeometryRevisionNote',
     'featureLocationSketch',
     'featureFreeDrawingStrokes',
+    'dailyLogContent',
+    'dailyLogBoundaryMemoStrokes',
     'surveyBoundaryNote',
     'reportPreparationSourceText',
     'reportEditorialIssueText'
@@ -227,6 +253,54 @@ const PEN_MEMO_CONTENT_FIELDS = [
     'penMemoReviewedTranscript',
     'penMemoStrokes'
 ];
+
+const DAILY_LOG_CONTENT_LABELS: Readonly<Record<string, string>> = {
+    workDateWeather: '\uc791\uc5c5\uc77c\uc790\u00b7\ub0a0\uc528',
+    staffRoles: '\uc870\uc0ac\uc790\u00b7\uc5ed\ud560',
+    workArea: '\uc791\uc5c5\uad6c\uc5ed',
+    strippingProgress: '\ud45c\ud1a0 \uc9c4\ud589',
+    featureProgress: '\uc720\uad6c \uc870\uc0ac \uc9c4\ud589',
+    layerDecision: '\uce35\uc704 \ud310\ub2e8',
+    findSampleCollection: '\uc720\ubb3c\u00b7\uc2dc\ub8cc \uc218\uc2b5',
+    photoDrawingNumbers: '\uc0ac\uc9c4\u00b7\ub3c4\uba74 \ubc88\ud638',
+    visitorInstruction: '\ubc29\ubb38\uc790\u00b7\uc9c0\uc2dc\uc0ac\ud56d',
+    equipmentIssue: '\uc7a5\ube44 \ubb38\uc81c',
+    safetyIssue: '\uc548\uc804 \ubb38\uc81c',
+    changeReason: '\ubcc0\uacbd \uc0ac\uc720',
+    nextWorkPlan: '\ub2e4\uc74c \uc791\uc5c5\uacc4\ud68d',
+    pendingDecision: '\ucd94\uac00 \ud655\uc778'
+};
+
+const DAILY_LOG_EVIDENCE_ROLE_LABELS: Readonly<Record<string, string>> = {
+    sameDayFactRecord: '\ub2f9\uc77c \uc0ac\uc2e4\uae30\ub85d',
+    cumulativeStaffCount: '\ub204\uc801 \uc870\uc0ac\uc6d0 \uc218',
+    cumulativeWorkerCount: '\ub204\uc801 \uc778\ubd80 \uc218',
+    cumulativeEquipmentCount: '\ub204\uc801 \uc7a5\ube44 \uc218',
+    weatherAndRainWork: '\ub0a0\uc528\u00b7\uac15\uc6b0\uc791\uc5c5',
+    importantFindNoted: '\uc911\uc694 \uc720\ubb3c\u00b7\uc720\uad6c \uae30\ub85d',
+    visitorInstructionNoted: '\ubc29\ubb38\uc790\u00b7\uc9c0\uc2dc\uc0ac\ud56d \uae30\ub85d',
+    committeeMeetingNoted: '\ud559\uc220\uc704\uc6d0\ud68c \uae30\ub85d',
+    expertReviewMeetingNoted: '\uc804\ubb38\uac00 \uac80\ud1a0\ud68c \uae30\ub85d',
+    clientAgencyCommunication: '\ubc1c\uc8fc\ucc98 \uc18c\ud1b5',
+    disputeEvidencePotential: '\ubd84\uc7c1 \uc99d\uac70 \uac00\ub2a5\uc131',
+    nextPlanBasis: '\ub2e4\uc74c \uc791\uc5c5\uacc4\ud68d \uadfc\uac70',
+    pendingDecision: '\ucd94\uac00 \ud655\uc778'
+};
+
+const DAILY_LOG_REVIEW_LABELS: Readonly<Record<string, string>> = {
+    sameDayWritten: '\ub2f9\uc77c \uc791\uc131',
+    factsInterpretationSeparated: '\uc0ac\uc2e4\u00b7\ud574\uc11d \ubd84\ub9ac',
+    authorIdentified: '\uc791\uc131\uc790 \ud655\uc778',
+    reviewerChecked: '\uac80\ud1a0\uc790 \ud655\uc778',
+    photoDrawingCrossChecked: '\uc0ac\uc9c4\u00b7\ub3c4\uba74 \ub300\uc870',
+    findListCrossChecked: '\uc720\ubb3c\ubaa9\ub85d \ub300\uc870',
+    sampleListCrossChecked: '\uc2dc\ub8cc\ubaa9\ub85d \ub300\uc870',
+    numberConversionChecked: '\ubc88\ud638 \ubcc0\ud658\ud45c \ub300\uc870',
+    correctionReasonLinked: '\uc218\uc815\uadfc\uac70 \uc5f0\uacb0',
+    sourceRecordArchived: '\uc6d0\uae30\ub85d \ubcf4\uc874',
+    reportCarryForwardChecked: '\ubcf4\uace0\uc11c \ubc18\uc601 \ud655\uc778',
+    pendingDecision: '\ucd94\uac00 \ud655\uc778'
+};
 
 const RELATION_DETAIL_ORDER = [
     'liesWithin',
@@ -472,6 +546,7 @@ function getValidationRelatedFields(resource: NewResource, messages: string[]): 
 
     if (category && MEDIA_URI_FIELDS[category]) fields.push(...MEDIA_URI_FIELDS[category]);
     if (category === 'PenMemo') fields.push(...PEN_MEMO_CONTENT_FIELDS);
+    if (category === DAILY_LOG_CATEGORY) fields.push(...DAILY_LOG_DETAIL_FIELDS);
 
     return Array.from(new Set(fields));
 }
@@ -513,6 +588,21 @@ function getHandoffPrintableFieldValue(resource: NewResource, fieldName: string)
 
     if (fieldName === 'drawingSketchStrokes') {
         return getStrokeEvidenceLabel('\ud0dc\ube14\ub9bf \uc2a4\ucf00\uce58', resource.drawingSketchStrokes);
+    }
+
+    if (fieldName === 'dailyLogContent') {
+        return getDailyLogListLabel(
+            '\uc77c\uc9c0 \ub0b4\uc6a9',
+            resource.dailyLogContent,
+            DAILY_LOG_CONTENT_LABELS
+        );
+    }
+
+    if (fieldName === 'dailyLogBoundaryMemoStrokes') {
+        return getStrokeEvidenceLabel(
+            '\uc791\uc5c5\uc77c\uc9c0 \uacbd\uacc4 \uba54\ubaa8',
+            resource.dailyLogBoundaryMemoStrokes
+        );
     }
 
     return getPrintableValue(resource[fieldName]);
@@ -646,6 +736,21 @@ function getSummaryFieldValue(document: Document, fieldName: string): string|und
         return getStrokeEvidenceLabel('\uc790\uc720 \uc2a4\ucf00\uce58', document.resource.featureFreeDrawingStrokes);
     }
 
+    if (fieldName === 'dailyLogContent') {
+        return getDailyLogListLabel(
+            '\uc77c\uc9c0 \ub0b4\uc6a9',
+            document.resource.dailyLogContent,
+            DAILY_LOG_CONTENT_LABELS
+        );
+    }
+
+    if (fieldName === 'dailyLogBoundaryMemoStrokes') {
+        return getStrokeEvidenceLabel(
+            '\uc791\uc5c5\uc77c\uc9c0 \uacbd\uacc4 \uba54\ubaa8',
+            document.resource.dailyLogBoundaryMemoStrokes
+        );
+    }
+
     return getPrintableValue(document.resource[fieldName]);
 }
 
@@ -688,6 +793,162 @@ function getLocationDrawingDetailSummary(document: Document): string|undefined {
         getStrokeEvidenceLabel('\uc704\uce58 \uc57d\ub3c4', document.resource.featureLocationSketch),
         getStrokeEvidenceLabel('\uc790\uc720 \uc2a4\ucf00\uce58', document.resource.featureFreeDrawingStrokes)
     ].filter((value): value is string => !!value).join(', ') || undefined;
+}
+
+
+function getDailyLogDetailSummary(document: Document): string|undefined {
+
+    if (document.resource.category !== DAILY_LOG_CATEGORY) return undefined;
+
+    return [
+        getDailyLogPersonnelLabel(document),
+        getDailyLogEquipmentLabel(document),
+        getDailyLogSafetyLabel(document),
+        getDailyLogListLabel('\ub0b4\uc6a9', document.resource.dailyLogContent, DAILY_LOG_CONTENT_LABELS),
+        getDailyLogListLabel('\uadfc\uac70', document.resource.dailyLogEvidenceRole, DAILY_LOG_EVIDENCE_ROLE_LABELS),
+        getDailyLogListLabel('\uac80\ud1a0', document.resource.dailyLogReview, DAILY_LOG_REVIEW_LABELS),
+        getStrokeEvidenceLabel(
+            '\uc791\uc5c5\uc77c\uc9c0 \uacbd\uacc4 \uba54\ubaa8',
+            document.resource.dailyLogBoundaryMemoStrokes
+        ),
+        getLabeledEvidenceValue(
+            '\uacbd\uacc4 \uac00\uc838\uc634',
+            getDateOnlyLabel(document.resource.dailyLogBoundaryMemoImportedAt)
+        ),
+        getLabeledEvidenceValue(
+            '\uacbd\uacc4 \uc218\uc815',
+            getDateOnlyLabel(document.resource.dailyLogBoundaryMemoUpdatedAt)
+        ),
+        getLabeledEvidenceValue(
+            '\uc791\uc5c5\uc77c\uc9c0 \uc218\uc815',
+            getDateOnlyLabel(document.resource.dailyLogWorkMemoUpdatedAt)
+        )
+    ].filter((value): value is string => !!value).join(', ') || undefined;
+}
+
+
+function getDailyLogPersonnelLabel(document: Document): string|undefined {
+
+    const investigatorCount = getPrintableValue(document.resource.dailyLogInvestigatorCount);
+    const laborerCount = getPrintableValue(document.resource.dailyLogLaborerCount);
+    const totalCount = getDailyLogPersonnelTotal(
+        document.resource.dailyLogInvestigatorCount,
+        document.resource.dailyLogLaborerCount,
+        document.resource.dailyLogWorkerCount
+    );
+    const parts = [
+        investigatorCount ? `\uc870\uc0ac\uc6d0 ${investigatorCount}\uba85` : undefined,
+        laborerCount ? `\uc778\ubd80 ${laborerCount}\uba85` : undefined,
+        totalCount ? `\ud22c\uc785 ${totalCount}\uba85` : undefined
+    ].filter((value): value is string => !!value);
+
+    return parts.length > 0 ? `\uc778\uc6d0: ${parts.join(' / ')}` : undefined;
+}
+
+
+function getDailyLogPersonnelTotal(investigatorCount: any, laborerCount: any, workerCount: any): number|undefined {
+
+    const explicitWorkerCount = getNumberValue(workerCount);
+    if (explicitWorkerCount !== undefined) return explicitWorkerCount;
+
+    const counts = [investigatorCount, laborerCount]
+        .map(getNumberValue)
+        .filter((value): value is number => value !== undefined);
+
+    return counts.length > 0 ? counts.reduce((sum, value) => sum + value, 0) : undefined;
+}
+
+
+function getDailyLogEquipmentLabel(document: Document): string|undefined {
+
+    const count = getPrintableValue(document.resource.dailyLogEquipmentCount);
+    const size = getPrintableValue(document.resource.dailyLogEquipmentSize);
+    const parts = [
+        count ? `${count}\ub300` : undefined,
+        size
+    ].filter((value): value is string => !!value);
+
+    return parts.length > 0 ? `\uc7a5\ube44: ${parts.join(' / ')}` : undefined;
+}
+
+
+function getDailyLogSafetyLabel(document: Document): string|undefined {
+
+    const photoLabel = getBooleanCompletionLabel('\uc0ac\uc9c4', document.resource.dailyLogSafetyEducationPhoto);
+    const stretchingLabel = getBooleanCompletionLabel(
+        '\uccb4\uc870',
+        document.resource.dailyLogSafetyEducationStretching
+    );
+    const parts = [photoLabel, stretchingLabel].filter((value): value is string => !!value);
+
+    return parts.length > 0 ? `\uc548\uc804\uad50\uc721: ${parts.join(' / ')}` : undefined;
+}
+
+
+function getBooleanCompletionLabel(label: string, value: any): string|undefined {
+
+    const normalizedValue = typeof value === 'string' ? value.trim().toLowerCase() : value;
+    if (normalizedValue === true || normalizedValue === 'true') return `${label} \uc644\ub8cc`;
+    if (normalizedValue === false || normalizedValue === 'false') return `${label} \ubbf8\ud655\uc778`;
+
+    return undefined;
+}
+
+
+function getDailyLogListLabel(label: string,
+                              value: any,
+                              labels: Readonly<Record<string, string>>): string|undefined {
+
+    const values = getListValues(value)
+        .map(item => labels[item] ?? item)
+        .filter(item => !!item && item !== '[]');
+
+    return values.length > 0 ? `${label}: ${values.join(' \u00b7 ')}` : undefined;
+}
+
+
+function getListValues(value: any): string[] {
+
+    if (value === undefined || value === null) return [];
+
+    if (Array.isArray(value)) return value.flatMap(getListValues);
+
+    if (typeof value === 'object') {
+        if (typeof value.inputValue === 'string') return getListValues(value.inputValue);
+        if (typeof value.value === 'string') return getListValues(value.value);
+
+        return [];
+    }
+
+    const text = String(value).trim();
+    if (!text || text === '[]') return [];
+
+    const parsed = parseJsonValue(text);
+    if (parsed !== undefined) return getListValues(parsed);
+
+    return text.split(/\r?\n/)
+        .map(line => line.trim())
+        .filter(line => !!line);
+}
+
+
+function getNumberValue(value: any): number|undefined {
+
+    const text = getPrintableValue(value);
+    if (!text) return undefined;
+
+    const numberValue = Number(text);
+    return Number.isFinite(numberValue) ? numberValue : undefined;
+}
+
+
+function getDateOnlyLabel(value: any): string|undefined {
+
+    const text = getPrintableValue(value);
+    if (!text) return undefined;
+
+    const match = text.match(/\d{4}-\d{2}-\d{2}/);
+    return match?.[0] ?? text;
 }
 
 

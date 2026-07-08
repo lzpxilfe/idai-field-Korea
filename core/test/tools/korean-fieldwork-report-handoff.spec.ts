@@ -94,6 +94,66 @@ describe('Korean fieldwork report handoff', () => {
     });
 
 
+    it('carries tablet daily log journal fields into HWP copy blocks without dumping boundary JSON', () => {
+
+        const handoff = makeKoreanFieldworkReportHandoff([
+            makeDocument('daily-log-1', 'DailyLog', {
+                identifier: '2026-06-30',
+                date: '2026-06-30',
+                dailyLogInvestigatorCount: 2,
+                dailyLogLaborerCount: 4,
+                dailyLogWorkerCount: 6,
+                dailyLogEquipmentCount: 1,
+                dailyLogEquipmentSize: '0.6m3',
+                dailyLogSafetyEducationPhoto: true,
+                dailyLogSafetyEducationStretching: false,
+                dailyLogContent: JSON.stringify([
+                    'strippingProgress',
+                    'workArea',
+                    'photoDrawingNumbers'
+                ]),
+                dailyLogEvidenceRole: ['sameDayFactRecord'],
+                dailyLogReview: ['sameDayWritten', 'reviewerChecked'],
+                dailyLogBoundaryMemoImportedAt: '2026-06-30T08:30:00.000Z',
+                dailyLogBoundaryMemoUpdatedAt: '2026-06-30T09:15:00.000Z',
+                dailyLogWorkMemoUpdatedAt: '2026-06-30T10:15:00.000Z',
+                dailyLogBoundaryMemoStrokes:
+                    '{"version":1,"strokes":[{"points":[{"x":1200,"y":2200},{"x":3200,"y":4200}]}]}'
+            })
+        ] as any);
+
+        const dailyLogItem = handoff.items.find(item => item.documentId === 'daily-log-1');
+        const detailText = dailyLogItem?.details.join('\n') ?? '';
+
+        expect(dailyLogItem?.summary)
+            .toBe('\uc77c\uc9c0 \ub0b4\uc6a9: \ud45c\ud1a0 \uc9c4\ud589 \u00b7 \uc791\uc5c5\uad6c\uc5ed \u00b7 \uc0ac\uc9c4\u00b7\ub3c4\uba74 \ubc88\ud638');
+        expect(detailText)
+            .toContain('\uc791\uc5c5\uc77c\uc9c0: \uc778\uc6d0: \uc870\uc0ac\uc6d0 2\uba85 / \uc778\ubd80 4\uba85 / \ud22c\uc785 6\uba85');
+        expect(detailText)
+            .toContain('\uc7a5\ube44: 1\ub300 / 0.6m3');
+        expect(detailText)
+            .toContain('\uc548\uc804\uad50\uc721: \uc0ac\uc9c4 \uc644\ub8cc / \uccb4\uc870 \ubbf8\ud655\uc778');
+        expect(detailText)
+            .toContain('\uadfc\uac70: \ub2f9\uc77c \uc0ac\uc2e4\uae30\ub85d');
+        expect(detailText)
+            .toContain('\uac80\ud1a0: \ub2f9\uc77c \uc791\uc131 \u00b7 \uac80\ud1a0\uc790 \ud655\uc778');
+        expect(detailText)
+            .toContain('\uc791\uc5c5\uc77c\uc9c0 \uacbd\uacc4 \uba54\ubaa8: \uc788\uc74c');
+        expect(detailText)
+            .toContain('\uacbd\uacc4 \uac00\uc838\uc634: 2026-06-30');
+        expect(detailText)
+            .toContain('\uacbd\uacc4 \uc218\uc815: 2026-06-30');
+        expect(detailText)
+            .toContain('\uc791\uc5c5\uc77c\uc9c0 \uc218\uc815: 2026-06-30');
+        expect(dailyLogItem?.copyText)
+            .toContain('\uc791\uc5c5\uc77c\uc9c0 \uacbd\uacc4 \uba54\ubaa8: \uc788\uc74c');
+        expect(dailyLogItem?.copyText)
+            .not.toContain('strippingProgress');
+        expect(dailyLogItem?.copyText)
+            .not.toContain('"strokes"');
+    });
+
+
     it('carries soil profile color sample locations into HWP copy blocks', () => {
 
         const documents = [

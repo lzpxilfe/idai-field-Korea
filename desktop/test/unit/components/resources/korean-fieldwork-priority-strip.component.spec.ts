@@ -220,6 +220,29 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
                             penMemoStrokes: '{"version":1,"strokes":[{"points":[{"x":10,"y":20},{"x":30,"y":40}]}]}',
                             penMemoTranscriptionStatus: 'pending',
                             relations: { depicts: ['feature-1'] }
+                        }),
+                        createDocument('daily-log-1', 'DailyLog', {
+                            identifier: '2026-06-30',
+                            date: '2026-06-30',
+                            dailyLogInvestigatorCount: 2,
+                            dailyLogLaborerCount: 4,
+                            dailyLogWorkerCount: 6,
+                            dailyLogEquipmentCount: 1,
+                            dailyLogEquipmentSize: '0.6m3',
+                            dailyLogSafetyEducationPhoto: true,
+                            dailyLogSafetyEducationStretching: false,
+                            dailyLogContent: JSON.stringify([
+                                'strippingProgress',
+                                'workArea',
+                                'photoDrawingNumbers'
+                            ]),
+                            dailyLogEvidenceRole: ['sameDayFactRecord'],
+                            dailyLogReview: ['sameDayWritten', 'reviewerChecked'],
+                            dailyLogBoundaryMemoImportedAt: '2026-06-30T08:30:00.000Z',
+                            dailyLogBoundaryMemoUpdatedAt: '2026-06-30T09:15:00.000Z',
+                            dailyLogWorkMemoUpdatedAt: '2026-06-30T10:15:00.000Z',
+                            dailyLogBoundaryMemoStrokes:
+                                '{"version":1,"strokes":[{"points":[{"x":1200,"y":2200},{"x":3200,"y":4200}]}]}'
                         })
                     ]
                 }),
@@ -230,7 +253,7 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
 
             expect(component.getPanelOptions().map(panel => panel.id)).toContain('report');
             expect(component.hasReportHandoffItems()).toBe(true);
-            expect(component.getReportHandoffSummaryLabel()).toContain('5');
+            expect(component.getReportHandoffSummaryLabel()).toContain('6');
 
             const [featureItem] = component.getReportHandoffItems();
             expect(featureItem).toMatchObject({
@@ -288,6 +311,20 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
                 .toContain('\uc5f0\uacb0: \ub300\uc0c1: [\uc720\uad6c] pit-001');
             component.selectReportHandoffItem(photoItem!);
             expect(component.getReportHandoffPreviewItem()?.documentId).toBe('photo-1');
+
+            const dailyLogItem = component.getReportHandoffItems()
+                .find(item => item.documentId === 'daily-log-1');
+            expect(dailyLogItem).toBeDefined();
+            expect(dailyLogItem!.summary)
+                .toContain('\uc77c\uc9c0 \ub0b4\uc6a9: \ud45c\ud1a0 \uc9c4\ud589');
+            expect(dailyLogItem!.details.join('\n'))
+                .toContain('\uc791\uc5c5\uc77c\uc9c0 \uacbd\uacc4 \uba54\ubaa8: \uc788\uc74c');
+            expect(dailyLogItem!.copyText)
+                .toContain('\uc548\uc804\uad50\uc721: \uc0ac\uc9c4 \uc644\ub8cc / \uccb4\uc870 \ubbf8\ud655\uc778');
+            expect(dailyLogItem!.copyText)
+                .not.toContain('strippingProgress');
+            expect(dailyLogItem!.copyText)
+                .not.toContain('"strokes"');
 
             await component.copyReportHandoffItem(featureItem);
 
