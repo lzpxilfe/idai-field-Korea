@@ -1,4 +1,18 @@
-import { CategoryForm, Document, ProjectConfiguration } from 'idai-field-core';
+import {
+    CategoryForm,
+    createKoreanFieldworkProjectSetupResourceUpdates as createSharedProjectSetupResourceUpdates,
+    Document,
+    getKoreanFieldworkInvestigationMode as getSharedInvestigationMode,
+    getKoreanFieldworkInvestigationModeLabel as getSharedInvestigationModeLabel,
+    getKoreanFieldworkProjectResourceValue as getSharedProjectResourceValue,
+    getKoreanFieldworkProjectSetupDefaultsFromDocument as getSharedProjectSetupDefaultsFromDocument,
+    isKoreanFieldworkProjectSetupFilledIn as isSharedProjectSetupFilledIn,
+    KOREAN_FIELDWORK_DEFAULT_INVESTIGATION_MODE as SHARED_DEFAULT_INVESTIGATION_MODE,
+    KOREAN_FIELDWORK_INVESTIGATION_MODES as SHARED_INVESTIGATION_MODES,
+    KOREAN_FIELDWORK_PROJECT_BOUNDARY_SUMMARY_FIELD as SHARED_BOUNDARY_SUMMARY_FIELD,
+    KOREAN_FIELDWORK_PROJECT_INVESTIGATION_MODE_FIELD as SHARED_INVESTIGATION_MODE_FIELD,
+    ProjectConfiguration
+} from 'idai-field-core';
 
 
 export interface KoreanFieldworkInvestigationModeOption {
@@ -7,59 +21,40 @@ export interface KoreanFieldworkInvestigationModeOption {
     detail: string;
 }
 
-export interface KoreanFieldworkProjectSetupDefaults {
-    boundarySummary?: string;
-    investigationModeId?: string;
-}
+export type { KoreanFieldworkProjectSetupDefaults } from 'idai-field-core';
 
-export const KOREAN_FIELDWORK_DEFAULT_INVESTIGATION_MODE = 'trialTrench';
-export const KOREAN_FIELDWORK_PROJECT_INVESTIGATION_MODE_FIELD = 'projectInvestigationMode';
-export const KOREAN_FIELDWORK_PROJECT_BOUNDARY_SUMMARY_FIELD = 'projectBoundarySummary';
+export const KOREAN_FIELDWORK_DEFAULT_INVESTIGATION_MODE = SHARED_DEFAULT_INVESTIGATION_MODE;
+export const KOREAN_FIELDWORK_PROJECT_INVESTIGATION_MODE_FIELD = SHARED_INVESTIGATION_MODE_FIELD;
+export const KOREAN_FIELDWORK_PROJECT_BOUNDARY_SUMMARY_FIELD = SHARED_BOUNDARY_SUMMARY_FIELD;
 
-export const KOREAN_FIELDWORK_INVESTIGATION_MODES: KoreanFieldworkInvestigationModeOption[] = [
-    {
-        value: 'trialTrench',
-        label: '시굴·표본조사',
-        detail: '트렌치 단위로 조사 과정과 확인 결과를 기록'
-    },
-    {
-        value: 'excavation',
-        label: '발굴조사',
-        detail: '제토 뒤 확인한 유구를 조사 단계별로 기록'
-    },
-    {
-        value: 'surfaceSurvey',
-        label: '지표조사',
-        detail: '조사 범위와 지표에서 보이는 자료를 빠르게 기록'
-    },
-    {
-        value: 'watchingBrief',
-        label: '참관·입회조사',
-        detail: '공사·입회 현장에서 확인한 변동 사항을 남김'
-    }
-];
+export const KOREAN_FIELDWORK_INVESTIGATION_MODES: KoreanFieldworkInvestigationModeOption[] =
+    SHARED_INVESTIGATION_MODES.map(mode => ({
+        value: mode.id,
+        label: mode.label,
+        detail: mode.detail
+    }));
 
-export function getKoreanFieldworkInvestigationModeLabel(modeId: string|undefined): string {
-
-    return getKoreanFieldworkInvestigationModeOption(modeId)?.label
-        ?? modeId
-        ?? '';
-}
+export const getKoreanFieldworkInvestigationModeLabel = getSharedInvestigationModeLabel;
+export const getKoreanFieldworkProjectResourceValue = getSharedProjectResourceValue;
+export const getKoreanFieldworkProjectSetupDefaultsFromDocument = getSharedProjectSetupDefaultsFromDocument;
+export const createKoreanFieldworkProjectSetupResourceUpdates = createSharedProjectSetupResourceUpdates;
+export const isKoreanFieldworkProjectSetupFilledIn = isSharedProjectSetupFilledIn;
 
 
 export function getKoreanFieldworkInvestigationModeOption(
         modeId: unknown): KoreanFieldworkInvestigationModeOption|undefined {
 
-    return typeof modeId === 'string'
-        ? KOREAN_FIELDWORK_INVESTIGATION_MODES.find(mode => mode.value === modeId)
+    const mode = getSharedInvestigationMode(modeId);
+
+    return mode
+        ? {
+            value: mode.id,
+            label: mode.label,
+            detail: mode.detail
+        }
         : undefined;
 }
 
-export function isKoreanFieldworkProjectSetupFilledIn(modeId: string|undefined,
-                                                      boundarySummary: string|undefined): boolean {
-
-    return !!modeId?.trim() && !!boundarySummary?.trim();
-}
 
 export function isKoreanFieldworkProject(projectDocument: Document|undefined,
                                          projectConfiguration: ProjectConfiguration): boolean {
@@ -68,6 +63,7 @@ export function isKoreanFieldworkProject(projectDocument: Document|undefined,
         || !!getKoreanFieldworkProjectResourceValue(projectDocument, KOREAN_FIELDWORK_PROJECT_INVESTIGATION_MODE_FIELD)
         || !!getKoreanFieldworkProjectResourceValue(projectDocument, KOREAN_FIELDWORK_PROJECT_BOUNDARY_SUMMARY_FIELD);
 }
+
 
 export function hasKoreanFieldworkProjectFields(projectConfiguration: ProjectConfiguration): boolean {
 
@@ -79,62 +75,4 @@ export function hasKoreanFieldworkProjectFields(projectConfiguration: ProjectCon
     } catch (err) {
         return false;
     }
-}
-
-export function getKoreanFieldworkProjectResourceValue(projectDocument: Document|undefined,
-                                                       fieldName: string): string|undefined {
-
-    const value = (projectDocument?.resource as any)?.[fieldName];
-    const normalizedValue = typeof value === 'string'
-        ? value.trim()
-        : undefined;
-
-    return normalizedValue && normalizedValue.length > 0
-        ? normalizedValue
-        : undefined;
-}
-
-
-export function getKoreanFieldworkProjectSetupDefaultsFromDocument(
-        projectDocument: Document|undefined): KoreanFieldworkProjectSetupDefaults {
-
-    const boundarySummary = getKoreanFieldworkProjectResourceValue(
-        projectDocument,
-        KOREAN_FIELDWORK_PROJECT_BOUNDARY_SUMMARY_FIELD
-    );
-    const investigationModeId = getKoreanFieldworkInvestigationModeOption(
-        (projectDocument?.resource as any)?.[KOREAN_FIELDWORK_PROJECT_INVESTIGATION_MODE_FIELD]
-    )?.value;
-
-    return {
-        boundarySummary,
-        investigationModeId
-    };
-}
-
-
-export function createKoreanFieldworkProjectSetupResourceUpdates(
-        defaults: KoreanFieldworkProjectSetupDefaults|string,
-        boundarySummary?: string) {
-
-    const setupDefaults = typeof defaults === 'string'
-        ? {
-            investigationModeId: defaults,
-            boundarySummary
-        }
-        : defaults;
-    const normalizedBoundarySummary = setupDefaults.boundarySummary?.trim();
-    const updates: { [fieldName: string]: string } = {};
-
-    if (getKoreanFieldworkInvestigationModeOption(setupDefaults.investigationModeId)) {
-        updates.projectInvestigationMode = setupDefaults.investigationModeId as string;
-    }
-
-    if (normalizedBoundarySummary) {
-        updates.projectBoundarySetupState = 'draftBoundary';
-        updates.projectBoundarySummary = normalizedBoundarySummary;
-        updates.shortDescription = normalizedBoundarySummary;
-    }
-
-    return updates;
 }

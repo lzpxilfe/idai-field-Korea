@@ -22,6 +22,7 @@ const featureRows = [
       'mobile/components/Project/korean-fieldwork-project-start.ts'
     ],
     desktop: [
+      'core/src/tools/korean-fieldwork-project-setup.ts',
       'desktop/src/app/components/project/create-project-modal.component.ts',
       'desktop/test/unit/components/project/create-project-modal.component.spec.ts',
       'desktop/src/app/components/project/project-information-modal.component.ts',
@@ -391,6 +392,8 @@ const releaseCriticalPatterns = [
   /^core\/test\/tools\/korean-fieldwork-record-contract\.spec\.ts$/,
   /^core\/src\/tools\/korean-fieldwork-draft-defaults\.ts$/,
   /^core\/test\/tools\/korean-fieldwork-draft-defaults\.spec\.ts$/,
+  /^core\/src\/tools\/korean-fieldwork-project-setup\.ts$/,
+  /^core\/test\/tools\/korean-fieldwork-project-setup\.spec\.ts$/,
   /^core\/src\/tools\/korean-fieldwork-field-note\.ts$/,
   /^core\/test\/tools\/korean-fieldwork-field-note\.spec\.ts$/,
   /^core\/src\/tools\/korean-fieldwork-report-handoff\.ts$/,
@@ -886,46 +889,48 @@ function walkRelative(directory) {
 }
 
 function compareInvestigationModes() {
-  const tabletModes = extractInvestigationModeOptions(
-    'mobile/components/Project/korean-fieldwork-investigation-mode.ts',
+  const coreModes = extractInvestigationModeOptions(
+    'core/src/tools/korean-fieldwork-project-setup.ts',
     'KOREAN_FIELDWORK_INVESTIGATION_MODES',
     'id'
   );
-  const desktopModes = extractInvestigationModeOptions(
-    'desktop/src/app/util/korean-fieldwork-project-setup.ts',
-    'KOREAN_FIELDWORK_INVESTIGATION_MODES',
-    'value'
-  );
-  const allModeIds = sortUnique([
-    ...Object.keys(tabletModes),
-    ...Object.keys(desktopModes)
-  ]);
+  const tabletWrapperText = readTextFile('mobile/components/Project/korean-fieldwork-investigation-mode.ts');
+  const desktopWrapperText = readTextFile('desktop/src/app/util/korean-fieldwork-project-setup.ts');
+  const expectedModeIds = ['trialTrench', 'excavation', 'surfaceSurvey', 'watchingBrief'];
   const findings = [];
 
-  for (const modeId of allModeIds) {
-    const tabletMode = tabletModes[modeId];
-    const desktopMode = desktopModes[modeId];
+  if (Object.keys(coreModes).length === 0) {
+    findings.push('core investigation modes must be defined in the shared project setup contract');
+  }
 
-    if (!tabletMode) {
-      findings.push(`tablet investigation mode missing for desktop mode: ${modeId}`);
+  for (const modeId of expectedModeIds) {
+    const coreMode = coreModes[modeId];
+
+    if (!coreMode) {
+      findings.push(`core investigation mode missing: ${modeId}`);
       continue;
     }
-    if (!desktopMode) {
-      findings.push(`desktop investigation mode missing for tablet mode: ${modeId}`);
-      continue;
-    }
 
-    for (const propertyName of ['label', 'detail']) {
-      if (tabletMode[propertyName] !== desktopMode[propertyName]) {
-        findings.push(
-          [
-            `investigation mode ${propertyName} mismatch for ${modeId}:`,
-            `tablet=${tabletMode[propertyName] || '(none)'}`,
-            `desktop=${desktopMode[propertyName] || '(none)'}`
-          ].join(' ')
-        );
+    for (const propertyName of ['label', 'detail', 'primaryAction']) {
+      if (!coreMode[propertyName]) {
+        findings.push(`core investigation mode ${modeId} missing ${propertyName}`);
       }
     }
+  }
+
+  if (!tabletWrapperText.includes("from 'idai-field-core'")
+      || !tabletWrapperText.includes('KOREAN_FIELDWORK_INVESTIGATION_MODES')
+      || !tabletWrapperText.includes('createKoreanFieldworkProjectSetupResourceUpdates')
+      || tabletWrapperText.includes('primaryAction:')) {
+    findings.push('tablet investigation mode utility must re-export the shared core project setup contract');
+  }
+
+  if (!desktopWrapperText.includes("from 'idai-field-core'")
+      || !desktopWrapperText.includes('KOREAN_FIELDWORK_INVESTIGATION_MODES as SHARED_INVESTIGATION_MODES')
+      || !desktopWrapperText.includes('SHARED_INVESTIGATION_MODES.map')
+      || !desktopWrapperText.includes('value: mode.id')
+      || desktopWrapperText.includes("label: '시굴·표본조사'")) {
+    findings.push('desktop project setup utility must map the shared core investigation modes instead of redefining them');
   }
 
   return findings;
@@ -941,7 +946,8 @@ function extractInvestigationModeOptions(filePath, arrayName, idPropertyName) {
 
     result[modeId] = {
       label: extractStringProperty(objectText, 'label'),
-      detail: extractStringProperty(objectText, 'detail')
+      detail: extractStringProperty(objectText, 'detail'),
+      primaryAction: extractStringProperty(objectText, 'primaryAction')
     };
   }
 

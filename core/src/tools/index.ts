@@ -26,5 +26,6 @@ export * from './korean-fieldwork-feature-attributes';
 export * from './korean-fieldwork-feature-types';
 export * from './korean-fieldwork-field-note';
 export * from './korean-fieldwork-identifier-revision';
+export * from './korean-fieldwork-project-setup';
 export * from './korean-fieldwork-report-handoff';
 export * from './korean-fieldwork-soil-color';
