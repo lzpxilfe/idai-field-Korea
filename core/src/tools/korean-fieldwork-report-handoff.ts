@@ -153,7 +153,7 @@ interface LabeledEvidenceFieldDefinition {
 const KO = {
     ALL_READY: '\ubc14\ub85c \uc778\uc6a9 \uac00\ub2a5',
     CATEGORY: '\uc720\ud615',
-    CHECKED_FOR_DESKTOP: '\ub370\uc2a4\ud06c\ud1b1 \ubcf4\uace0\uc11c \ud0ed \uc804\ub2ec \ud655\uc778',
+    CHECKED_FOR_DESKTOP: '\ub370\uc2a4\ud06c\ud1b1 HWP \ubcf4\uace0\uc11c \ud0ed \uc804\ub2ec \ud655\uc778',
     DETAILS: '\uae30\ub85d',
     EVIDENCE: '\uc790\ub8cc',
     EVIDENCE_DETAILS: '\uc790\ub8cc \uc0c1\uc138',

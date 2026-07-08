@@ -785,7 +785,7 @@ describe('Korean fieldwork report handoff', () => {
             isCopyable: true,
             issueCount: 0
         }));
-        expect(validation.message).toContain('\ub370\uc2a4\ud06c\ud1b1 \ubcf4\uace0\uc11c \ud0ed \uc804\ub2ec \ud655\uc778');
+        expect(validation.message).toContain('\ub370\uc2a4\ud06c\ud1b1 HWP \ubcf4\uace0\uc11c \ud0ed \uc804\ub2ec \ud655\uc778');
         expect(validation.copyText).toContain('[\uc720\uad6c] pit-001');
     });
 
