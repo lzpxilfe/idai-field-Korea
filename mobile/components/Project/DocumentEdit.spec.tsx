@@ -273,8 +273,8 @@ describe('DocumentEdit', () => {
   it('shows desktop HWP handoff details after saving tablet edits that need review', async () => {
     cleanup();
     mockUseGlobalSearchParams.mockReturnValue({
-      docId: 'si1',
-      categoryName: 'Photo',
+      docId: t2.resource.id,
+      categoryName: category,
     });
     renderAPI = renderDocumentEditScreen(
       preferences,
@@ -290,7 +290,7 @@ describe('DocumentEdit', () => {
     const toastMessage = mockShowToast.mock.calls[0][1];
     expect(toastMessage).toContain('HWP');
     expect(toastMessage).toContain('보완 항목');
-    expect(toastMessage).toContain('사진/도면');
+    expect(toastMessage).toContain('상위 조사구역');
   });
 });
 
