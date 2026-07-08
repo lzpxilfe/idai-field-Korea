@@ -185,6 +185,9 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
                         createDocument('feature-1', 'Feature', {
                             identifier: 'pit-001',
                             shortDescription: 'round pit with dark fill',
+                            featureLocationSketch: '{"shape":"oval","center":{"x":75,"y":50},"scale":80}',
+                            featureFreeDrawingStrokes:
+                                '{"version":1,"strokes":[{"points":[{"x":10,"y":20},{"x":40,"y":50}]}]}',
                             featureRecordingStatus: 'confirmed',
                             featureInvestigationChecklist: []
                         }),
@@ -239,6 +242,10 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
             });
             expect(component.getReportHandoffPreviewItem()?.documentId).toBe('feature-1');
             expect(component.isReportHandoffItemSelected(featureItem)).toBe(true);
+            expect(featureItem.details.join('\n'))
+                .toContain('\uc704\uce58 \uc57d\ub3c4: \uc788\uc74c');
+            expect(featureItem.details.join('\n'))
+                .toContain('\uc790\uc720 \uc2a4\ucf00\uce58: \uc788\uc74c');
             expect(featureItem.evidenceDetails.join('\n'))
                 .toContain('file:///tablet/photos/pit-001.jpg');
             expect(featureItem.evidenceDetails.join('\n'))
@@ -259,6 +266,10 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
                 .toContain('\ud544\uae30 \uc6d0\ubcf8: \uc788\uc74c');
             expect(featureItem.copyText)
                 .toContain('\ud0dc\ube14\ub9bf \uc2a4\ucf00\uce58: \uc788\uc74c');
+            expect(featureItem.copyText)
+                .toContain('\uc790\uc720 \uc2a4\ucf00\uce58: \uc788\uc74c');
+            expect(featureItem.copyText)
+                .not.toContain('"shape"');
             expect(featureItem.copyText)
                 .not.toContain('"strokes"');
             expect(featureItem.issueDetails.join('\n'))

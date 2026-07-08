@@ -65,6 +65,35 @@ describe('Korean fieldwork report handoff', () => {
     });
 
 
+    it('summarizes feature location sketches without dumping tablet sketch JSON into HWP copy blocks', () => {
+
+        const handoff = makeKoreanFieldworkReportHandoff([
+            makeDocument('feature-1', 'Feature', {
+                identifier: 'pit-001',
+                featureLocationSketch: '{"shape":"oval","center":{"x":75,"y":50},"scale":80}',
+                featureFreeDrawingStrokes: '{"version":1,"strokes":[{"points":[{"x":10,"y":20},{"x":40,"y":50}]}]}',
+                featureRecordingStatus: 'candidate',
+                featureInvestigationChecklist: []
+            })
+        ] as any);
+
+        const featureItem = handoff.items.find(item => item.documentId === 'feature-1');
+
+        expect(featureItem?.summary)
+            .toBe('\uc704\uce58 \uc57d\ub3c4: \uc788\uc74c');
+        expect(featureItem?.details.join('\n'))
+            .toContain('\uc704\uce58/\ub3c4\uba74: \uc704\uce58 \uc57d\ub3c4: \uc788\uc74c, \uc790\uc720 \uc2a4\ucf00\uce58: \uc788\uc74c');
+        expect(featureItem?.copyText)
+            .toContain('\uc694\uc57d: \uc704\uce58 \uc57d\ub3c4: \uc788\uc74c');
+        expect(featureItem?.copyText)
+            .toContain('\uc790\uc720 \uc2a4\ucf00\uce58: \uc788\uc74c');
+        expect(featureItem?.copyText)
+            .not.toContain('"shape"');
+        expect(featureItem?.copyText)
+            .not.toContain('"strokes"');
+    });
+
+
     it('carries soil profile color sample locations into HWP copy blocks', () => {
 
         const documents = [

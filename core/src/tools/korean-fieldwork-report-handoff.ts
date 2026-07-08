@@ -79,6 +79,7 @@ export function normalizeKoreanFieldworkHwpPlainText(text: string): string {
 
 interface DetailFieldDefinition {
     label: string;
+    getSummary?: (document: Document) => string|undefined;
     fields: string[];
 }
 
@@ -137,12 +138,14 @@ const DETAIL_FIELDS: DetailFieldDefinition[] = [
     },
     {
         label: '\uc704\uce58/\ub3c4\uba74',
+        getSummary: getLocationDrawingDetailSummary,
         fields: [
             'geometrySource',
             'geometryConfidence',
             'featureGeometryEditStatus',
             'featureGeometryRevisionNote',
             'featureLocationSketch',
+            'featureFreeDrawingStrokes',
             'surveyBoundaryAccuracy',
             'surveyBoundarySource'
         ]
@@ -185,6 +188,7 @@ const SUMMARY_FIELDS = [
     'penMemoAutoTranscript',
     'featureGeometryRevisionNote',
     'featureLocationSketch',
+    'featureFreeDrawingStrokes',
     'surveyBoundaryNote',
     'reportPreparationSourceText',
     'reportEditorialIssueText'
@@ -491,9 +495,27 @@ function getValidationMessage(
 function hasPrintableField(resource: NewResource, fieldNames: string[]): boolean {
 
     return fieldNames.some(fieldName => {
-        const value = getPrintableValue(resource[fieldName]);
+        const value = getHandoffPrintableFieldValue(resource, fieldName);
         return !!value && value !== '[]';
     });
+}
+
+
+function getHandoffPrintableFieldValue(resource: NewResource, fieldName: string): string|undefined {
+
+    if (fieldName === 'featureLocationSketch') {
+        return getStrokeEvidenceLabel('\uc704\uce58 \uc57d\ub3c4', resource.featureLocationSketch);
+    }
+
+    if (fieldName === 'featureFreeDrawingStrokes') {
+        return getStrokeEvidenceLabel('\uc790\uc720 \uc2a4\ucf00\uce58', resource.featureFreeDrawingStrokes);
+    }
+
+    if (fieldName === 'drawingSketchStrokes') {
+        return getStrokeEvidenceLabel('\ud0dc\ube14\ub9bf \uc2a4\ucf00\uce58', resource.drawingSketchStrokes);
+    }
+
+    return getPrintableValue(resource[fieldName]);
 }
 
 
@@ -606,11 +628,25 @@ function isReportHandoffDocument(document: Document): boolean {
 function getSummary(document: Document, categoryLabel: string): string {
 
     for (const fieldName of SUMMARY_FIELDS) {
-        const value = getPrintableValue(document.resource[fieldName]);
+        const value = getSummaryFieldValue(document, fieldName);
         if (value) return truncate(value, 180);
     }
 
     return `${categoryLabel} ${KO.RECORD}`;
+}
+
+
+function getSummaryFieldValue(document: Document, fieldName: string): string|undefined {
+
+    if (fieldName === 'featureLocationSketch') {
+        return getStrokeEvidenceLabel('\uc704\uce58 \uc57d\ub3c4', document.resource.featureLocationSketch);
+    }
+
+    if (fieldName === 'featureFreeDrawingStrokes') {
+        return getStrokeEvidenceLabel('\uc790\uc720 \uc2a4\ucf00\uce58', document.resource.featureFreeDrawingStrokes);
+    }
+
+    return getPrintableValue(document.resource[fieldName]);
 }
 
 
@@ -625,6 +661,9 @@ function getDetailLines(document: Document): string[] {
 
 function getDetailLine(document: Document, definition: DetailFieldDefinition): string|undefined {
 
+    const summary = definition.getSummary?.(document);
+    if (summary) return `${definition.label}: ${summary}`;
+
     const values = definition.fields
         .map(fieldName => getPrintableValue(document.resource[fieldName]))
         .filter((value): value is string => !!value);
@@ -632,6 +671,23 @@ function getDetailLine(document: Document, definition: DetailFieldDefinition): s
     if (values.length === 0) return undefined;
 
     return `${definition.label}: ${values.join(', ')}`;
+}
+
+
+function getLocationDrawingDetailSummary(document: Document): string|undefined {
+
+    return [
+        ...[
+            'geometrySource',
+            'geometryConfidence',
+            'featureGeometryEditStatus',
+            'featureGeometryRevisionNote',
+            'surveyBoundaryAccuracy',
+            'surveyBoundarySource'
+        ].map(fieldName => getPrintableValue(document.resource[fieldName])),
+        getStrokeEvidenceLabel('\uc704\uce58 \uc57d\ub3c4', document.resource.featureLocationSketch),
+        getStrokeEvidenceLabel('\uc790\uc720 \uc2a4\ucf00\uce58', document.resource.featureFreeDrawingStrokes)
+    ].filter((value): value is string => !!value).join(', ') || undefined;
 }
 
 
