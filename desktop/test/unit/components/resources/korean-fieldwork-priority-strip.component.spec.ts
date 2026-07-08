@@ -455,7 +455,9 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
             expect(featureItem.copyText)
                 .not.toContain('\uc190\uadf8\ub9bc \uc88c\ud45c');
             expect(featureItem.issueDetails.join('\n'))
-                .toContain('fieldwork-photo-upload-missing');
+                .toContain('\ud604\uc7a5\uc0ac\uc9c4 \uc6d0\ubcf8 \ubcf4\uc874 \uc0c1\ud0dc');
+            expect(featureItem.copyText)
+                .not.toContain('fieldwork-photo-upload-missing');
             expect(featureItem.copyText).toContain('pit-001');
             expect(featureItem.copyText).toContain('round pit with dark fill');
             expect(featureItem.copyText).toContain('\uc790\ub8cc \uc0c1\uc138');

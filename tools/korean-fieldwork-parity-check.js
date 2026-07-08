@@ -3401,10 +3401,15 @@ function validateReportHandoffPreSaveValidation() {
   if (!coreReportHandoffSpecText.includes('evidenceDetails.join')
       || !coreReportHandoffSpecText.includes('issueDetails.join')
       || !coreReportHandoffSpecText.includes('relationDetails')
+      || !coreReportHandoffText.includes('formatReportHandoffIssueDetail')
+      || coreReportHandoffText.includes('`(${issue.ruleId})`')
       || !coreReportHandoffSpecText.includes('fieldwork-photo-upload-missing')
       || !coreReportHandoffSpecText.includes('fieldwork-photo-annotation-review')
-      || !coreReportHandoffSpecText.includes('pen-memo-auto-transcript-review')) {
-    findings.push('core report handoff tests must prove relation labels, evidence, readiness issues, and closeout issues are carried into HWP copy blocks');
+      || !coreReportHandoffSpecText.includes('pen-memo-auto-transcript-review')
+      || !coreReportHandoffSpecText.includes("not.toContain('fieldwork-photo-upload-missing')")
+      || !coreReportHandoffSpecText.includes("not.toContain('pen-memo-auto-transcript-review')")
+      || !desktopPriorityStripSpecText.includes("not.toContain('fieldwork-photo-upload-missing')")) {
+    findings.push('core report handoff tests must prove relation labels, evidence, readiness issues, and closeout issues are carried into HWP copy blocks without leaking internal rule ids');
   }
   for (const [label, text] of [
     ['tablet add screen', tabletAddText],

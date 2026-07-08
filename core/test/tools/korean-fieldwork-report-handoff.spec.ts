@@ -47,17 +47,19 @@ describe('Korean fieldwork report handoff', () => {
         expect(featureItem?.evidenceLabel).toContain('\ud604\uc7a5\uba54\ubaa8 1');
         expect(featureItem?.evidenceDetails.join('\n')).toContain('file:///tablet/photos/photo-1.jpg');
         expect(featureItem?.evidenceDetails.join('\n')).toContain('fill continues under east edge');
-        expect(featureItem?.issueDetails.join('\n')).toContain('feature-complete-photo');
-        expect(featureItem?.issueDetails.join('\n')).toContain('fieldwork-photo-upload-missing');
-        expect(featureItem?.issueDetails.join('\n')).toContain('fieldwork-photo-report-metadata-missing');
-        expect(featureItem?.issueDetails.join('\n')).toContain('soil-profile-color-swatches-missing');
+        expect(featureItem?.issueDetails.join('\n')).toContain('완료 사진 항목이 체크되지 않았습니다');
+        expect(featureItem?.issueDetails.join('\n')).toContain('현장사진 원본 보존 상태');
+        expect(featureItem?.issueDetails.join('\n')).toContain('보고서용 원본 정보');
+        expect(featureItem?.issueDetails.join('\n')).toContain('번호별 토색');
         expect(featureItem?.copyText).toContain('[\uc720\uad6c] pit-001');
         expect(featureItem?.copyText).toContain('\uc694\uc57d: round pit with dark fill');
         expect(featureItem?.copyText).toContain('\uc790\ub8cc \uc0c1\uc138');
         expect(featureItem?.copyText).toContain('file:///tablet/photos/photo-1.jpg');
         expect(featureItem?.copyText).toContain('\ud655\uc778: \ubcf4\uc644 \ud544\uc694 6');
         expect(featureItem?.copyText).toContain('\ud655\uc778 \uc0c1\uc138');
-        expect(featureItem?.copyText).toContain('fieldwork-photo-upload-missing');
+        expect(featureItem?.copyText).toContain('현장사진 원본 보존 상태');
+        expect(featureItem?.copyText).not.toContain('fieldwork-photo-upload-missing');
+        expect(featureItem?.copyText).not.toContain('feature-complete-photo');
         expect(handoff.reviewCount).toBeGreaterThan(0);
         expect(handoff.copyAllText).toContain(featureItem!.copyText);
         expect(featureItem?.copyText).not.toContain('\u200B');
@@ -444,15 +446,17 @@ describe('Korean fieldwork report handoff', () => {
         const featureItem = handoff.items.find(item => item.documentId === 'feature-1');
         const issueDetails = featureItem?.issueDetails.join('\n') ?? '';
 
-        expect(issueDetails).toContain('fieldwork-photo-annotation-review');
-        expect(issueDetails).toContain('pen-memo-auto-transcript-review');
+        expect(issueDetails).toContain('사진 위 표시가 보고서용 설명으로 정리되지 않았습니다');
+        expect(issueDetails).toContain('자동 필사된 현장메모가 아직 검토되지 않았습니다');
         expect(featureItem?.copyText).toContain('\ud655\uc778 \uc0c1\uc138');
         expect(featureItem?.copyText).toContain('\uc0ac\uc9c4 \ud45c\uc2dc: \uc788\uc74c');
         expect(featureItem?.copyText).toContain('\uc6d0\ubcf8 \ud30c\uc77c: photo-annotated.jpg');
         expect(featureItem?.copyText).toContain('\ucd2c\uc601: 2026-06-23 01:02');
         expect(featureItem?.copyText).toContain('\ud06c\uae30: 4032x3024');
-        expect(featureItem?.copyText).toContain('fieldwork-photo-annotation-review');
-        expect(featureItem?.copyText).toContain('pen-memo-auto-transcript-review');
+        expect(featureItem?.copyText).toContain('사진 위 표시가 보고서용 설명으로 정리되지 않았습니다');
+        expect(featureItem?.copyText).toContain('자동 필사된 현장메모가 아직 검토되지 않았습니다');
+        expect(featureItem?.copyText).not.toContain('fieldwork-photo-annotation-review');
+        expect(featureItem?.copyText).not.toContain('pen-memo-auto-transcript-review');
         expect(featureItem?.copyText).not.toContain('"strokes"');
     });
 
@@ -552,7 +556,9 @@ describe('Korean fieldwork report handoff', () => {
         expect(featureItem?.copyText)
             .toContain('\ud544\uae30 \uc6d0\ubcf8: \uc788\uc74c');
         expect(featureItem?.copyText)
-            .toContain('pen-memo-handwriting-transcription');
+            .toContain('\ud0dc\ube14\ub9bf \ud544\uae30 \ud604\uc7a5\uba54\ubaa8');
+        expect(featureItem?.copyText)
+            .not.toContain('pen-memo-handwriting-transcription');
         expect(featureItem?.copyText)
             .not.toContain('"strokes"');
     });

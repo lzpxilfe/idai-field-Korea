@@ -1694,15 +1694,20 @@ function getReportHandoffIssueDocuments(bundle: EvidenceBundle): Document[] {
 
 function getIssueDetails(issues: KoreanFieldworkReadinessIssue[]): string[] {
 
-    return issues.map(issue => [
+    return issues.map(formatReportHandoffIssueDetail);
+}
+
+
+function formatReportHandoffIssueDetail(issue: KoreanFieldworkReadinessIssue): string {
+
+    return [
         getSeverityLabel(issue.severity),
         getPrintableValue(issue.identifier) ?? issue.documentId,
-        `(${issue.ruleId})`,
         '-',
         issue.message,
         '/',
         issue.recommendedAction
-    ].join(' '));
+    ].join(' ');
 }
 
 
