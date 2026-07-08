@@ -3497,6 +3497,7 @@ function validateTabletInstallGuide() {
   const tabletInstallDocText = readTextFile('docs/korean-fieldwork/android-tablet-install.ko.md');
   const tabletInstallScriptText = readTextFile('install-idai-field-android-apk.ps1');
   const tabletReadmeText = readTextFile('mobile/README.md');
+  const desktopWorkflowText = readTextFile('.github/workflows/desktop.yml');
   const tabletWorkflowText = readTextFile('.github/workflows/mobile.yml');
 
   if (!tabletWorkflowText.includes('name: idai-field-mobile-android-apk')) {
@@ -3521,6 +3522,12 @@ function validateTabletInstallGuide() {
   if (!rootReadmeText.includes('Field Desktop의 `보고서/HWP 복사` 패널')
       || !rootReadmeText.includes('일반 텍스트 클립보드')) {
     findings.push('root README must explain the tablet-to-Field-Desktop-to-HWP copy flow without making BridgeDesk the primary destination');
+  }
+  if (!desktopWorkflowText.includes('Run Korean fieldwork parity check')
+      || !desktopWorkflowText.includes('tools/korean-fieldwork-*.js')
+      || !desktopWorkflowText.includes('docs/korean-fieldwork/**')
+      || !desktopWorkflowText.includes('README.md')) {
+    findings.push('desktop workflow must run parity checks when Korean fieldwork install guides or verifier scripts change');
   }
 
   return findings;
