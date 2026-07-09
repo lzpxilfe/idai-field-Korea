@@ -69,7 +69,7 @@ jobs:
         run: npm run test:hub-integration
         working-directory: desktop
   E2E:
-    if: ${{ github.event_name == 'push' && (contains(github.event.head_commit.message, '[e2e]') || contains(github.event.head_commit.message, '[full-ci]')) }}
+    if: ${{ github.event_name == 'push' && (contains(github.event.head_commit.message, '[e2e]') || contains(github.event.head_commit.message, '[full-ci]') || contains(github.event.head_commit.message, '[handoff-e2e]')) }}
     timeout-minutes: 90
     runs-on: macos-latest
     steps:
@@ -82,7 +82,12 @@ jobs:
       - name: Build core
         run: npm run build
         working-directory: core
+      - name: Run Korean fieldwork handoff e2e tests
+        if: ${{ contains(github.event.head_commit.message, '[handoff-e2e]') && !contains(github.event.head_commit.message, '[e2e]') && !contains(github.event.head_commit.message, '[full-ci]') }}
+        run: npm run e2e:korean-fieldwork-handoff
+        working-directory: desktop
       - name: Run e2e tests
+        if: ${{ contains(github.event.head_commit.message, '[e2e]') || contains(github.event.head_commit.message, '[full-ci]') }}
         run: npm run e2e
         working-directory: desktop
   Build:
