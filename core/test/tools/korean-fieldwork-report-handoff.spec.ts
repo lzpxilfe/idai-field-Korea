@@ -843,6 +843,12 @@ describe('Korean fieldwork report handoff', () => {
             makeDocument('find-1', 'Find', {
                 identifier: 'find-001',
                 findSpotDescription: 'pit floor, east edge',
+                findSpotItems: JSON.stringify({
+                    version: 1,
+                    items: [
+                        { number: 1, point: { x: 25, y: 75 }, label: 'bronze fragment' }
+                    ]
+                }),
                 findSampleResearchScope: ['reportIncludedArtifact', 'collectionStatusRecorded'],
                 artifactHandlingWorkflow: ['fieldCollection'],
                 artifactLabelRegisterLink: ['labelCreated', 'fieldSerialNumber'],
@@ -853,6 +859,12 @@ describe('Korean fieldwork report handoff', () => {
             }),
             makeDocument('sample-1', 'Sample', {
                 identifier: 'sample-001',
+                findSpotItems: JSON.stringify({
+                    version: 1,
+                    items: [
+                        { number: 1, point: { x: 50, y: 40 }, label: 'charcoal bag' }
+                    ]
+                }),
                 sampleType: 'charcoal',
                 samplePurpose: ['absoluteDating'],
                 findSampleResearchScope: ['charcoal', 'scienceAnalysisCandidate'],
@@ -876,6 +888,7 @@ describe('Korean fieldwork report handoff', () => {
         expect(featureItem?.evidenceLabel).toContain('\uc2dc\ub8cc 1');
         expect(evidenceDetails).toContain('\uc720\ubb3c find-001');
         expect(evidenceDetails).toContain('\ucd9c\ud1a0 \uc704\uce58: pit floor, east edge');
+        expect(evidenceDetails).toContain('\ucd9c\ud1a0 \uc704\uce58\uc810: 1\ubc88 25%/75% bronze fragment');
         expect(evidenceDetails).toContain('\uc720\ubb3c\u00b7\uc2dc\ub8cc \uc5f0\uad6c\ubc94\uc704: \ubcf4\uace0\uc11c \uc218\ub85d \uc720\ubb3c');
         expect(evidenceDetails).toContain('\uc720\ubb3c \uad00\ub9ac \uc808\ucc28: \ud604\uc7a5\uc218\uc2b5');
         expect(evidenceDetails).toContain('\uc720\ubb3c \uaf2c\ub9ac\ud45c\u00b7\ub300\uc7a5 \uc5f0\uacb0: \uaf2c\ub9ac\ud45c \uc791\uc131');
@@ -883,6 +896,7 @@ describe('Korean fieldwork report handoff', () => {
         expect(evidenceDetails).toContain('\uc6b0\uc5f0\u00b7\uc2e0\uace0 \uc720\ubb3c \ucd9c\ucc98: \uc8fc\ubbfc \uc2e0\uace0');
         expect(evidenceDetails).toContain('\uae30\uc640\uac00\ub9c8 \ucd9c\ud1a0\ud488 \uc131\uaca9: \uc0dd\uc0b0\ud488');
         expect(evidenceDetails).toContain('\uc2dc\ub8cc sample-001');
+        expect(evidenceDetails).toContain('\ucc44\ucde8 \uc704\uce58\uc810: 1\ubc88 50%/40% charcoal bag');
         expect(evidenceDetails).toContain('\uc2dc\ub8cc \uc885\ub958: charcoal');
         expect(evidenceDetails).toContain('\uc2dc\ub8cc \ubaa9\uc801: \uc808\ub300\uc5f0\ub300');
         expect(evidenceDetails).toContain('\uc2dc\ub8cc \ucc44\ucde8\u00b7\ubcf4\uad00: \ube5b \ucc28\ub2e8');

@@ -111,11 +111,22 @@ const VALID_SHAPES = new Set<FeatureLocationSketchShape>([
   'rectangle',
   'oval',
 ]);
-const FIND_CONTEXT_CATEGORIES = new Set<string>([
+const LOCATION_CONTEXT_CATEGORIES = new Set<string>([
   KOREAN_FIELDWORK_CATEGORIES.FIND,
   KOREAN_FIELDWORK_CATEGORIES.FIND_COLLECTION,
+  KOREAN_FIELDWORK_CATEGORIES.SAMPLE,
 ]);
-const TEXT = {
+
+interface FindSpotPanelText {
+  addHint: string;
+  emptyItem: string;
+  feature: string;
+  noFeature: string;
+  numberSuffix: string;
+  title: string;
+}
+
+const FIND_TEXT: FindSpotPanelText = {
   addHint:
     '\uc720\uad6c \uc2a4\ucf00\uce58 \uc704\uc5d0 \ucd9c\ud1a0 \uc704\uce58\ub97c \ub204\ub974\uba74 \ubc88\ud638\uc810\uc774 \ucd94\uac00\ub429\ub2c8\ub2e4.',
   emptyItem: '\uc720\ubb3c\uba85/\uc218\ub7c9 \uba54\ubaa8',
@@ -123,6 +134,13 @@ const TEXT = {
   noFeature: '\uc5f0\uacb0\ub41c \uc720\uad6c \uc2a4\ucf00\uce58 \uc5c6\uc74c',
   numberSuffix: '\ubc88',
   title: '\uc720\ubb3c \ucd9c\ud1a0 \uc704\uce58',
+};
+const SAMPLE_TEXT: FindSpotPanelText = {
+  ...FIND_TEXT,
+  addHint:
+    '\uc720\uad6c \uc2a4\ucf00\uce58 \uc704\uc5d0 \uc2dc\ub8cc \ucc44\ucde8 \uc704\uce58\ub97c \ub204\ub974\uba74 \ubc88\ud638\uc810\uc774 \ucd94\uac00\ub429\ub2c8\ub2e4.',
+  emptyItem: '\uc2dc\ub8cc\uba85/\uc218\ub7c9 \uba54\ubaa8',
+  title: '\uc2dc\ub8cc \ucc44\ucde8 \uc704\uce58',
 };
 
 const KoreanFieldworkFindSpotPanel: React.FC<Props> = ({
@@ -155,8 +173,10 @@ const KoreanFieldworkFindSpotPanel: React.FC<Props> = ({
     [resource]
   );
 
-  if (!FIND_CONTEXT_CATEGORIES.has(resource.category)) return null;
+  if (!LOCATION_CONTEXT_CATEGORIES.has(resource.category)) return null;
   if (!featureDocument) return null;
+
+  const text = getFindSpotPanelText(resource.category);
 
   const updateCanvasSize = (event: LayoutChangeEvent) => {
     const { height, width } = event.nativeEvent.layout;
@@ -309,14 +329,14 @@ const KoreanFieldworkFindSpotPanel: React.FC<Props> = ({
       <View style={styles.headerRow}>
         <View style={styles.titleRow}>
           <MaterialIcons name="place" size={17} color="#344054" />
-          <Text style={styles.title}>{TEXT.title}</Text>
+          <Text style={styles.title}>{text.title}</Text>
           <Text style={styles.countText}>{items.length}</Text>
         </View>
         <Text style={styles.featureLabel} numberOfLines={1}>
           {featureLabel}
         </Text>
       </View>
-      <Text style={styles.hint}>{TEXT.addHint}</Text>
+      <Text style={styles.hint}>{text.addHint}</Text>
       <View
         onLayout={updateCanvasSize}
         onResponderGrant={startViewportGesture}
@@ -345,7 +365,7 @@ const KoreanFieldworkFindSpotPanel: React.FC<Props> = ({
             ? renderFeatureSketch(featureSketch, canvasSize)
             : (
               <View style={styles.emptyPreview}>
-                <Text style={styles.emptyPreviewText}>{TEXT.noFeature}</Text>
+                <Text style={styles.emptyPreviewText}>{FIND_TEXT.noFeature}</Text>
               </View>
             )}
           {items.map((item) => (
@@ -387,7 +407,7 @@ const KoreanFieldworkFindSpotPanel: React.FC<Props> = ({
               <TextInput
                 autoCapitalize="none"
                 onChangeText={(text) => updateLabel(item.number, text)}
-                placeholder={`${item.number}${TEXT.numberSuffix} ${TEXT.emptyItem}`}
+                placeholder={`${item.number}${text.numberSuffix} ${text.emptyItem}`}
                 placeholderTextColor="#98a2b3"
                 style={styles.itemInput}
                 testID={`findSpotLabelInput_${item.number}`}
@@ -409,6 +429,9 @@ const KoreanFieldworkFindSpotPanel: React.FC<Props> = ({
   );
 };
 
+const getFindSpotPanelText = (category: string): FindSpotPanelText =>
+  category === KOREAN_FIELDWORK_CATEGORIES.SAMPLE ? SAMPLE_TEXT : FIND_TEXT;
+
 const renderFeatureSketch = (
   sketch: FeatureLocationSketch,
   canvasSize: CanvasSize
@@ -425,7 +448,7 @@ const renderFeatureSketch = (
         testID="findSpotFeatureShape"
       >
         <View style={styles.featureShapeCenter} />
-        <Text style={styles.featureShapeLabel}>{TEXT.feature}</Text>
+        <Text style={styles.featureShapeLabel}>{FIND_TEXT.feature}</Text>
       </View>
     );
   }

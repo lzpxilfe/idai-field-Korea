@@ -57,6 +57,68 @@ describe('KoreanFieldworkFindSpotPanel', () => {
       .toEqual(payload.updatedAt);
   });
 
+  it('adds numbered sample collection spots on the parent feature sketch', () => {
+    const onUpdateResourceFields = jest.fn();
+    const feature = createFeature();
+    const sampleResource = createSampleResource();
+    const { getByTestId, getByText } = render(
+      <KoreanFieldworkFindSpotPanel
+        documents={[feature]}
+        parentDocument={feature}
+        resource={sampleResource}
+        onUpdateResourceFields={onUpdateResourceFields}
+      />
+    );
+    const canvas = getByTestId('findSpotCanvas');
+
+    expect(getByText('\uc2dc\ub8cc \ucc44\ucde8 \uc704\uce58')).toBeTruthy();
+    fireEvent(canvas, 'layout', {
+      nativeEvent: { layout: { height: 200, width: 400 } },
+    });
+    fireEvent(canvas, 'responderGrant', {
+      nativeEvent: { locationX: 200, locationY: 80 },
+    });
+    fireEvent(canvas, 'responderRelease', {
+      nativeEvent: { locationX: 200, locationY: 80 },
+    });
+
+    expect(onUpdateResourceFields).toHaveBeenCalledTimes(1);
+    const updates = onUpdateResourceFields.mock.calls[0][0];
+    const payload = JSON.parse(updates[KOREAN_FIELDWORK_FIND_SPOT_FIELDS.items]);
+
+    expect(payload.items).toMatchObject([
+      {
+        label: '',
+        number: 1,
+        point: { x: 50, y: 40 },
+      },
+    ]);
+  });
+
+  it('uses sample wording for existing sample spot labels', () => {
+    const feature = createFeature();
+    const sampleResource = createSampleResource({
+      findSpotItems: JSON.stringify({
+        version: 1,
+        items: [
+          { number: 1, point: { x: 50, y: 40 }, label: '' },
+        ],
+      }),
+    });
+    const { getByTestId, getByText } = render(
+      <KoreanFieldworkFindSpotPanel
+        documents={[feature]}
+        parentDocument={feature}
+        resource={sampleResource}
+        onUpdateResourceFields={jest.fn()}
+      />
+    );
+
+    expect(getByText('\uc2dc\ub8cc \ucc44\ucde8 \uc704\uce58')).toBeTruthy();
+    expect(getByTestId('findSpotLabelInput_1').props.placeholder)
+      .toBe('1\ubc88 \uc2dc\ub8cc\uba85/\uc218\ub7c9 \uba54\ubaa8');
+  });
+
   it('zooms the feature sketch before placing a precise find spot', () => {
     const onUpdateResourceFields = jest.fn();
     const feature = createFeature();
@@ -261,6 +323,16 @@ const createFindResource = (
 ): NewResource => ({
   category: C.FIND,
   identifier: 'find-1',
+  relations,
+  ...extraResource,
+});
+
+const createSampleResource = (
+  extraResource: Record<string, unknown> = {},
+  relations: Record<string, string[]> = {}
+): NewResource => ({
+  category: C.SAMPLE,
+  identifier: 'sample-1',
   relations,
   ...extraResource,
 });

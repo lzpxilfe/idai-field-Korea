@@ -221,6 +221,15 @@ interface LabeledEvidenceFieldDefinition {
     fieldName: string;
 }
 
+interface FindSpotHandoffItem {
+    label?: string;
+    number: number;
+    point: {
+        x: number;
+        y: number;
+    };
+}
+
 const KO = {
     ALL_READY: '\ubc14\ub85c \uc778\uc6a9 \uac00\ub2a5',
     BODY: '\ubcf8\ubb38',
@@ -275,6 +284,7 @@ const FIND_EVIDENCE_SUMMARY_FIELDS: LabeledEvidenceFieldDefinition[] = [
     { label: '\uc694\uc57d', fieldName: 'shortDescription' },
     { label: '\uc124\uba85', fieldName: 'description' },
     { label: '\ucd9c\ud1a0 \uc704\uce58', fieldName: 'findSpotDescription' },
+    { label: '\ucd9c\ud1a0 \uc704\uce58\uc810', fieldName: 'findSpotItems' },
     { label: '\uc720\ubb3c\u00b7\uc2dc\ub8cc \uc5f0\uad6c\ubc94\uc704', fieldName: 'findSampleResearchScope' },
     { label: '\uc720\ubb3c \uad00\ub9ac \uc808\ucc28', fieldName: 'artifactHandlingWorkflow' },
     { label: '\uc720\ubb3c \uc774\uc1a1 \uc548\uc804', fieldName: 'artifactTransportSafety' },
@@ -291,6 +301,7 @@ const FIND_EVIDENCE_SUMMARY_FIELDS: LabeledEvidenceFieldDefinition[] = [
 const SAMPLE_EVIDENCE_SUMMARY_FIELDS: LabeledEvidenceFieldDefinition[] = [
     { label: '\uc694\uc57d', fieldName: 'shortDescription' },
     { label: '\uc124\uba85', fieldName: 'description' },
+    { label: '\ucc44\ucde8 \uc704\uce58\uc810', fieldName: 'findSpotItems' },
     { label: '\uc2dc\ub8cc \uc885\ub958', fieldName: 'sampleType' },
     { label: '\uc2e4\ud5d8\uc2e4 \ubc88\ud638', fieldName: 'labNumber' },
     { label: '\ubb34\uac8c', fieldName: 'weight' },
@@ -325,6 +336,7 @@ const FIND_SAMPLE_SUMMARY_FIELDS = Array.from(new Set([
     'labNumber',
     'weight',
     'volume',
+    'findSpotItems',
     ...FIND_EVIDENCE_SUMMARY_FIELDS.map(definition => definition.fieldName),
     ...SAMPLE_EVIDENCE_SUMMARY_FIELDS.map(definition => definition.fieldName)
 ])).filter(fieldName =>
@@ -370,6 +382,7 @@ const DETAIL_FIELDS: DetailFieldDefinition[] = [
             'featureGeometryEditStatus',
             'featureGeometryRevisionNote',
             'featureLocationSketch',
+            'findSpotItems',
             'featureFreeDrawingStrokes',
             'surveyBoundaryAccuracy',
             'surveyBoundarySource'
@@ -846,6 +859,10 @@ function getHandoffPrintableFieldValue(resource: NewResource, fieldName: string)
         return getStrokeEvidenceLabel('\uc790\uc720 \uc2a4\ucf00\uce58', resource.featureFreeDrawingStrokes);
     }
 
+    if (fieldName === 'findSpotItems') {
+        return getFindSpotItemsSummary(resource.findSpotItems);
+    }
+
     if (fieldName === 'drawingSketchStrokes') {
         return getStrokeEvidenceLabel('\ud0dc\ube14\ub9bf \uc2a4\ucf00\uce58', resource.drawingSketchStrokes);
     }
@@ -1099,6 +1116,10 @@ function getSummaryFieldValue(document: Document, fieldName: string): string|und
 
     if (fieldName === 'featureFreeDrawingStrokes') {
         return getStrokeEvidenceLabel('\uc790\uc720 \uc2a4\ucf00\uce58', document.resource.featureFreeDrawingStrokes);
+    }
+
+    if (fieldName === 'findSpotItems') {
+        return getFindSpotItemsSummary(document.resource.findSpotItems);
     }
 
     if (fieldName === 'dailyLogContent') {
@@ -1793,6 +1814,84 @@ function getLabeledEvidenceFieldSummary(
 }
 
 
+function getFindSpotItemsSummary(value: any): string|undefined {
+
+    const items = normalizeFindSpotHandoffItems(value);
+
+    return items.length > 0
+        ? items.map(getFindSpotItemSummary).join(', ')
+        : undefined;
+}
+
+
+function normalizeFindSpotHandoffItems(value: any): FindSpotHandoffItem[] {
+
+    const rawValue = typeof value === 'string' ? parseJsonValue(value) : value;
+    const rawItems = Array.isArray(rawValue)
+        ? rawValue
+        : isPlainRecord(rawValue) && Array.isArray(rawValue.items)
+            ? rawValue.items
+            : [];
+
+    return rawItems
+        .map(normalizeFindSpotHandoffItem)
+        .filter((item): item is FindSpotHandoffItem => !!item)
+        .sort((itemA, itemB) => itemA.number - itemB.number);
+}
+
+
+function normalizeFindSpotHandoffItem(value: any): FindSpotHandoffItem|undefined {
+
+    if (!isPlainRecord(value) || !isPlainRecord(value.point)) return undefined;
+
+    const number = normalizePositiveInteger(value.number);
+    const x = normalizeFindSpotPercent(value.point.x);
+    const y = normalizeFindSpotPercent(value.point.y);
+    if (number === undefined || x === undefined || y === undefined) return undefined;
+
+    return {
+        label: getPrintableValue(value.label),
+        number,
+        point: { x, y }
+    };
+}
+
+
+function normalizePositiveInteger(value: any): number|undefined {
+
+    return typeof value === 'number' && Number.isInteger(value) && value > 0
+        ? value
+        : undefined;
+}
+
+
+function normalizeFindSpotPercent(value: any): number|undefined {
+
+    return typeof value === 'number' && Number.isFinite(value)
+        ? Math.min(100, Math.max(0, value))
+        : undefined;
+}
+
+
+function getFindSpotItemSummary(item: FindSpotHandoffItem): string {
+
+    const coordinates = `${formatFindSpotPercent(item.point.x)}%/${formatFindSpotPercent(item.point.y)}%`;
+    const prefix = `${item.number}\ubc88 ${coordinates}`;
+
+    return item.label ? `${prefix} ${item.label}` : prefix;
+}
+
+
+function formatFindSpotPercent(value: number): string {
+
+    const rounded = Math.round(value * 10) / 10;
+
+    return Number.isInteger(rounded)
+        ? String(rounded)
+        : rounded.toFixed(1);
+}
+
+
 function getPenMemoStrokeEvidenceLabel(value: any): string|undefined {
 
     return getStrokeEvidenceLabel('\ud544\uae30 \uc6d0\ubcf8', value);
@@ -2069,6 +2168,12 @@ function getPrintableValue(value: any): string|undefined {
     const text = String(value).replace(/\s+/g, ' ').trim();
 
     return text.length > 0 ? text : undefined;
+}
+
+
+function isPlainRecord(value: any): value is Record<string, any> {
+
+    return !!value && typeof value === 'object' && !Array.isArray(value);
 }
 
 
