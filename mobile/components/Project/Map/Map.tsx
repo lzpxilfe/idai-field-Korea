@@ -21,6 +21,7 @@ import Button from '@/components/common/Button';
 import GLMap from './GLMap/GLMap';
 import {
   createOperationDraft as buildOperationDraft,
+  createPenMemoDraft as buildPenMemoDraft,
   createSoilProfilePhotoDraft as buildSoilProfilePhotoDraft,
   createSurveyBoundaryDraft as buildSurveyBoundaryDraft,
   MapLocation,
@@ -390,17 +391,9 @@ const Map: React.FC<MapProps> = (props) => {
   const createPenMemoDraft = async () => {
     if (!highlightedDoc || !config?.getCategory(KOREAN_FIELDWORK_CATEGORIES.PEN_MEMO)) return;
 
-    const createdDocument = await props.repository.create({
-      resource: {
-        identifier: `pen-memo-${Date.now()}`,
-        category: KOREAN_FIELDWORK_CATEGORIES.PEN_MEMO,
-        relations: {
-          depicts: [highlightedDoc.resource.id],
-        },
-        penMemoStrokes: '[]',
-        penMemoTranscriptionStatus: 'pending',
-      },
-    });
+    const createdDocument = await props.repository.create(
+      buildPenMemoDraft(highlightedDoc, props.documents)
+    );
 
     props.editDocument(createdDocument.resource.id, KOREAN_FIELDWORK_CATEGORIES.PEN_MEMO);
   };
@@ -408,7 +401,9 @@ const Map: React.FC<MapProps> = (props) => {
   const createSoilProfilePhotoDraft = async () => {
     if (!highlightedDoc || !canCreateSoilProfilePhoto) return;
 
-    const createdDocument = await props.repository.create(buildSoilProfilePhotoDraft(highlightedDoc));
+    const createdDocument = await props.repository.create(
+      buildSoilProfilePhotoDraft(highlightedDoc, props.documents)
+    );
 
     props.editDocument(createdDocument.resource.id, KOREAN_FIELDWORK_CATEGORIES.SOIL_PROFILE_PHOTO);
   };

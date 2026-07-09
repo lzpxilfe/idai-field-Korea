@@ -1,4 +1,6 @@
 import {
+  createKoreanFieldworkLinkedDraftIdentifier,
+  getKoreanFieldworkParentDraftIdentifier,
   Document,
   getKoreanFieldworkDraftFieldDefaults,
   KOREAN_FIELDWORK_FEATURE_GEOMETRY_EDIT_STATUS_ROUGH_SKETCH,
@@ -32,6 +34,7 @@ import {
   getKoreanFieldworkFeatureTypeOption,
 } from '../korean-fieldwork-feature-types';
 import { type KoreanFieldworkInvestigationModeId } from '../korean-fieldwork-investigation-mode';
+import { KOREAN_FIELDWORK_LINKED_IDENTIFIER_LABELS } from '../korean-fieldwork-document-drafts';
 
 export const LAYER_SEQUENCE_MEANING_DEFAULT = KOREAN_FIELDWORK_LAYER_SEQUENCE_MEANING_DEFAULT;
 export const SOIL_COLOR_ASSIST_STATUS_DEFAULT = KOREAN_FIELDWORK_SOIL_COLOR_ASSIST_STATUS_DEFAULT;
@@ -193,12 +196,37 @@ export const createKoreanFieldworkChildRelations = (
   };
 };
 
-export const createSoilProfilePhotoDraft = (targetDoc: Document): NewDocument => ({
+export const createSoilProfilePhotoDraft = (
+  targetDoc: Document,
+  existingDocuments: readonly Document[] = []
+): NewDocument => ({
   resource: {
-    identifier: `soil-profile-photo-${Date.now()}`,
+    identifier: createLinkedDraftIdentifier(
+      targetDoc,
+      KOREAN_FIELDWORK_CATEGORIES.SOIL_PROFILE_PHOTO,
+      '토층사진',
+      existingDocuments
+    ),
     category: KOREAN_FIELDWORK_CATEGORIES.SOIL_PROFILE_PHOTO,
     relations: createDepictsRelation(targetDoc),
     ...getKoreanFieldworkDraftFieldDefaults(KOREAN_FIELDWORK_CATEGORIES.SOIL_PROFILE_PHOTO),
+  },
+});
+
+export const createPenMemoDraft = (
+  targetDoc: Document,
+  existingDocuments: readonly Document[] = []
+): NewDocument => ({
+  resource: {
+    identifier: createLinkedDraftIdentifier(
+      targetDoc,
+      KOREAN_FIELDWORK_CATEGORIES.PEN_MEMO,
+      '메모',
+      existingDocuments
+    ),
+    category: KOREAN_FIELDWORK_CATEGORIES.PEN_MEMO,
+    relations: createDepictsRelation(targetDoc),
+    ...getKoreanFieldworkDraftFieldDefaults(KOREAN_FIELDWORK_CATEGORIES.PEN_MEMO),
   },
 });
 
@@ -207,13 +235,25 @@ export const createLayerDraft = (
   sequenceNumber: number
 ): NewDocument => ({
   resource: {
-    identifier: `layer-${Date.now()}-${sequenceNumber}`,
+    identifier: `${getKoreanFieldworkParentDraftIdentifier(parentDoc)} 토층 ${sequenceNumber}`,
     category: KOREAN_FIELDWORK_CATEGORIES.LAYER,
     relations: createKoreanFieldworkChildRelations(parentDoc),
     ...getKoreanFieldworkDraftFieldDefaults(KOREAN_FIELDWORK_CATEGORIES.LAYER),
     layerSequenceNumber: sequenceNumber,
   },
 });
+
+const createLinkedDraftIdentifier = (
+  targetDoc: Document,
+  categoryName: string,
+  fallbackLabel: string,
+  existingDocuments: readonly Document[] = []
+): string => createKoreanFieldworkLinkedDraftIdentifier(
+  targetDoc,
+  categoryName,
+  KOREAN_FIELDWORK_LINKED_IDENTIFIER_LABELS[categoryName] ?? fallbackLabel,
+  existingDocuments
+);
 
 export const createFeatureCandidateDraft = (
   parentDoc: Document,

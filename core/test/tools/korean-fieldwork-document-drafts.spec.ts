@@ -43,6 +43,20 @@ describe('Korean fieldwork document drafts', () => {
             .toBe('1호 수혈 사진 3');
         expect(createKoreanFieldworkLinkedDraftIdentifier(parentDoc, 'SoilProfilePhoto', '토층사진'))
             .toBe('1호 수혈 토층사진 1');
+
+        const operationDoc = createDoc('operation-1', 'Operation', {}, { identifier: '1구역' });
+        const operationDocuments = [
+            createDoc('boundary-1', 'SurveyBoundary', { isRecordedIn: ['operation-1'] }, {
+                identifier: '1구역 조사경계 1'
+            })
+        ];
+
+        expect(createKoreanFieldworkLinkedDraftIdentifier(
+            operationDoc,
+            'SurveyBoundary',
+            '조사경계',
+            operationDocuments
+        )).toBe('1구역 조사경계 2');
     });
 
 

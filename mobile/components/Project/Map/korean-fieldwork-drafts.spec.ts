@@ -2,6 +2,7 @@ import {
   createFeatureCandidateDraft,
   createLayerDraft,
   createOperationDraft,
+  createPenMemoDraft,
   createSoilProfilePhotoDraft,
   createSurveyBoundaryDraft,
   FEATURE_GEOMETRY_EDIT_STATUS_ROUGH_SKETCH,
@@ -200,14 +201,22 @@ describe('Korean fieldwork map drafts', () => {
     const targetDoc = {
       resource: {
         id: 'feature-1',
+        identifier: '1호 수혈',
         category: 'Feature',
       },
     } as any;
 
-    const draft = createSoilProfilePhotoDraft(targetDoc);
+    const draft = createSoilProfilePhotoDraft(targetDoc, [
+      createDocument(
+        'soil-profile-photo-1',
+        'SoilProfilePhoto',
+        { depicts: ['feature-1'] },
+        { identifier: '1호 수혈 토층사진 1' }
+      ),
+    ]);
 
     expect(draft.resource).toMatchObject({
-      identifier: 'soil-profile-photo-1700000000000',
+      identifier: '1호 수혈 토층사진 2',
       category: 'SoilProfilePhoto',
       relations: { depicts: ['feature-1'] },
       soilProfileAnnotationStrokes: '[]',
@@ -223,10 +232,38 @@ describe('Korean fieldwork map drafts', () => {
     });
   });
 
+  it('creates pen memo drafts named from the highlighted document', () => {
+    const targetDoc = {
+      resource: {
+        id: 'feature-1',
+        identifier: '1호 수혈',
+        category: 'Feature',
+      },
+    } as any;
+
+    const draft = createPenMemoDraft(targetDoc, [
+      createDocument(
+        'pen-memo-1',
+        'PenMemo',
+        { depicts: ['feature-1'] },
+        { identifier: '1호 수혈 메모 1' }
+      ),
+    ]);
+
+    expect(draft.resource).toMatchObject({
+      identifier: '1호 수혈 메모 2',
+      category: 'PenMemo',
+      relations: { depicts: ['feature-1'] },
+      penMemoStrokes: '[]',
+      penMemoTranscriptionStatus: 'pending',
+    });
+  });
+
   it('creates Layer drafts with latest-to-earliest numbering and soil color assistance disabled by default', () => {
     const operationDoc = {
       resource: {
         id: 'operation-1',
+        identifier: '1구역',
         category: 'Operation',
         relations: {},
       },
@@ -235,7 +272,7 @@ describe('Korean fieldwork map drafts', () => {
     const draft = createLayerDraft(operationDoc, 1);
 
     expect(draft.resource).toMatchObject({
-      identifier: 'layer-1700000000000-1',
+      identifier: '1구역 토층 1',
       category: 'Layer',
       relations: { isRecordedIn: ['operation-1'] },
       layerSequenceNumber: 1,
@@ -248,6 +285,7 @@ describe('Korean fieldwork map drafts', () => {
     const featureDoc = {
       resource: {
         id: 'feature-1',
+        identifier: '1호 수혈',
         category: 'Feature',
         relations: {
           isRecordedIn: ['operation-1'],
@@ -257,6 +295,7 @@ describe('Korean fieldwork map drafts', () => {
 
     const draft = createLayerDraft(featureDoc, 2);
 
+    expect(draft.resource.identifier).toBe('1호 수혈 토층 2');
     expect(draft.resource.relations).toEqual({
       isRecordedIn: ['operation-1'],
       liesWithin: ['feature-1'],
@@ -446,12 +485,14 @@ describe('Korean fieldwork map drafts', () => {
 const createDocument = (
   id: string,
   category: string,
-  relations: Record<string, string[]> = {}
+  relations: Record<string, string[]> = {},
+  fields: Record<string, any> = {}
 ) => ({
   resource: {
     id,
     identifier: id,
     category,
     relations,
+    ...fields,
   },
 } as any);

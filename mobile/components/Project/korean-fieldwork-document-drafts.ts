@@ -158,10 +158,27 @@ export const createDraftIdentifier = (
 };
 
 const getLinkedIdentifierLabel = (categoryName: string): string | undefined => {
-  if (categoryName === C.PHOTO) return '사진';
-  if (categoryName === C.SOIL_PROFILE_PHOTO) return '토층사진';
+  return KOREAN_FIELDWORK_LINKED_IDENTIFIER_LABELS[categoryName];
+};
 
-  return undefined;
+export const KOREAN_FIELDWORK_LINKED_IDENTIFIER_LABELS: Readonly<Record<string, string>> = {
+  [C.AERIAL_MAP_LAYER]: '지도',
+  [C.DAILY_LOG]: '작업일지',
+  [C.DRAWING]: '도면',
+  [C.FEATURE_GROUP]: '관련유구',
+  [C.FEATURE_SEGMENT]: '피트',
+  [C.FIELD_RECORD_QUALITY_REVIEW]: '보완메모',
+  [C.FIND]: '유물',
+  [C.FIND_COLLECTION]: '유물일괄',
+  [C.LAYER]: '토층',
+  [C.PEN_MEMO]: '메모',
+  [C.PHOTO]: '사진',
+  [C.SAMPLE]: '시료',
+  [C.SOIL_PROFILE_PHOTO]: '토층사진',
+  [C.SOURCE_EVIDENCE_INDEX]: '근거자료',
+  [C.SURVEY]: '지표조사',
+  [C.SURVEY_BOUNDARY]: '조사경계',
+  [C.TRENCH]: '트렌치',
 };
 
 const isFeatureWorkflowCategory = (categoryName: string): boolean =>

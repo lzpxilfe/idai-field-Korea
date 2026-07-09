@@ -405,6 +405,7 @@ function getNextLinkedDraftIdentifierNumber(parentId: string|undefined,
             && (
                 isRelationLinkedToParent(document.resource.relations?.depicts, parentId)
                 || isRelationLinkedToParent(document.resource.relations?.liesWithin, parentId)
+                || isRelationLinkedToParent(document.resource.relations?.isRecordedIn, parentId)
             ))
         .map(document => getLinkedDraftIdentifierSuffixNumber(document.resource.identifier, prefix))
         .filter((value): value is number => value !== undefined);

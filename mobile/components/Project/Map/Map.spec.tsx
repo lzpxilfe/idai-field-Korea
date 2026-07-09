@@ -251,6 +251,129 @@ describe('Map', () => {
     expect(editDocument).not.toHaveBeenCalled();
   });
 
+  it('names bottom-sheet pen memo drafts from the highlighted feature', async () => {
+    const operation = createDoc(C.OPERATION, 'operation-1', { identifier: '1구역' });
+    const feature = createDoc(C.FEATURE, 'feature-1', {
+      identifier: '1호 수혈',
+      relations: { isRecordedIn: ['operation-1'] },
+    });
+    const existingMemo = createDoc(C.PEN_MEMO, 'pen-memo-1', {
+      identifier: '1호 수혈 메모 1',
+      relations: { depicts: ['feature-1'] },
+    });
+    const repository = createRepositoryMock([operation, feature, existingMemo]);
+    const editDocument = jest.fn();
+    (useMapData as jest.Mock).mockReturnValue([
+      [feature],
+      [],
+      undefined,
+      undefined,
+      undefined,
+      jest.fn(),
+      undefined,
+    ]);
+
+    const { getByText } = render(
+      <ConfigurationContext.Provider value={createConfigurationMock() as any}>
+        <PreferencesContext.Provider value={createPreferencesMock() as any}>
+          <Map
+            repository={repository as any}
+            documents={[operation, feature, existingMemo]}
+            selectedDocumentIds={['feature-1']}
+            highlightedDocId="feature-1"
+            addDocument={jest.fn()}
+            addDocumentOfCategory={jest.fn()}
+            editDocument={editDocument}
+            removeDocument={jest.fn()}
+            selectParent={jest.fn()}
+            readinessIssues={[]}
+            investigationModeId="excavation"
+          />
+        </PreferencesContext.Provider>
+      </ConfigurationContext.Provider>
+    );
+
+    await waitFor(() =>
+      expect(getByText('메모').props.accessibilityState.disabled).toBe(false)
+    );
+    fireEvent.press(getByText('메모'));
+
+    await waitFor(() => expect(repository.create).toHaveBeenCalledWith({
+      resource: expect.objectContaining({
+        identifier: '1호 수혈 메모 2',
+        category: C.PEN_MEMO,
+        relations: { depicts: ['feature-1'] },
+      }),
+    }));
+    expect(editDocument).toHaveBeenCalledWith(
+      'survey-boundary-1',
+      C.PEN_MEMO
+    );
+  });
+
+  it('names bottom-sheet soil profile photo drafts from the highlighted feature', async () => {
+    const operation = createDoc(C.OPERATION, 'operation-1', { identifier: '1구역' });
+    const feature = createDoc(C.FEATURE, 'feature-1', {
+      identifier: '1호 수혈',
+      relations: { isRecordedIn: ['operation-1'] },
+    });
+    const existingPhoto = createDoc(C.SOIL_PROFILE_PHOTO, 'soil-photo-1', {
+      identifier: '1호 수혈 토층사진 1',
+      relations: { depicts: ['feature-1'] },
+    });
+    const repository = createRepositoryMock([operation, feature, existingPhoto]);
+    const editDocument = jest.fn();
+    (useMapData as jest.Mock).mockReturnValue([
+      [feature],
+      [],
+      undefined,
+      undefined,
+      undefined,
+      jest.fn(),
+      undefined,
+    ]);
+
+    const { getAllByText } = render(
+      <ConfigurationContext.Provider value={createConfigurationMock() as any}>
+        <PreferencesContext.Provider value={createPreferencesMock() as any}>
+          <Map
+            repository={repository as any}
+            documents={[operation, feature, existingPhoto]}
+            selectedDocumentIds={['feature-1']}
+            highlightedDocId="feature-1"
+            addDocument={jest.fn()}
+            addDocumentOfCategory={jest.fn()}
+            editDocument={editDocument}
+            removeDocument={jest.fn()}
+            selectParent={jest.fn()}
+            readinessIssues={[]}
+            investigationModeId="excavation"
+          />
+        </PreferencesContext.Provider>
+      </ConfigurationContext.Provider>
+    );
+
+    const getSoilProfilePhotoButton = () =>
+      getAllByText('토층사진').find((node) => node.props.accessibilityState);
+
+    await waitFor(() =>
+      expect(getSoilProfilePhotoButton()?.props.accessibilityState.disabled).toBe(false)
+    );
+    fireEvent.press(getSoilProfilePhotoButton()!);
+
+    await waitFor(() => expect(repository.create).toHaveBeenCalledWith({
+      resource: expect.objectContaining({
+        identifier: '1호 수혈 토층사진 2',
+        category: C.SOIL_PROFILE_PHOTO,
+        relations: { depicts: ['feature-1'] },
+      }),
+    }));
+    expect(editDocument).toHaveBeenCalledWith(
+      'survey-boundary-1',
+      C.SOIL_PROFILE_PHOTO
+    );
+  });
+
   it('asks map data to focus all geometry in site overview mode', () => {
     const repository = createRepositoryMock();
 
@@ -318,13 +441,18 @@ const createPreferencesMock = () => ({
   setMapSettings: jest.fn(),
 });
 
-const createDoc = (category: string, id: string): Document => ({
+const createDoc = (
+  category: string,
+  id: string,
+  fields: Record<string, any> = {}
+): Document => ({
   _id: id,
   resource: {
     id,
     identifier: id,
     category,
     relations: {},
+    ...fields,
   },
   created: { user: 'test', date: new Date(0) },
   modified: [],

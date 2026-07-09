@@ -30,7 +30,7 @@ describe('Korean fieldwork document drafts', () => {
   });
 
   it('creates immediately saveable Trench drafts below operation records', () => {
-    const operationDoc = createDoc('operation-1', C.OPERATION);
+    const operationDoc = createDoc('operation-1', C.OPERATION, {}, '1구역');
     const config = allowRelations({
       [`${C.TRENCH}:${C.OPERATION}`]: ['isRecordedIn', 'liesWithin'],
     });
@@ -42,7 +42,7 @@ describe('Korean fieldwork document drafts', () => {
     );
 
     expect(draft).toMatchObject({
-      identifier: 'trench-1700000000000',
+      identifier: '1구역 트렌치 1',
       category: C.TRENCH,
       relations: {
         isRecordedIn: ['operation-1'],
@@ -57,7 +57,7 @@ describe('Korean fieldwork document drafts', () => {
   it('keeps FeatureSegment pit/detail drafts linked to their operation and parent feature', () => {
     const featureDoc = createDoc('feature-1', C.FEATURE, {
       isRecordedIn: ['operation-1'],
-    });
+    }, '1호 주거지');
     const config = allowRelations({
       [`${C.FEATURE_SEGMENT}:${C.FEATURE}`]: ['liesWithin'],
     });
@@ -69,7 +69,7 @@ describe('Korean fieldwork document drafts', () => {
     );
 
     expect(draft).toMatchObject({
-      identifier: 'feature-segment-1700000000000',
+      identifier: '1호 주거지 피트 1',
       category: C.FEATURE_SEGMENT,
       relations: {
         isRecordedIn: ['operation-1'],
@@ -86,7 +86,7 @@ describe('Korean fieldwork document drafts', () => {
   it('keeps legacy FeatureGroup drafts on the same shared feature workflow defaults', () => {
     const trenchDoc = createDoc('trench-1', C.TRENCH, {
       isRecordedIn: ['operation-1'],
-    });
+    }, '1호 트렌치');
     const config = allowRelations({
       [`${C.FEATURE_GROUP}:${C.TRENCH}`]: ['liesWithin'],
     });
@@ -98,7 +98,7 @@ describe('Korean fieldwork document drafts', () => {
     );
 
     expect(draft).toMatchObject({
-      identifier: 'feature-group-1700000000000',
+      identifier: '1호 트렌치 관련유구 1',
       category: C.FEATURE_GROUP,
       relations: {
         isRecordedIn: ['operation-1'],
@@ -255,7 +255,7 @@ describe('Korean fieldwork document drafts', () => {
   it('creates Layer drafts with tablet-friendly sequence defaults', () => {
     const featureDoc = createDoc('feature-1', C.FEATURE, {
       isRecordedIn: ['operation-1'],
-    });
+    }, '1호 주거지');
     const config = allowRelations({
       [`${C.LAYER}:${C.FEATURE}`]: ['liesWithin'],
     });
@@ -267,7 +267,7 @@ describe('Korean fieldwork document drafts', () => {
     );
 
     expect(draft).toMatchObject({
-      identifier: 'layer-1700000000000',
+      identifier: '1호 주거지 토층 1',
       category: C.LAYER,
       relations: {
         isRecordedIn: ['operation-1'],
@@ -353,6 +353,32 @@ describe('Korean fieldwork document drafts', () => {
     });
   });
 
+  it('creates Drawing drafts named from the parent feature', () => {
+    const featureDoc = createDoc('feature-1', C.FEATURE, {}, '1호 수혈');
+    const config = allowRelations({
+      [`${C.DRAWING}:${C.FEATURE}`]: ['depicts'],
+    });
+
+    const draft = createKoreanFieldworkDraftResource(
+      featureDoc,
+      C.DRAWING,
+      config,
+      {
+        existingDocuments: [
+          createDoc('drawing-1', C.DRAWING, { depicts: ['feature-1'] }, '1호 수혈 도면 1'),
+        ],
+      }
+    );
+
+    expect(draft).toMatchObject({
+      identifier: '1호 수혈 도면 2',
+      category: C.DRAWING,
+      relations: { depicts: ['feature-1'] },
+      drawingSketchStrokes: '[]',
+      mediaEvidenceRole: ['fieldResultRecord'],
+    });
+  });
+
   it('numbers the next regular Photo below the same record', () => {
     const featureDoc = createDoc('feature-1', C.FEATURE, {}, '1호 수혈');
     const config = allowRelations({
@@ -376,7 +402,7 @@ describe('Korean fieldwork document drafts', () => {
   });
 
   it('creates SurveyBoundary drafts with operation-level boundary defaults', () => {
-    const operationDoc = createDoc('operation-1', C.OPERATION);
+    const operationDoc = createDoc('operation-1', C.OPERATION, {}, '1구역');
     const config = allowRelations({
       [`${C.SURVEY_BOUNDARY}:${C.OPERATION}`]: ['isRecordedIn'],
     });
@@ -388,7 +414,7 @@ describe('Korean fieldwork document drafts', () => {
     );
 
     expect(draft).toMatchObject({
-      identifier: 'survey-boundary-1700000000000',
+      identifier: '1구역 조사경계 1',
       category: C.SURVEY_BOUNDARY,
       relations: { isRecordedIn: ['operation-1'] },
       surveyBoundaryType: SURVEY_BOUNDARY_TYPE_DEFAULT,
@@ -399,7 +425,7 @@ describe('Korean fieldwork document drafts', () => {
   });
 
   it('creates PenMemo drafts with empty stroke data', () => {
-    const featureDoc = createDoc('feature-1', C.FEATURE);
+    const featureDoc = createDoc('feature-1', C.FEATURE, {}, '1호 수혈');
     const config = allowRelations({
       [`${C.PEN_MEMO}:${C.FEATURE}`]: ['depicts'],
     });
@@ -411,7 +437,7 @@ describe('Korean fieldwork document drafts', () => {
     );
 
     expect(draft).toMatchObject({
-      identifier: 'pen-memo-1700000000000',
+      identifier: '1호 수혈 메모 1',
       category: C.PEN_MEMO,
       relations: { depicts: ['feature-1'] },
       penMemoStrokes: '[]',
