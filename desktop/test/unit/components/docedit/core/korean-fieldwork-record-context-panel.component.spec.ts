@@ -191,7 +191,8 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
             expect(component.getReportHandoffItem()).toMatchObject({
                 documentId: 'feature-1',
                 identifier: 'F1',
-                summary: 'round pit with dark fill'
+                summary: 'round pit with dark fill',
+                bodyPreview: '\uc720\uad6c F1: round pit with dark fill'
             });
             expect(component.getReportHandoffItem()?.copyText).toContain('[\uc720\uad6c] F1');
             expect(component.getReportHandoffItem()?.copyText)

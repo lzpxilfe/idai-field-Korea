@@ -233,6 +233,11 @@
                         <span class="korean-fieldwork-report-handoff-identifier">{{item.identifier}}</span>
                     </span>
                     <span class="korean-fieldwork-report-handoff-text">{{item.summary}}</span>
+                    <span *ngIf="item.bodyPreview"
+                          class="korean-fieldwork-report-handoff-body-preview">
+                        <span>HWP &#48376;&#47928;</span>
+                        <span>{{item.bodyPreview}}</span>
+                    </span>
                     <span class="korean-fieldwork-report-handoff-metrics">
                         <span>{{item.evidenceLabel}}</span>
                         <span [class.warning]="item.issueCount > 0">{{item.issueLabel}}</span>
@@ -304,6 +309,11 @@
                         <span>{{getReportHandoffCopyActionLabel(previewItem)}}</span>
                     </button>
                 </span>
+            </div>
+            <div *ngIf="previewItem.bodyPreview"
+                 class="korean-fieldwork-report-handoff-preview-body">
+                <span>HWP &#48376;&#47928;</span>
+                <span>{{previewItem.bodyPreview}}</span>
             </div>
             <div *ngIf="previewItem.copySections.length > 0"
                  class="korean-fieldwork-report-handoff-copy-sections">

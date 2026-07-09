@@ -52,6 +52,7 @@ export interface KoreanFieldworkReportHandoffItem {
     identifier: string;
     title: string;
     summary: string;
+    bodyPreview: string;
     details: string[];
     relationDetails: string[];
     evidenceLabel: string;
@@ -937,6 +938,7 @@ function makeReportHandoffItem(document: Document, documents: Document[]): Korea
         identifier,
         title,
         summary,
+        bodyPreview: copyTextParts.bodyText,
         details,
         relationDetails,
         evidenceLabel,

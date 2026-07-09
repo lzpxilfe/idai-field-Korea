@@ -80,6 +80,11 @@
             <span>{{reportItem.evidenceLabel}}</span>
             <span [class.warning]="reportItem.issueCount > 0">{{reportItem.issueLabel}}</span>
         </div>
+        <div *ngIf="reportItem.bodyPreview"
+             class="korean-fieldwork-record-context-hwp-body">
+            <span>HWP &#48376;&#47928;</span>
+            <span>{{reportItem.bodyPreview}}</span>
+        </div>
         <div class="korean-fieldwork-record-context-hwp-actions">
             <button type="button"
                     class="korean-fieldwork-record-context-hwp-action primary"

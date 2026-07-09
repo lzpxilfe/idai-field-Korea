@@ -3397,9 +3397,11 @@ function validateReportHandoffPreSaveValidation() {
   }
   if (!coreReportHandoffText.includes('KoreanFieldworkReportHandoffCopySection')
       || !coreReportHandoffText.includes('copySections: makeCopySections')
+      || !coreReportHandoffText.includes('bodyPreview')
       || !coreReportHandoffText.includes('copyAllBodyText')
       || !coreReportHandoffText.includes('getReportBodyCopyText')
       || !coreReportHandoffText.includes('getKoreanFieldworkFieldNoteReportPreview')
+      || !coreReportHandoffSpecText.includes('featureItem?.bodyPreview')
       || !coreReportHandoffSpecText.includes('copyAllBodyText')
       || !coreReportHandoffSpecText.includes("section.id === 'body'")
       || !coreReportHandoffSpecText.includes('copySections.map(section => section.id)')) {
@@ -3617,10 +3619,15 @@ function validateReportHandoffPreSaveValidation() {
   }
   if (!desktopPriorityStripTemplateText.includes('previewItem.copySections')
       || !desktopPriorityStripTemplateText.includes('korean-fieldwork-report-handoff-copy-section')
+      || !desktopPriorityStripTemplateText.includes('item.bodyPreview')
+      || !desktopPriorityStripTemplateText.includes('previewItem.bodyPreview')
       || !desktopPriorityStripText.includes('copyReportHandoffSection')
       || !desktopPriorityStripText.includes('getReportHandoffSectionCopyActionLabel')
+      || !desktopPriorityStripStyleText.includes('.korean-fieldwork-report-handoff-body-preview')
+      || !desktopPriorityStripStyleText.includes('.korean-fieldwork-report-handoff-preview-body')
       || !desktopPriorityStripStyleText.includes('.korean-fieldwork-report-handoff-copy-section')
       || !desktopPriorityStripSpecText.includes('copyReportHandoffSection')
+      || !desktopPriorityStripSpecText.includes('featureItem.bodyPreview')
       || !desktopPriorityStripSpecText.includes('evidenceSection.copyText')) {
     findings.push('desktop report handoff preview must support section-level HWP copy buttons for selective pasting');
   }
@@ -3629,8 +3636,11 @@ function validateReportHandoffPreSaveValidation() {
       || !desktopRecordContextText.includes('copyReportHandoffSection')
       || !desktopRecordContextTemplateText.includes('korean-fieldwork-record-context-hwp')
       || !desktopRecordContextTemplateText.includes('reportItem.copySections')
+      || !desktopRecordContextTemplateText.includes('reportItem.bodyPreview')
       || !desktopRecordContextStyleText.includes('.korean-fieldwork-record-context-hwp')
+      || !desktopRecordContextStyleText.includes('.korean-fieldwork-record-context-hwp-body')
       || !desktopRecordContextSpecText.includes('exposes current record HWP copy blocks in the desktop record context')
+      || !desktopRecordContextSpecText.includes('bodyPreview')
       || !desktopRecordContextSpecText.includes('copyReportHandoffSection')) {
     findings.push('desktop record context panel must expose current-record HWP copy blocks using the shared handoff contract');
   }
