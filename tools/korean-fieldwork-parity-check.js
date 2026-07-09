@@ -3805,6 +3805,12 @@ function validateTabletInstallGuide() {
       || !desktopInstallDocText.includes('`본문 복사`')) {
     findings.push('root README and desktop install guide must document direct Field Desktop HWP body copy before BridgeDesk fallback tooling');
   }
+  if (!readTextFile('tools/bridgedesk/tools/make_visual_assets.py').includes('make_readme_field_desktop_screenshot')
+      || !readTextFile('tools/bridgedesk/tools/make_visual_assets.py').includes('readme-field-desktop-hwp-copy.png')
+      || !readTextFile('tools/bridgedesk/tools/make_visual_assets.py').includes('본문 복사')
+      || !readTextFile('tools/bridgedesk/pyproject.toml').includes('Pillow')) {
+    findings.push('README HWP screenshot generation must stay tied to the direct Field Desktop body-copy flow and declare its Pillow dependency');
+  }
   if (!rootReadmeText.includes('태블릿 자료를 데스크톱으로 받기')
       || !rootReadmeText.includes('Field Hub 동기화')
       || !rootReadmeText.includes('original_image')
