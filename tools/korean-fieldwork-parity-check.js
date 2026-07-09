@@ -3684,6 +3684,7 @@ function validateTabletInstallGuide() {
   const findings = [];
   const rootReadmeText = readTextFile('README.md');
   const tabletInstallDocText = readTextFile('docs/korean-fieldwork/android-tablet-install.ko.md');
+  const desktopInstallDocText = readTextFile('docs/korean-fieldwork/field-desktop-install.ko.md');
   const desktopStartShortcutText = readTextFile('START_FIELD_DESKTOP.cmd');
   const desktopStartOtherDriveShortcutText = readTextFile('START_FIELD_DESKTOP_TO_OTHER_DRIVE.cmd');
   const desktopStartScriptText = readTextFile('run-idai-field-ko.ps1');
@@ -3798,6 +3799,11 @@ function validateTabletInstallGuide() {
   if (!rootReadmeText.includes('Field Desktop의 `보고서/HWP 복사` 패널')
       || !rootReadmeText.includes('일반 텍스트 클립보드')) {
     findings.push('root README must explain the tablet-to-Field-Desktop-to-HWP copy flow without making BridgeDesk the primary destination');
+  }
+  if (!rootReadmeText.includes('`본문 복사`')
+      || !rootReadmeText.includes('보고서/HWP 복사 기능은 Field Desktop 안에서 우선 사용')
+      || !desktopInstallDocText.includes('`본문 복사`')) {
+    findings.push('root README and desktop install guide must document direct Field Desktop HWP body copy before BridgeDesk fallback tooling');
   }
   if (!rootReadmeText.includes('태블릿 자료를 데스크톱으로 받기')
       || !rootReadmeText.includes('Field Hub 동기화')
