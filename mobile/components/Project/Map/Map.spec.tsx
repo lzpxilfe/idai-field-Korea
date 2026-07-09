@@ -214,6 +214,59 @@ describe('Map', () => {
     );
   });
 
+  it('continues feature creation from the highlighted feature parent in trial trench mode', async () => {
+    const operation = createDoc(C.OPERATION, 'operation-1');
+    const trench = createDoc(C.TRENCH, 'trench-1', {
+      relations: { isRecordedIn: ['operation-1'] },
+    });
+    const feature = createDoc(C.FEATURE, 'feature-1', {
+      relations: {
+        isRecordedIn: ['operation-1'],
+        liesWithin: ['trench-1'],
+      },
+    });
+    const boundary = createDoc(C.SURVEY_BOUNDARY, 'boundary-1');
+    const addDocumentOfCategory = jest.fn();
+    (useMapData as jest.Mock).mockReturnValue([
+      [boundary, feature],
+      [],
+      undefined,
+      undefined,
+      undefined,
+      jest.fn(),
+      undefined,
+    ]);
+
+    const { getAllByText } = render(
+      <ConfigurationContext.Provider value={createConfigurationMock() as any}>
+        <PreferencesContext.Provider value={createPreferencesMock() as any}>
+          <Map
+            repository={createRepositoryMock([operation, trench, feature]) as any}
+            documents={[operation, trench, feature, boundary]}
+            selectedDocumentIds={['operation-1']}
+            highlightedDocId="feature-1"
+            addDocument={jest.fn()}
+            addDocumentOfCategory={addDocumentOfCategory}
+            editDocument={jest.fn()}
+            removeDocument={jest.fn()}
+            selectParent={jest.fn()}
+            readinessIssues={[]}
+            investigationModeId="trialTrench"
+          />
+        </PreferencesContext.Provider>
+      </ConfigurationContext.Provider>
+    );
+
+    await waitFor(() => expect(getAllByText('유구 추가').length).toBeGreaterThan(0));
+
+    fireEvent.press(getAllByText('유구 추가')[0]);
+
+    expect(addDocumentOfCategory).toHaveBeenCalledWith(
+      trench,
+      C.FEATURE
+    );
+  });
+
   it('keeps users on the white map workspace after saving a hand-drawn boundary', async () => {
     const editDocument = jest.fn();
     const repository = createRepositoryMock();

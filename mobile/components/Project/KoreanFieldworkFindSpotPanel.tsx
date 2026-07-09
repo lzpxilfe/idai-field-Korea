@@ -267,10 +267,13 @@ const KoreanFieldworkFindSpotPanel: React.FC<Props> = ({
   const finishViewportGesture = (event?: GestureResponderEvent) => {
     const tapGesture = tapGestureRef.current;
     const point = event ? getPrimaryTouchPoint(event) : undefined;
+    const fallbackPoint = point ?? tapGesture?.start;
     const shouldAddPoint = !!tapGesture
-      && !!point
+      && !!fallbackPoint
       && !didMoveGestureRef.current
-      && getPixelDistance(tapGesture.start, point) <= FIND_SPOT_TAP_DISTANCE;
+      && getPixelDistance(tapGesture.start, fallbackPoint) <= FIND_SPOT_TAP_DISTANCE;
+    const pointToAdd = shouldAddPoint ? fallbackPoint : undefined;
+    const viewportToAdd = tapGesture?.viewport ?? normalizedViewport;
 
     pinchGestureRef.current = undefined;
     panGestureRef.current = undefined;
@@ -279,7 +282,7 @@ const KoreanFieldworkFindSpotPanel: React.FC<Props> = ({
     setViewport((currentViewport) =>
       normalizeFindSpotViewport(currentViewport, canvasSize));
 
-    if (shouldAddPoint) addPoint(event as GestureResponderEvent);
+    if (pointToAdd) addPointFromPixelPoint(pointToAdd, viewportToAdd);
   };
   const resetViewport = () => {
     pinchGestureRef.current = undefined;
@@ -288,8 +291,11 @@ const KoreanFieldworkFindSpotPanel: React.FC<Props> = ({
     didMoveGestureRef.current = false;
     setViewport(DEFAULT_FIND_SPOT_VIEWPORT);
   };
-  const addPoint = (event: GestureResponderEvent) => {
-    const point = getNormalizedPoint(event, canvasSize, normalizedViewport);
+  const addPointFromPixelPoint = (
+    pixelPoint: PixelPoint,
+    viewportForPoint: FindSpotViewport
+  ) => {
+    const point = getNormalizedPoint(pixelPoint, canvasSize, viewportForPoint);
     if (!point) return;
 
     writeItems(
@@ -757,13 +763,10 @@ const SketchLineSegment: React.FC<{
 };
 
 const getNormalizedPoint = (
-  event: GestureResponderEvent,
+  touchPoint: PixelPoint,
   canvasSize: CanvasSize,
   viewport: FindSpotViewport
 ): SketchPoint | undefined => {
-  const touchPoint = getPrimaryTouchPoint(event);
-  if (!touchPoint) return undefined;
-
   const { x, y } = screenToViewportContentPoint(
     touchPoint,
     canvasSize,

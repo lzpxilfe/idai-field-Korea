@@ -95,6 +95,43 @@ describe('KoreanFieldworkFindSpotPanel', () => {
     ]);
   });
 
+  it('adds a sample spot when Android release coordinates are missing', () => {
+    const onUpdateResourceFields = jest.fn();
+    const feature = createFeature();
+    const sampleResource = createSampleResource();
+    const { getByTestId } = render(
+      <KoreanFieldworkFindSpotPanel
+        documents={[feature]}
+        parentDocument={feature}
+        resource={sampleResource}
+        onUpdateResourceFields={onUpdateResourceFields}
+      />
+    );
+    const canvas = getByTestId('findSpotCanvas');
+
+    fireEvent(canvas, 'layout', {
+      nativeEvent: { layout: { height: 200, width: 400 } },
+    });
+    fireEvent(canvas, 'responderGrant', {
+      nativeEvent: { locationX: 300, locationY: 120 },
+    });
+    fireEvent(canvas, 'responderRelease', {
+      nativeEvent: {},
+    });
+
+    expect(onUpdateResourceFields).toHaveBeenCalledTimes(1);
+    const updates = onUpdateResourceFields.mock.calls[0][0];
+    const payload = JSON.parse(updates[KOREAN_FIELDWORK_FIND_SPOT_FIELDS.items]);
+
+    expect(payload.items).toMatchObject([
+      {
+        label: '',
+        number: 1,
+        point: { x: 75, y: 60 },
+      },
+    ]);
+  });
+
   it('uses sample wording for existing sample spot labels', () => {
     const feature = createFeature();
     const sampleResource = createSampleResource({

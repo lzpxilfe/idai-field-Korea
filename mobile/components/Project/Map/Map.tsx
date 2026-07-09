@@ -948,6 +948,9 @@ const getFeatureCandidateParent = (
   documents: Document[],
   investigationModeId?: KoreanFieldworkInvestigationModeId
 ): Document | undefined => {
+  const usesTrenchWorkflow =
+    shouldUseKoreanFieldworkTrenchWorkflow(investigationModeId);
+
   if (highlightedDoc) {
     if (highlightedDoc.resource.category === KOREAN_FIELDWORK_CATEGORIES.OPERATION) {
       return highlightedDoc;
@@ -955,15 +958,69 @@ const getFeatureCandidateParent = (
 
     if (
       highlightedDoc.resource.category === KOREAN_FIELDWORK_CATEGORIES.TRENCH
-      && shouldUseKoreanFieldworkTrenchWorkflow(investigationModeId)
+      && usesTrenchWorkflow
     ) {
       return highlightedDoc;
+    }
+
+    if (highlightedDoc.resource.category === KOREAN_FIELDWORK_CATEGORIES.FEATURE) {
+      const parentCategoryPreference = usesTrenchWorkflow
+        ? [
+          KOREAN_FIELDWORK_CATEGORIES.TRENCH,
+          KOREAN_FIELDWORK_CATEGORIES.OPERATION,
+        ]
+        : [
+          KOREAN_FIELDWORK_CATEGORIES.OPERATION,
+          KOREAN_FIELDWORK_CATEGORIES.TRENCH,
+        ];
+      const relatedParent = findRelatedDocumentByCategory(
+        highlightedDoc,
+        documents,
+        parentCategoryPreference
+      );
+      if (relatedParent) return relatedParent;
     }
   }
 
   return documents.find(
     (document) => document.resource.category === KOREAN_FIELDWORK_CATEGORIES.OPERATION
   );
+};
+
+const findRelatedDocumentByCategory = (
+  document: Document,
+  documents: Document[],
+  categoryPreference: string[]
+): Document | undefined => {
+  const documentsById = new globalThis.Map(documents.map((candidate) => [
+    candidate.resource.id,
+    candidate,
+  ]));
+  const relationTargets = getFeatureParentRelationTargets(document);
+
+  for (const categoryName of categoryPreference) {
+    const relatedDocument = relationTargets
+      .map((documentId) => documentsById.get(documentId))
+      .find((candidate) => candidate?.resource.category === categoryName);
+    if (relatedDocument) return relatedDocument;
+  }
+
+  return undefined;
+};
+
+const getFeatureParentRelationTargets = (document: Document): string[] => {
+  const relations = document.resource.relations as
+    | Record<string, unknown>
+    | undefined;
+  if (!relations) return [];
+
+  return ['liesWithin', 'isRecordedIn']
+    .flatMap((relationName) => {
+      const targets = relations[relationName];
+      return Array.isArray(targets)
+        ? targets.filter((target): target is string => typeof target === 'string')
+        : [];
+    });
 };
 
 const appendGeometryRevisionHistory = (
