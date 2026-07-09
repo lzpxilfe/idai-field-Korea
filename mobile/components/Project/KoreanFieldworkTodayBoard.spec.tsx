@@ -75,7 +75,7 @@ describe('KoreanFieldworkTodayBoard', () => {
     );
 
     fireEvent.press(getByText('오늘 일지'));
-    fireEvent.press(getByText('유구 추가'));
+    fireEvent.press(getByText('유구 기록'));
 
     expect(handleOpenDocument).toHaveBeenCalledWith(dailyLog);
     expect(handleOpenDocument).toHaveBeenCalledWith(feature);

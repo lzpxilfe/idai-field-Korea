@@ -574,8 +574,8 @@ const getFeatureQuickActionLabel = (
   targets: KoreanFieldworkTodayActionTargets,
   investigationModeId?: KoreanFieldworkInvestigationModeId
 ): string => {
-  if (investigationModeId !== 'trialTrench') return '유구 추가';
   if (targets.featureCandidate) return '유구 기록';
+  if (investigationModeId !== 'trialTrench') return '유구 추가';
   if (targets.featureDraftParent) return '유구 확인';
   return '트렌치 추가';
 };

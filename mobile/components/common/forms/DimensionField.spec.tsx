@@ -4,6 +4,16 @@ import React from 'react';
 import { ToastProvider } from '../Toast/ToastProvider';
 import DimensionField from './DimensionField';
 
+jest.mock('@/contexts/preferences-context', () => {
+  const React = require('react');
+
+  return {
+    PreferencesContext: React.createContext({
+      preferences: { languages: ['en'] },
+    }),
+  };
+});
+
 const fieldName = 'dimension';
 const mockField: Field = {
   name: fieldName,

@@ -162,10 +162,10 @@ describe('KoreanFieldworkQuickRecordPanel', () => {
       '처음부터 모두 채울 필요 없습니다. 조사 진행 중 확인한 항목부터 계속 보완하세요.'
     )).toBeTruthy();
     expect(getByText('가마 부위')).toBeTruthy();
-    expect(getByText('구조·피열')).toBeTruthy();
-    expect(getByText('연소부')).toBeTruthy();
-    expect(getByText('소성부')).toBeTruthy();
-    expect(getByText('연도부')).toBeTruthy();
+    expect(getByText('구조·소열')).toBeTruthy();
+    expect(getByText('연소부 기록')).toBeTruthy();
+    expect(getByText('소성부 기록')).toBeTruthy();
+    expect(getByText('연도부 기록')).toBeTruthy();
 
     fireEvent.press(getByTestId('quickRecordOption_combustionPartRecorded'));
 
@@ -243,7 +243,7 @@ describe('KoreanFieldworkQuickRecordPanel', () => {
 
     expect(getByText('목책열')).toBeTruthy();
     expect(getByText('목책열 조사')).toBeTruthy();
-    expect(getByText('주간거리')).toBeTruthy();
+    expect(getByText('주간거리 확인')).toBeTruthy();
   });
 
   it('updates the feature period from the optional quick setup', () => {
@@ -317,7 +317,7 @@ describe('KoreanFieldworkQuickRecordPanel', () => {
     );
 
     expect(getByPlaceholderText(
-      '가마 관찰 - 가마 부위: 화구, 연소부, 소성부, 연도부 / 구조·피열: 평면형, 규모, 소성·연소 비율, 화염 흐름 / 야장 근거: 평면·단면 스케치 번호, 약측값, 사진·도면 번호, 성격 미정/추정 사유'
+      '가마 관찰- 가마 부위: 화구 기록, 연소부 기록, 소성부 기록, 연도부 기록 / 구조·소열: 평면형 기록, 규모 기록, 소성·연소 비율, 화염 흐름 / 현장 근거: 평면·단면 스케치 번호, 실측값, 사진·도면 번호, 성격 미정/추정 사유'
     )).toBeTruthy();
   });
 

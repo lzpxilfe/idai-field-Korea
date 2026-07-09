@@ -35,6 +35,34 @@ describe('Korean fieldwork today actions', () => {
     });
   });
 
+  it('labels existing feature candidates as records instead of new additions', () => {
+    const operation = createDoc('operation-1', C.OPERATION);
+    const candidate = createDoc('feature-1', C.FEATURE, {
+      featureRecordingStatus: 'candidate',
+    });
+    const summary = createSummary({
+      featureCandidates: [candidate],
+    });
+    const targets = getKoreanFieldworkTodayActionTargets(
+      summary as any,
+      [operation, candidate] as any,
+      'excavation'
+    );
+
+    expect(getKoreanFieldworkQuickActionStates(
+      summary as any,
+      targets,
+      undefined,
+      'excavation'
+    ).featureCandidate).toMatchObject({
+      label: '유구 기록',
+      action: {
+        type: 'openDocument',
+        documentId: 'feature-1',
+      },
+    });
+  });
+
   it('uses trench before operation for new feature candidates in trial trench mode', () => {
     const operation = createDoc('operation-1', C.OPERATION);
     const featureGroup = createDoc('feature-group-1', C.FEATURE_GROUP);

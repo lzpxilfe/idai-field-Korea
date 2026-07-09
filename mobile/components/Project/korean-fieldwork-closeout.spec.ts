@@ -472,7 +472,7 @@ describe('Korean fieldwork closeout summary', () => {
     expect(summary.issues[0]).toMatchObject({
       documentId: 'memo-1',
       ruleId: 'pen-memo-handwriting-transcription',
-      message: '태블릿 손글씨 현장 메모가 아직 전사되지 않았습니다. 손그림 메모 1획 1점',
+      message: '태블릿 손글씨 야장 메모가 아직 전사되지 않았습니다. 스케치 메모 1획/1점.',
     });
     expect(summary.issues[0].recommendedAction).toContain(
       '태블릿 손글씨 원자료'

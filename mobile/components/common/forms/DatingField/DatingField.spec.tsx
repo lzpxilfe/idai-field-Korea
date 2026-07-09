@@ -4,6 +4,16 @@ import React from 'react';
 import { IS_IMPRECISE_ID, IS_UNCERTAIN_ID, SOURCE_TEST_ID } from './constants';
 import DatingField from './DatingField';
 
+jest.mock('../../../../contexts/preferences-context', () => {
+  const React = require('react');
+
+  return {
+    PreferencesContext: React.createContext({
+      preferences: { languages: ['en'] },
+    }),
+  };
+});
+
 const fieldName = 'dating';
 const mockField: Field = {
   name: fieldName,
