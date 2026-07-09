@@ -4,8 +4,6 @@ import {
   CategoryForm,
   Document,
   Resource,
-  getKoreanFieldworkReportHandoffSaveMessage,
-  validateKoreanFieldworkReportHandoffCandidate,
 } from 'idai-field-core';
 import React, { useContext, useEffect, useMemo, useState } from 'react';
 import { Keyboard, StyleSheet, Text, View } from 'react-native';
@@ -123,23 +121,9 @@ const DocumentEdit: React.FC = () => {
 
   const editDocument = () => {
     if (document && resource) {
-      const reportHandoffValidation = validateKoreanFieldworkReportHandoffCandidate(
-        resource,
-        documents ?? []
-      );
       repository
         ?.update({ ...document, resource })
         .then((doc) => {
-          if (reportHandoffValidation.status === 'review') {
-            showToast(
-              ToastType.Info,
-              getKoreanFieldworkReportHandoffSaveMessage(
-                'HWP 보고서로 넘기기 전에 보완할 항목이 있습니다.',
-                reportHandoffValidation
-              ),
-              5000
-            );
-          }
           navigateToKoreanFieldworkReturnTarget(returnTarget, doc.resource.id);
         })
         .catch((err) => {

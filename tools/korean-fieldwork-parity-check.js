@@ -3365,17 +3365,19 @@ function validateReportHandoffPreSaveValidation() {
       || !coreReportHandoffText.includes('MEDIA_URI_FIELDS')) {
     findings.push('core report handoff must expose reusable pre-save validation for tablet and desktop report copy readiness');
   }
-  if (!coreReportHandoffSpecText.includes('tablet save warnings for desktop HWP handoff gaps')
+  if (!coreReportHandoffSpecText.includes('builds concrete desktop HWP handoff review details')
       || !coreReportHandoffSpecText.includes('validation.copySections')
       || !coreReportHandoffSpecText.includes('validation.copyBodyText')
       || !coreReportHandoffSpecText.includes('HWP \\ubcf8\\ubb38 \\ubbf8\\ub9ac\\ubcf4\\uae30')
-      || !tabletAddText.includes('getKoreanFieldworkReportHandoffSaveMessage')
-      || !tabletEditText.includes('getKoreanFieldworkReportHandoffSaveMessage')
-      || !mobileDocumentAddSpecText.includes('HWP 본문 미리보기')
-      || !mobileDocumentEditSpecText.includes('HWP 본문 미리보기')
+      || !mobileDocumentAddSpecText.includes('keeps tablet draft saves quiet even when later HWP handoff will need review')
+      || !mobileDocumentEditSpecText.includes('keeps tablet edit saves quiet even when later HWP handoff will need review')
+      || tabletAddText.includes('HWP 보고서로 넘기기 전에')
+      || tabletEditText.includes('HWP 보고서로 넘기기 전에')
+      || tabletAddText.includes('getKoreanFieldworkReportHandoffSaveMessage')
+      || tabletEditText.includes('getKoreanFieldworkReportHandoffSaveMessage')
       || tabletAddText.includes('getReportHandoffSaveMessage')
       || tabletEditText.includes('getReportHandoffSaveMessage')) {
-    findings.push('tablet save flows must use the shared core HWP handoff save message, including concrete review details');
+    findings.push('tablet save flows must stay quiet about HWP handoff while core and desktop keep concrete report review details');
   }
   if (!tabletPackageText.includes('"test:ci": "jest --watchAll=false --runInBand"')
       || !tabletWorkflowText.includes('mobile-handoff-tests')
@@ -3588,11 +3590,12 @@ function validateReportHandoffPreSaveValidation() {
     ['tablet add screen', tabletAddText],
     ['tablet edit screen', tabletEditText]
   ]) {
-    if (!text.includes('validateKoreanFieldworkReportHandoffCandidate')
-        || !text.includes('getKoreanFieldworkReportHandoffSaveMessage')
-        || !text.includes("reportHandoffValidation.status === 'review'")
-        || !text.includes('ToastType.Info')) {
-      findings.push(`${label} must validate desktop report handoff before saving tablet records`);
+    if (text.includes('validateKoreanFieldworkReportHandoffCandidate')
+        || text.includes('getKoreanFieldworkReportHandoffSaveMessage')
+        || text.includes("reportHandoffValidation.status === 'review'")
+        || text.includes('ToastType.Info')
+        || text.includes('HWP 보고서로 넘기기 전에')) {
+      findings.push(`${label} must not interrupt field saves with desktop HWP handoff checks`);
     }
   }
   if (tabletAddText.includes('기록을 만들었습니다')

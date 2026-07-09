@@ -980,7 +980,7 @@ describe('Korean fieldwork report handoff', () => {
     });
 
 
-    it('adds concrete tablet save warnings for desktop HWP handoff gaps', () => {
+    it('builds concrete desktop HWP handoff review details', () => {
 
         const validation = validateKoreanFieldworkReportHandoffCandidate({
             identifier: 'photo-001',
@@ -1002,7 +1002,7 @@ describe('Korean fieldwork report handoff', () => {
     });
 
 
-    it('keeps tablet HWP body previews compact for save messages', () => {
+    it('keeps HWP body previews compact for review messages', () => {
 
         const message = getKoreanFieldworkReportHandoffValidationCopyPreviewMessage({
             status: 'ready',
@@ -1020,7 +1020,7 @@ describe('Korean fieldwork report handoff', () => {
     });
 
 
-    it('keeps tablet save messages quiet when a record is not part of HWP handoff', () => {
+    it('keeps non-handoff review messages unchanged', () => {
 
         const validation = validateKoreanFieldworkReportHandoffCandidate({
             identifier: 'term-001',

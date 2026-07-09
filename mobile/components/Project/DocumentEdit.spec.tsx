@@ -23,7 +23,7 @@ import { PreferencesContext } from '@/contexts/preferences-context';
 import { Preferences } from '@/models/preferences';
 import { DocumentRepository } from '@/repositories/document-repository';
 import loadConfiguration from '@/services/config/load-configuration';
-import { ToastProvider, ToastType } from '@/components/common/Toast/ToastProvider';
+import { ToastProvider } from '@/components/common/Toast/ToastProvider';
 import { ProjectContext } from '@/contexts/project-context';
 import DocumentEdit from '@/app/(tabs)/ProjectScreen/DocumentEdit';
 import { defaultMapSettings } from '@/components/Project/Map/map-settings';
@@ -270,7 +270,7 @@ describe('DocumentEdit', () => {
     );
   });
 
-  it('shows desktop HWP handoff details after saving tablet edits that need review', async () => {
+  it('keeps tablet edit saves quiet even when later HWP handoff will need review', async () => {
     cleanup();
     mockUseGlobalSearchParams.mockReturnValue({
       docId: t2.resource.id,
@@ -285,17 +285,9 @@ describe('DocumentEdit', () => {
     await waitFor(() => renderAPI.getByTestId('documentForm'));
     fireEvent.press(renderAPI.getByTestId('editDocBtn'));
 
-    await waitFor(() => expect(mockShowToast).toHaveBeenCalled());
-
-    expect(mockShowToast.mock.calls[0][0]).toBe(ToastType.Info);
-    expect(mockShowToast.mock.calls[0][2]).toBe(5000);
-
-    const toastMessage = mockShowToast.mock.calls[0][1];
-    expect(toastMessage).not.toContain('기록을 저장했습니다');
-    expect(toastMessage).toContain('HWP');
-    expect(toastMessage).toContain('보완 항목');
-    expect(toastMessage).toContain('HWP 본문 미리보기');
-    expect(toastMessage).toContain('상위 조사구역');
+    await waitFor(() => expect(repository.update).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledTimes(1));
+    expect(mockShowToast).not.toHaveBeenCalled();
   });
 });
 
