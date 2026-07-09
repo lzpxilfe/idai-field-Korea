@@ -1,4 +1,4 @@
-export {
+import {
     canReviseKoreanFieldworkIdentifier,
     getKoreanFieldworkFieldIdentifier,
     getKoreanFieldworkIdentifierRevisionHistory,
@@ -6,6 +6,15 @@ export {
     getKoreanFieldworkReportIdentifier,
     KOREAN_FIELDWORK_IDENTIFIER_REVISION_CATEGORIES
 } from 'idai-field-core';
+
+export {
+    canReviseKoreanFieldworkIdentifier,
+    getKoreanFieldworkFieldIdentifier,
+    getKoreanFieldworkIdentifierRevisionHistory,
+    getKoreanFieldworkIdentifierRevisionUpdates,
+    getKoreanFieldworkReportIdentifier,
+    KOREAN_FIELDWORK_IDENTIFIER_REVISION_CATEGORIES
+};
 
 export type {
     KoreanFieldworkIdentifierRevision,

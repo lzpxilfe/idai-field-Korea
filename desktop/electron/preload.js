@@ -37,6 +37,7 @@ const eventChannels = new Set([
     'menuItemClicked',
     'requestClose',
     'resetApp',
+    'seedKoreanFieldworkReportHandoff',
     'settingChanged',
     'updateDownloaded'
 ]);

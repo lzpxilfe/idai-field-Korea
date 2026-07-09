@@ -30,6 +30,7 @@ import {
     isKoreanFieldworkProject,
     isKoreanFieldworkProjectSetupFilledIn
 } from '../../util/korean-fieldwork-project-setup';
+import type { KoreanFieldworkInvestigationModeId } from '../../util/korean-fieldwork-project-setup';
 import {
     getKoreanFieldworkSatelliteMapProviderNotice,
     hasKoreanFieldworkSatelliteMapDisplayKey
@@ -65,7 +66,7 @@ export class SettingsComponent implements OnInit, AfterViewChecked {
     public existingBackupsSizeLabel: string;
     public estimatedBackupsSizeLabel: string;
     public projectDocument: Document|undefined;
-    public koreanInvestigationMode: string = KOREAN_FIELDWORK_DEFAULT_INVESTIGATION_MODE;
+    public koreanInvestigationMode: KoreanFieldworkInvestigationModeId = KOREAN_FIELDWORK_DEFAULT_INVESTIGATION_MODE;
     public koreanBoundarySummary: string = '';
     public koreanProjectSetupSaved: boolean = false;
     public readonly koreanInvestigationModes = KOREAN_FIELDWORK_INVESTIGATION_MODES;
@@ -195,7 +196,7 @@ export class SettingsComponent implements OnInit, AfterViewChecked {
         getKoreanFieldworkSatelliteMapProviderNotice(this.settings?.mapProviderSettings);
 
 
-    public setKoreanInvestigationMode(modeId: string) {
+    public setKoreanInvestigationMode(modeId: KoreanFieldworkInvestigationModeId) {
 
         this.koreanInvestigationMode = modeId;
         this.koreanProjectSetupSaved = false;

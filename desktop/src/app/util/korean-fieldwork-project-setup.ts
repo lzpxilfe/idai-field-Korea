@@ -22,6 +22,7 @@ export interface KoreanFieldworkInvestigationModeOption {
 }
 
 export type { KoreanFieldworkProjectSetupDefaults } from 'idai-field-core';
+export type { KoreanFieldworkInvestigationModeId } from 'idai-field-core';
 
 export const KOREAN_FIELDWORK_DEFAULT_INVESTIGATION_MODE = SHARED_DEFAULT_INVESTIGATION_MODE;
 export const KOREAN_FIELDWORK_PROJECT_INVESTIGATION_MODE_FIELD = SHARED_INVESTIGATION_MODE_FIELD;

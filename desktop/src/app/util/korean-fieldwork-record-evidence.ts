@@ -1,6 +1,10 @@
-export {
+import {
     getKoreanFieldworkEvidenceChips
 } from 'idai-field-core';
+
+export {
+    getKoreanFieldworkEvidenceChips
+};
 
 export type {
     KoreanFieldworkEvidenceChip

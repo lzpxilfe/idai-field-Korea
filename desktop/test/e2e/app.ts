@@ -57,7 +57,8 @@ export function stop(): Promise<any> {
 
 export async function getUrl(): Promise<string> {
 
-    return window.evaluate(() => require('@electron/remote').getCurrentWindow().webContents.getURL());
+    return electronApp.evaluate(({ BrowserWindow }) =>
+        BrowserWindow.getAllWindows()[0].webContents.getURL());
 }
 
 
@@ -65,9 +66,8 @@ export async function navigateTo(menu) {
 
     await pause(100);
 
-    return window.evaluate((menuOption) => {
-        require('@electron/remote').getCurrentWindow().webContents
-            .send('menuItemClicked', menuOption);
+    return electronApp.evaluate(({ BrowserWindow }, menuOption) => {
+        BrowserWindow.getAllWindows()[0].webContents.send('menuItemClicked', menuOption);
     }, menu);
 }
 
@@ -80,8 +80,20 @@ export async function resetApp() {
 
 export async function sendMessageToAppController(message: string) {
 
-    await window.evaluate(value => require('@electron/remote').getCurrentWindow().webContents.send(value), message);
-    return waitForExist("//span[@class='message-content' and contains(text(), 'Erfolgreich ausgeführt')]", 120000);
+    const messageCountBefore = await getLocator('.message-content').count();
+
+    await electronApp.evaluate(({ BrowserWindow }, value) => {
+        BrowserWindow.getAllWindows()[0].webContents.send(value);
+    }, message);
+
+    const timeout = 120000;
+    const deadline = Date.now() + timeout;
+    while (Date.now() < deadline) {
+        if (await getLocator('.message-content').count() > messageCountBefore) return;
+        await pause(250);
+    }
+
+    throw new Error(`Timed out waiting for app controller message after ${message}`);
 }
 
 
@@ -100,6 +112,12 @@ export function getAppDataPath(): Promise<string> {
 export function getLocator(selector: string) {
 
     return window.locator(selector);
+}
+
+
+export function readClipboardText(): Promise<string> {
+
+    return electronApp.evaluate(({ clipboard }) => clipboard.readText());
 }
 
 /**
@@ -265,6 +283,6 @@ export function pause(milliseconds) {
 
 function getGlobal(globalName: string): Promise<any> {
 
-    return window.evaluate(value => require('@electron/remote').getGlobal(value), globalName);
+    return electronApp.evaluate((_, value) => (globalThis as any)[value], globalName);
 }
 

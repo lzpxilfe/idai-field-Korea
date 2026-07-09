@@ -3350,6 +3350,9 @@ function validateReportHandoffPreSaveValidation() {
   );
   const desktopHwpClipboardText = readTextFile('desktop/src/app/util/korean-fieldwork-hwp-clipboard.ts');
   const desktopHwpClipboardSpecText = readTextFile('desktop/test/unit/util/korean-fieldwork-hwp-clipboard.spec.ts');
+  const desktopE2eAppText = readTextFile('desktop/test/e2e/app.ts');
+  const desktopAppControllerText = readTextFile('desktop/src/app/services/app-controller.ts');
+  const desktopReportHandoffE2eText = readTextFile('desktop/test/e2e/korean-fieldwork/report-handoff.spec.ts');
 
   if (!coreReportHandoffText.includes('validateKoreanFieldworkReportHandoffCandidate')
       || !coreReportHandoffText.includes('KoreanFieldworkReportHandoffValidation')
@@ -3675,6 +3678,24 @@ function validateReportHandoffPreSaveValidation() {
       || !desktopPriorityStripSpecText.includes('getReportHandoffPreviewItem')
       || !desktopPriorityStripSpecText.includes('expands report handoff lists')) {
     findings.push('desktop report handoff panel must render and test relation details, evidence details, issue details, visible HWP copy previews, and expandable full record lists');
+  }
+  if (!desktopReportHandoffE2eText.includes('Korean fieldwork report handoff')
+      || !desktopReportHandoffE2eText.includes('start()')
+      || !desktopReportHandoffE2eText.includes('seedKoreanFieldworkReportHandoff')
+      || !desktopReportHandoffE2eText.includes('korean-fieldwork-report-handoff-strip')
+      || !desktopReportHandoffE2eText.includes('본문 복사')
+      || !desktopReportHandoffE2eText.includes('fullClipboardText')
+      || !desktopReportHandoffE2eText.includes('.nth(1)')
+      || !desktopReportHandoffE2eText.includes('readClipboardText')
+      || !desktopReportHandoffE2eText.includes('스포이드 위치')
+      || !desktopReportHandoffE2eText.includes('RGB 111/87/61 @ 20%/50%')
+      || !desktopReportHandoffE2eText.includes("not.toContain('soilColorAssistCandidates')")
+      || !desktopReportHandoffE2eText.includes("not.toContain('fieldworkPhotoAnnotationStrokes')")
+      || !desktopE2eAppText.includes('readClipboardText')
+      || !desktopAppControllerText.includes('seedKoreanFieldworkReportHandoff')
+      || !desktopAppControllerText.includes('soilProfileColorSwatches')
+      || !desktopAppControllerText.includes('soilColorAssistCandidates')) {
+    findings.push('desktop report handoff must have an Electron E2E that seeds tablet fieldwork data, opens the HWP panel, and verifies body/full clipboard copy');
   }
 
   return findings;

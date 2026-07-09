@@ -25,6 +25,8 @@ import {
     KoreanFieldworkFieldNoteInput
 } from './korean-fieldwork-notebook-digest';
 
+export type { KoreanFieldworkContinuationAction } from 'idai-field-core';
+
 
 export interface KoreanFieldworkDraftResourceOptions {
     boundaryAccuracy?: string;
