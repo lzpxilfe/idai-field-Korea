@@ -1,5 +1,4 @@
 import {
-  act,
   fireEvent,
   render,
   waitFor,
@@ -472,7 +471,7 @@ describe('DocumentAddModal', () => {
         expect.objectContaining({ height: expect.any(Number) }),
       ])
     );
-    const canvasStyles = canvas.props.style as Array<{ height?: number }>;
+    const canvasStyles = canvas.props.style as { height?: number }[];
     const dynamicCanvasStyle = canvasStyles[canvasStyles.length - 1];
     expect(dynamicCanvasStyle.height).toBeGreaterThanOrEqual(440);
     expect(dynamicCanvasStyle.height).toBeLessThanOrEqual(860);
@@ -594,7 +593,6 @@ describe('DocumentAddModal', () => {
       { locationX: 40, locationY: 25 },
       { locationX: 120, locationY: 50 },
       { locationX: 150, locationY: 60 },
-      { locationX: 40, locationY: 25 },
     ].forEach((point) => {
       fireEvent(touchLayer, 'responderGrant', { nativeEvent: point });
       fireEvent(touchLayer, 'responderRelease', { nativeEvent: point });
@@ -614,13 +612,15 @@ describe('DocumentAddModal', () => {
         identifier: '1호 유구',
       })
     );
+    expect(onAddCategory.mock.calls[0][2].featureLocationSketch)
+      .toEqual(expect.stringContaining('"isClosed":true'));
     expect(onAddCategory.mock.calls[0][2]).not.toHaveProperty(
       'featureGeometryRevisionNote'
     );
     expect(onAddCategory.mock.calls[0][2]).not.toHaveProperty('shortDescription');
   });
 
-  it('inserts a polygon point on an existing segment before closing the sketch', () => {
+  it('inserts a polygon point from the visible segment handle', () => {
     const onAddCategory = jest.fn();
     const parentDoc = {
       resource: {
@@ -659,14 +659,14 @@ describe('DocumentAddModal', () => {
       { locationX: 40, locationY: 25 },
       { locationX: 120, locationY: 50 },
       { locationX: 150, locationY: 60 },
-      { locationX: 80, locationY: 37.5 },
-      { locationX: 40, locationY: 25 },
     ].forEach((point) => {
       fireEvent(touchLayer, 'responderGrant', { nativeEvent: point });
       fireEvent(touchLayer, 'responderRelease', { nativeEvent: point });
     });
 
     expect(getByTestId('featureSketchInsertPoint_0')).toBeTruthy();
+    fireEvent.press(getByTestId('featureSketchInsertPoint_0'));
+
     expect(getByTestId('featureSketchPoint_1').props.style).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -691,6 +691,70 @@ describe('DocumentAddModal', () => {
       'featureGeometryRevisionNote'
     );
     expect(onAddCategory.mock.calls[0][2]).not.toHaveProperty('shortDescription');
+  });
+
+  it('moves an existing polygon point instead of adding a duplicate point', () => {
+    const parentDoc = {
+      resource: {
+        id: 'operation-1',
+        identifier: 'Operation 1',
+        category: C.TRENCH,
+        relations: {},
+      },
+    } as any;
+
+    const { getByTestId, queryByTestId } = render(
+      <LabelsContext.Provider value={{ labels: new Labels(() => ['ko']) }}>
+        <ConfigurationContext.Provider value={createConfig([
+          createCategory(C.TRENCH),
+          createCategory(C.FEATURE),
+        ])}
+        >
+          <DocumentAddModal
+            boundaryDraft={createBoundaryDraft()}
+            initialCategoryName={C.FEATURE}
+            onAddCategory={jest.fn()}
+            onClose={jest.fn()}
+            parentDoc={parentDoc}
+          />
+        </ConfigurationContext.Provider>
+      </LabelsContext.Provider>
+    );
+
+    const canvas = getByTestId('featureLocationSketchCanvas');
+    const touchLayer = getByTestId('featureLocationSketchTouchLayer');
+    fireEvent(canvas, 'layout', {
+      nativeEvent: { layout: { height: 100, width: 200 } },
+    });
+    fireEvent.press(getByTestId('featureSketchMode_polygon'));
+    [
+      { locationX: 40, locationY: 25 },
+      { locationX: 120, locationY: 50 },
+      { locationX: 150, locationY: 60 },
+    ].forEach((point) => {
+      fireEvent(touchLayer, 'responderGrant', { nativeEvent: point });
+      fireEvent(touchLayer, 'responderRelease', { nativeEvent: point });
+    });
+
+    fireEvent(touchLayer, 'responderGrant', {
+      nativeEvent: { locationX: 120, locationY: 50 },
+    });
+    fireEvent(touchLayer, 'responderMove', {
+      nativeEvent: { locationX: 130, locationY: 40 },
+    });
+    fireEvent(touchLayer, 'responderRelease', {
+      nativeEvent: { locationX: 130, locationY: 40 },
+    });
+
+    expect(getByTestId('featureSketchPoint_1').props.style).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          left: 130,
+          top: 40,
+        }),
+      ])
+    );
+    expect(queryByTestId('featureSketchPoint_3')).toBeNull();
   });
 
   it('resizes and rotates a shape with a two-finger gesture', () => {

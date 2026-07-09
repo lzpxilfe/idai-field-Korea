@@ -215,6 +215,7 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
   const [featureSketchViewport, setFeatureSketchViewport] =
     useState<FeatureSketchViewport>(FEATURE_SKETCH_VIEWPORT_DEFAULT);
   const lastPreviewFeatureSketchPointRef = useRef<FeatureSketchPoint>();
+  const draggedFeatureSketchPointIndexRef = useRef<number>();
   const featureShapeGestureRef = useRef<FeatureShapeGestureState>();
   const featureViewportGestureRef = useRef<FeatureSketchViewportGestureState>();
   const featureViewportPanRef = useRef<FeatureSketchPanGestureState>();
@@ -405,6 +406,7 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
     setFeatureSketchWasEdited(false);
     setFeatureSketchBackground('white');
     setFeatureSketchViewport(FEATURE_SKETCH_VIEWPORT_DEFAULT);
+    draggedFeatureSketchPointIndexRef.current = undefined;
     featureShapeGestureRef.current = undefined;
     featureViewportGestureRef.current = undefined;
     featureViewportPanRef.current = undefined;
@@ -433,6 +435,7 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
     setFeatureSketchActiveTool('inspect');
     setActiveFeatureSketchPoint(undefined);
     lastPreviewFeatureSketchPointRef.current = undefined;
+    draggedFeatureSketchPointIndexRef.current = undefined;
     featureShapeGestureRef.current = undefined;
     featureViewportGestureRef.current = undefined;
     featureViewportPanRef.current = undefined;
@@ -448,6 +451,7 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
     setFeatureSketchActiveTool(shape);
     setActiveFeatureSketchPoint(undefined);
     lastPreviewFeatureSketchPointRef.current = undefined;
+    draggedFeatureSketchPointIndexRef.current = undefined;
     featureShapeGestureRef.current = undefined;
     featureViewportGestureRef.current = undefined;
     featureViewportPanRef.current = undefined;
@@ -518,6 +522,7 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
       }
 
       setFeatureSketchWasEdited(true);
+      draggedFeatureSketchPointIndexRef.current = undefined;
       setActiveFeatureSketchPoint(undefined);
       setFeatureSketchCenter(shapeGesture.center);
       setFeatureSketchPoints([shapeGesture.center]);
@@ -527,6 +532,7 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
     }
 
     if (touches.length > 1) {
+      draggedFeatureSketchPointIndexRef.current = undefined;
       updateFeatureSketchViewport(event);
       return;
     }
@@ -540,6 +546,19 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
       featureSketchViewport
     );
     if (!point) return;
+
+    if (featureLocationShape === 'polygon') {
+      const draggedPointIndex = draggedFeatureSketchPointIndexRef.current
+        ?? getFeatureSketchPointHitIndex(point, featureSketchPoints);
+      if (draggedPointIndex !== undefined) {
+        draggedFeatureSketchPointIndexRef.current = draggedPointIndex;
+        lastPreviewFeatureSketchPointRef.current = point;
+        setFeatureSketchWasEdited(true);
+        setActiveFeatureSketchPoint(point);
+        moveFeatureSketchPoint(draggedPointIndex, point);
+        return;
+      }
+    }
 
     if (!shouldUpdateFeatureSketchPreviewPoint(
       point,
@@ -575,11 +594,26 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
       return;
     }
 
+    if (draggedFeatureSketchPointIndexRef.current !== undefined) {
+      const point = getSketchPointFromPress(
+        event,
+        featureSketchCanvasSize,
+        featureSketchViewport
+      ) ?? activeFeatureSketchPoint;
+      if (point) {
+        moveFeatureSketchPoint(draggedFeatureSketchPointIndexRef.current, point);
+      }
+      draggedFeatureSketchPointIndexRef.current = undefined;
+      lastPreviewFeatureSketchPointRef.current = undefined;
+      setActiveFeatureSketchPoint(undefined);
+      return;
+    }
+
     const point = getSketchPointFromPress(
       event,
       featureSketchCanvasSize,
       featureSketchViewport
-    );
+    ) ?? activeFeatureSketchPoint;
     if (!point) {
       cancelFeatureSketchPoint();
       return;
@@ -607,8 +641,54 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
     setFeatureSketchPolygonClosed(false);
   };
 
+  const moveFeatureSketchPoint = (
+    pointIndex: number,
+    point: FeatureSketchPoint
+  ) => {
+    setFeatureSketchWasEdited(true);
+    setFeatureSketchCenter(point);
+    setFeatureSketchPoints((points) => {
+      if (!points[pointIndex]) return points;
+
+      const nextPoints = points.slice();
+      nextPoints[pointIndex] = point;
+      return nextPoints;
+    });
+    setFeatureSketchPolygonClosed(featureSketchPoints.length >= 3);
+  };
+
+  const insertFeatureSketchPointAtSegment = (segmentIndex: number) => {
+    if (
+      featureLocationShape !== 'polygon'
+      || featureSketchPoints.length >= FEATURE_SKETCH_MAX_POLYGON_POINTS
+    ) {
+      return;
+    }
+
+    const midpoint = getFeatureSketchSegmentMidpoints(
+      featureSketchPoints,
+      featureSketchPolygonClosed
+    )[segmentIndex];
+    if (!midpoint) return;
+
+    const insertionIndex = getFeatureSketchMidpointInsertionIndex(
+      segmentIndex,
+      featureSketchPoints.length
+    );
+    const nextPoints = featureSketchPoints.slice();
+    nextPoints.splice(insertionIndex, 0, midpoint);
+
+    lastPreviewFeatureSketchPointRef.current = undefined;
+    setActiveFeatureSketchPoint(undefined);
+    setFeatureSketchWasEdited(true);
+    setFeatureSketchCenter(midpoint);
+    setFeatureSketchPoints(nextPoints);
+    setFeatureSketchPolygonClosed(nextPoints.length >= 3);
+  };
+
   const cancelFeatureSketchPoint = () => {
     lastPreviewFeatureSketchPointRef.current = undefined;
+    draggedFeatureSketchPointIndexRef.current = undefined;
     featureShapeGestureRef.current = undefined;
     featureViewportGestureRef.current = undefined;
     featureViewportPanRef.current = undefined;
@@ -832,9 +912,10 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
             featureSketchPoints,
             featureSketchPolygonClosed
           ).map((point, index) => (
-            <View
+            <TouchableOpacity
+              activeOpacity={0.78}
               key={`feature-insert-${index}`}
-              pointerEvents="none"
+              onPress={() => insertFeatureSketchPointAtSegment(index)}
               style={[
                 styles.featureSketchInsertPoint,
                 getFeatureSketchPointStyle(
@@ -846,7 +927,7 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
               testID={`featureSketchInsertPoint_${index}`}
             >
               <Ionicons name="add" size={10} color="#c2410c" />
-            </View>
+            </TouchableOpacity>
           ))}
         {visiblePoints.map((point, index) => (
           <View
@@ -1975,7 +2056,7 @@ const getNextFeatureSketchPolygonState = ({
 
     return {
       center: point,
-      isClosed,
+      isClosed: nextPoints.length >= 3,
       points: nextPoints.slice(0, FEATURE_SKETCH_MAX_POLYGON_POINTS),
     };
   }
@@ -1986,10 +2067,15 @@ const getNextFeatureSketchPolygonState = ({
 
   return {
     center: point,
-    isClosed: false,
+    isClosed: nextPoints.length >= 3,
     points: nextPoints,
   };
 };
+
+const getFeatureSketchMidpointInsertionIndex = (
+  segmentIndex: number,
+  pointCount: number
+): number => Math.min(pointCount, Math.max(1, segmentIndex + 1));
 
 const shouldCloseFeatureSketchPolygon = (
   point: FeatureSketchPoint,
@@ -1999,6 +2085,17 @@ const shouldCloseFeatureSketchPolygon = (
   && getFeatureSketchPointDistance(point, points[0])
     <= FEATURE_SKETCH_CLOSE_POINT_DISTANCE
 );
+
+const getFeatureSketchPointHitIndex = (
+  point: FeatureSketchPoint,
+  points: FeatureSketchPoint[]
+): number | undefined => {
+  const pointIndex = points.findIndex((candidate) =>
+    getFeatureSketchPointDistance(point, candidate) <= FEATURE_SKETCH_CLOSE_POINT_DISTANCE
+  );
+
+  return pointIndex >= 0 ? pointIndex : undefined;
+};
 
 const getFeatureSketchSegmentInsertionIndex = (
   point: FeatureSketchPoint,
