@@ -18,7 +18,7 @@ jest.mock('@expo/vector-icons', () => {
 const C = KOREAN_FIELDWORK_CATEGORIES;
 
 describe('KoreanFieldworkFeaturePitLinePanel', () => {
-  it('stores an orthogonal soil pit line from two tapped points', () => {
+  it('stores a straight soil pit line from two tapped points', () => {
     const onUpdateResourceFields = jest.fn();
     const { getByTestId } = render(
       <KoreanFieldworkFeaturePitLinePanel
@@ -70,7 +70,6 @@ describe('KoreanFieldworkFeaturePitLinePanel', () => {
     expect(pitLine.end).toEqual({ x: 80, y: 75 });
     expect(pitLine.points).toEqual([
       { x: 20, y: 25 },
-      { x: 80, y: 25 },
       { x: 80, y: 75 },
     ]);
     expect(pitLine.version).toBe(2);
@@ -140,9 +139,36 @@ describe('KoreanFieldworkFeaturePitLinePanel', () => {
     expect(pitLines[1].end).toEqual({ x: 90, y: 80 });
     expect(pitLines[1].points).toEqual([
       { x: 10, y: 20 },
-      { x: 90, y: 20 },
       { x: 90, y: 80 },
     ]);
+  });
+
+  it('renders legacy multi-point pit lines as one straight segment', () => {
+    const { getAllByTestId, queryByTestId } = render(
+      <KoreanFieldworkFeaturePitLinePanel
+        document={createDoc('feature-1', C.FEATURE, {
+          featureSoilPitLines: JSON.stringify([
+            {
+              version: 2,
+              id: 'soil-pit-line-1',
+              label: '1',
+              start: { x: 20, y: 25 },
+              end: { x: 80, y: 75 },
+              points: [
+                { x: 20, y: 25 },
+                { x: 80, y: 25 },
+                { x: 80, y: 75 },
+              ],
+            },
+          ]),
+        })}
+        documents={[]}
+        onUpdateResourceFields={jest.fn()}
+      />
+    );
+
+    expect(getAllByTestId('featurePitLineSegment')).toHaveLength(1);
+    expect(queryByTestId('featurePitLineCorner_0_0')).toBeNull();
   });
 
   it('ignores non-finite touch coordinates instead of saving an invalid pit line', () => {
@@ -219,7 +245,7 @@ describe('KoreanFieldworkFeaturePitLinePanel', () => {
       />
     );
 
-    expect(getAllByTestId('featurePitLineSegment')).toHaveLength(2);
+    expect(getAllByTestId('featurePitLineSegment')).toHaveLength(1);
     fireEvent.press(getByTestId('featurePitLineClear'));
 
     expect(onUpdateResourceFields).toHaveBeenCalledWith(expect.objectContaining({
@@ -304,7 +330,7 @@ describe('KoreanFieldworkFeaturePitLinePanel', () => {
       />
     );
 
-    expect(getAllByTestId('featurePitLineSegment')).toHaveLength(2);
+    expect(getAllByTestId('featurePitLineSegment')).toHaveLength(1);
     expect(getByTestId('featurePitLineLabel_0')).toBeTruthy();
   });
 });

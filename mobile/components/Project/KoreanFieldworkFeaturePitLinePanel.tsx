@@ -89,12 +89,12 @@ const TEXT = {
   clear: '\uc9c0\uc6b0\uae30',
   connectedCount: '\uc5f0\uacb0\ub41c \ud1a0\uce35\uc0ac\uc9c4',
   drawHint:
-    '\ud53c\ud2b8\ub294 \uc218\uc9c1\u00b7\uc218\ud3c9 \uc120\uc73c\ub85c\ub9cc \uc800\uc7a5\ub429\ub2c8\ub2e4. \ub300\uac01\uc120\uc73c\ub85c \ucc0d\uc5b4\ub3c4 \u3131\uc790 \uc120\uc73c\ub85c \ubcf4\uc815\ub429\ub2c8\ub2e4.',
+    '\ud53c\ud2b8\ub294 \uc2dc\uc791\uc810\uacfc \ub05d\uc810\uc744 \uc9c1\uc120\uc73c\ub85c \uc5f0\uacb0\ud574 \uc800\uc7a5\ud569\ub2c8\ub2e4.',
   feature: '\uc720\uad6c',
   lineCount: '\ud53c\ud2b8\uc120',
   noSketch: '\uc720\uad6c \uc2a4\ucf00\uce58 \uc5c6\uc74c',
-  pendingHint: '\ub2e4\uc74c \uc810\uc744 \ucc0d\uc73c\uba74 \uc218\uc9c1\u00b7\uc218\ud3c9 \ud53c\ud2b8\uc120\uc774 \ucd94\uac00\ub429\ub2c8\ub2e4.',
-  readyHint: '\uc2dc\uc791\uc810\uc744 \ucc0d\uc73c\uba74 \ub2e4\uc74c \uc810\uae4c\uc9c0 \ud53c\ud2b8\uc120\uc744 \uc5f0\uacb0\ud569\ub2c8\ub2e4.',
+  pendingHint: '\ub2e4\uc74c \uc810\uc744 \ucc0d\uc73c\uba74 \uc9c1\uc120 \ud53c\ud2b8\uc120\uc774 \ucd94\uac00\ub429\ub2c8\ub2e4.',
+  readyHint: '\uc2dc\uc791\uc810\uc744 \ucc0d\uace0 \ub05d\uc810\uc744 \ucc0d\uc73c\uba74 \uc9c1\uc120 \ud53c\ud2b8\uc120\uc774 \uc5f0\uacb0\ub429\ub2c8\ub2e4.',
   title: '\ud53c\ud2b8\uc120\u00b7\ud1a0\uce35\uc0ac\uc9c4',
   undo: '\ub9c8\uc9c0\ub9c9 \uc9c0\uc6b0\uae30',
 };
@@ -314,13 +314,6 @@ const KoreanFieldworkFeaturePitLinePanel: React.FC<Props> = ({
                 point={points[0]}
                 testID="featurePitLineStart"
               />
-              {points.slice(1, -1).map((point, cornerIndex) => (
-                <LineHandle
-                  key={`feature-pit-line-corner-${line.id}-${cornerIndex}`}
-                  point={point}
-                  testID={`featurePitLineCorner_${index}_${cornerIndex}`}
-                />
-              ))}
               <LineHandle
                 label={line.label}
                 point={points[points.length - 1]}
@@ -453,7 +446,7 @@ const normalizeFeatureSoilPitLine = (
   if (!start || !end) return undefined;
   const points = Array.isArray(rawValue.points)
     ? normalizePitLinePoints(rawValue.points, start, end)
-    : createOrthogonalPitLinePoints(start, end);
+    : createStraightPitLinePoints(start, end);
 
   return {
     end: points[points.length - 1],
@@ -477,7 +470,7 @@ const createFeatureSoilPitLine = (
   end: SketchPoint,
   index: number
 ): FeatureSoilPitLine => {
-  const points = createOrthogonalPitLinePoints(start, end);
+  const points = createStraightPitLinePoints(start, end);
 
   return {
     end: points[points.length - 1],
@@ -502,38 +495,33 @@ const normalizePitLinePoints = (
       .map(normalizeSketchPoint)
       .filter((point): point is SketchPoint => !!point)
     : [];
-  if (points.length >= 2) return points;
+  if (points.length >= 2) {
+    return createStraightPitLinePoints(points[0], points[points.length - 1]);
+  }
 
-  return [fallbackStart, fallbackEnd];
+  return createStraightPitLinePoints(fallbackStart, fallbackEnd);
 };
 
-const createOrthogonalPitLinePoints = (
+const createStraightPitLinePoints = (
   start: SketchPoint,
   end: SketchPoint
-): SketchPoint[] => {
-  if (Math.abs(start.x - end.x) < MIN_LINE_DISTANCE) {
-    return [start, { x: start.x, y: end.y }];
-  }
-  if (Math.abs(start.y - end.y) < MIN_LINE_DISTANCE) {
-    return [start, { x: end.x, y: start.y }];
-  }
-
-  const shouldRunHorizontalFirst =
-    Math.abs(end.x - start.x) >= Math.abs(end.y - start.y);
-  const corner = shouldRunHorizontalFirst
-    ? { x: end.x, y: start.y }
-    : { x: start.x, y: end.y };
-
-  return [start, corner, end];
-};
+): SketchPoint[] => [start, end];
 
 const createFeatureSoilPitLineId = (index: number): string =>
   `soil-pit-line-${index + 1}`;
 
 const getLineMidpoint = (line: FeatureSoilPitLine): SketchPoint => {
   const points = getPitLinePoints(line);
+  const start = points[0];
+  const end = points[points.length - 1];
+  if (start && end) {
+    return {
+      x: (start.x + end.x) / 2,
+      y: (start.y + end.y) / 2,
+    };
+  }
 
-  return points[Math.floor((points.length - 1) / 2)] ?? line.start;
+  return line.start;
 };
 
 const normalizeFeatureLocationSketch = (
