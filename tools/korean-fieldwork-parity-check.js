@@ -3609,7 +3609,7 @@ function validateReportHandoffPreSaveValidation() {
       || !desktopPriorityStripText.includes('reportHandoffCopyAllBodyText')
       || !desktopPriorityStripTemplateText.includes('getReportHandoffCopyAllActionLabel()')
       || !desktopPriorityStripTemplateText.includes('getReportHandoffCopyAllBodyActionLabel()')
-      || !desktopPriorityStripSpecText.includes('writeText).toHaveBeenCalledWith(featureItem.copyText)')
+      || !desktopPriorityStripSpecText.includes('writeText).toHaveBeenLastCalledWith(featureItem.copyText)')
       || !desktopPriorityStripSpecText.includes('copyAllReportHandoffItems')
       || !desktopPriorityStripSpecText.includes('copyAllReportHandoffBodies')
       || !desktopPriorityStripSpecText.includes('reportHandoffCopyAllText')
@@ -3622,27 +3622,38 @@ function validateReportHandoffPreSaveValidation() {
       || !desktopPriorityStripTemplateText.includes('item.bodyPreview')
       || !desktopPriorityStripTemplateText.includes('previewItem.bodyPreview')
       || !desktopPriorityStripText.includes('copyReportHandoffSection')
+      || !desktopPriorityStripText.includes('copyReportHandoffBody')
       || !desktopPriorityStripText.includes('getReportHandoffSectionCopyActionLabel')
+      || !desktopPriorityStripText.includes('getReportHandoffBodyCopyActionLabel')
+      || !desktopPriorityStripTemplateText.includes('getReportHandoffBodyCopyActionLabel(item)')
+      || !desktopPriorityStripTemplateText.includes('getReportHandoffBodyCopyActionLabel(previewItem)')
       || !desktopPriorityStripStyleText.includes('.korean-fieldwork-report-handoff-body-preview')
       || !desktopPriorityStripStyleText.includes('.korean-fieldwork-report-handoff-preview-body')
       || !desktopPriorityStripStyleText.includes('.korean-fieldwork-report-handoff-copy-section')
       || !desktopPriorityStripSpecText.includes('copyReportHandoffSection')
+      || !desktopPriorityStripSpecText.includes('copyReportHandoffBody(featureItem)')
+      || !desktopPriorityStripSpecText.includes('bodySection.copyText')
       || !desktopPriorityStripSpecText.includes('featureItem.bodyPreview')
       || !desktopPriorityStripSpecText.includes('evidenceSection.copyText')) {
-    findings.push('desktop report handoff preview must support section-level HWP copy buttons for selective pasting');
+    findings.push('desktop report handoff preview must support direct body and section-level HWP copy buttons for selective pasting');
   }
   if (!desktopRecordContextText.includes('makeKoreanFieldworkReportHandoff')
       || !desktopRecordContextText.includes('writeKoreanFieldworkHwpClipboardText')
       || !desktopRecordContextText.includes('copyReportHandoffSection')
+      || !desktopRecordContextText.includes('copyReportHandoffBody')
+      || !desktopRecordContextText.includes('getReportHandoffBodyCopyActionLabel')
       || !desktopRecordContextTemplateText.includes('korean-fieldwork-record-context-hwp')
       || !desktopRecordContextTemplateText.includes('reportItem.copySections')
       || !desktopRecordContextTemplateText.includes('reportItem.bodyPreview')
+      || !desktopRecordContextTemplateText.includes('copyReportHandoffBody()')
       || !desktopRecordContextStyleText.includes('.korean-fieldwork-record-context-hwp')
       || !desktopRecordContextStyleText.includes('.korean-fieldwork-record-context-hwp-body')
       || !desktopRecordContextSpecText.includes('exposes current record HWP copy blocks in the desktop record context')
       || !desktopRecordContextSpecText.includes('bodyPreview')
+      || !desktopRecordContextSpecText.includes('copyReportHandoffBody')
+      || !desktopRecordContextSpecText.includes('bodySection.copyText')
       || !desktopRecordContextSpecText.includes('copyReportHandoffSection')) {
-    findings.push('desktop record context panel must expose current-record HWP copy blocks using the shared handoff contract');
+    findings.push('desktop record context panel must expose current-record direct body and section HWP copy blocks using the shared handoff contract');
   }
   if (!desktopPriorityStripTemplateText.includes('korean-fieldwork-report-handoff-details')
       || !desktopPriorityStripTemplateText.includes('item.relationDetails')

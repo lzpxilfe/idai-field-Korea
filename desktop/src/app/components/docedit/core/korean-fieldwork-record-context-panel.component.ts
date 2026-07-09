@@ -853,8 +853,19 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
         && this.reportHandoffCopiedId === this.getReportHandoffSectionCopyId(this.reportHandoffItem, section);
 
 
+    public isReportHandoffBodyCopied = () => {
+        const bodySection = this.getReportHandoffBodySection();
+
+        return !!bodySection && this.isReportHandoffSectionCopied(bodySection);
+    };
+
+
     public getReportHandoffCopyActionLabel = () =>
         this.isReportHandoffItemCopied() ? '\ubcf5\uc0ac\ub428' : '\uc804\uccb4';
+
+
+    public getReportHandoffBodyCopyActionLabel = () =>
+        this.isReportHandoffBodyCopied() ? '\ubcf5\uc0ac\ub428' : '\ubcf8\ubb38';
 
 
     public getReportHandoffSectionCopyActionLabel = (section: KoreanFieldworkReportHandoffCopySection) =>
@@ -1225,6 +1236,15 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
     }
 
 
+    public async copyReportHandoffBody() {
+
+        const bodySection = this.getReportHandoffBodySection();
+        if (!bodySection?.copyText) return;
+
+        await this.copyReportHandoffSection(bodySection);
+    }
+
+
     public async copyReportHandoffSection(section: KoreanFieldworkReportHandoffCopySection) {
 
         const item = this.reportHandoffItem;
@@ -1552,6 +1572,12 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
     ): string {
 
         return `${item.documentId}::${section.id}`;
+    }
+
+
+    private getReportHandoffBodySection(): KoreanFieldworkReportHandoffCopySection|undefined {
+
+        return this.reportHandoffItem?.copySections.find(section => section.id === 'body');
     }
 
 

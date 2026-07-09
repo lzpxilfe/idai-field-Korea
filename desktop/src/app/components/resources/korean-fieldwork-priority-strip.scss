@@ -2839,8 +2839,17 @@ korean-fieldwork-priority-strip {
     border-radius: 5px;
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
     min-width: 0;
     overflow: hidden;
+
+    .korean-fieldwork-report-handoff-open {
+      grid-row: 1 / span 2;
+    }
+
+    .korean-fieldwork-report-handoff-copy {
+      min-width: 82px;
+    }
 
     &.review {
       border-left-color: #f79009;

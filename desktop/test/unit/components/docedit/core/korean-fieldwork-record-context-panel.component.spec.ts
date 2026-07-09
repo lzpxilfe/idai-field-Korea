@@ -201,19 +201,28 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
                 .toEqual(['body', 'summary', 'details', 'evidence', 'issues']);
             expect(component.getReportHandoffItem()?.copySections.find(section => section.id === 'body')?.copyText)
                 .toBe('\uc720\uad6c F1: round pit with dark fill');
+            expect(component.getReportHandoffBodyCopyActionLabel()).toBe('\ubcf8\ubb38');
+
+            const item = component.getReportHandoffItem()!;
+            const bodySection = item.copySections.find(section => section.id === 'body')!;
+            await component.copyReportHandoffBody();
+
+            expect(clear).toHaveBeenCalledTimes(1);
+            expect(writeText).toHaveBeenCalledWith(bodySection.copyText);
+            expect(write).not.toHaveBeenCalled();
+            expect(component.getReportHandoffBodyCopyActionLabel()).toBe('\ubcf5\uc0ac\ub428');
 
             await component.copyReportHandoffItem();
 
-            const item = component.getReportHandoffItem()!;
-            expect(clear).toHaveBeenCalledTimes(1);
-            expect(writeText).toHaveBeenCalledWith(item.copyText);
+            expect(clear).toHaveBeenCalledTimes(2);
+            expect(writeText).toHaveBeenLastCalledWith(item.copyText);
             expect(write).not.toHaveBeenCalled();
             expect(component.getReportHandoffCopyActionLabel()).toBe('\ubcf5\uc0ac\ub428');
 
             const evidenceSection = item.copySections.find(section => section.id === 'evidence')!;
             await component.copyReportHandoffSection(evidenceSection);
 
-            expect(clear).toHaveBeenCalledTimes(2);
+            expect(clear).toHaveBeenCalledTimes(3);
             expect(writeText).toHaveBeenLastCalledWith(evidenceSection.copyText);
             expect(write).not.toHaveBeenCalled();
             expect(component.getReportHandoffSectionCopyActionLabel(evidenceSection))

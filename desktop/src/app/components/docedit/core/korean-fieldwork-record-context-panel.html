@@ -88,6 +88,15 @@
         <div class="korean-fieldwork-record-context-hwp-actions">
             <button type="button"
                     class="korean-fieldwork-record-context-hwp-action primary"
+                    [class.copied]="isReportHandoffBodyCopied()"
+                    (click)="copyReportHandoffBody()">
+                <span class="mdi"
+                      [class.mdi-check]="isReportHandoffBodyCopied()"
+                      [class.mdi-text-box-check-outline]="!isReportHandoffBodyCopied()"></span>
+                <span>{{getReportHandoffBodyCopyActionLabel()}}</span>
+            </button>
+            <button type="button"
+                    class="korean-fieldwork-record-context-hwp-action"
                     [class.copied]="isReportHandoffItemCopied()"
                     (click)="copyReportHandoffItem()">
                 <span class="mdi"

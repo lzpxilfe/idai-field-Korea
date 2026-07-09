@@ -853,6 +853,12 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
             section: KoreanFieldworkReportHandoffCopySection
     ) => this.reportCopiedDocumentId === this.getReportHandoffSectionCopyId(item, section);
 
+    public isReportHandoffBodyCopied = (item: KoreanFieldworkReportHandoffItem) => {
+        const bodySection = this.getReportHandoffBodySection(item);
+
+        return !!bodySection && this.isReportHandoffSectionCopied(item, bodySection);
+    };
+
     public isReportHandoffItemSelected = (item: KoreanFieldworkReportHandoffItem) =>
         this.getReportHandoffPreviewItem()?.documentId === item.documentId;
 
@@ -868,6 +874,9 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
 
     public getReportHandoffCopyAllBodyActionLabel = () =>
         this.isReportHandoffCopyAllBodyCopied() ? '\ubcf5\uc0ac\ub428' : '\ubcf8\ubb38 \uc804\uccb4 \ubcf5\uc0ac';
+
+    public getReportHandoffBodyCopyActionLabel = (item: KoreanFieldworkReportHandoffItem) =>
+        this.isReportHandoffBodyCopied(item) ? '\ubcf5\uc0ac\ub428' : '\ubcf8\ubb38 \ubcf5\uc0ac';
 
     public getReportHandoffSectionCopyActionLabel = (
             item: KoreanFieldworkReportHandoffItem,
@@ -921,6 +930,14 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
         } catch (errWithParams) {
             this.messages.add(errWithParams);
         }
+    }
+
+    public async copyReportHandoffBody(item: KoreanFieldworkReportHandoffItem, event?: Event) {
+
+        const bodySection = this.getReportHandoffBodySection(item);
+        if (!bodySection?.copyText) return;
+
+        await this.copyReportHandoffSection(item, bodySection, event);
     }
 
     public async copyReportHandoffSection(
@@ -1724,6 +1741,13 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
     ): string {
 
         return `${item.documentId}::${section.id}`;
+    }
+
+    private getReportHandoffBodySection(
+            item: KoreanFieldworkReportHandoffItem
+    ): KoreanFieldworkReportHandoffCopySection|undefined {
+
+        return item.copySections.find(section => section.id === 'body');
     }
 
 

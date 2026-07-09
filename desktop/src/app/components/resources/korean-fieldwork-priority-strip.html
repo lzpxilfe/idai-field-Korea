@@ -262,6 +262,15 @@
                     </span>
                 </button>
                 <button type="button"
+                        class="korean-fieldwork-report-handoff-copy body"
+                        [class.copied]="isReportHandoffBodyCopied(item)"
+                        (click)="copyReportHandoffBody(item, $event)">
+                    <span class="mdi"
+                          [class.mdi-check]="isReportHandoffBodyCopied(item)"
+                          [class.mdi-text-box-check-outline]="!isReportHandoffBodyCopied(item)"></span>
+                    <span>{{getReportHandoffBodyCopyActionLabel(item)}}</span>
+                </button>
+                <button type="button"
                         class="korean-fieldwork-report-handoff-copy"
                         [class.copied]="isReportHandoffItemCopied(item)"
                         (click)="copyReportHandoffItem(item, $event)">
@@ -298,6 +307,15 @@
                             (click)="openReportHandoffItem(previewItem, $event)">
                         <span class="mdi mdi-open-in-new"></span>
                         <span>&#50896;&#47928;</span>
+                    </button>
+                    <button type="button"
+                            class="korean-fieldwork-report-handoff-preview-action"
+                            [class.copied]="isReportHandoffBodyCopied(previewItem)"
+                            (click)="copyReportHandoffBody(previewItem, $event)">
+                        <span class="mdi"
+                              [class.mdi-check]="isReportHandoffBodyCopied(previewItem)"
+                              [class.mdi-text-box-check-outline]="!isReportHandoffBodyCopied(previewItem)"></span>
+                        <span>{{getReportHandoffBodyCopyActionLabel(previewItem)}}</span>
                     </button>
                     <button type="button"
                             class="korean-fieldwork-report-handoff-preview-action"

@@ -523,6 +523,7 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
                 .toBe('\uc720\uad6c pit-001\uc740 \ubc14\ub2e5\uba74\uc5d0\uc11c \uc6d0\ud615 \uc724\uacfd \ud655\uc778. \uc8fc\uacf5 \uac00\ub2a5\uc131.');
             expect(featureItem.bodyPreview)
                 .toBe('\uc720\uad6c pit-001\uc740 \ubc14\ub2e5\uba74\uc5d0\uc11c \uc6d0\ud615 \uc724\uacfd \ud655\uc778. \uc8fc\uacf5 \uac00\ub2a5\uc131.');
+            expect(component.getReportHandoffBodyCopyActionLabel(featureItem)).toBe('\ubcf8\ubb38 \ubcf5\uc0ac');
             expect(component.reportHandoffCopyAllBodyText)
                 .toContain('\uc720\uad6c pit-001\uc740 \ubc14\ub2e5\uba74\uc5d0\uc11c \uc6d0\ud615 \uc724\uacfd \ud655\uc778. \uc8fc\uacf5 \uac00\ub2a5\uc131.');
             expect(component.reportHandoffCopyAllBodyText)
@@ -623,10 +624,19 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
             expect(dailyLogItem!.copyText)
                 .not.toContain('"strokes"');
 
-            await component.copyReportHandoffItem(featureItem);
+            const bodySection = featureItem.copySections.find(section => section.id === 'body')!;
+            await component.copyReportHandoffBody(featureItem);
 
             expect(clear).toHaveBeenCalledTimes(1);
-            expect(writeText).toHaveBeenCalledWith(featureItem.copyText);
+            expect(writeText).toHaveBeenCalledWith(bodySection.copyText);
+            expect(write).not.toHaveBeenCalled();
+            expect(component.getReportHandoffPreviewItem()?.documentId).toBe('feature-1');
+            expect(component.getReportHandoffBodyCopyActionLabel(featureItem)).toBe('\ubcf5\uc0ac\ub428');
+
+            await component.copyReportHandoffItem(featureItem);
+
+            expect(clear).toHaveBeenCalledTimes(2);
+            expect(writeText).toHaveBeenLastCalledWith(featureItem.copyText);
             expect(write).not.toHaveBeenCalled();
             expect(component.getReportHandoffPreviewItem()?.documentId).toBe('feature-1');
             expect(component.getReportHandoffCopyActionLabel(featureItem)).toBe('\ubcf5\uc0ac\ub428');
@@ -634,7 +644,7 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
             const evidenceSection = featureItem.copySections.find(section => section.id === 'evidence')!;
             await component.copyReportHandoffSection(featureItem, evidenceSection);
 
-            expect(clear).toHaveBeenCalledTimes(2);
+            expect(clear).toHaveBeenCalledTimes(3);
             expect(writeText).toHaveBeenLastCalledWith(evidenceSection.copyText);
             expect(write).not.toHaveBeenCalled();
             expect(component.getReportHandoffPreviewItem()?.documentId).toBe('feature-1');
@@ -643,7 +653,7 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
 
             await component.copyAllReportHandoffBodies();
 
-            expect(clear).toHaveBeenCalledTimes(3);
+            expect(clear).toHaveBeenCalledTimes(4);
             expect(writeText).toHaveBeenLastCalledWith(component.reportHandoffCopyAllBodyText);
             expect(write).not.toHaveBeenCalled();
             expect(component.isReportHandoffCopyAllBodyCopied()).toBe(true);
@@ -651,7 +661,7 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
 
             await component.copyAllReportHandoffItems();
 
-            expect(clear).toHaveBeenCalledTimes(4);
+            expect(clear).toHaveBeenCalledTimes(5);
             expect(writeText).toHaveBeenLastCalledWith(component.reportHandoffCopyAllText);
             expect(write).not.toHaveBeenCalled();
             expect(component.reportHandoffCopyAllText).toContain(featureItem.copyText);
