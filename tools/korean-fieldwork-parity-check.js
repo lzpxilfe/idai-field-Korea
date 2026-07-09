@@ -3590,9 +3590,16 @@ function validateReportHandoffPreSaveValidation() {
   ]) {
     if (!text.includes('validateKoreanFieldworkReportHandoffCandidate')
         || !text.includes('getKoreanFieldworkReportHandoffSaveMessage')
-        || !text.includes("reportHandoffValidation.status === 'review' ? 5000 : 3000")) {
+        || !text.includes("reportHandoffValidation.status === 'review'")
+        || !text.includes('ToastType.Info')) {
       findings.push(`${label} must validate desktop report handoff before saving tablet records`);
     }
+  }
+  if (tabletAddText.includes('기록을 만들었습니다')
+      || tabletEditText.includes('기록을 저장했습니다')
+      || tabletAddText.includes('ToastType.Success')
+      || tabletEditText.includes('ToastType.Success')) {
+    findings.push('tablet save flows must not interrupt routine record saves with green success toasts');
   }
   if (!desktopPriorityStripText.includes('makeKoreanFieldworkReportHandoff')
       || !desktopPriorityStripText.includes('copyReportHandoffItem')

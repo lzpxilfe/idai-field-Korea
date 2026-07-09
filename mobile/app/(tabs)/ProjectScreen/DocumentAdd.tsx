@@ -195,14 +195,16 @@ const DocumentAdd: React.FC = () => {
       repository
         ?.create(newDocument)
         .then((doc) => {
-          showToast(
-            ToastType.Success,
-            getKoreanFieldworkReportHandoffSaveMessage(
-              `${doc.resource.identifier} 기록을 만들었습니다.`,
-              reportHandoffValidation
-            ),
-            reportHandoffValidation.status === 'review' ? 5000 : 3000
-          );
+          if (reportHandoffValidation.status === 'review') {
+            showToast(
+              ToastType.Info,
+              getKoreanFieldworkReportHandoffSaveMessage(
+                'HWP 보고서로 넘기기 전에 보완할 항목이 있습니다.',
+                reportHandoffValidation
+              ),
+              5000
+            );
+          }
           setResourceToDefault();
           navigateToKoreanFieldworkReturnTarget(returnTarget, doc.resource.id);
         })

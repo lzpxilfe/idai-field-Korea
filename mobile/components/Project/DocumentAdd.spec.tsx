@@ -25,7 +25,7 @@ import { ProjectContext } from '@/contexts/project-context';
 import { Preferences } from '@/models/preferences';
 import { DocumentRepository } from '@/repositories/document-repository';
 import loadConfiguration from '@/services/config/load-configuration';
-import { ToastProvider } from '@/components/common/Toast/ToastProvider';
+import { ToastProvider, ToastType } from '@/components/common/Toast/ToastProvider';
 import DocumentAdd from '@/app/(tabs)/ProjectScreen/DocumentAdd';
 import { defaultMapSettings } from '@/components/Project/Map/map-settings';
 
@@ -249,6 +249,21 @@ describe('DocumentAdd', () => {
     });
   });
 
+  it('does not interrupt ordinary record creation with a success toast', async () => {
+    const { getByTestId } = renderAPI;
+
+    await waitFor(() => getByTestId('documentForm'));
+
+    fireEvent.changeText(
+      getByTestId('quickRecordInput_description'),
+      observationDescription
+    );
+    fireEvent.press(getByTestId('saveDocBtn'));
+
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledTimes(1));
+    expect(mockShowToast).not.toHaveBeenCalled();
+  });
+
   it('adds a drawing sketch canvas to new drawing records', async () => {
     cleanup();
     mockUseGlobalSearchParams.mockReturnValue({
@@ -310,7 +325,11 @@ describe('DocumentAdd', () => {
 
     await waitFor(() => expect(mockShowToast).toHaveBeenCalled());
 
+    expect(mockShowToast.mock.calls[0][0]).toBe(ToastType.Info);
+    expect(mockShowToast.mock.calls[0][2]).toBe(5000);
+
     const toastMessage = mockShowToast.mock.calls[0][1];
+    expect(toastMessage).not.toContain('기록을 만들었습니다');
     expect(toastMessage).toContain('HWP');
     expect(toastMessage).toContain('보완 항목');
     expect(toastMessage).toContain('HWP 본문 미리보기');
