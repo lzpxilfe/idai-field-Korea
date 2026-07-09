@@ -71,6 +71,46 @@ describe('KoreanFieldworkRecordContextPanel', () => {
     expect(handleAddDocumentOfCategory).not.toHaveBeenCalled();
   });
 
+  it('expands busy evidence groups before opening an individual record', () => {
+    const feature = createDoc('feature-1', C.FEATURE, 'feature 1');
+    const firstPhoto = createDoc('photo-1', C.PHOTO, 'photo 1', {
+      depicts: ['feature-1'],
+    }, {
+      shortDescription: 'north overview',
+    });
+    const secondPhoto = createDoc('photo-2', C.PHOTO, 'photo 2', {
+      depicts: ['feature-1'],
+    }, {
+      shortDescription: 'section detail',
+    });
+    const handleAddDocumentOfCategory = jest.fn();
+    const handleOpenDocument = jest.fn();
+    const { getByTestId, getByText } = render(
+      <KoreanFieldworkRecordContextPanel
+        document={feature}
+        documents={[feature, firstPhoto, secondPhoto]}
+        allowedAddCategoryNames={[C.PHOTO]}
+        onAddDocumentOfCategory={handleAddDocumentOfCategory}
+        onOpenDocument={handleOpenDocument}
+      />
+    );
+
+    fireEvent.press(getByTestId('evidenceMetric_photos'));
+
+    expect(handleOpenDocument).not.toHaveBeenCalled();
+    expect(getByTestId('evidenceGroup_photos')).toBeTruthy();
+    expect(getByText('photo 1')).toBeTruthy();
+    expect(getByText('section detail')).toBeTruthy();
+
+    fireEvent.press(getByTestId('evidenceGroupItem_photos_photo-2'));
+
+    expect(handleOpenDocument).toHaveBeenCalledWith(secondPhoto);
+
+    fireEvent.press(getByTestId('evidenceGroupAdd_photos'));
+
+    expect(handleAddDocumentOfCategory).toHaveBeenCalledWith(feature, C.PHOTO);
+  });
+
   it('opens directly attached tablet photos instead of creating a duplicate record', () => {
     const feature = createDoc('feature-1', C.FEATURE, '?섑삁 1', {}, {
       fieldworkPhotoUri: 'file:///tablet/photos/feature-1.jpg',
