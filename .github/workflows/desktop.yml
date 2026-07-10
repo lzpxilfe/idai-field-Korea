@@ -5,6 +5,7 @@ on:
       - "core/**"
       - "desktop/**"
       - "tools/korean-fieldwork-*.js"
+      - "tools/ci-retry-command.js"
       - "README.md"
       - "docs/korean-fieldwork/**"
       - "START_FIELD_DESKTOP.cmd"
@@ -26,6 +27,7 @@ on:
       - "core/**"
       - "desktop/**"
       - "tools/korean-fieldwork-*.js"
+      - "tools/ci-retry-command.js"
       - "README.md"
       - "docs/korean-fieldwork/**"
       - "START_FIELD_DESKTOP.cmd"
@@ -54,7 +56,7 @@ jobs:
       - name: Run Korean fieldwork parity check
         run: node tools/korean-fieldwork-parity-check.js
       - name: Install dependencies
-        run: npm run bootstrap
+        run: node tools/ci-retry-command.js npm run bootstrap
       - name: Build core
         run: npm run build
         working-directory: core
@@ -78,7 +80,7 @@ jobs:
         with:
           node-version: 22
       - name: Install dependencies
-        run: npm run bootstrap
+        run: node tools/ci-retry-command.js npm run bootstrap
       - name: Build core
         run: npm run build
         working-directory: core
@@ -111,9 +113,9 @@ jobs:
       with:
         node-version: 22
     - name: Install root node modules
-      run: npm i
+      run: node tools/ci-retry-command.js npm i
     - name: Install and link package node modules 
-      run: npm run bootstrap
+      run: node tools/ci-retry-command.js npm run bootstrap
     - name: Build core
       run: npm run build
       working-directory: core
