@@ -3230,11 +3230,15 @@ function validateRecordPanelOrder() {
       || !desktopRecordTabletBundleSpecText.includes('groups many tablet evidence records by kind for desktop handoff')
       || !desktopRecordContextPanelText.includes('makeKoreanFieldworkRecordTabletBundle')
       || !desktopRecordContextPanelText.includes('copyTabletRecordBundleGroup')
+      || !desktopRecordContextPanelText.includes('toggleTabletRecordBundleGroup')
+      || !desktopRecordContextPanelText.includes('openTabletRecordBundleSource')
       || !desktopRecordContextPanelTemplateText.includes('getTabletRecordBundle() as tabletBundle')
       || !desktopRecordContextPanelTemplateText.includes('korean-fieldwork-record-context-tablet-bundle-groups')
+      || !desktopRecordContextPanelTemplateText.includes('korean-fieldwork-record-context-tablet-bundle-source')
       || !desktopRecordContextPanelStyleText.includes('korean-fieldwork-record-context-tablet-bundle-group')
-      || !desktopRecordContextPanelSpecText.includes('shows a grouped tablet record bundle with HWP-safe copy actions')) {
-    findings.push('desktop record context panel must group linked tablet evidence, notebook entries, HWP copy readiness, and issues into a copyable per-record tablet bundle');
+      || !desktopRecordContextPanelStyleText.includes('korean-fieldwork-record-context-tablet-bundle-source-open')
+      || !desktopRecordContextPanelSpecText.includes('shows a grouped tablet record bundle with HWP-safe copy and source-open actions')) {
+    findings.push('desktop record context panel must group linked tablet evidence, notebook entries, HWP copy readiness, and issues into a copyable and openable per-record tablet bundle');
   }
   if (!desktopRecordContextPanelText.includes('pushFeatureAttributeChip')
       || !desktopRecordContextPanelText.includes('formatFeatureAttributeLabels')

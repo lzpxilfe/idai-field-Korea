@@ -70,6 +70,7 @@ import {
 import {
     KoreanFieldworkTabletRecordBundle,
     KoreanFieldworkTabletRecordBundleGroup,
+    KoreanFieldworkTabletRecordBundleSource,
     makeKoreanFieldworkRecordTabletBundle
 } from '../../../util/korean-fieldwork-record-tablet-bundle';
 import { writeKoreanFieldworkHwpClipboardText } from '../../../util/korean-fieldwork-hwp-clipboard';
@@ -805,6 +806,7 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
     public recordActions: KoreanFieldworkRecordActionItem[] = [];
     public reportHandoffItem: KoreanFieldworkReportHandoffItem|undefined;
     public tabletRecordBundle: KoreanFieldworkTabletRecordBundle|undefined;
+    public expandedTabletRecordBundleGroupIds: string[] = [];
     public reportHandoffCopiedId: string|undefined;
     public tabletRecordBundleCopiedId: string|undefined;
     public evidenceInsightCopiedId: string|undefined;
@@ -931,6 +933,26 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
 
     public getTabletRecordBundleGroupCopyActionLabel = (group: KoreanFieldworkTabletRecordBundleGroup) =>
         this.isTabletRecordBundleGroupCopied(group) ? '\ubcf5\uc0ac\ub428' : '\ubcf5\uc0ac';
+
+
+    public isTabletRecordBundleGroupExpanded = (group: KoreanFieldworkTabletRecordBundleGroup) =>
+        this.expandedTabletRecordBundleGroupIds.includes(group.id);
+
+
+    public getTabletRecordBundleGroupToggleLabel = (group: KoreanFieldworkTabletRecordBundleGroup) =>
+        this.isTabletRecordBundleGroupExpanded(group) ? '\uc811\uae30' : '\ud3bc\uce58\uae30';
+
+
+    public toggleTabletRecordBundleGroup(group: KoreanFieldworkTabletRecordBundleGroup) {
+
+        this.expandedTabletRecordBundleGroupIds = this.isTabletRecordBundleGroupExpanded(group)
+            ? this.expandedTabletRecordBundleGroupIds.filter(groupId => groupId !== group.id)
+            : this.expandedTabletRecordBundleGroupIds.concat(group.id);
+    }
+
+
+    public canOpenTabletRecordBundleSource = (source: KoreanFieldworkTabletRecordBundleSource) =>
+        !!source.documentId;
 
 
     public hasReportHandoffItem = () => !!this.reportHandoffItem;
@@ -1513,6 +1535,14 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
     }
 
 
+    public async openTabletRecordBundleSource(source: KoreanFieldworkTabletRecordBundleSource) {
+
+        if (!source.documentId) return;
+
+        await this.routing.jumpToResource(await this.datastore.get(source.documentId));
+    }
+
+
     public async copyEvidenceInsight(insight: EvidenceInsight) {
 
         const copyText = this.getEvidenceInsightCopyText(insight);
@@ -1569,6 +1599,7 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
             this.recordActions = [];
             this.reportHandoffItem = undefined;
             this.tabletRecordBundle = undefined;
+            this.expandedTabletRecordBundleGroupIds = [];
             this.projectDocuments = [];
             return;
         }
@@ -1611,6 +1642,8 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
             documents,
             this.reportHandoffItem
         );
+        this.expandedTabletRecordBundleGroupIds = this.expandedTabletRecordBundleGroupIds
+            .filter(groupId => this.tabletRecordBundle?.groups.some(group => group.id === groupId));
     }
 
 

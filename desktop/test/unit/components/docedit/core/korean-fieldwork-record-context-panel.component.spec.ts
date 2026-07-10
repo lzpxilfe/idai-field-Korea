@@ -233,7 +233,7 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
     });
 
 
-    it('shows a grouped tablet record bundle with HWP-safe copy actions', async () => {
+    it('shows a grouped tablet record bundle with HWP-safe copy and source-open actions', async () => {
 
         const write = jest.fn();
         const writeText = jest.fn();
@@ -266,11 +266,16 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
                 date: getTodayLabel(),
                 penMemoReviewedTranscript: '[\uad00\ucc30 \ub0b4\uc6a9] \ubc14\ub2e5\uba74 \ud53c\ud2b8\uc120 \ud655\uc778.'
             });
-            const component = createComponent({
+            const datastore = {
                 find: jest.fn().mockResolvedValue({
                     documents: [feature, ...photos, drawing, memo]
-                })
-            });
+                }),
+                get: jest.fn().mockResolvedValue(photos[3])
+            };
+            const routing = { jumpToResource: jest.fn() };
+            const component = createComponent({
+                ...datastore
+            }, routing);
             component.document = feature as any;
             component.fieldDefinitions = [
                 field('featureRecordingStatus'),
@@ -306,6 +311,19 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
             expect(writeText).toHaveBeenLastCalledWith(photoGroup.copyText);
             expect(component.getTabletRecordBundleGroupCopyActionLabel(photoGroup))
                 .toBe('\ubcf5\uc0ac\ub428');
+
+            expect(component.isTabletRecordBundleGroupExpanded(photoGroup)).toBe(false);
+
+            component.toggleTabletRecordBundleGroup(photoGroup);
+
+            expect(component.isTabletRecordBundleGroupExpanded(photoGroup)).toBe(true);
+            expect(component.getTabletRecordBundleGroupToggleLabel(photoGroup)).toBe('\uc811\uae30');
+            expect(component.canOpenTabletRecordBundleSource(photoGroup.sources[3])).toBe(true);
+
+            await component.openTabletRecordBundleSource(photoGroup.sources[3]);
+
+            expect(datastore.get).toHaveBeenCalledWith('photo-4');
+            expect(routing.jumpToResource).toHaveBeenCalledWith(photos[3]);
         } finally {
             testWindow.require = previousRequire;
         }
@@ -336,9 +354,13 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
         expect(bundleIndex).toBeGreaterThan(actionIndex);
         expect(bundleIndex).toBeLessThan(hwpIndex);
         expect(template).toContain('korean-fieldwork-record-context-tablet-bundle-groups');
+        expect(template).toContain('toggleTabletRecordBundleGroup(group)');
+        expect(template).toContain('openTabletRecordBundleSource(source)');
         expect(template).toContain('copyTabletRecordBundleGroup(group)');
+        expect(template).toContain('korean-fieldwork-record-context-tablet-bundle-source');
         expect(styles).toContain('.korean-fieldwork-record-context-tablet-bundle');
         expect(styles).toContain('.korean-fieldwork-record-context-tablet-bundle-group');
+        expect(styles).toContain('.korean-fieldwork-record-context-tablet-bundle-source-open');
     });
 
 

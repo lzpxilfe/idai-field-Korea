@@ -98,23 +98,57 @@
             <div *ngFor="let group of tabletBundle.groups"
                  class="korean-fieldwork-record-context-tablet-bundle-group"
                  [class.warning]="group.tone === 'warning'">
-                <div class="korean-fieldwork-record-context-tablet-bundle-group-main">
-                    <span class="korean-fieldwork-record-context-tablet-bundle-group-label">
-                        {{group.label}} {{group.count}}
-                    </span>
-                    <span class="korean-fieldwork-record-context-tablet-bundle-group-detail">
-                        {{group.detail}}
-                    </span>
+                <div class="korean-fieldwork-record-context-tablet-bundle-group-header">
+                    <div class="korean-fieldwork-record-context-tablet-bundle-group-main">
+                        <span class="korean-fieldwork-record-context-tablet-bundle-group-label">
+                            {{group.label}} {{group.count}}
+                        </span>
+                        <span class="korean-fieldwork-record-context-tablet-bundle-group-detail">
+                            {{group.detail}}
+                        </span>
+                    </div>
+                    <div class="korean-fieldwork-record-context-tablet-bundle-group-actions">
+                        <button type="button"
+                                class="korean-fieldwork-record-context-tablet-bundle-group-toggle"
+                                (click)="toggleTabletRecordBundleGroup(group)">
+                            <span class="mdi"
+                                  [class.mdi-chevron-up]="isTabletRecordBundleGroupExpanded(group)"
+                                  [class.mdi-chevron-down]="!isTabletRecordBundleGroupExpanded(group)"></span>
+                            <span>{{getTabletRecordBundleGroupToggleLabel(group)}}</span>
+                        </button>
+                        <button type="button"
+                                class="korean-fieldwork-record-context-tablet-bundle-group-copy"
+                                [class.copied]="isTabletRecordBundleGroupCopied(group)"
+                                (click)="copyTabletRecordBundleGroup(group)">
+                            <span class="mdi"
+                                  [class.mdi-check]="isTabletRecordBundleGroupCopied(group)"
+                                  [class.mdi-content-copy]="!isTabletRecordBundleGroupCopied(group)"></span>
+                            <span>{{getTabletRecordBundleGroupCopyActionLabel(group)}}</span>
+                        </button>
+                    </div>
                 </div>
-                <button type="button"
-                        class="korean-fieldwork-record-context-tablet-bundle-group-copy"
-                        [class.copied]="isTabletRecordBundleGroupCopied(group)"
-                        (click)="copyTabletRecordBundleGroup(group)">
-                    <span class="mdi"
-                          [class.mdi-check]="isTabletRecordBundleGroupCopied(group)"
-                          [class.mdi-content-copy]="!isTabletRecordBundleGroupCopied(group)"></span>
-                    <span>{{getTabletRecordBundleGroupCopyActionLabel(group)}}</span>
-                </button>
+                <div *ngIf="isTabletRecordBundleGroupExpanded(group)"
+                     class="korean-fieldwork-record-context-tablet-bundle-sources">
+                    <div *ngFor="let source of group.sources"
+                         class="korean-fieldwork-record-context-tablet-bundle-source">
+                        <span class="korean-fieldwork-record-context-tablet-bundle-source-main">
+                            <span class="korean-fieldwork-record-context-tablet-bundle-source-label">
+                                {{source.label}}
+                            </span>
+                            <span *ngIf="source.detail"
+                                  class="korean-fieldwork-record-context-tablet-bundle-source-detail">
+                                {{source.detail}}
+                            </span>
+                        </span>
+                        <button *ngIf="canOpenTabletRecordBundleSource(source)"
+                                type="button"
+                                class="korean-fieldwork-record-context-tablet-bundle-source-open"
+                                (click)="openTabletRecordBundleSource(source)">
+                            <span class="mdi mdi-open-in-new"></span>
+                            <span>&#50676;&#44592;</span>
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
