@@ -166,6 +166,11 @@ describe('korean-fieldwork-record-tablet-bundle', () => {
         });
         expect(reviewedBundle.copyText)
             .toContain('\ub370\uc2a4\ud06c\ud1b1 \ucc98\ub9ac: \ucc98\ub9ac\ub428 2026-07-11');
+        expect(reviewedBundle.copyText)
+            .toContain(
+                `\ucc98\ub9ac \uc0c1\uc138: \uc790\ub8cc ${bundle.sourceCount}\uac74`
+                + ` \u00b7 \ud655\uc778 ${bundle.issueCount}\uac74`
+            );
 
         const reopenedDocument = createKoreanFieldworkTabletHandoffReviewUpdate(
             reviewedDocument,
@@ -207,6 +212,7 @@ describe('korean-fieldwork-record-tablet-bundle', () => {
             isReviewed: false,
             isStale: true,
             label: '\ub2e4\uc2dc \ud655\uc778',
+            detail: expect.stringContaining('\uc790\ub8cc 1\uac74\uc5d0\uc11c 2\uac74'),
             tone: 'warning'
         });
         expect(bundle.copyText)
@@ -249,6 +255,7 @@ describe('korean-fieldwork-record-tablet-bundle', () => {
             isReviewed: false,
             isStale: true,
             label: '\ub2e4\uc2dc \ud655\uc778',
+            detail: expect.stringContaining('\uc6d0\ubcf8/\ubcf8\ubb38 \ub0b4\uc6a9 \ubcc0\uacbd'),
             tone: 'warning'
         });
     });

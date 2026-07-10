@@ -2284,6 +2284,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
             `[\ud0dc\ube14\ub9bf \ucc98\ub9ac] ${item.title}`,
             bundle.summary,
             `\ub370\uc2a4\ud06c\ud1b1 \ucc98\ub9ac: ${bundle.reviewState.label}`,
+            `\ucc98\ub9ac \uc0c1\uc138: ${bundle.reviewState.detail}`,
             bodyText ? 'HWP \ubcf8\ubb38' : '',
             bodyText,
             '',

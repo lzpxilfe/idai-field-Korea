@@ -214,11 +214,15 @@ export function getKoreanFieldworkTabletHandoffReviewState(
     const reviewedFingerprint = getTextValue(
         resource?.[KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_FINGERPRINT_FIELD]
     );
-    const isStale = !!reviewedAt && (
-        (sourceCount !== undefined && reviewedSourceCount !== undefined && reviewedSourceCount !== sourceCount)
-        || (issueCount !== undefined && reviewedIssueCount !== undefined && reviewedIssueCount !== issueCount)
-        || (fingerprint !== undefined && reviewedFingerprint !== undefined && reviewedFingerprint !== fingerprint)
+    const staleReasons = getTabletHandoffStaleReasons(
+        sourceCount,
+        reviewedSourceCount,
+        issueCount,
+        reviewedIssueCount,
+        fingerprint,
+        reviewedFingerprint
     );
+    const isStale = !!reviewedAt && staleReasons.length > 0;
     const reviewedAtLabel = reviewedAt ? formatReviewDateLabel(reviewedAt) : undefined;
 
     if (!reviewedAt) {
@@ -238,7 +242,7 @@ export function getKoreanFieldworkTabletHandoffReviewState(
             reviewedAt,
             ...(reviewedAtLabel ? { reviewedAtLabel } : {}),
             label: '\ub2e4\uc2dc \ud655\uc778',
-            detail: '\ucc98\ub9ac \ud6c4 \ud0dc\ube14\ub9bf \uc790\ub8cc\uac00 \ubc14\ub00c',
+            detail: `\ucc98\ub9ac \ud6c4 \ud0dc\ube14\ub9bf \uc790\ub8cc \ubcc0\uacbd: ${staleReasons.join(' \u00b7 ')}`,
             tone: 'warning'
         };
     }
@@ -283,6 +287,29 @@ export function createKoreanFieldworkTabletHandoffReviewUpdate(
     }
 
     return updatedDocument;
+}
+
+
+function getTabletHandoffStaleReasons(
+        sourceCount: number|undefined,
+        reviewedSourceCount: number|undefined,
+        issueCount: number|undefined,
+        reviewedIssueCount: number|undefined,
+        fingerprint: string|undefined,
+        reviewedFingerprint: string|undefined
+): string[] {
+
+    return [
+        sourceCount !== undefined && reviewedSourceCount !== undefined && sourceCount !== reviewedSourceCount
+            ? `\uc790\ub8cc ${reviewedSourceCount}\uac74\uc5d0\uc11c ${sourceCount}\uac74`
+            : '',
+        issueCount !== undefined && reviewedIssueCount !== undefined && issueCount !== reviewedIssueCount
+            ? `\ud655\uc778 ${reviewedIssueCount}\uac74\uc5d0\uc11c ${issueCount}\uac74`
+            : '',
+        fingerprint !== undefined && reviewedFingerprint !== undefined && fingerprint !== reviewedFingerprint
+            ? '\uc6d0\ubcf8/\ubcf8\ubb38 \ub0b4\uc6a9 \ubcc0\uacbd'
+            : ''
+    ].filter(reason => reason.length > 0);
 }
 
 
@@ -455,6 +482,7 @@ function makeBundleCopyText(
         `[\ud0dc\ube14\ub9bf \uc790\ub8cc \ubb36\uc74c] ${title}`,
         summary,
         `\ub370\uc2a4\ud06c\ud1b1 \ucc98\ub9ac: ${reviewState.label}`,
+        `\ucc98\ub9ac \uc0c1\uc138: ${reviewState.detail}`,
         bodyPreview ? `HWP \ubcf8\ubb38: ${bodyPreview}` : '',
         '',
         ...groups.map(group => `${group.label} ${group.count}\uac74: ${group.detail}`),

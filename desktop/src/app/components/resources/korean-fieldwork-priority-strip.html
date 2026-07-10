@@ -406,6 +406,11 @@
                         {{tabletBundle.reviewState.label}}
                     </span>
                 </span>
+                <span class="korean-fieldwork-report-handoff-tablet-bundle-review-detail"
+                      [class.success]="tabletBundle.reviewState.tone === 'success'"
+                      [class.warning]="tabletBundle.reviewState.tone === 'warning'">
+                    {{tabletBundle.reviewState.detail}}
+                </span>
                 <span class="korean-fieldwork-report-handoff-tablet-bundle-groups">
                     <span *ngFor="let group of tabletBundle.groups"
                           class="korean-fieldwork-report-handoff-tablet-bundle-group"

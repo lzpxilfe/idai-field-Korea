@@ -3257,6 +3257,31 @@ korean-fieldwork-priority-strip {
     }
   }
 
+  .korean-fieldwork-report-handoff-tablet-bundle-review-detail {
+    background: #f2f4f7;
+    border: 1px solid #d0d5dd;
+    border-radius: 4px;
+    color: #475467;
+    display: block;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1.3;
+    min-width: 0;
+    padding: 5px 6px;
+
+    &.success {
+      background: #ecfdf3;
+      border-color: #abefc6;
+      color: #027a48;
+    }
+
+    &.warning {
+      background: #fffaeb;
+      border-color: #fedf89;
+      color: #b54708;
+    }
+  }
+
   .korean-fieldwork-report-handoff-tablet-bundle-groups {
     display: grid;
     gap: 4px;
