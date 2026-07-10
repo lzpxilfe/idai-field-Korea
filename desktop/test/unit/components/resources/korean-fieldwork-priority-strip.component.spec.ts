@@ -20,7 +20,9 @@ import {
 } from 'idai-field-core';
 import {
     KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_AT_FIELD,
-    KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_SOURCE_COUNT_FIELD
+    KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_SOURCE_COUNT_FIELD,
+    KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_AT_FIELD,
+    KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_FINGERPRINT_FIELD
 } from '../../../../src/app/util/korean-fieldwork-record-tablet-bundle';
 
 
@@ -773,15 +775,22 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
 
         await component.toggleReportHandoffTabletBundleReviewed(featureItem);
 
-        expect(datastore.bulkUpdate).toHaveBeenCalledWith([
+        expect(datastore.bulkUpdate).toHaveBeenCalledWith(expect.arrayContaining([
             expect.objectContaining({
                 resource: expect.objectContaining({
                     id: 'feature-1',
                     [KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_AT_FIELD]: expect.any(String),
                     [KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_SOURCE_COUNT_FIELD]: 1
                 })
+            }),
+            expect.objectContaining({
+                resource: expect.objectContaining({
+                    id: 'photo-1',
+                    [KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_AT_FIELD]: expect.any(String),
+                    [KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_FINGERPRINT_FIELD]: expect.any(String)
+                })
             })
-        ]);
+        ]));
         expect(component.isReportHandoffTabletBundleReviewed(featureItem)).toBe(true);
         expect(component.getReportHandoffTabletBundleReviewActionLabel(featureItem))
             .toBe('\ucc98\ub9ac \ud574\uc81c');
@@ -794,6 +803,9 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
         expect(documents.find(document =>
             document.resource.id === 'feature-1'
         )!.resource[KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_AT_FIELD]).toBeUndefined();
+        expect(documents.find(document =>
+            document.resource.id === 'photo-1'
+        )!.resource[KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_AT_FIELD]).toBeUndefined();
         expect(component.isReportHandoffTabletBundleReviewed(featureItem)).toBe(false);
     });
 
@@ -808,7 +820,7 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
         testWindow.require = jest.fn().mockReturnValue({ clipboard: { clear, write, writeText } });
 
         try {
-            const documents = [
+            let documents = [
                 createDocument('project', 'Project'),
                 createDocument('feature-1', 'Feature', {
                     identifier: 'pit-001',
@@ -828,10 +840,19 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
                 })
             ];
             const datastore = {
-                find: jest.fn().mockResolvedValue({ documents }),
+                find: jest.fn().mockImplementation(async () => ({ documents })),
                 get: jest.fn().mockImplementation(async (documentId: string) =>
                     documents.find(document => document.resource.id === documentId)
-                )
+                ),
+                bulkUpdate: jest.fn().mockImplementation(async (updatedDocuments: any[]) => {
+                    documents = documents.map(document =>
+                        updatedDocuments.find(updatedDocument =>
+                            updatedDocument.resource.id === document.resource.id
+                        ) ?? document
+                    );
+
+                    return updatedDocuments;
+                })
             };
             const routing = { jumpToResource: jest.fn() };
             const component = createComponent(datastore, createProjectConfiguration(), routing);
@@ -850,6 +871,12 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
             expect(component.getReportHandoffTabletBundleSourceCopyActionLabel(featureItem, photoGroup, photoSource))
                 .toBe('\ubcf5\uc0ac');
             expect(component.canOpenReportHandoffTabletBundleSource(photoSource)).toBe(true);
+            expect(component.getReportHandoffTabletBundleSourceReviewActionLabel(photoSource))
+                .toBe('\ucc98\ub9ac \uc644\ub8cc');
+            expect(photoSource.reviewState).toMatchObject({
+                isReviewed: false,
+                label: '\ubbf8\ucc98\ub9ac'
+            });
 
             await component.copyReportHandoffTabletBundleGroup(featureItem, photoGroup);
 
@@ -868,6 +895,32 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
                 .toBe(true);
             expect(component.getReportHandoffTabletBundleSourceCopyActionLabel(featureItem, photoGroup, photoSource))
                 .toBe('\ubcf5\uc0ac\ub428');
+
+            await component.toggleReportHandoffTabletBundleSourceReviewed(photoSource);
+
+            expect(datastore.bulkUpdate).toHaveBeenCalledWith([
+                expect.objectContaining({
+                    resource: expect.objectContaining({
+                        id: 'photo-1',
+                        [KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_AT_FIELD]: expect.any(String),
+                        [KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_FINGERPRINT_FIELD]: photoSource.fingerprint
+                    })
+                })
+            ]);
+
+            const refreshedFeatureItem = component.getReportHandoffItems()
+                .find(item => item.documentId === 'feature-1')!;
+            const refreshedPhotoGroup = component.getReportHandoffTabletBundle(refreshedFeatureItem)!
+                .groups.find(group => group.id === 'photos')!;
+            const refreshedPhotoSource = refreshedPhotoGroup.sources
+                .find(source => source.documentId === 'photo-1')!;
+
+            expect(refreshedPhotoSource.reviewState).toMatchObject({
+                isReviewed: true,
+                label: expect.stringContaining('\ucc98\ub9ac\ub428')
+            });
+            expect(component.getReportHandoffTabletBundleSourceReviewActionLabel(refreshedPhotoSource))
+                .toBe('\ucc98\ub9ac \ud574\uc81c');
 
             await component.openReportHandoffTabletBundleSource(photoSource);
 
@@ -1079,7 +1132,9 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
             expect.objectContaining({
                 resource: expect.objectContaining({
                     id: 'photo-open',
-                    [KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_AT_FIELD]: expect.any(String)
+                    [KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_AT_FIELD]: expect.any(String),
+                    [KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_AT_FIELD]: expect.any(String),
+                    [KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_FINGERPRINT_FIELD]: expect.any(String)
                 })
             })
         ]));

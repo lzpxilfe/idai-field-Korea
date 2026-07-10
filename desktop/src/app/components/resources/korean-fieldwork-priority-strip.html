@@ -446,13 +446,26 @@
                         <span class="korean-fieldwork-report-handoff-tablet-bundle-sources">
                             <span *ngFor="let source of getReportHandoffTabletBundleGroupSources(group)"
                                   class="korean-fieldwork-report-handoff-tablet-bundle-source"
-                                  [class.warning]="source.issueCount > 0">
+                                  [class.warning]="source.issueCount > 0 || source.reviewState.tone === 'warning'"
+                                  [class.reviewed]="source.reviewState.isReviewed">
                                 <span class="korean-fieldwork-report-handoff-tablet-bundle-source-main">
                                     <span class="korean-fieldwork-report-handoff-tablet-bundle-source-label">
                                         {{source.label}}
-                                        <span *ngIf="source.issueCount > 0">
+                                        <span *ngIf="source.issueCount > 0"
+                                              class="issue">
                                             &#54869;&#51064; {{source.issueCount}}
                                         </span>
+                                        <span class="review"
+                                              [class.success]="source.reviewState.tone === 'success'"
+                                              [class.warning]="source.reviewState.tone === 'warning'">
+                                            {{source.reviewState.label}}
+                                        </span>
+                                    </span>
+                                    <span *ngIf="source.reviewState.isReviewed || source.reviewState.isStale"
+                                          class="korean-fieldwork-report-handoff-tablet-bundle-source-review-detail"
+                                          [class.success]="source.reviewState.tone === 'success'"
+                                          [class.warning]="source.reviewState.tone === 'warning'">
+                                        {{source.reviewState.detail}}
                                     </span>
                                     <span *ngIf="source.detail"
                                           class="korean-fieldwork-report-handoff-tablet-bundle-source-detail">
@@ -472,6 +485,16 @@
                                               [class.mdi-check]="isReportHandoffTabletBundleSourceCopied(previewItem, group, source)"
                                               [class.mdi-content-copy]="!isReportHandoffTabletBundleSourceCopied(previewItem, group, source)"></span>
                                         <span>{{getReportHandoffTabletBundleSourceCopyActionLabel(previewItem, group, source)}}</span>
+                                    </button>
+                                    <button *ngIf="canOpenReportHandoffTabletBundleSource(source)"
+                                            type="button"
+                                            class="korean-fieldwork-report-handoff-tablet-bundle-source-review"
+                                            [class.reviewed]="source.reviewState.isReviewed"
+                                            (click)="toggleReportHandoffTabletBundleSourceReviewed(source, $event)">
+                                        <span class="mdi"
+                                              [class.mdi-backup-restore]="source.reviewState.isReviewed"
+                                              [class.mdi-check-circle-outline]="!source.reviewState.isReviewed"></span>
+                                        <span>{{getReportHandoffTabletBundleSourceReviewActionLabel(source)}}</span>
                                     </button>
                                     <button *ngIf="canOpenReportHandoffTabletBundleSource(source)"
                                             type="button"

@@ -1,10 +1,15 @@
 import {
     createKoreanFieldworkTabletHandoffReviewUpdate,
+    createKoreanFieldworkTabletHandoffSourceReviewUpdate,
     KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_AT_FIELD,
     KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_FINGERPRINT_FIELD,
     KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_ISSUE_COUNT_FIELD,
     KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_SOURCE_COUNT_FIELD,
     KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_SUMMARY_FIELD,
+    KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_AT_FIELD,
+    KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_FINGERPRINT_FIELD,
+    KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_ISSUE_COUNT_FIELD,
+    KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_LABEL_FIELD,
     makeKoreanFieldworkRecordTabletBundle
 } from '../../../src/app/util/korean-fieldwork-record-tablet-bundle';
 
@@ -183,6 +188,81 @@ describe('korean-fieldwork-record-tablet-bundle', () => {
         expect(reopenedDocument.resource[KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_SOURCE_COUNT_FIELD])
             .toBeUndefined();
         expect(reopenedDocument.resource[KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_FINGERPRINT_FIELD])
+            .toBeUndefined();
+    });
+
+
+    it('tracks desktop review state for individual tablet source rows', () => {
+
+        const feature = createDoc('feature-1', 'Feature', 'F1', {}, {
+            featureRecordingStatus: 'confirmed',
+            featureInvestigationChecklist: []
+        });
+        const photo = createDoc('photo-1', 'Photo', 'P1', {
+            depicts: ['feature-1']
+        }, {
+            fieldworkPhotoUri: 'file:///tablet/photos/P1.jpg'
+        });
+        const bundle = makeKoreanFieldworkRecordTabletBundle(feature, [feature, photo] as any)!;
+        const photoSource = bundle.groups.find(group => group.id === 'photos')!.sources[0];
+        const reviewedPhoto = createKoreanFieldworkTabletHandoffSourceReviewUpdate(
+            photo,
+            photoSource,
+            true,
+            '2026-07-11T02:03:04.000Z'
+        );
+        const reviewedBundle = makeKoreanFieldworkRecordTabletBundle(
+            feature,
+            [feature, reviewedPhoto] as any
+        )!;
+        const reviewedSource = reviewedBundle.groups.find(group => group.id === 'photos')!.sources[0];
+
+        expect(reviewedPhoto.resource).toMatchObject({
+            [KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_AT_FIELD]: '2026-07-11T02:03:04.000Z',
+            [KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_ISSUE_COUNT_FIELD]: photoSource.issueCount,
+            [KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_LABEL_FIELD]: 'P1',
+            [KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_FINGERPRINT_FIELD]: photoSource.fingerprint
+        });
+        expect(reviewedSource.reviewState).toMatchObject({
+            isReviewed: true,
+            isStale: false,
+            label: '\ucc98\ub9ac\ub428 2026-07-11',
+            tone: 'success'
+        });
+
+        const changedPhoto = createDoc('photo-1', 'Photo', 'P1', {
+            depicts: ['feature-1']
+        }, {
+            fieldworkPhotoUri: 'file:///tablet/photos/P1-retake.jpg',
+            [KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_AT_FIELD]:
+                reviewedPhoto.resource[KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_AT_FIELD],
+            [KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_ISSUE_COUNT_FIELD]:
+                reviewedPhoto.resource[KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_ISSUE_COUNT_FIELD],
+            [KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_LABEL_FIELD]:
+                reviewedPhoto.resource[KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_LABEL_FIELD],
+            [KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_FINGERPRINT_FIELD]:
+                reviewedPhoto.resource[KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_FINGERPRINT_FIELD]
+        });
+        const staleBundle = makeKoreanFieldworkRecordTabletBundle(feature, [feature, changedPhoto] as any)!;
+        const staleSource = staleBundle.groups.find(group => group.id === 'photos')!.sources[0];
+
+        expect(staleSource.reviewState).toMatchObject({
+            isReviewed: false,
+            isStale: true,
+            label: '\ub2e4\uc2dc \ud655\uc778',
+            detail: expect.stringContaining('\uc6d0\ubcf8/\ubcf8\ubb38 \ub0b4\uc6a9 \ubcc0\uacbd'),
+            tone: 'warning'
+        });
+
+        const reopenedPhoto = createKoreanFieldworkTabletHandoffSourceReviewUpdate(
+            reviewedPhoto,
+            reviewedSource,
+            false
+        );
+
+        expect(reopenedPhoto.resource[KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_AT_FIELD])
+            .toBeUndefined();
+        expect(reopenedPhoto.resource[KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_FINGERPRINT_FIELD])
             .toBeUndefined();
     });
 

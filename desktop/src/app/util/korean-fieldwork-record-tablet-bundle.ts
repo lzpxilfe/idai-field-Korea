@@ -23,6 +23,12 @@ export const KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_SOURCE_COUNT_FIELD = 'tabl
 export const KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_ISSUE_COUNT_FIELD = 'tabletHandoffReviewedIssueCount';
 export const KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_SUMMARY_FIELD = 'tabletHandoffReviewedSummary';
 export const KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_FINGERPRINT_FIELD = 'tabletHandoffReviewedFingerprint';
+export const KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_AT_FIELD = 'tabletHandoffSourceReviewedAt';
+export const KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_ISSUE_COUNT_FIELD
+    = 'tabletHandoffSourceReviewedIssueCount';
+export const KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_LABEL_FIELD = 'tabletHandoffSourceReviewedLabel';
+export const KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_FINGERPRINT_FIELD
+    = 'tabletHandoffSourceReviewedFingerprint';
 
 export interface KoreanFieldworkTabletHandoffReviewState {
     isReviewed: boolean;
@@ -42,6 +48,8 @@ export interface KoreanFieldworkTabletRecordBundleSource {
     issueCount: number;
     issueDetails: string[];
     copyText: string;
+    fingerprint: string;
+    reviewState: KoreanFieldworkTabletHandoffReviewState;
     tone: KoreanFieldworkTabletRecordBundleTone;
 }
 
@@ -290,6 +298,32 @@ export function createKoreanFieldworkTabletHandoffReviewUpdate(
 }
 
 
+export function createKoreanFieldworkTabletHandoffSourceReviewUpdate(
+        document: Document,
+        source: KoreanFieldworkTabletRecordBundleSource,
+        reviewed: boolean,
+        reviewedAt: string = new Date().toISOString()
+): Document {
+
+    const updatedDocument = Document.clone(document);
+    const resource = updatedDocument.resource as Record<string, unknown>;
+
+    if (reviewed) {
+        resource[KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_AT_FIELD] = reviewedAt;
+        resource[KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_ISSUE_COUNT_FIELD] = source.issueCount;
+        resource[KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_LABEL_FIELD] = source.label;
+        resource[KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_FINGERPRINT_FIELD] = source.fingerprint;
+    } else {
+        delete resource[KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_AT_FIELD];
+        delete resource[KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_ISSUE_COUNT_FIELD];
+        delete resource[KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_LABEL_FIELD];
+        delete resource[KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_FINGERPRINT_FIELD];
+    }
+
+    return updatedDocument;
+}
+
+
 function getTabletHandoffStaleReasons(
         sourceCount: number|undefined,
         reviewedSourceCount: number|undefined,
@@ -310,6 +344,64 @@ function getTabletHandoffStaleReasons(
             ? '\uc6d0\ubcf8/\ubcf8\ubb38 \ub0b4\uc6a9 \ubcc0\uacbd'
             : ''
     ].filter(reason => reason.length > 0);
+}
+
+
+function getKoreanFieldworkTabletHandoffSourceReviewState(
+        document: Document,
+        issueCount: number,
+        fingerprint: string
+): KoreanFieldworkTabletHandoffReviewState {
+
+    const resource = document?.resource as Record<string, unknown>|undefined;
+    const reviewedAt = getTextValue(resource?.[KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_AT_FIELD]);
+    const reviewedIssueCount = getNumberValue(
+        resource?.[KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_ISSUE_COUNT_FIELD]
+    );
+    const reviewedFingerprint = getTextValue(
+        resource?.[KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_FINGERPRINT_FIELD]
+    );
+    const staleReasons = [
+        reviewedIssueCount !== undefined && reviewedIssueCount !== issueCount
+            ? `\ud655\uc778 ${reviewedIssueCount}\uac74\uc5d0\uc11c ${issueCount}\uac74`
+            : '',
+        reviewedFingerprint !== undefined && reviewedFingerprint !== fingerprint
+            ? '\uc6d0\ubcf8/\ubcf8\ubb38 \ub0b4\uc6a9 \ubcc0\uacbd'
+            : ''
+    ].filter(reason => reason.length > 0);
+    const reviewedAtLabel = reviewedAt ? formatReviewDateLabel(reviewedAt) : undefined;
+
+    if (!reviewedAt) {
+        return {
+            isReviewed: false,
+            isStale: false,
+            label: '\ubbf8\ucc98\ub9ac',
+            detail: '\uc774 \uc6d0\uc790\ub8cc\ub97c \uc544\uc9c1 \ucc98\ub9ac\ud558\uc9c0 \uc54a\uc74c',
+            tone: 'neutral'
+        };
+    }
+
+    if (staleReasons.length > 0) {
+        return {
+            isReviewed: false,
+            isStale: true,
+            reviewedAt,
+            ...(reviewedAtLabel ? { reviewedAtLabel } : {}),
+            label: '\ub2e4\uc2dc \ud655\uc778',
+            detail: `\ucc98\ub9ac \ud6c4 \uc6d0\uc790\ub8cc \ubcc0\uacbd: ${staleReasons.join(' \u00b7 ')}`,
+            tone: 'warning'
+        };
+    }
+
+    return {
+        isReviewed: true,
+        isStale: false,
+        reviewedAt,
+        ...(reviewedAtLabel ? { reviewedAtLabel } : {}),
+        label: reviewedAtLabel ? `\ucc98\ub9ac\ub428 ${reviewedAtLabel}` : '\ucc98\ub9ac\ub428',
+        detail: issueCount > 0 ? `\ud655\uc778 ${issueCount}\uac74` : '\ud655\uc778 \uc5c6\uc74c',
+        tone: 'success'
+    };
 }
 
 
@@ -431,6 +523,14 @@ function makeDocumentSource(document: Document,
     const label = getDocumentIdentifier(document);
     const detail = getDocumentDetail(document);
     const issueDetails = issueDetailsByDocumentId.get(document.resource.id) ?? [];
+    const copyText = makeSourceCopyText(label, detail, issueDetails);
+    const fingerprint = makeSourceFingerprint(
+        document.resource.id,
+        label,
+        detail,
+        issueDetails,
+        copyText
+    );
 
     return {
         id: document.resource.id,
@@ -439,7 +539,9 @@ function makeDocumentSource(document: Document,
         documentId: document.resource.id,
         issueCount: issueDetails.length,
         issueDetails,
-        copyText: makeSourceCopyText(label, detail, issueDetails),
+        copyText,
+        fingerprint,
+        reviewState: getKoreanFieldworkTabletHandoffSourceReviewState(document, issueDetails.length, fingerprint),
         tone: issueDetails.length > 0 ? 'warning' : 'info'
     };
 }
@@ -455,6 +557,14 @@ function makeNotebookSource(entry: KoreanFieldworkNotebookEntry,
         entry.dateLabel
     ].filter(value => value.length > 0).join(' \u00b7 ');
     const issueDetails = issueDetailsByDocumentId.get(entry.sourceDocument.resource.id) ?? [];
+    const copyText = makeSourceCopyText(label, entry.detail, issueDetails);
+    const fingerprint = makeSourceFingerprint(
+        entry.sourceDocument.resource.id,
+        label,
+        entry.detail,
+        issueDetails,
+        copyText
+    );
 
     return {
         id: entry.id,
@@ -463,7 +573,13 @@ function makeNotebookSource(entry: KoreanFieldworkNotebookEntry,
         documentId: entry.sourceDocument.resource.id,
         issueCount: issueDetails.length,
         issueDetails,
-        copyText: makeSourceCopyText(label, entry.detail, issueDetails),
+        copyText,
+        fingerprint,
+        reviewState: getKoreanFieldworkTabletHandoffSourceReviewState(
+            entry.sourceDocument,
+            issueDetails.length,
+            fingerprint
+        ),
         tone: issueDetails.length > 0 ? 'warning' : 'info'
     };
 }
@@ -541,6 +657,27 @@ function makeSourceCopyText(
     ];
 
     return normalizeKoreanFieldworkHwpPlainText(lines.filter(line => line.length > 0).join('\n'));
+}
+
+
+function makeSourceFingerprint(
+        documentId: string,
+        label: string,
+        detail: string|undefined,
+        issueDetails: string[],
+        copyText: string
+): string {
+
+    const payload = JSON.stringify({
+        version: 1,
+        documentId,
+        label,
+        detail: detail ?? '',
+        issueDetails,
+        copyText
+    });
+
+    return `v1:${hashFingerprintPayload(payload)}:${payload.length}`;
 }
 
 

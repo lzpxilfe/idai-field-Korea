@@ -125,6 +125,7 @@ import {
 } from '../../util/korean-fieldwork-feature-guidance';
 import {
     createKoreanFieldworkTabletHandoffReviewUpdate,
+    createKoreanFieldworkTabletHandoffSourceReviewUpdate,
     KoreanFieldworkTabletRecordBundle,
     KoreanFieldworkTabletRecordBundleGroup,
     KoreanFieldworkTabletRecordBundleSource,
@@ -1001,6 +1002,10 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
             source: KoreanFieldworkTabletRecordBundleSource
     ) => this.isReportHandoffTabletBundleSourceCopied(item, group, source) ? '\ubcf5\uc0ac\ub428' : '\ubcf5\uc0ac';
 
+    public getReportHandoffTabletBundleSourceReviewActionLabel = (
+            source: KoreanFieldworkTabletRecordBundleSource
+    ) => source.reviewState.isReviewed ? '\ucc98\ub9ac \ud574\uc81c' : '\ucc98\ub9ac \uc644\ub8cc';
+
     public canOpenReportHandoffTabletBundleSource = (source: KoreanFieldworkTabletRecordBundleSource) =>
         !!source.documentId;
 
@@ -1135,25 +1140,58 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
         }
     }
 
+    public async toggleReportHandoffTabletBundleSourceReviewed(
+            source: KoreanFieldworkTabletRecordBundleSource,
+            event?: Event
+    ) {
+
+        if (event) event.stopPropagation();
+        if (!source.documentId) return;
+
+        const reviewedAt = new Date().toISOString();
+        const updatedDocumentsById = new Map<string, Document>();
+        this.collectReportHandoffTabletSourceReviewUpdate(
+            source,
+            !source.reviewState.isReviewed,
+            reviewedAt,
+            updatedDocumentsById
+        );
+
+        if (updatedDocumentsById.size === 0) return;
+
+        try {
+            await this.datastore.bulkUpdate([...updatedDocumentsById.values()]);
+            this.applyProjectDocumentUpdates(updatedDocumentsById);
+            await this.refresh();
+        } catch (errWithParams) {
+            this.messages.add(errWithParams);
+        }
+    }
+
     public async toggleReportHandoffTabletBundleReviewed(item: KoreanFieldworkReportHandoffItem, event?: Event) {
 
         if (event) event.stopPropagation();
 
         const bundle = this.getReportHandoffTabletBundle(item);
-        const document = this.projectDocuments.find(candidate => candidate.resource.id === item.documentId);
-        if (!bundle || !document) return;
+        if (!bundle) return;
 
         try {
             this.selectedReportHandoffDocumentId = item.documentId;
-            const updatedDocument = createKoreanFieldworkTabletHandoffReviewUpdate(
-                document,
+            const reviewed = !bundle.reviewState.isReviewed;
+            const reviewedAt = new Date().toISOString();
+            const updatedDocumentsById = new Map<string, Document>();
+
+            this.collectReportHandoffTabletBundleReviewUpdates(
+                item,
                 bundle,
-                !bundle.reviewState.isReviewed
+                reviewed,
+                reviewedAt,
+                updatedDocumentsById
             );
-            await this.datastore.bulkUpdate([updatedDocument]);
-            this.projectDocuments = this.projectDocuments.map(candidate =>
-                candidate.resource.id === updatedDocument.resource.id ? updatedDocument : candidate
-            );
+            if (updatedDocumentsById.size === 0) return;
+
+            await this.datastore.bulkUpdate([...updatedDocumentsById.values()]);
+            this.applyProjectDocumentUpdates(updatedDocumentsById);
             await this.refresh();
         } catch (errWithParams) {
             this.messages.add(errWithParams);
@@ -1165,26 +1203,26 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
         if (event) event.stopPropagation();
 
         const reviewedAt = new Date().toISOString();
-        const updatedDocuments = this.getTabletWorkReportHandoffItems()
-            .map(item => {
-                const bundle = this.getReportHandoffTabletBundle(item);
-                const document = this.projectDocuments.find(candidate => candidate.resource.id === item.documentId);
+        const updatedDocumentsById = new Map<string, Document>();
 
-                return bundle && document
-                    ? createKoreanFieldworkTabletHandoffReviewUpdate(document, bundle, true, reviewedAt)
-                    : undefined;
-            })
-            .filter((document): document is Document => !!document);
+        this.getTabletWorkReportHandoffItems().forEach(item => {
+            const bundle = this.getReportHandoffTabletBundle(item);
+            if (!bundle) return;
 
-        if (updatedDocuments.length === 0) return;
+            this.collectReportHandoffTabletBundleReviewUpdates(
+                item,
+                bundle,
+                true,
+                reviewedAt,
+                updatedDocumentsById
+            );
+        });
+
+        if (updatedDocumentsById.size === 0) return;
 
         try {
-            await this.datastore.bulkUpdate(updatedDocuments);
-            const updatedDocumentsById = new Map(updatedDocuments.map(document => [document.resource.id, document]));
-
-            this.projectDocuments = this.projectDocuments.map(candidate =>
-                updatedDocumentsById.get(candidate.resource.id) ?? candidate
-            );
+            await this.datastore.bulkUpdate([...updatedDocumentsById.values()]);
+            this.applyProjectDocumentUpdates(updatedDocumentsById);
             await this.refresh();
         } catch (errWithParams) {
             this.messages.add(errWithParams);
@@ -1994,6 +2032,80 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
 
         await this.routing.jumpToResource(await this.datastore.get(documentId));
     }
+
+
+    private collectReportHandoffTabletBundleReviewUpdates(
+            item: KoreanFieldworkReportHandoffItem,
+            bundle: KoreanFieldworkTabletRecordBundle,
+            reviewed: boolean,
+            reviewedAt: string,
+            updatedDocumentsById: Map<string, Document>
+    ) {
+
+        const document = this.getProjectDocumentForStagedUpdate(item.documentId, updatedDocumentsById);
+        if (!document) return;
+
+        this.stageProjectDocumentUpdate(
+            createKoreanFieldworkTabletHandoffReviewUpdate(document, bundle, reviewed, reviewedAt),
+            updatedDocumentsById
+        );
+
+        bundle.groups
+            .flatMap(group => group.sources)
+            .forEach(source => this.collectReportHandoffTabletSourceReviewUpdate(
+                source,
+                reviewed,
+                reviewedAt,
+                updatedDocumentsById
+            ));
+    }
+
+
+    private collectReportHandoffTabletSourceReviewUpdate(
+            source: KoreanFieldworkTabletRecordBundleSource,
+            reviewed: boolean,
+            reviewedAt: string,
+            updatedDocumentsById: Map<string, Document>
+    ) {
+
+        if (!source.documentId) return;
+
+        const document = this.getProjectDocumentForStagedUpdate(source.documentId, updatedDocumentsById);
+        if (!document) return;
+
+        this.stageProjectDocumentUpdate(
+            createKoreanFieldworkTabletHandoffSourceReviewUpdate(document, source, reviewed, reviewedAt),
+            updatedDocumentsById
+        );
+    }
+
+
+    private getProjectDocumentForStagedUpdate(
+            documentId: string,
+            updatedDocumentsById: Map<string, Document>
+    ): Document|undefined {
+
+        return updatedDocumentsById.get(documentId)
+            ?? this.projectDocuments.find(candidate => candidate.resource.id === documentId);
+    }
+
+
+    private stageProjectDocumentUpdate(
+            document: Document,
+            updatedDocumentsById: Map<string, Document>
+    ) {
+
+        updatedDocumentsById.set(document.resource.id, document);
+    }
+
+
+    private applyProjectDocumentUpdates(updatedDocumentsById: Map<string, Document>) {
+
+        this.projectDocuments = this.projectDocuments.map(candidate =>
+            updatedDocumentsById.get(candidate.resource.id) ?? candidate
+        );
+    }
+
 
     private markReportHandoffCopied(documentId: string) {
 
