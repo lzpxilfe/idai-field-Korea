@@ -1764,8 +1764,7 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
             ...photoAnnotationInsights,
             ...penMemoSketchInsights
         ]
-            .filter(insight => insight.detail.trim().length > 0)
-            .slice(0, 4);
+            .filter(insight => insight.detail.trim().length > 0);
     }
 
 

@@ -1907,6 +1907,65 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
     });
 
 
+    it('does not truncate linked tablet evidence insights when a feature has more than four records', async () => {
+
+        const feature = createDocument('feature-1', 'Feature', 'F1', {}, {
+            description: 'feature narrative'
+        });
+        const finds = Array.from({ length: 6 }, (_, index) => {
+            const number = index + 1;
+
+            return createDocument(`find-${number}`, 'Find', `find-${number}`, {
+                isPresentIn: ['feature-1']
+            }, {
+                findSpotItems: JSON.stringify({
+                    version: 1,
+                    items: [
+                        {
+                            number: 1,
+                            point: { x: 10 + (number * 5), y: 20 + (number * 4) },
+                            label: `artifact ${number}`
+                        }
+                    ]
+                }),
+                shortDescription: `artifact summary ${number}`
+            });
+        });
+        const component = createComponent({
+            find: jest.fn().mockResolvedValue({
+                documents: [feature, ...finds]
+            })
+        });
+        component.document = feature as any;
+        component.fieldDefinitions = [
+            field('featureRecordingStatus'),
+            textField('description', 'Description')
+        ] as any;
+
+        await component.ngOnChanges();
+
+        const findSpotInsights = component.getEvidenceInsights()
+            .filter(insight => insight.id.startsWith('findSpot:'));
+
+        expect(findSpotInsights.map(insight => insight.id)).toEqual([
+            'findSpot:find-1',
+            'findSpot:find-2',
+            'findSpot:find-3',
+            'findSpot:find-4',
+            'findSpot:find-5',
+            'findSpot:find-6'
+        ]);
+        expect(component.getEvidenceInsights()).toHaveLength(6);
+        expect(findSpotInsights[5].appendText).toContain('artifact 6');
+
+        component.applyEvidenceInsight(findSpotInsights[5]);
+
+        expect(feature.resource.description).toContain('feature narrative');
+        expect(feature.resource.description).toContain('artifact 6');
+        expect(feature.resource.description).not.toContain('"items"');
+    });
+
+
     it('appends linked tablet PenMemo handwriting evidence to the current record narrative once', async () => {
 
         const feature = createDocument('feature-1', 'Feature', 'F1', {}, {

@@ -3173,6 +3173,11 @@ function validateRecordPanelOrder() {
       || !desktopRecordContextPanelSpecText.includes('채취 위치점: 1번 50%/40% charcoal bag')) {
     findings.push('desktop record context panel must turn linked tablet find and sample spot points into appendable feature narrative evidence');
   }
+  if (desktopRecordContextPanelText.includes('.slice(0, 4)')
+      || !desktopRecordContextPanelSpecText.includes('does not truncate linked tablet evidence insights')
+      || !desktopRecordContextPanelSpecText.includes('findSpot:find-6')) {
+    findings.push('desktop record context panel must not truncate linked tablet evidence insights when one feature has many field records');
+  }
   if (!desktopRecordContextPanelText.includes('pushFeatureAttributeChip')
       || !desktopRecordContextPanelText.includes('formatFeatureAttributeLabels')
       || !desktopRecordContextPanelSpecText.includes('가마 핵심 연소부 기록·소성부 기록')
