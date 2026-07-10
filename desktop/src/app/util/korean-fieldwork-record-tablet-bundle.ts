@@ -695,11 +695,7 @@ function makeBundleGroupCopyLines(groups: KoreanFieldworkTabletRecordBundleGroup
 
     return groups.flatMap(group => [
         `${group.label} ${group.count}\uac74: ${group.detail}`,
-        ...group.sources.flatMap(source => [
-            `- ${source.label}`,
-            ...makeDetailCopyLines(source.detail, '  '),
-            ...source.issueDetails.map(issueDetail => `  \ud655\uc778: ${issueDetail}`)
-        ])
+        ...group.sources.flatMap(makeSourceRowCopyLines)
     ]);
 }
 
@@ -712,19 +708,37 @@ function makeGroupCopyText(
 
     const lines = [
         `[${label}] ${title}`,
-        ...sources.flatMap(source => {
-            const firstLine = `- ${source.label}`;
-            const issueLines = source.issueDetails.map(issueDetail => `  \ud655\uc778: ${issueDetail}`);
-
-            return [
-                firstLine,
-                ...makeDetailCopyLines(source.detail, '  '),
-                ...issueLines
-            ];
-        })
+        ...sources.flatMap(makeSourceRowCopyLines)
     ];
 
     return normalizeKoreanFieldworkHwpPlainText(lines.join('\n'));
+}
+
+
+function makeSourceRowCopyLines(source: KoreanFieldworkTabletRecordBundleSource): string[] {
+
+    return [
+        `- ${source.label}`,
+        makeSourceReviewCopyLine(source.reviewState, '  '),
+        ...makeDetailCopyLines(source.detail, '  '),
+        ...source.issueDetails.map(issueDetail => `  \ud655\uc778: ${issueDetail}`)
+    ];
+}
+
+
+function makeSourceReviewCopyLine(
+        reviewState: KoreanFieldworkTabletHandoffReviewState,
+        indent: string = ''
+): string {
+
+    const detail = reviewState.isReviewed || reviewState.isStale
+        ? reviewState.detail
+        : '';
+    const label = [reviewState.label, detail]
+        .filter(part => part.length > 0)
+        .join(' - ');
+
+    return `${indent}\ucc98\ub9ac: ${label}`;
 }
 
 

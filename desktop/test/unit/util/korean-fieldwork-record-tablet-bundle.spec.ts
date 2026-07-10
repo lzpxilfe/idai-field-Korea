@@ -173,12 +173,14 @@ describe('korean-fieldwork-record-tablet-bundle', () => {
         ].join('\r\n'));
         expect(photoGroup.copyText).toContain([
             '- P1',
+            ' \ucc98\ub9ac: \ubbf8\ucc98\ub9ac',
             ' - \uc0ac\uc9c4 \uc124\uba85: \ubd81\ubcbd \uc720\uad6c \ubc14\ub2e5\uba74',
             ' - \uc6d0\ubcf8 \ud30c\uc77c: IMG_0001.JPG',
             ' - \uc6d0\ubcf8: file:///tablet/photos/IMG_0001.JPG'
         ].join('\r\n'));
         expect(bundle.copyText).toContain([
             '- P1',
+            ' \ucc98\ub9ac: \ubbf8\ucc98\ub9ac',
             ' - \uc0ac\uc9c4 \uc124\uba85: \ubd81\ubcbd \uc720\uad6c \ubc14\ub2e5\uba74',
             ' - \uc6d0\ubcf8 \ud30c\uc77c: IMG_0001.JPG',
             ' - \uc6d0\ubcf8: file:///tablet/photos/IMG_0001.JPG'
@@ -584,6 +586,10 @@ describe('korean-fieldwork-record-tablet-bundle', () => {
             label: '\ucc98\ub9ac\ub428 2026-07-11',
             tone: 'success'
         });
+        expect(reviewedBundle.groups.find(group => group.id === 'photos')!.copyText)
+            .toContain('\ucc98\ub9ac: \ucc98\ub9ac\ub428 2026-07-11 - \ud655\uc778 \uc5c6\uc74c');
+        expect(reviewedBundle.copyText)
+            .toContain('\ucc98\ub9ac: \ucc98\ub9ac\ub428 2026-07-11 - \ud655\uc778 \uc5c6\uc74c');
 
         const changedPhoto = createDoc('photo-1', 'Photo', 'P1', {
             depicts: ['feature-1']
@@ -608,6 +614,8 @@ describe('korean-fieldwork-record-tablet-bundle', () => {
             detail: expect.stringContaining('\uc6d0\ubcf8/\ubcf8\ubb38 \ub0b4\uc6a9 \ubcc0\uacbd'),
             tone: 'warning'
         });
+        expect(staleBundle.groups.find(group => group.id === 'photos')!.copyText)
+            .toContain('\ucc98\ub9ac: \ub2e4\uc2dc \ud655\uc778 - ');
 
         const reopenedPhoto = createKoreanFieldworkTabletHandoffSourceReviewUpdate(
             reviewedPhoto,
