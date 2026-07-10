@@ -189,6 +189,53 @@ describe('korean-fieldwork-record-tablet-bundle', () => {
     });
 
 
+    it('carries tablet soil color sample points into desktop handoff source rows', () => {
+
+        const feature = createDoc('feature-1', 'Feature', 'F1', {}, {
+            featureRecordingStatus: 'confirmed',
+            featureInvestigationChecklist: []
+        });
+        const soilProfilePhoto = createDoc('soil-photo-1', 'SoilProfilePhoto', 'SP1', {
+            depicts: ['feature-1']
+        }, {
+            soilProfilePhotoUri: 'file:///tablet/photos/profile-1.jpg',
+            soilColorAssistCandidates: [
+                '\uc0ac\uc9c4 \uc120\ud0dd \uc9c0\uc810 20%/50% \ud3c9\uade0 RGB 111/87/61',
+                '1: 10YR 4/3 (\ub192\uc74c, \ucc28\uc774 0.0)',
+                '2: 7.5YR 4/3 (\ubcf4\ud1b5, \ucc28\uc774 8.1)'
+            ].join('\n'),
+            soilProfileColorSwatches: [
+                '1: 10YR 4/3 dark fill RGB 111/87/61 @ 20%/50%',
+                '2: 7.5YR 4/4 red clay RGB 139/128/88 @ 80%/45%'
+            ].join('\n'),
+            soilProfileColorNote: '\uc0ac\uc9c4 \uc0c9\uacfc \uc2e4\ubb3c \uc0c9 \ube44\uad50 \ud544\uc694',
+            soilProfileCaptureNote: '\ubd81\ubcbd \ub2e8\uba74 \uc624\ud6c4 \ucd2c\uc601'
+        });
+
+        const bundle = makeKoreanFieldworkRecordTabletBundle(
+            feature,
+            [feature, soilProfilePhoto] as any
+        )!;
+        const soilProfilePhotoSource = bundle.groups
+            .find(group => group.id === 'soilProfilePhotos')!.sources[0];
+
+        expect(soilProfilePhotoSource.detail)
+            .toContain('\uba3c\uc140 \ud6c4\ubcf4 10YR 4/3, 7.5YR 4/3');
+        expect(soilProfilePhotoSource.detail)
+            .toContain('\uc2a4\ud3ec\uc774\ub4dc \uc704\uce58: 1\uce35: RGB 111/87/61 @ 20%/50%');
+        expect(soilProfilePhotoSource.detail)
+            .toContain('\uce35\ubcc4 \ud1a0\uc0c9: 1\uce35 10YR 4/3 dark fill RGB 111/87/61 @ 20%/50%');
+        expect(soilProfilePhotoSource.detail)
+            .toContain('\ud1a0\uc0c9 \uba54\ubaa8: \uc0ac\uc9c4 \uc0c9\uacfc \uc2e4\ubb3c \uc0c9 \ube44\uad50 \ud544\uc694');
+        expect(soilProfilePhotoSource.detail)
+            .toContain('file:///tablet/photos/profile-1.jpg');
+        expect(soilProfilePhotoSource.copyText)
+            .toContain('\uc2a4\ud3ec\uc774\ub4dc \uc704\uce58: 1\uce35: RGB 111/87/61 @ 20%/50%');
+        expect(bundle.groups.find(group => group.id === 'soilProfilePhotos')?.copyText)
+            .toContain('\uce35\ubcc4 \ud1a0\uc0c9: 1\uce35 10YR 4/3 dark fill RGB 111/87/61 @ 20%/50%');
+    });
+
+
     it('tracks desktop review state for tablet bundle handoff processing', () => {
 
         const feature = createDoc('feature-1', 'Feature', 'F1', {}, {

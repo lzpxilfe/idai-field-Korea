@@ -4,7 +4,8 @@ import {
     KoreanFieldworkReportHandoffItem,
     KoreanFieldworkReadinessIssue,
     makeKoreanFieldworkReportHandoff,
-    normalizeKoreanFieldworkHwpPlainText
+    normalizeKoreanFieldworkHwpPlainText,
+    parseSoilProfileColorSwatchRows
 } from 'idai-field-core';
 import {
     KoreanFieldworkEvidenceReview,
@@ -14,6 +15,10 @@ import {
     getKoreanFieldworkNotebookEntriesForDocument,
     KoreanFieldworkNotebookEntry
 } from './korean-fieldwork-notebook-digest';
+import {
+    getMunsellCandidateSummaryLabel,
+    getSoilColorSampleSourceLabel
+} from './korean-fieldwork-soil-color-candidates';
 
 
 export type KoreanFieldworkTabletRecordBundleTone = 'neutral'|'info'|'warning';
@@ -85,6 +90,8 @@ interface KoreanFieldworkTabletRecordBundleGroupDefinition {
     tone: KoreanFieldworkTabletRecordBundleTone;
     getDocuments: (review: KoreanFieldworkEvidenceReview) => Document[];
 }
+
+type SoilProfileColorSwatchRow = ReturnType<typeof parseSoilProfileColorSwatchRows>[number];
 
 const PREVIEW_LIMIT = 3;
 
@@ -834,6 +841,7 @@ function getDocumentDetail(document: Document): string|undefined {
         'description',
         'fieldworkPhotoCaption',
         'originalFilename',
+        'soilProfilePhotoUri',
         'fieldworkPhotoUri',
         'imageUri',
         'fileUri'
@@ -843,6 +851,7 @@ function getDocumentDetail(document: Document): string|undefined {
 
     return [
         getFindSpotDetail(document),
+        getSoilProfilePhotoDetail(document),
         fieldDetails
     ].filter((value): value is string => !!value).join(' \u00b7 ') || undefined;
 }
@@ -858,6 +867,57 @@ function getFindSpotDetail(document: Document): string|undefined {
     return document.resource.category === 'Sample'
         ? `\uc2dc\ub8cc \ucc44\ucde8 \uc704\uce58: ${summary}`
         : `\uc720\ubb3c \ucd9c\ud1a0 \uc704\uce58: ${summary}`;
+}
+
+
+function getSoilProfilePhotoDetail(document: Document): string|undefined {
+
+    if (document.resource.category !== 'SoilProfilePhoto') return undefined;
+
+    const candidateLabel = getMunsellCandidateSummaryLabel(document.resource.soilColorAssistCandidates);
+    const sampleSourceLabel = getSoilColorSampleSourceLabel(
+        document.resource.soilColorAssistCandidates,
+        document.resource.soilProfileColorSwatches
+    );
+    const swatchLabel = getSoilProfileColorSwatchDetail(document.resource.soilProfileColorSwatches);
+    const colorNote = getTextValue(document.resource.soilProfileColorNote);
+    const captureNote = getTextValue(document.resource.soilProfileCaptureNote);
+
+    return [
+        candidateLabel,
+        sampleSourceLabel ? `\uc2a4\ud3ec\uc774\ub4dc \uc704\uce58: ${sampleSourceLabel}` : undefined,
+        swatchLabel ? `\uce35\ubcc4 \ud1a0\uc0c9: ${swatchLabel}` : undefined,
+        colorNote ? `\ud1a0\uc0c9 \uba54\ubaa8: ${colorNote}` : undefined,
+        captureNote ? `\ucd2c\uc601 \uba54\ubaa8: ${captureNote}` : undefined
+    ].filter((value): value is string => !!value).join(' \u00b7 ') || undefined;
+}
+
+
+function getSoilProfileColorSwatchDetail(value: unknown): string|undefined {
+
+    const rowLabels = parseSoilProfileColorSwatchRows(value)
+        .map(getSoilProfileColorSwatchRowLabel)
+        .filter((label): label is string => !!label);
+
+    if (rowLabels.length === 0) return undefined;
+
+    return rowLabels.length > PREVIEW_LIMIT
+        ? `${rowLabels.slice(0, PREVIEW_LIMIT).join(', ')} \uc678 ${rowLabels.length - PREVIEW_LIMIT}\uac74`
+        : rowLabels.join(', ');
+}
+
+
+function getSoilProfileColorSwatchRowLabel(row: SoilProfileColorSwatchRow): string|undefined {
+
+    const parts = [
+        getTextValue(row.munsell),
+        getTextValue(row.note),
+        getTextValue(row.sample?.label)
+    ].filter((part): part is string => !!part);
+
+    return parts.length > 0
+        ? `${row.number}\uce35 ${parts.join(' ')}`
+        : undefined;
 }
 
 
