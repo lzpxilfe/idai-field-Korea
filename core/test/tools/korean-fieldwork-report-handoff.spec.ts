@@ -365,6 +365,7 @@ describe('Korean fieldwork report handoff', () => {
             makeDocument('daily-log-1', 'DailyLog', {
                 identifier: '2026-06-30',
                 date: '2026-06-30',
+                description: '동쪽 확장 구간 표토 제거 후 원형 수혈 2기 윤곽 확인.',
                 dailyLogInvestigatorCount: 2,
                 dailyLogLaborerCount: 4,
                 dailyLogWorkerCount: 6,
@@ -391,7 +392,7 @@ describe('Korean fieldwork report handoff', () => {
         const detailText = dailyLogItem?.details.join('\n') ?? '';
 
         expect(dailyLogItem?.summary)
-            .toBe('\uc77c\uc9c0 \ub0b4\uc6a9: \ud45c\ud1a0 \uc9c4\ud589 \u00b7 \uc791\uc5c5\uad6c\uc5ed \u00b7 \uc0ac\uc9c4\u00b7\ub3c4\uba74 \ubc88\ud638');
+            .toBe('동쪽 확장 구간 표토 제거 후 원형 수혈 2기 윤곽 확인.');
         expect(detailText)
             .toContain('\uc791\uc5c5\uc77c\uc9c0: \uc778\uc6d0: \uc870\uc0ac\uc6d0 2\uba85 / \uc778\ubd80 4\uba85 / \ud22c\uc785 6\uba85');
         expect(detailText)
@@ -403,6 +404,8 @@ describe('Korean fieldwork report handoff', () => {
         expect(detailText)
             .toContain('\uac80\ud1a0: \ub2f9\uc77c \uc791\uc131 \u00b7 \uac80\ud1a0\uc790 \ud655\uc778');
         expect(detailText)
+            .toContain('작업 메모: 동쪽 확장 구간 표토 제거 후 원형 수혈 2기 윤곽 확인.');
+        expect(detailText)
             .toContain('\uc791\uc5c5\uc77c\uc9c0 \uacbd\uacc4 \uba54\ubaa8: \uc788\uc74c');
         expect(detailText)
             .toContain('\uacbd\uacc4 \uac00\uc838\uc634: 2026-06-30');
@@ -410,6 +413,8 @@ describe('Korean fieldwork report handoff', () => {
             .toContain('\uacbd\uacc4 \uc218\uc815: 2026-06-30');
         expect(detailText)
             .toContain('\uc791\uc5c5\uc77c\uc9c0 \uc218\uc815: 2026-06-30');
+        expect(dailyLogItem?.copyText)
+            .toContain('작업 메모: 동쪽 확장 구간 표토 제거 후 원형 수혈 2기 윤곽 확인.');
         expect(dailyLogItem?.copyText)
             .toContain('\uc791\uc5c5\uc77c\uc9c0 \uacbd\uacc4 \uba54\ubaa8: \uc788\uc74c');
         expect(dailyLogItem?.copyText)

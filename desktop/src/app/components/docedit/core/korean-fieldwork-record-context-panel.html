@@ -413,6 +413,10 @@
                   class="korean-fieldwork-record-context-daily-summary-chip">
                 {{dailyJournalSummary.reviewLabel}}
             </span>
+            <span *ngIf="dailyJournalSummary.workMemoLabel"
+                  class="korean-fieldwork-record-context-daily-summary-chip">
+                {{dailyJournalSummary.workMemoLabel}}
+            </span>
             <span class="korean-fieldwork-record-context-daily-summary-chip"
                   [class.empty]="!dailyJournalSummary.hasBoundaryMemo">
                 {{dailyJournalSummary.boundaryMemoLabel}}

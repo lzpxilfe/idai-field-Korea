@@ -113,6 +113,7 @@ describe('korean-fieldwork-notebook-digest', () => {
 
         const dailyLog = createDoc('daily-log-1', 'DailyLog', '2026-06-24 일지', {
             date: '2026-06-24',
+            description: '서쪽 트렌치 표토 정리 후 암갈색 원형 수혈 윤곽 확인.',
             dailyLogInvestigatorCount: 2,
             dailyLogLaborerCount: 5,
             dailyLogEquipmentCount: 1,
@@ -144,6 +145,7 @@ describe('korean-fieldwork-notebook-digest', () => {
                 contentLabel: '내용 작업구역 · 유구 조사 진행 · 사진·도면 번호',
                 evidenceRoleLabel: '근거 당일 사실기록',
                 reviewLabel: '검토 당일 작성',
+                workMemoLabel: '작업 메모 서쪽 트렌치 표토 정리 후 암갈색 원형 수혈 윤곽 확인.',
                 boundaryMemoLabel: '경계 메모 1획/2점',
                 boundaryMemoImportedAtLabel: '경계 가져옴 2026-06-24',
                 workMemoUpdatedAtLabel: '작업일지 수정 2026-06-24',
@@ -154,6 +156,7 @@ describe('korean-fieldwork-notebook-digest', () => {
                 hasPersonnel: true,
                 hasSafetyComplete: false,
                 hasBoundaryMemo: true,
+                hasWorkMemo: true,
                 hasLogClassification: true
             })
         ]);
@@ -181,6 +184,26 @@ describe('korean-fieldwork-notebook-digest', () => {
                 hasSafetyComplete: false,
                 hasBoundaryMemo: false,
                 hasLogClassification: true
+            })
+        ]);
+    });
+
+
+    it('keeps tablet daily journal work memo-only logs in desktop summaries', () => {
+
+        const dailyLog = createDoc('daily-log-1', 'DailyLog', '2026-06-24 일지', {
+            date: '2026-06-24',
+            description: '남쪽 확장부에서 회색 사질토가 넓게 노출됨.'
+        });
+
+        const digest = makeKoreanFieldworkDailyNotebookDigest([dailyLog] as any, today);
+
+        expect(digest.dailyJournalSummaries).toEqual([
+            expect.objectContaining({
+                document: dailyLog,
+                workMemoLabel: '작업 메모 남쪽 확장부에서 회색 사질토가 넓게 노출됨.',
+                hasWorkMemo: true,
+                hasLogClassification: false
             })
         ]);
     });

@@ -255,6 +255,7 @@ const KO = {
 const DAILY_LOG_CATEGORY = 'DailyLog';
 const FIELD_RECORD_QUALITY_REVIEW_CATEGORY = 'FieldRecordQualityReview';
 const DAILY_LOG_DETAIL_FIELDS = [
+    'description',
     'dailyLogInvestigatorCount',
     'dailyLogLaborerCount',
     'dailyLogWorkerCount',
@@ -1333,6 +1334,7 @@ function getDailyLogDetailSummary(document: Document): string|undefined {
         getDailyLogListLabel('\ub0b4\uc6a9', document.resource.dailyLogContent, DAILY_LOG_CONTENT_LABELS),
         getDailyLogListLabel('\uadfc\uac70', document.resource.dailyLogEvidenceRole, DAILY_LOG_EVIDENCE_ROLE_LABELS),
         getDailyLogListLabel('\uac80\ud1a0', document.resource.dailyLogReview, DAILY_LOG_REVIEW_LABELS),
+        getDailyLogWorkMemoLabel(document),
         getStrokeEvidenceLabel(
             '\uc791\uc5c5\uc77c\uc9c0 \uacbd\uacc4 \uba54\ubaa8',
             document.resource.dailyLogBoundaryMemoStrokes
@@ -1425,6 +1427,15 @@ function getFieldRecordQualityReviewDetailSummary(document: Document): string|un
             )
         )
     ].filter((value): value is string => !!value).join(', ') || undefined;
+}
+
+
+function getDailyLogWorkMemoLabel(document: Document): string|undefined {
+
+    return getLabeledEvidenceValue(
+        '\uc791\uc5c5 \uba54\ubaa8',
+        truncatePrintableText(getPrintableValue(document.resource.description), 240)
+    );
 }
 
 
@@ -1540,6 +1551,12 @@ function getNumberValue(value: any): number|undefined {
 
     const numberValue = Number(text);
     return Number.isFinite(numberValue) ? numberValue : undefined;
+}
+
+
+function truncatePrintableText(value: string|undefined, maxLength: number): string|undefined {
+
+    return value ? truncate(value, maxLength) : undefined;
 }
 
 

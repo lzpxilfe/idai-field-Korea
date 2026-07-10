@@ -740,6 +740,7 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
     it('shows tablet daily journal personnel, equipment, and safety on opened DailyLog records', () => {
 
         const dailyLog = createDocument('daily-log-1', 'DailyLog', '2026-06-30 일지', {}, {
+            description: '동쪽 확장 구간 표토 제거 후 원형 수혈 2기 윤곽 확인.',
             dailyLogInvestigatorCount: 2,
             dailyLogLaborerCount: 4,
             dailyLogEquipmentCount: 1,
@@ -771,11 +772,13 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
         expect(summary.contentLabel).toBe('내용 제토 진행 · 작업구역 · 안전 문제');
         expect(summary.evidenceRoleLabel).toBe('근거 당일 사실기록');
         expect(summary.reviewLabel).toBe('검토 당일 작성 · 검토자 확인');
+        expect(summary.workMemoLabel).toBe('작업 메모 동쪽 확장 구간 표토 제거 후 원형 수혈 2기 윤곽 확인.');
         expect(summary.boundaryMemoLabel).toBe('경계 메모 없음');
         expect(summary.boundaryMemoImportedAtLabel).toBe('경계 가져옴 2026-06-30');
         expect(summary.workMemoUpdatedAtLabel).toBe('작업일지 수정 2026-06-30');
         expect(summary.hasSafetyComplete).toBe(false);
         expect(summary.hasBoundaryMemo).toBe(false);
+        expect(summary.hasWorkMemo).toBe(true);
         expect(summary.hasLogClassification).toBe(true);
     });
 
@@ -797,6 +800,7 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
         expect(template).toContain('dailyJournalSummary.contentLabel');
         expect(template).toContain('dailyJournalSummary.evidenceRoleLabel');
         expect(template).toContain('dailyJournalSummary.reviewLabel');
+        expect(template).toContain('dailyJournalSummary.workMemoLabel');
         expect(template).toContain('dailyJournalSummary.boundaryMemoImportedAtLabel');
         expect(template).toContain('dailyJournalSummary.workMemoUpdatedAtLabel');
     });

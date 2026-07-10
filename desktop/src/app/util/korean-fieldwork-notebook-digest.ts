@@ -44,6 +44,7 @@ export interface KoreanFieldworkDailyJournalSummary {
     contentLabel: string;
     evidenceRoleLabel: string;
     reviewLabel: string;
+    workMemoLabel: string;
     boundaryMemoLabel: string;
     boundaryMemoImportedAtLabel: string;
     workMemoUpdatedAtLabel: string;
@@ -52,6 +53,7 @@ export interface KoreanFieldworkDailyJournalSummary {
     hasPersonnel: boolean;
     hasSafetyComplete: boolean;
     hasBoundaryMemo: boolean;
+    hasWorkMemo: boolean;
     hasLogClassification: boolean;
 }
 
@@ -103,6 +105,7 @@ const DAILY_JOURNAL_FIELD = {
     review: 'dailyLogReview',
     safetyEducationPhoto: 'dailyLogSafetyEducationPhoto',
     safetyEducationStretching: 'dailyLogSafetyEducationStretching',
+    workMemo: 'description',
     workMemoUpdatedAt: 'dailyLogWorkMemoUpdatedAt',
     workerCount: 'dailyLogWorkerCount'
 } as const;
@@ -594,6 +597,7 @@ export function createDailyJournalSummary(dailyLogDocument: Document): KoreanFie
         '검토',
         DAILY_LOG_REVIEW_LABELS
     );
+    const workMemoLabel = getDailyJournalWorkMemoLabel(dailyLogDocument);
     const hasPersonnel = [
         investigatorCount,
         laborerCount,
@@ -603,9 +607,10 @@ export function createDailyJournalSummary(dailyLogDocument: Document): KoreanFie
     ].some(value => value !== undefined && value !== '');
     const hasSafety = safetyPhotoDone || safetyStretchingDone;
     const hasBoundaryMemo = boundaryMemoStats.pointCount > 0;
+    const hasWorkMemo = workMemoLabel.length > 0;
     const hasLogClassification = [contentLabel, evidenceRoleLabel, reviewLabel]
         .some(label => label.length > 0);
-    if (!hasPersonnel && !hasSafety && !hasBoundaryMemo && !hasLogClassification) return undefined;
+    if (!hasPersonnel && !hasSafety && !hasBoundaryMemo && !hasWorkMemo && !hasLogClassification) return undefined;
 
     const personnelLabel = getDailyJournalPersonnelLabel(investigatorCount, laborerCount, workerCount);
     const equipmentLabel = getDailyJournalEquipmentLabel(equipmentCount, equipmentSize);
@@ -633,6 +638,7 @@ export function createDailyJournalSummary(dailyLogDocument: Document): KoreanFie
         contentLabel,
         evidenceRoleLabel,
         reviewLabel,
+        workMemoLabel,
         boundaryMemoLabel,
         boundaryMemoImportedAtLabel,
         workMemoUpdatedAtLabel,
@@ -644,6 +650,7 @@ export function createDailyJournalSummary(dailyLogDocument: Document): KoreanFie
             contentLabel,
             evidenceRoleLabel,
             reviewLabel,
+            workMemoLabel,
             boundaryMemoLabel,
             boundaryMemoImportedAtLabel,
             workMemoUpdatedAtLabel
@@ -651,6 +658,7 @@ export function createDailyJournalSummary(dailyLogDocument: Document): KoreanFie
         hasPersonnel,
         hasSafetyComplete: safetyPhotoDone && safetyStretchingDone,
         hasBoundaryMemo,
+        hasWorkMemo,
         hasLogClassification
     };
 }
@@ -859,6 +867,20 @@ function getDailyJournalSafetyLabel(safetyPhotoDone: boolean, safetyStretchingDo
 }
 
 
+function getDailyJournalWorkMemoLabel(document: Document): string {
+
+    const preview = getStringField(document, DAILY_JOURNAL_FIELD.workMemo)
+        .split(/\r?\n/)
+        .map(line => line.trim())
+        .filter(line => line.length > 0)
+        .slice(0, 3)
+        .join(' / ');
+    if (!preview) return '';
+
+    return `작업 메모 ${truncateDailyJournalPreview(preview, 120)}`;
+}
+
+
 function getDailyJournalDateFieldLabel(document: Document, fieldName: string, prefix: string): string {
 
     const date = normalizeDateValue(document.resource[fieldName]);
@@ -877,6 +899,14 @@ function getDailyJournalArrayFieldLabel(document: Document,
         .filter(value => value.length > 0);
 
     return values.length > 0 ? `${prefix} ${values.join(' · ')}` : '';
+}
+
+
+function truncateDailyJournalPreview(value: string, maxLength: number): string {
+
+    return value.length > maxLength
+        ? `${value.slice(0, maxLength - 1)}...`
+        : value;
 }
 
 
