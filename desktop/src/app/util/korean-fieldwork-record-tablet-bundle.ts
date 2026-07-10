@@ -342,9 +342,9 @@ export function getKoreanFieldworkTabletRecordBundleGroupSourcesForReview(
 
 function getTabletSourceProcessingPriority(source: KoreanFieldworkTabletRecordBundleSource): number {
 
-    if (source.reviewState.isStale) return 0;
+    if (source.reviewState?.isStale) return 0;
     if (source.issueCount > 0) return 1;
-    if (!source.reviewState.isReviewed) return 2;
+    if (source.reviewState?.isReviewed !== true) return 2;
     return 3;
 }
 
