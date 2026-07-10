@@ -769,6 +769,83 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
     });
 
 
+    it('filters the report handoff list to tablet bundles that still need desktop processing', async () => {
+
+        const component = createComponent({
+            find: jest.fn().mockResolvedValue({
+                documents: [
+                    createDocument('project', 'Project'),
+                    createDocument('feature-open', 'Feature', {
+                        identifier: 'pit-open',
+                        featureRecordingStatus: 'confirmed',
+                        featureInvestigationChecklist: []
+                    }),
+                    createDocument('photo-open', 'Photo', {
+                        fieldworkPhotoUri: 'file:///tablet/photos/open.jpg',
+                        relations: { depicts: ['feature-open'] }
+                    }),
+                    createDocument('feature-done', 'Feature', {
+                        identifier: 'pit-done',
+                        [KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_AT_FIELD]: '2026-07-11T01:02:03.000Z',
+                        [KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_SOURCE_COUNT_FIELD]: 1,
+                        featureRecordingStatus: 'confirmed',
+                        featureInvestigationChecklist: []
+                    }),
+                    createDocument('photo-done', 'Photo', {
+                        fieldworkPhotoUri: 'file:///tablet/photos/done.jpg',
+                        relations: { depicts: ['feature-done'] }
+                    }),
+                    createDocument('feature-stale', 'Feature', {
+                        identifier: 'pit-stale',
+                        [KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_AT_FIELD]: '2026-07-11T01:02:03.000Z',
+                        [KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_SOURCE_COUNT_FIELD]: 1,
+                        featureRecordingStatus: 'confirmed',
+                        featureInvestigationChecklist: []
+                    }),
+                    createDocument('photo-stale-1', 'Photo', {
+                        fieldworkPhotoUri: 'file:///tablet/photos/stale-1.jpg',
+                        relations: { depicts: ['feature-stale'] }
+                    }),
+                    createDocument('photo-stale-2', 'Photo', {
+                        fieldworkPhotoUri: 'file:///tablet/photos/stale-2.jpg',
+                        relations: { depicts: ['feature-stale'] }
+                    })
+                ]
+            }),
+            get: jest.fn()
+        });
+
+        await component.refresh();
+
+        expect(component.getTabletWorkReportHandoffItemCount()).toBe(2);
+        expect(component.getReviewedTabletReportHandoffItemCount()).toBe(1);
+        expect(component.hasTabletWorkReportHandoffItems()).toBe(true);
+        expect(component.getReportHandoffSummaryLabel())
+            .toContain('\ud0dc\ube14\ub9bf \ucc98\ub9ac 2');
+        expect(component.getReportHandoffTabletWorkFilterActionLabel())
+            .toBe('\ud0dc\ube14\ub9bf \ucc98\ub9ac 2');
+
+        component.toggleReportHandoffTabletWorkFilter();
+
+        expect(component.reportHandoffShowsTabletWorkOnly).toBe(true);
+        expect(component.getReportHandoffTabletWorkFilterActionLabel()).toBe('\uc804\uccb4');
+        expect(component.getReportHandoffItems().map(item => item.documentId))
+            .toEqual(['feature-open', 'feature-stale']);
+        expect(component.getReportHandoffPreviewItem()?.documentId).toBe('feature-open');
+        expect(component.getReportHandoffTabletBundle(component.getReportHandoffItems()[1])!.reviewState)
+            .toMatchObject({
+                isStale: true,
+                label: '\ub2e4\uc2dc \ud655\uc778'
+            });
+
+        component.toggleReportHandoffTabletWorkFilter();
+
+        expect(component.reportHandoffShowsTabletWorkOnly).toBe(false);
+        expect(component.getReportHandoffItems().some(item => item.documentId === 'feature-done'))
+            .toBe(true);
+    });
+
+
     it('expands report handoff lists so tablet records are not left hidden', async () => {
 
         const featureDocuments = Array.from({ length: 10 }, (_, index) => {

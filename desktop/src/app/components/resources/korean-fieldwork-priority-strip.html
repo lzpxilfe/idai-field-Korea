@@ -195,6 +195,16 @@
             <span class="mdi mdi-file-document-edit-outline"></span>
             <span>&#48372;&#44256;&#49436;/HWP &#48373;&#49324;</span>
             <span class="korean-fieldwork-report-handoff-summary">{{getReportHandoffSummaryLabel()}}</span>
+            <button *ngIf="hasTabletWorkReportHandoffItems() || reportHandoffShowsTabletWorkOnly"
+                    type="button"
+                    class="korean-fieldwork-report-handoff-filter"
+                    [class.active]="reportHandoffShowsTabletWorkOnly"
+                    (click)="toggleReportHandoffTabletWorkFilter($event)">
+                <span class="mdi"
+                      [class.mdi-filter-check-outline]="reportHandoffShowsTabletWorkOnly"
+                      [class.mdi-tablet-cellphone]="!reportHandoffShowsTabletWorkOnly"></span>
+                <span>{{getReportHandoffTabletWorkFilterActionLabel()}}</span>
+            </button>
             <button type="button"
                     class="korean-fieldwork-report-handoff-copy-all"
                     [class.copied]="isReportHandoffCopyAllBodyCopied()"
@@ -286,6 +296,11 @@
                     <span>{{getReportHandoffCopyActionLabel(item)}}</span>
                 </button>
             </div>
+        </div>
+        <div *ngIf="reportHandoffShowsTabletWorkOnly && getReportHandoffItems().length === 0"
+             class="korean-fieldwork-report-handoff-empty">
+            <span class="mdi mdi-check-circle-outline"></span>
+            <span>&#53468;&#48660;&#47551; &#52376;&#47532; &#45824;&#49345; &#50630;&#51020;</span>
         </div>
         <button *ngIf="hasReportHandoffOverflow()"
                 type="button"

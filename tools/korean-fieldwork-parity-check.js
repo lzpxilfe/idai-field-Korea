@@ -3742,16 +3742,21 @@ function validateReportHandoffPreSaveValidation() {
       || !desktopPriorityStripText.includes('getReportHandoffTabletBundle')
       || !desktopPriorityStripText.includes('copyReportHandoffTabletBundle')
       || !desktopPriorityStripText.includes('toggleReportHandoffTabletBundleReviewed')
+      || !desktopPriorityStripText.includes('toggleReportHandoffTabletWorkFilter')
+      || !desktopPriorityStripText.includes('getTabletWorkReportHandoffItemCount')
       || !desktopPriorityStripText.includes('makeKoreanFieldworkRecordTabletBundle')
       || !desktopPriorityStripTemplateText.includes('korean-fieldwork-report-handoff-tablet-bundle')
+      || !desktopPriorityStripTemplateText.includes('korean-fieldwork-report-handoff-filter')
       || !desktopPriorityStripTemplateText.includes('getReportHandoffTabletBundle(previewItem)')
       || !desktopPriorityStripTemplateText.includes('copyReportHandoffTabletBundle(previewItem, $event)')
       || !desktopPriorityStripTemplateText.includes('toggleReportHandoffTabletBundleReviewed(previewItem, $event)')
       || !desktopPriorityStripStyleText.includes('.korean-fieldwork-report-handoff-tablet-bundle')
+      || !desktopPriorityStripStyleText.includes('.korean-fieldwork-report-handoff-filter')
       || !desktopPriorityStripStyleText.includes('&.tablet-review')
       || !desktopPriorityStripSpecText.includes('featureTabletBundle')
       || !desktopPriorityStripSpecText.includes('copyReportHandoffTabletBundle(featureItem)')
-      || !desktopPriorityStripSpecText.includes('stores desktop review state for tablet bundles from the report handoff panel')) {
+      || !desktopPriorityStripSpecText.includes('stores desktop review state for tablet bundles from the report handoff panel')
+      || !desktopPriorityStripSpecText.includes('filters the report handoff list to tablet bundles that still need desktop processing')) {
     findings.push('desktop report handoff panel must surface each record tablet bundle and copy it separately for office-side HWP processing');
   }
   if (!desktopRecordContextText.includes('makeKoreanFieldworkReportHandoff')

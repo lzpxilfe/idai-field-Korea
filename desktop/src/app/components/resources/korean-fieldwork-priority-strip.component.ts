@@ -236,6 +236,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
     public notebookCopiedEntryId: string|undefined;
     public selectedReportHandoffDocumentId: string|undefined;
     public reportHandoffShowsAll: boolean = false;
+    public reportHandoffShowsTabletWorkOnly: boolean = false;
     public overviewChartData: KoreanFieldworkOverviewChartData|undefined;
     public isLoading: boolean = false;
     public activePanel: KoreanFieldworkPriorityPanelId = 'overview';
@@ -827,23 +828,45 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
 
     public hasReportHandoffItems = () => this.reportHandoffItems.length > 0;
 
-    public getReportHandoffItems = () =>
-        this.reportHandoffShowsAll
-            ? this.reportHandoffItems
-            : this.reportHandoffItems.slice(0, REPORT_HANDOFF_COLLAPSED_LIMIT);
+    public getReportHandoffItems = () => {
+        const items = this.getFilteredReportHandoffItems();
+
+        return this.reportHandoffShowsAll
+            ? items
+            : items.slice(0, REPORT_HANDOFF_COLLAPSED_LIMIT);
+    };
 
     public hasReportHandoffOverflow = () =>
-        this.reportHandoffItems.length > REPORT_HANDOFF_COLLAPSED_LIMIT;
+        this.getFilteredReportHandoffItems().length > REPORT_HANDOFF_COLLAPSED_LIMIT;
 
     public getReportHandoffHiddenCount = () =>
-        Math.max(0, this.reportHandoffItems.length - this.getReportHandoffItems().length);
+        Math.max(0, this.getFilteredReportHandoffItems().length - this.getReportHandoffItems().length);
 
     public getReportHandoffSummaryLabel = () => {
         const reviewCount = this.reportHandoffItems.filter(item => item.tone === 'review').length;
         const readyCount = this.reportHandoffItems.length - reviewCount;
+        const tabletWorkCount = this.getTabletWorkReportHandoffItemCount();
+        const tabletDoneCount = this.getReviewedTabletReportHandoffItemCount();
 
-        return `\ubcf5\uc0ac ${this.reportHandoffItems.length} \u00b7 \ubcf4\uc644 ${reviewCount} \u00b7 \ubc14\ub85c ${readyCount}`;
+        return `\ubcf5\uc0ac ${this.reportHandoffItems.length} \u00b7 \ubcf4\uc644 ${reviewCount} \u00b7 \ubc14\ub85c ${readyCount}`
+            + (this.reportHandoffTabletBundlesByDocumentId.size > 0
+                ? ` \u00b7 \ud0dc\ube14\ub9bf \ucc98\ub9ac ${tabletWorkCount} \u00b7 \uc644\ub8cc ${tabletDoneCount}`
+                : '');
     };
+
+    public hasTabletWorkReportHandoffItems = () =>
+        this.getTabletWorkReportHandoffItemCount() > 0;
+
+    public getTabletWorkReportHandoffItemCount = () =>
+        this.reportHandoffItems.filter(item => this.needsTabletReportHandoffProcessing(item)).length;
+
+    public getReviewedTabletReportHandoffItemCount = () =>
+        this.reportHandoffItems.filter(item => this.isReportHandoffTabletBundleReviewed(item)).length;
+
+    public getReportHandoffTabletWorkFilterActionLabel = () =>
+        this.reportHandoffShowsTabletWorkOnly
+            ? '\uc804\uccb4'
+            : `\ud0dc\ube14\ub9bf \ucc98\ub9ac ${this.getTabletWorkReportHandoffItemCount()}`;
 
     public isReportHandoffItemCopied = (item: KoreanFieldworkReportHandoffItem) =>
         this.reportCopiedDocumentId === item.documentId;
@@ -868,9 +891,12 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
     public isReportHandoffItemSelected = (item: KoreanFieldworkReportHandoffItem) =>
         this.getReportHandoffPreviewItem()?.documentId === item.documentId;
 
-    public getReportHandoffPreviewItem = () =>
-        this.reportHandoffItems.find(item => item.documentId === this.selectedReportHandoffDocumentId)
-        ?? this.reportHandoffItems[0];
+    public getReportHandoffPreviewItem = () => {
+        const items = this.getFilteredReportHandoffItems();
+
+        return items.find(item => item.documentId === this.selectedReportHandoffDocumentId)
+            ?? items[0];
+    };
 
     public getReportHandoffTabletBundle = (item: KoreanFieldworkReportHandoffItem) =>
         this.reportHandoffTabletBundlesByDocumentId.get(item.documentId);
@@ -911,6 +937,15 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
         this.reportHandoffShowsAll
             ? '\uc811\uae30'
             : `\uc804\uccb4 \ubcf4\uae30 \u00b7 ${this.getReportHandoffHiddenCount()} \uae30\ub85d`;
+
+    public toggleReportHandoffTabletWorkFilter(event?: Event) {
+
+        if (event) event.stopPropagation();
+
+        this.reportHandoffShowsTabletWorkOnly = !this.reportHandoffShowsTabletWorkOnly;
+        this.reportHandoffShowsAll = false;
+        this.ensureReportHandoffPreviewSelection();
+    }
 
     public selectReportHandoffItem(item: KoreanFieldworkReportHandoffItem, event?: Event) {
 
@@ -1642,6 +1677,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
                 this.reportHandoffCopyAllBodyText = '';
                 this.selectedReportHandoffDocumentId = undefined;
                 this.reportHandoffShowsAll = false;
+                this.reportHandoffShowsTabletWorkOnly = false;
                 this.projectDocuments = [];
                 this.activePanel = 'workflow';
             }
@@ -1828,7 +1864,9 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
 
     private ensureReportHandoffPreviewSelection() {
 
-        if (this.reportHandoffItems.length === 0) {
+        const visibleItems = this.getFilteredReportHandoffItems();
+
+        if (visibleItems.length === 0) {
             this.selectedReportHandoffDocumentId = undefined;
             this.reportHandoffShowsAll = false;
             return;
@@ -1837,8 +1875,8 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
         if (!this.hasReportHandoffOverflow()) this.reportHandoffShowsAll = false;
 
         if (!this.selectedReportHandoffDocumentId
-                || !this.reportHandoffItems.some(item => item.documentId === this.selectedReportHandoffDocumentId)) {
-            this.selectedReportHandoffDocumentId = this.reportHandoffItems[0].documentId;
+                || !visibleItems.some(item => item.documentId === this.selectedReportHandoffDocumentId)) {
+            this.selectedReportHandoffDocumentId = visibleItems[0].documentId;
         }
     }
 
@@ -2039,6 +2077,22 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
 
     private getReportPanelCount = () =>
         this.reportHandoffItems.length;
+
+
+    private getFilteredReportHandoffItems(): KoreanFieldworkReportHandoffItem[] {
+
+        return this.reportHandoffShowsTabletWorkOnly
+            ? this.reportHandoffItems.filter(item => this.needsTabletReportHandoffProcessing(item))
+            : this.reportHandoffItems;
+    }
+
+
+    private needsTabletReportHandoffProcessing(item: KoreanFieldworkReportHandoffItem): boolean {
+
+        const bundle = this.getReportHandoffTabletBundle(item);
+
+        return !!bundle && !bundle.reviewState.isReviewed;
+    }
 
 
     private getCloseoutPanelCount = () =>
