@@ -3783,6 +3783,8 @@ function validateReportHandoffPreSaveValidation() {
       || !desktopPriorityStripText.includes('markAllReportHandoffTabletWorkReviewed')
       || !desktopPriorityStripText.includes('getReportHandoffTabletWorkReviewActionLabel')
       || !desktopPriorityStripText.includes('toggleReportHandoffTabletBundleReviewed')
+      || !desktopPriorityStripText.includes('collectReportHandoffTabletBundleReviewUpdateForSource')
+      || !desktopPriorityStripText.includes('wouldEveryTabletBundleSourceBeReviewed')
       || !desktopPriorityStripText.includes('toggleReportHandoffTabletWorkFilter')
       || !desktopPriorityStripText.includes('getTabletWorkReportHandoffItemCount')
       || !desktopPriorityStripText.includes('makeKoreanFieldworkRecordTabletBundle')
@@ -3793,7 +3795,7 @@ function validateReportHandoffPreSaveValidation() {
       || !desktopPriorityStripTemplateText.includes('copyReportHandoffTabletBundle(previewItem, $event)')
       || !desktopPriorityStripTemplateText.includes('copyReportHandoffTabletBundleGroup(previewItem, group, $event)')
       || !desktopPriorityStripTemplateText.includes('copyReportHandoffTabletBundleSource(previewItem, group, source, $event)')
-      || !desktopPriorityStripTemplateText.includes('toggleReportHandoffTabletBundleSourceReviewed(source, $event)')
+      || !desktopPriorityStripTemplateText.includes('toggleReportHandoffTabletBundleSourceReviewed(source, $event, previewItem)')
       || !desktopPriorityStripTemplateText.includes('getReportHandoffTabletBundleGroupSources(group)')
       || !desktopPriorityStripTemplateText.includes('openReportHandoffTabletBundleSource(source, $event)')
       || !desktopPriorityStripTemplateText.includes('copyAllReportHandoffTabletWork($event)')
@@ -3818,6 +3820,7 @@ function validateReportHandoffPreSaveValidation() {
       || !desktopPriorityStripSpecText.includes('orders tablet source rows needing review before clean rows')
       || !desktopPriorityStripSpecText.includes('copyAllReportHandoffTabletWork')
       || !desktopPriorityStripSpecText.includes('marks all tablet report handoff work reviewed from the desktop queue')
+      || !desktopPriorityStripSpecText.includes('marks parent tablet handoff reviewed when the last source row is reviewed')
       || !desktopPriorityStripSpecText.includes('stores desktop review state for tablet bundles from the report handoff panel')
       || !desktopPriorityStripSpecText.includes('filters the report handoff list to tablet bundles that still need desktop processing')) {
     findings.push('desktop report handoff panel must surface each record tablet bundle and copy it separately for office-side HWP processing');

@@ -490,7 +490,7 @@
                                             type="button"
                                             class="korean-fieldwork-report-handoff-tablet-bundle-source-review"
                                             [class.reviewed]="source.reviewState.isReviewed"
-                                            (click)="toggleReportHandoffTabletBundleSourceReviewed(source, $event)">
+                                            (click)="toggleReportHandoffTabletBundleSourceReviewed(source, $event, previewItem)">
                                         <span class="mdi"
                                               [class.mdi-backup-restore]="source.reviewState.isReviewed"
                                               [class.mdi-check-circle-outline]="!source.reviewState.isReviewed"></span>

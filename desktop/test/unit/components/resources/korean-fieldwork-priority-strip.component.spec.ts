@@ -932,6 +932,94 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
     });
 
 
+    it('marks parent tablet handoff reviewed when the last source row is reviewed', async () => {
+
+        let documents = [
+            createDocument('project', 'Project'),
+            createDocument('feature-1', 'Feature', {
+                identifier: 'pit-001',
+                shortDescription: 'round pit',
+                featureRecordingStatus: 'confirmed',
+                featureInvestigationChecklist: [],
+                fieldRecordQuality: ['checked']
+            }),
+            createDocument('photo-1', 'Photo', {
+                identifier: 'photo-001',
+                fieldworkPhotoUri: 'file:///tablet/photos/photo-001.jpg',
+                relations: { depicts: ['feature-1'] }
+            })
+        ];
+        const datastore = {
+            find: jest.fn().mockImplementation(async () => ({ documents })),
+            get: jest.fn(),
+            bulkUpdate: jest.fn().mockImplementation(async (updatedDocuments: any[]) => {
+                documents = documents.map(document =>
+                    updatedDocuments.find(updatedDocument =>
+                        updatedDocument.resource.id === document.resource.id
+                    ) ?? document
+                );
+
+                return updatedDocuments;
+            })
+        };
+        const component = createComponent(datastore);
+
+        await component.refresh();
+
+        const featureItem = component.getReportHandoffItems()
+            .find(item => item.documentId === 'feature-1')!;
+        const photoSource = component.getReportHandoffTabletBundle(featureItem)!
+            .groups.flatMap(group => group.sources)
+            .find(source => source.documentId === 'photo-1')!;
+
+        expect(component.getReportHandoffTabletBundle(featureItem)!.reviewState.isReviewed)
+            .toBe(false);
+        expect(component.tabletProcessingRecordIds.has('feature-1')).toBe(true);
+
+        await component.toggleReportHandoffTabletBundleSourceReviewed(photoSource, undefined, featureItem);
+
+        expect(datastore.bulkUpdate).toHaveBeenCalledWith(expect.arrayContaining([
+            expect.objectContaining({
+                resource: expect.objectContaining({
+                    id: 'feature-1',
+                    [KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_AT_FIELD]: expect.any(String)
+                })
+            }),
+            expect.objectContaining({
+                resource: expect.objectContaining({
+                    id: 'photo-1',
+                    [KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_AT_FIELD]: expect.any(String)
+                })
+            })
+        ]));
+
+        const reviewedFeatureItem = component.getReportHandoffItems()
+            .find(item => item.documentId === 'feature-1')!;
+        const reviewedPhotoSource = component.getReportHandoffTabletBundle(reviewedFeatureItem)!
+            .groups.flatMap(group => group.sources)
+            .find(source => source.documentId === 'photo-1')!;
+
+        expect(component.getReportHandoffTabletBundle(reviewedFeatureItem)!.reviewState.isReviewed)
+            .toBe(true);
+        expect(reviewedPhotoSource.reviewState.isReviewed).toBe(true);
+        expect(component.tabletProcessingRecordIds.has('feature-1')).toBe(false);
+
+        await component.toggleReportHandoffTabletBundleSourceReviewed(
+            reviewedPhotoSource,
+            undefined,
+            reviewedFeatureItem
+        );
+
+        expect(documents.find(document =>
+            document.resource.id === 'feature-1'
+        )!.resource[KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_AT_FIELD]).toBeUndefined();
+        expect(documents.find(document =>
+            document.resource.id === 'photo-1'
+        )!.resource[KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_AT_FIELD]).toBeUndefined();
+        expect(component.tabletProcessingRecordIds.has('feature-1')).toBe(true);
+    });
+
+
     it('orders tablet source rows needing review before clean rows in the report handoff preview', () => {
 
         const component = createComponent({ find: jest.fn(), get: jest.fn() });

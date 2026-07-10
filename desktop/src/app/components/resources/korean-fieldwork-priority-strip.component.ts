@@ -1156,19 +1156,28 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
 
     public async toggleReportHandoffTabletBundleSourceReviewed(
             source: KoreanFieldworkTabletRecordBundleSource,
-            event?: Event
+            event?: Event,
+            item?: KoreanFieldworkReportHandoffItem
     ) {
 
         if (event) event.stopPropagation();
         if (!source.documentId) return;
 
         const reviewedAt = new Date().toISOString();
+        const reviewed = !source.reviewState.isReviewed;
         const updatedDocumentsById = new Map<string, Document>();
         this.collectReportHandoffTabletSourceReviewUpdate(
             source,
-            !source.reviewState.isReviewed,
+            reviewed,
             reviewedAt,
             updatedDocumentsById
+        );
+        this.collectReportHandoffTabletBundleReviewUpdateForSource(
+            source,
+            reviewed,
+            reviewedAt,
+            updatedDocumentsById,
+            item
         );
 
         if (updatedDocumentsById.size === 0) return;
@@ -2104,6 +2113,90 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
             createKoreanFieldworkTabletHandoffSourceReviewUpdate(document, source, reviewed, reviewedAt),
             updatedDocumentsById
         );
+    }
+
+
+    private collectReportHandoffTabletBundleReviewUpdateForSource(
+            source: KoreanFieldworkTabletRecordBundleSource,
+            reviewed: boolean,
+            reviewedAt: string,
+            updatedDocumentsById: Map<string, Document>,
+            preferredItem?: KoreanFieldworkReportHandoffItem
+    ) {
+
+        const entry = this.getReportHandoffTabletBundleEntryForSource(source, preferredItem);
+        if (!entry) return;
+
+        const shouldUpdateBundle = reviewed
+            ? this.wouldEveryTabletBundleSourceBeReviewed(entry.bundle, source)
+            : entry.bundle.reviewState.isReviewed;
+        if (!shouldUpdateBundle) return;
+
+        const document = this.getProjectDocumentForStagedUpdate(entry.item.documentId, updatedDocumentsById);
+        if (!document) return;
+
+        this.stageProjectDocumentUpdate(
+            createKoreanFieldworkTabletHandoffReviewUpdate(document, entry.bundle, reviewed, reviewedAt),
+            updatedDocumentsById
+        );
+    }
+
+
+    private getReportHandoffTabletBundleEntryForSource(
+            source: KoreanFieldworkTabletRecordBundleSource,
+            preferredItem?: KoreanFieldworkReportHandoffItem
+    ): { item: KoreanFieldworkReportHandoffItem; bundle: KoreanFieldworkTabletRecordBundle }|undefined {
+
+        if (preferredItem) {
+            const preferredBundle = this.getReportHandoffTabletBundle(preferredItem);
+            if (preferredBundle && this.tabletBundleContainsSource(preferredBundle, source)) {
+                return { item: preferredItem, bundle: preferredBundle };
+            }
+        }
+
+        for (const item of this.reportHandoffItems) {
+            const bundle = this.getReportHandoffTabletBundle(item);
+            if (bundle && this.tabletBundleContainsSource(bundle, source)) {
+                return { item, bundle };
+            }
+        }
+
+        return undefined;
+    }
+
+
+    private tabletBundleContainsSource(
+            bundle: KoreanFieldworkTabletRecordBundle,
+            source: KoreanFieldworkTabletRecordBundleSource
+    ): boolean {
+
+        return bundle.groups.some(group =>
+            group.sources.some(candidate => this.isSameTabletBundleSource(candidate, source))
+        );
+    }
+
+
+    private wouldEveryTabletBundleSourceBeReviewed(
+            bundle: KoreanFieldworkTabletRecordBundle,
+            toggledSource: KoreanFieldworkTabletRecordBundleSource
+    ): boolean {
+
+        return bundle.groups
+            .flatMap(group => group.sources)
+            .every(source =>
+                this.isSameTabletBundleSource(source, toggledSource)
+                    || source.reviewState.isReviewed
+            );
+    }
+
+
+    private isSameTabletBundleSource(
+            left: KoreanFieldworkTabletRecordBundleSource,
+            right: KoreanFieldworkTabletRecordBundleSource
+    ): boolean {
+
+        return left.id === right.id
+            && left.documentId === right.documentId;
     }
 
 
