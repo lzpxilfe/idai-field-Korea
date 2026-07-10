@@ -1239,12 +1239,31 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
     }
 
 
-    public canApplyNotebookEntry = (entry: KoreanFieldworkNotebookEntry) =>
-        !!this.getNotebookAppendTargetField(entry);
+    public canApplyNotebookEntry = (entry: KoreanFieldworkNotebookEntry) => {
+
+        const targetField = this.getNotebookAppendTargetField(entry);
+
+        return !!targetField
+            && !this.isAppendTextAlreadyApplied(targetField, this.getNotebookAppendText(entry));
+    };
 
 
-    public canApplyEvidenceInsight = (insight: EvidenceInsight) =>
-        !!this.getEvidenceInsightAppendTargetField(insight);
+    public canApplyEvidenceInsight = (insight: EvidenceInsight) => {
+
+        const targetField = this.getEvidenceInsightAppendTargetField(insight);
+
+        return !!targetField && !this.isEvidenceInsightApplied(insight);
+    };
+
+
+    public isEvidenceInsightApplied(insight: EvidenceInsight): boolean {
+
+        const targetField = this.getEvidenceInsightAppendTargetField(insight);
+
+        return !!targetField
+            && !!insight.appendText
+            && this.isAppendTextAlreadyApplied(targetField, insight.appendText);
+    }
 
 
     public canOpenEvidenceInsight = (insight: EvidenceInsight) =>
@@ -2329,6 +2348,12 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
         if (!trimmedCurrentValue) return notebookText;
 
         return `${trimmedCurrentValue}\n${notebookText}`;
+    }
+
+
+    private isAppendTextAlreadyApplied(fieldName: string, appendText: string): boolean {
+
+        return this.getStringResourceFieldValue(fieldName).trimEnd().includes(appendText);
     }
 
 

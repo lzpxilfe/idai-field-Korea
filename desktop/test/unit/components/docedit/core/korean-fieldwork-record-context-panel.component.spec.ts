@@ -1391,6 +1391,7 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
 
         component.applyNotebookEntry(component.getNotebookEntries()[0]);
         component.applyNotebookEntry(component.getNotebookEntries()[0]);
+        expect(component.canApplyNotebookEntry(component.getNotebookEntries()[0])).toBe(false);
 
         expect(feature.resource.description).toContain('기존 기록.');
         expect(feature.resource.description).toContain('[메모 ');
@@ -2060,6 +2061,51 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
         }
         expect(feature.resource.description).not.toContain('"items"');
         expect(handleChanged).toHaveBeenCalledTimes(1);
+    });
+
+
+    it('marks already appended linked tablet evidence insights as applied', async () => {
+
+        const feature = createDocument('feature-1', 'Feature', 'F1', {}, {
+            description: 'feature narrative'
+        });
+        const find = createDocument('find-1', 'Find', 'find-001', {
+            isPresentIn: ['feature-1']
+        }, {
+            findSpotItems: JSON.stringify({
+                version: 1,
+                items: [
+                    { number: 1, point: { x: 25, y: 75 }, label: 'bronze fragment' }
+                ]
+            }),
+            shortDescription: 'bronze rim sherd'
+        });
+        const component = createComponent({
+            find: jest.fn().mockResolvedValue({
+                documents: [feature, find]
+            })
+        });
+        component.document = feature as any;
+        component.fieldDefinitions = [
+            field('featureRecordingStatus'),
+            textField('description', 'Description')
+        ] as any;
+
+        await component.ngOnChanges();
+
+        const insight = component.getEvidenceInsights()
+            .find(candidate => candidate.id === 'findSpot:find-1');
+
+        expect(component.canApplyEvidenceInsight(insight!)).toBe(true);
+        expect(component.isEvidenceInsightApplied(insight!)).toBe(false);
+        expect(component.getApplicableEvidenceInsights()).toHaveLength(1);
+
+        component.applyEvidenceInsight(insight!);
+
+        expect(component.canApplyEvidenceInsight(insight!)).toBe(false);
+        expect(component.isEvidenceInsightApplied(insight!)).toBe(true);
+        expect(component.getApplicableEvidenceInsights()).toHaveLength(0);
+        expect(component.hasApplicableEvidenceInsights()).toBe(false);
     });
 
 

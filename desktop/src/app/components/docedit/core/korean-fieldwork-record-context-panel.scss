@@ -836,6 +836,21 @@ korean-fieldwork-record-context-panel {
     }
   }
 
+  .korean-fieldwork-record-context-evidence-insight-applied {
+    align-items: center;
+    background: #f6fef9;
+    border: 1px solid #abefc6;
+    border-radius: 4px;
+    color: #027a48;
+    display: inline-flex;
+    font-size: 11px;
+    font-weight: 800;
+    gap: 3px;
+    line-height: 1;
+    min-height: 24px;
+    padding: 3px 6px;
+  }
+
   .korean-fieldwork-record-context-sketch-preview {
     background: #ffffff;
     border: 1px solid rgba(52, 64, 84, 0.18);

@@ -3193,6 +3193,12 @@ function validateRecordPanelOrder() {
       || !desktopRecordContextPanelSpecText.includes('opens original linked tablet evidence records from context insights')) {
     findings.push('desktop record context panel must let users open original linked tablet evidence records from evidence insights');
   }
+  if (!desktopRecordContextPanelText.includes('isEvidenceInsightApplied')
+      || !desktopRecordContextPanelTemplateText.includes('korean-fieldwork-record-context-evidence-insight-applied')
+      || !desktopRecordContextPanelStyleText.includes('korean-fieldwork-record-context-evidence-insight-applied')
+      || !desktopRecordContextPanelSpecText.includes('marks already appended linked tablet evidence insights as applied')) {
+    findings.push('desktop record context panel must mark already appended tablet evidence as applied instead of leaving it in the pending apply queue');
+  }
   if (!desktopRecordContextPanelText.includes('pushFeatureAttributeChip')
       || !desktopRecordContextPanelText.includes('formatFeatureAttributeLabels')
       || !desktopRecordContextPanelSpecText.includes('가마 핵심 연소부 기록·소성부 기록')

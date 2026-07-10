@@ -501,7 +501,7 @@
                           [attr.y]="text.y"
                           text-anchor="middle">{{text.text}}</text>
                 </svg>
-                <span *ngIf="canApplyEvidenceInsight(insight) || canOpenEvidenceInsight(insight)"
+                <span *ngIf="canApplyEvidenceInsight(insight) || isEvidenceInsightApplied(insight) || canOpenEvidenceInsight(insight)"
                       class="korean-fieldwork-record-context-evidence-insight-actions">
                     <button *ngIf="canApplyEvidenceInsight(insight)"
                             type="button"
@@ -509,6 +509,11 @@
                             (click)="applyEvidenceInsight(insight)">
                         {{getEvidenceInsightApplyTargetLabel(insight)}}에 반영
                     </button>
+                    <span *ngIf="isEvidenceInsightApplied(insight)"
+                          class="korean-fieldwork-record-context-evidence-insight-applied">
+                        <span class="mdi mdi-check-circle-outline"></span>
+                        <span>반영됨</span>
+                    </span>
                     <button *ngIf="canOpenEvidenceInsight(insight)"
                             type="button"
                             class="korean-fieldwork-record-context-evidence-insight-action"
