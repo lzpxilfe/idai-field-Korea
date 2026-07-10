@@ -3755,7 +3755,7 @@ function validateReportHandoffPreSaveValidation() {
       || !desktopPriorityStripTemplateText.includes('toggleReportHandoffTabletBundleReviewed(previewItem, $event)')
       || !desktopPriorityStripStyleText.includes('.korean-fieldwork-report-handoff-tablet-bundle')
       || !desktopPriorityStripStyleText.includes('.korean-fieldwork-report-handoff-filter')
-      || !desktopPriorityStripStyleText.includes('&.tablet-work')
+      || !desktopPriorityStripStyleText.includes('.tablet-work')
       || !desktopPriorityStripStyleText.includes('&.tablet-review')
       || !desktopPriorityStripSpecText.includes('featureTabletBundle')
       || !desktopPriorityStripSpecText.includes('copyReportHandoffTabletBundle(featureItem)')
