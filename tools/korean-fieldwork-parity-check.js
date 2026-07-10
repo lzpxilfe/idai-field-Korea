@@ -4833,8 +4833,12 @@ function validateRecordActionEvidencePriority() {
       || !mobileRecordActionSpecText.includes('counts and opens existing sketch memo evidence')) {
     findings.push('tablet record actions must count existing PenMemo sketches and offer them as openable evidence');
   }
-  if (!desktopRecordActionText.includes('makeKoreanFieldworkEvidenceReview')) {
-    findings.push('desktop record actions must use expanded evidence review issues, including tablet PenMemo transcription backlog');
+  if (!desktopRecordActionText.includes('makeKoreanFieldworkEvidenceReview')
+      || !desktopRecordActionText.includes('getIssueActions')
+      || !desktopRecordActionText.includes('issues.map')
+      || !desktopRecordActionSpecText.includes('surfaces multiple tablet review issues before draft suggestions')
+      || !desktopRecordContextSpecText.includes('shows multiple tablet review issues as openable record actions')) {
+    findings.push('desktop record actions must use expanded evidence review issues, including multiple tablet issues and PenMemo transcription backlog');
   }
   if (!desktopRecordActionText.includes('OPEN_EVIDENCE_CATEGORIES')
       || !desktopRecordActionText.includes("'PenMemo'")

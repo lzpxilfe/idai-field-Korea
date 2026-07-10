@@ -1862,6 +1862,50 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
     });
 
 
+    it('shows multiple tablet review issues as openable record actions', async () => {
+
+        const feature = createDocument('feature-1', 'Feature', 'F1', {}, {
+            featureRecordingStatus: 'confirmed',
+            featureInvestigationChecklist: []
+        });
+        const memo = createDocument('memo-1', 'PenMemo', 'M1', {
+            depicts: ['feature-1']
+        }, {
+            penMemoStrokes: '{"version":1,"strokes":[{"points":[{"x":10,"y":20}]}]}',
+            penMemoTranscriptionStatus: 'pending'
+        });
+        const component = createComponent({
+            find: jest.fn().mockResolvedValue({ documents: [feature, memo] })
+        });
+        component.document = feature as any;
+        component.fieldDefinitions = [
+            field('featureRecordingStatus'),
+            field('featureInvestigationChecklist')
+        ] as any;
+
+        await component.ngOnChanges();
+
+        expect(component.getRecordActions().map(action => action.id)).toEqual(expect.arrayContaining([
+            'issue-feature-complete-photo-feature-1',
+            'issue-pen-memo-handwriting-transcription-memo-1'
+        ]));
+        expect(component.getRecordActions().find(action =>
+            action.id === 'issue-feature-complete-photo-feature-1'
+        )).toMatchObject({
+            type: 'openDocument',
+            documentId: 'feature-1',
+            tone: 'warning'
+        });
+        expect(component.getRecordActions().find(action =>
+            action.id === 'issue-pen-memo-handwriting-transcription-memo-1'
+        )).toMatchObject({
+            type: 'openDocument',
+            documentId: 'memo-1',
+            tone: 'warning'
+        });
+    });
+
+
     it('appends linked tablet find and sample spot evidence to the current feature narrative once', async () => {
 
         const feature = createDocument('feature-1', 'Feature', 'F1', {}, {

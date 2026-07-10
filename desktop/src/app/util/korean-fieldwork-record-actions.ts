@@ -80,8 +80,7 @@ export function makeKoreanFieldworkRecordActions(
     if (!document?.resource?.id) return [];
 
     const actions: KoreanFieldworkRecordActionItem[] = [];
-    const issueAction = getIssueAction(document, documents);
-    if (issueAction) actions.push(issueAction);
+    actions.push(...getIssueActions(document, documents));
 
     const continuationActions = getKoreanFieldworkContinuationActions(document, projectConfiguration);
     const linkedDocuments = getLinkedDocuments(document, documents);
@@ -105,16 +104,13 @@ export function makeKoreanFieldworkRecordActions(
 }
 
 
-function getIssueAction(document: Document,
-                        documents: Document[]): KoreanFieldworkRecordActionItem|undefined {
+function getIssueActions(document: Document,
+                         documents: Document[]): KoreanFieldworkRecordActionItem[] {
 
     const issues = makeKoreanFieldworkEvidenceReview(document, documents).issues
         .slice()
         .sort((issueA, issueB) => compareIssues(issueA, issueB, document.resource.id));
-    const [issue] = issues;
-    if (!issue) return undefined;
-
-    return {
+    return issues.map(issue => ({
         id: `issue-${issue.ruleId}-${issue.documentId}`,
         type: 'openDocument',
         label: issue.documentId === document.resource.id ? '이 기록 점검' : '관련 점검',
@@ -124,7 +120,7 @@ function getIssueAction(document: Document,
             : 'mdi-alert-outline',
         tone: issue.severity === 'critical' ? 'danger' : 'warning',
         documentId: issue.documentId
-    };
+    }));
 }
 
 

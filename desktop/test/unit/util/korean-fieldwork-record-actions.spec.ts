@@ -64,6 +64,47 @@ describe('korean-fieldwork-record-actions', () => {
     });
 
 
+    it('surfaces multiple tablet review issues before draft suggestions', () => {
+
+        const feature = createDoc('feature-1', 'Feature', {}, {
+            featureRecordingStatus: 'confirmed',
+            featureInvestigationChecklist: []
+        });
+        const memo = createDoc('memo-1', 'PenMemo', {
+            depicts: ['feature-1']
+        }, {
+            penMemoStrokes: '{"version":1,"strokes":[{"points":[{"x":10,"y":20}]}]}',
+            penMemoTranscriptionStatus: 'pending'
+        });
+        const actions = makeKoreanFieldworkRecordActions(
+            feature,
+            [feature, memo],
+            createConfig({
+                'FeatureSegment:Feature': ['liesWithin'],
+                'Photo:Feature': ['depicts']
+            }),
+            4
+        );
+
+        expect(actions.map(action => action.id)).toEqual([
+            'issue-feature-complete-photo-feature-1',
+            'issue-pen-memo-handwriting-transcription-memo-1',
+            'create-FeatureSegment',
+            'create-Photo'
+        ]);
+        expect(actions[0]).toMatchObject({
+            type: 'openDocument',
+            documentId: 'feature-1',
+            tone: 'warning'
+        });
+        expect(actions[1]).toMatchObject({
+            type: 'openDocument',
+            documentId: 'memo-1',
+            tone: 'warning'
+        });
+    });
+
+
     it('respects the requested action limit', () => {
 
         const layer = createDoc('layer-1', 'Layer');
