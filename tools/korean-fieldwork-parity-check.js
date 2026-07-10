@@ -338,7 +338,8 @@ const featureRows = [
       'desktop/src/app/components/resources/korean-fieldwork-priority-strip.component.ts',
       'desktop/src/app/components/resources/korean-fieldwork-priority-strip.html',
       'desktop/src/app/components/resources/korean-fieldwork-priority-strip.scss',
-      'desktop/src/app/util/korean-fieldwork-hwp-clipboard.ts'
+      'desktop/src/app/util/korean-fieldwork-hwp-clipboard.ts',
+      'desktop/src/app/util/korean-fieldwork-record-tablet-bundle.ts'
     ],
     tabletTests: [
       'mobile/components/Project/korean-fieldwork-document-drafts.spec.ts',
@@ -347,7 +348,8 @@ const featureRows = [
     ],
     desktopTests: [
       'desktop/test/unit/components/docedit/core/korean-fieldwork-record-context-panel.component.spec.ts',
-      'desktop/test/unit/components/resources/korean-fieldwork-priority-strip.component.spec.ts'
+      'desktop/test/unit/components/resources/korean-fieldwork-priority-strip.component.spec.ts',
+      'desktop/test/unit/util/korean-fieldwork-record-tablet-bundle.spec.ts'
     ]
   },
   {
