@@ -501,12 +501,20 @@
                           [attr.y]="text.y"
                           text-anchor="middle">{{text.text}}</text>
                 </svg>
-                <span *ngIf="canApplyEvidenceInsight(insight)"
+                <span *ngIf="canApplyEvidenceInsight(insight) || canOpenEvidenceInsight(insight)"
                       class="korean-fieldwork-record-context-evidence-insight-actions">
-                    <button type="button"
+                    <button *ngIf="canApplyEvidenceInsight(insight)"
+                            type="button"
                             class="korean-fieldwork-record-context-evidence-insight-action apply"
                             (click)="applyEvidenceInsight(insight)">
                         {{getEvidenceInsightApplyTargetLabel(insight)}}에 반영
+                    </button>
+                    <button *ngIf="canOpenEvidenceInsight(insight)"
+                            type="button"
+                            class="korean-fieldwork-record-context-evidence-insight-action"
+                            (click)="openEvidenceInsight(insight)">
+                        <span class="mdi mdi-open-in-new"></span>
+                        <span>열기</span>
                     </button>
                 </span>
             </span>

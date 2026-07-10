@@ -3186,6 +3186,13 @@ function validateRecordPanelOrder() {
       || !desktopRecordContextPanelSpecText.includes('applies all linked tablet evidence insights')) {
     findings.push('desktop record context panel must provide a one-click path to append all linked tablet evidence summaries into the current narrative');
   }
+  if (!desktopRecordContextPanelText.includes('openEvidenceInsight')
+      || !desktopRecordContextPanelText.includes('canOpenEvidenceInsight')
+      || !desktopRecordContextPanelTemplateText.includes('openEvidenceInsight(insight)')
+      || !desktopRecordContextPanelTemplateText.includes('mdi-open-in-new')
+      || !desktopRecordContextPanelSpecText.includes('opens original linked tablet evidence records from context insights')) {
+    findings.push('desktop record context panel must let users open original linked tablet evidence records from evidence insights');
+  }
   if (!desktopRecordContextPanelText.includes('pushFeatureAttributeChip')
       || !desktopRecordContextPanelText.includes('formatFeatureAttributeLabels')
       || !desktopRecordContextPanelSpecText.includes('가마 핵심 연소부 기록·소성부 기록')

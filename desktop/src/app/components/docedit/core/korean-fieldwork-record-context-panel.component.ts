@@ -91,6 +91,7 @@ interface EvidenceMetric extends ContextMetric {
 interface EvidenceInsight {
     appendText?: string;
     detail: string;
+    document?: Document;
     id: string;
     label: string;
     sketchPreview?: KoreanFieldworkPenMemoSketchPreview;
@@ -1246,6 +1247,10 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
         !!this.getEvidenceInsightAppendTargetField(insight);
 
 
+    public canOpenEvidenceInsight = (insight: EvidenceInsight) =>
+        !!insight.document;
+
+
     public getApplicableEvidenceInsights = (): EvidenceInsight[] =>
         this.evidenceInsights.filter(insight => this.canApplyEvidenceInsight(insight));
 
@@ -1287,6 +1292,14 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
     public async openNotebookEntry(entry: KoreanFieldworkNotebookEntry) {
 
         await this.routing.jumpToResource(entry.sourceDocument);
+    }
+
+
+    public async openEvidenceInsight(insight: EvidenceInsight) {
+
+        if (!insight.document) return;
+
+        await this.routing.jumpToResource(insight.document);
     }
 
 
@@ -1656,6 +1669,7 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
                 const sketchPreview = this.getSoilColorSampleSketchPreview(summary.document);
                 const insight: EvidenceInsight = {
                     detail: `${this.getDocumentLabel(summary.document)} · ${summary.label}`,
+                    document: summary.document,
                     id: `soilColor:${summary.document.resource.id}`,
                     ...(sketchPreview ? { sketchPreview } : {}),
                     label: '토색 후보',
@@ -1675,6 +1689,7 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
                 const sketchPreview = this.getSoilColorSampleSketchPreview(summary.document);
                 const insight: EvidenceInsight = {
                     detail: `${this.getDocumentLabel(summary.document)} · ${summary.label}`,
+                    document: summary.document,
                     id: `soilColorSwatches:${summary.document.resource.id}`,
                     ...(sketchPreview ? { sketchPreview } : {}),
                     label: '층별 토색',
@@ -1693,6 +1708,7 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
 
                 return [{
                     detail: `${this.getDocumentLabel(document)} · ${sketchPreview.label}`,
+                    document,
                     id: `soilLayerMarkers:${document.resource.id}`,
                     label: '층 번호 표시',
                     sketchPreview,
@@ -1713,6 +1729,7 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
                     : visibleLocations.join(', ');
                 const insight: EvidenceInsight = {
                     detail: `${this.getDocumentLabel(document)} · ${locationLabel} ${summaries.length}: ${locationSummary}`,
+                    document,
                     id: `findSpot:${document.resource.id}`,
                     label: isSample ? '시료 위치' : '유물 위치',
                     tone: 'info' as const
@@ -1730,6 +1747,7 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
                     detail: summary.pendingTranscription
                         ? `${this.getDocumentLabel(summary.document)} · ${getPenMemoTranscriptionSummaryLabel(summary.document)}`
                         : `${this.getDocumentLabel(summary.document)} · ${getPenMemoSketchSummaryLabel(summary.document.resource.penMemoStrokes)}`,
+                    document: summary.document,
                     id: `penMemoSketch:${summary.document.resource.id}`,
                     label: summary.pendingTranscription ? '태블릿 야장 전사' : '야장 스케치',
                     ...(sketchPreview ? { sketchPreview } : {}),
@@ -1748,6 +1766,7 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
 
                 const insight: EvidenceInsight = {
                     detail: `${this.getDocumentLabel(document)} · ${sketchPreview.label}`,
+                    document,
                     id: `drawingSketch:${document.resource.id}`,
                     label: '도면 스케치',
                     sketchPreview,
@@ -1766,6 +1785,7 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
 
                 const insight: EvidenceInsight = {
                     detail: `${this.getDocumentLabel(document)} · ${summary}`,
+                    document,
                     id: `drawingSurvey:${document.resource.id}`,
                     label: '도면 실측',
                     tone: 'info' as const
@@ -1780,6 +1800,7 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
             .map(summary => {
                 const insight: EvidenceInsight = {
                     detail: `${this.getDocumentLabel(summary.document)} · ${summary.label}`,
+                    document: summary.document,
                     id: `photoAnnotation:${summary.document.resource.id}`,
                     label: summary.source === 'soilProfilePhoto' ? '토층사진 표시' : '사진 표시',
                     sketchPreview: summary.preview,
@@ -1802,7 +1823,24 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
             ...photoAnnotationInsights,
             ...penMemoSketchInsights
         ]
+            .map(insight => this.withHiddenEvidenceInsightDocument(insight))
             .filter(insight => insight.detail.trim().length > 0);
+    }
+
+
+    private withHiddenEvidenceInsightDocument(insight: EvidenceInsight): EvidenceInsight {
+
+        const sourceDocument = insight.document;
+        if (!sourceDocument) return insight;
+
+        delete insight.document;
+        Object.defineProperty(insight, 'document', {
+            configurable: true,
+            enumerable: false,
+            value: sourceDocument
+        });
+
+        return insight;
     }
 
 

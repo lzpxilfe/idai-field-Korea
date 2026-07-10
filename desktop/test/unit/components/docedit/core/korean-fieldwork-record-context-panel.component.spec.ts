@@ -1907,6 +1907,47 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
     });
 
 
+    it('opens original linked tablet evidence records from context insights', async () => {
+
+        const feature = createDocument('feature-1', 'Feature', 'F1', {}, {
+            description: 'feature narrative'
+        });
+        const find = createDocument('find-1', 'Find', 'find-001', {
+            isPresentIn: ['feature-1']
+        }, {
+            findSpotItems: JSON.stringify({
+                version: 1,
+                items: [
+                    { number: 1, point: { x: 25, y: 75 }, label: 'bronze fragment' }
+                ]
+            })
+        });
+        const routing = { jumpToResource: jest.fn() };
+        const component = createComponent({
+            find: jest.fn().mockResolvedValue({
+                documents: [feature, find]
+            })
+        }, routing);
+        component.document = feature as any;
+        component.fieldDefinitions = [
+            field('featureRecordingStatus'),
+            textField('description', 'Description')
+        ] as any;
+
+        await component.ngOnChanges();
+
+        const insight = component.getEvidenceInsights()
+            .find(candidate => candidate.id === 'findSpot:find-1');
+
+        expect(insight?.document).toBe(find);
+        expect(component.canOpenEvidenceInsight(insight!)).toBe(true);
+
+        await component.openEvidenceInsight(insight!);
+
+        expect(routing.jumpToResource).toHaveBeenCalledWith(find);
+    });
+
+
     it('does not truncate linked tablet evidence insights when a feature has more than four records', async () => {
 
         const feature = createDocument('feature-1', 'Feature', 'F1', {}, {
