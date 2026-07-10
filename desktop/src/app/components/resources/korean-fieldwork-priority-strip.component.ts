@@ -227,6 +227,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
     public workbenchItems: KoreanFieldworkWorkbenchItem[] = [];
     public recordWorkFilterCounts: KoreanFieldworkRecordWorkFilterCounts|undefined;
     public activeRecordWorkFilterId: KoreanFieldworkRecordWorkFilterId = 'all';
+    public tabletProcessingRecordIds: Set<string> = new Set();
     public workbenchActionsByDocumentId: Map<string, KoreanFieldworkRecordActionItem[]> = new Map();
     public scopeSummary: KoreanFieldworkScopeSummary|undefined;
     public closeoutSummary: KoreanFieldworkCloseoutSummary|undefined;
@@ -1803,13 +1804,6 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
             const workbenchItems = stats
                 ? makeKoreanFieldworkWorkbenchItems(documents, 6, investigationMode)
                 : [];
-            const recordWorkFilterCounts = stats
-                ? getKoreanFieldworkRecordWorkFilterCounts(
-                    getKoreanFieldworkRecordWorkDocuments(documents),
-                    documents,
-                    stats.issueCountByDocumentId
-                )
-                : undefined;
             const documentsById = new Map(documents.map(document => [document.resource.id, document]));
             const workbenchActionsByDocumentId = stats
                 ? makeWorkbenchActionsByDocumentId(workbenchItems, documentsById, documents, this.projectConfiguration)
@@ -1832,6 +1826,19 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
             const reportHandoffTabletBundlesByDocumentId = stats && reportHandoff
                 ? makeReportHandoffTabletBundles(reportHandoff.items, documentsById, documents)
                 : new Map<string, KoreanFieldworkTabletRecordBundle>();
+            const tabletProcessingRecordIds = this.getTabletProcessingRecordIds(
+                reportHandoff?.items ?? [],
+                reportHandoffTabletBundlesByDocumentId
+            );
+            const recordWorkFilterCounts = stats
+                ? getKoreanFieldworkRecordWorkFilterCounts(
+                    getKoreanFieldworkRecordWorkDocuments(documents),
+                    documents,
+                    stats.issueCountByDocumentId,
+                    new Date(),
+                    tabletProcessingRecordIds
+                )
+                : undefined;
 
             if (currentRefreshId === this.refreshId) {
                 this.stats = stats;
@@ -1844,6 +1851,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
                 this.unitMatrixItems = unitMatrixItems;
                 this.workbenchItems = workbenchItems;
                 this.recordWorkFilterCounts = recordWorkFilterCounts;
+                this.tabletProcessingRecordIds = tabletProcessingRecordIds;
                 this.workbenchActionsByDocumentId = workbenchActionsByDocumentId;
                 this.closeoutSummary = closeoutSummary;
                 this.closeoutBatchUpdates = closeoutBatchUpdates;
@@ -1869,6 +1877,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
                 this.unitMatrixItems = [];
                 this.workbenchItems = [];
                 this.recordWorkFilterCounts = undefined;
+                this.tabletProcessingRecordIds = new Set();
                 this.workbenchActionsByDocumentId = new Map();
                 this.closeoutSummary = undefined;
                 this.closeoutBatchUpdates = [];
@@ -2555,8 +2564,25 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
             document,
             this.activeRecordWorkFilterId,
             this.projectDocuments,
-            this.stats.issueCountByDocumentId
+            this.stats.issueCountByDocumentId,
+            new Date(),
+            this.tabletProcessingRecordIds
         );
+    }
+
+
+    private getTabletProcessingRecordIds(
+            items: KoreanFieldworkReportHandoffItem[],
+            tabletBundlesByDocumentId: Map<string, KoreanFieldworkTabletRecordBundle>
+    ): Set<string> {
+
+        return new Set(items
+            .filter(item => {
+                const bundle = tabletBundlesByDocumentId.get(item.documentId);
+
+                return !!bundle && !bundle.reviewState.isReviewed;
+            })
+            .map(item => item.documentId));
     }
 
 

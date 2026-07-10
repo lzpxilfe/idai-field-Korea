@@ -27,6 +27,30 @@ describe('korean-fieldwork-record-work-filters', () => {
     });
 
 
+    it('matches tablet handoff records that still need desktop processing', () => {
+
+        const feature = createDocument('feature-tablet', 'Feature');
+        const tabletProcessingDocumentIds = new Set(['feature-tablet']);
+
+        expect(matchesKoreanFieldworkRecordWorkFilter(
+            feature,
+            'needsReview',
+            [feature],
+            {},
+            new Date('2026-06-24T10:00:00+09:00'),
+            tabletProcessingDocumentIds
+        )).toBe(true);
+        expect(matchesKoreanFieldworkRecordWorkFilter(
+            feature,
+            'pending',
+            [feature],
+            {},
+            new Date('2026-06-24T10:00:00+09:00'),
+            tabletProcessingDocumentIds
+        )).toBe(false);
+    });
+
+
     it('matches candidate and investigating feature records', () => {
 
         const candidate = createDocument('candidate', 'Feature', {
@@ -231,10 +255,11 @@ describe('korean-fieldwork-record-work-filters', () => {
             recordDocuments as any,
             documents as any,
             { 'operation-1': 1 },
-            now
+            now,
+            new Set(['feature-1'])
         )).toEqual({
             all: 2,
-            needsReview: 1,
+            needsReview: 2,
             pending: 1,
             missingEvidence: 2,
             today: 1

@@ -3444,6 +3444,12 @@ function validateReportHandoffPreSaveValidation() {
   const desktopPriorityStripSpecText = readTextFile(
     'desktop/test/unit/components/resources/korean-fieldwork-priority-strip.component.spec.ts'
   );
+  const desktopRecordWorkFilterText = readTextFile(
+    'desktop/src/app/util/korean-fieldwork-record-work-filters.ts'
+  );
+  const desktopRecordWorkFilterSpecText = readTextFile(
+    'desktop/test/unit/util/korean-fieldwork-record-work-filters.spec.ts'
+  );
   const desktopRecordContextText = readTextFile(
     'desktop/src/app/components/docedit/core/korean-fieldwork-record-context-panel.component.ts'
   );
@@ -3815,6 +3821,15 @@ function validateReportHandoffPreSaveValidation() {
       || !desktopPriorityStripSpecText.includes('stores desktop review state for tablet bundles from the report handoff panel')
       || !desktopPriorityStripSpecText.includes('filters the report handoff list to tablet bundles that still need desktop processing')) {
     findings.push('desktop report handoff panel must surface each record tablet bundle and copy it separately for office-side HWP processing');
+  }
+  if (!desktopRecordWorkFilterText.includes('tabletProcessingDocumentIds')
+      || !desktopRecordWorkFilterText.includes('tabletProcessingDocumentIds.has(document.resource.id)')
+      || !desktopRecordWorkFilterSpecText.includes('matches tablet handoff records that still need desktop processing')
+      || !desktopPriorityStripText.includes('tabletProcessingRecordIds')
+      || !desktopPriorityStripText.includes('getTabletProcessingRecordIds')
+      || !desktopPriorityStripText.includes('reportHandoffTabletBundlesByDocumentId')
+      || !desktopPriorityStripSpecText.includes('includes unprocessed tablet handoff records in the desktop review filter')) {
+    findings.push('desktop record work filters must include unprocessed tablet handoff records in the review queue');
   }
   if (!desktopRecordContextText.includes('makeKoreanFieldworkReportHandoff')
       || !desktopRecordContextText.includes('writeKoreanFieldworkHwpClipboardText')

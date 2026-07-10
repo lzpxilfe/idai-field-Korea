@@ -56,7 +56,8 @@ export function getKoreanFieldworkRecordWorkFilterCounts(
         documents: Document[],
         allDocuments: Document[],
         issueCountByDocumentId: Record<string, number>,
-        now: Date = new Date()
+        now: Date = new Date(),
+        tabletProcessingDocumentIds: ReadonlySet<string> = new Set()
 ): KoreanFieldworkRecordWorkFilterCounts {
 
     return KOREAN_FIELDWORK_RECORD_WORK_FILTERS.reduce((counts, filter) => ({
@@ -67,7 +68,8 @@ export function getKoreanFieldworkRecordWorkFilterCounts(
                 filter.id,
                 allDocuments,
                 issueCountByDocumentId,
-                now
+                now,
+                tabletProcessingDocumentIds
             )
         ).length
     }), createEmptyCounts());
@@ -79,13 +81,15 @@ export function matchesKoreanFieldworkRecordWorkFilter(
         filterId: KoreanFieldworkRecordWorkFilterId,
         allDocuments: Document[],
         issueCountByDocumentId: Record<string, number>,
-        now: Date = new Date()
+        now: Date = new Date(),
+        tabletProcessingDocumentIds: ReadonlySet<string> = new Set()
 ): boolean {
 
     switch (filterId) {
         case 'needsReview':
             return (issueCountByDocumentId[document.resource.id] ?? 0) > 0
-                || hasReviewVerificationState(document);
+                || hasReviewVerificationState(document)
+                || tabletProcessingDocumentIds.has(document.resource.id);
         case 'pending':
             return hasPendingFieldworkStatus(document);
         case 'missingEvidence':

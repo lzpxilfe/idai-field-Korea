@@ -1299,6 +1299,52 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
     });
 
 
+    it('includes unprocessed tablet handoff records in the desktop review filter', async () => {
+
+        const component = createComponent({
+            find: jest.fn().mockResolvedValue({
+                documents: [
+                    createDocument('project', 'Project'),
+                    createDocument('feature-tablet', 'Feature', {
+                        featureRecordingStatus: 'confirmed',
+                        featureInvestigationChecklist: [],
+                        fieldRecordQuality: ['checked']
+                    }),
+                    createDocument('photo-tablet', 'Photo', {
+                        relations: { depicts: ['feature-tablet'] },
+                        fieldworkPhotoUri: 'file:///tablet/photos/feature-tablet.jpg',
+                        fieldworkImageUploadStatus: 'uploaded',
+                        fieldworkImageUploadedAt: '2026-07-11T01:02:03.000Z',
+                        fieldworkImageUploadedUri: 'file:///tablet/photos/feature-tablet.jpg',
+                        fieldworkImageUploadTarget:
+                            'https://field.example/files/project/photo-tablet?type=original_image',
+                        fieldworkImageUploadedProject: 'project',
+                        fieldworkImageUploadedSizeBytes: 481516,
+                        fieldworkImageUploadedMd5: 'tablet-md5',
+                        fieldworkImageStoredSizeBytes: 481516,
+                        fieldworkImageStoredMd5: 'tablet-md5',
+                        fieldworkImageStoredSha256: 'server-sha256'
+                    })
+                ]
+            }),
+            get: jest.fn()
+        });
+
+        await component.refresh();
+
+        const reviewFilter = component.getRecordWorkFilters()
+            .find(filter => filter.id === 'needsReview')!;
+
+        expect(component.tabletProcessingRecordIds.has('feature-tablet')).toBe(true);
+        expect(component.getRecordWorkFilterCount(reviewFilter)).toBeGreaterThanOrEqual(1);
+
+        component.setActiveRecordWorkFilter(reviewFilter);
+
+        expect(component.getFilteredProgressItems().map(item => item.documentId))
+            .toContain('feature-tablet');
+    });
+
+
     it('shows the full fieldwork sequence when setup and records are in place', async () => {
 
         const component = createComponent({
