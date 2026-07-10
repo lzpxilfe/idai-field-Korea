@@ -1812,6 +1812,101 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
     });
 
 
+    it('appends linked tablet find and sample spot evidence to the current feature narrative once', async () => {
+
+        const feature = createDocument('feature-1', 'Feature', 'F1', {}, {
+            description: '기존 유구 설명.'
+        });
+        const find = createDocument('find-1', 'Find', 'find-001', {
+            isPresentIn: ['feature-1']
+        }, {
+            findSpotDescription: 'pit floor east edge',
+            findSpotItems: JSON.stringify({
+                version: 1,
+                items: [
+                    { number: 1, point: { x: 25, y: 75 }, label: 'bronze fragment' }
+                ]
+            }),
+            shortDescription: 'bronze rim sherd'
+        });
+        const sample = createDocument('sample-1', 'Sample', 'sample-001', {
+            isPresentIn: ['feature-1']
+        }, {
+            findSpotItems: JSON.stringify({
+                version: 1,
+                items: [
+                    { number: 1, point: { x: 50, y: 40 }, label: 'charcoal bag' }
+                ]
+            }),
+            samplePurpose: ['absoluteDating'],
+            sampleType: 'charcoal',
+            shortDescription: 'floor charcoal sample'
+        });
+        const component = createComponent({
+            find: jest.fn().mockResolvedValue({
+                documents: [feature, find, sample]
+            })
+        });
+        const handleChanged = jest.fn();
+        component.onChanged.subscribe(handleChanged);
+        component.document = feature as any;
+        component.fieldDefinitions = [
+            field('featureRecordingStatus'),
+            textField('description', '설명')
+        ] as any;
+
+        await component.ngOnChanges();
+
+        expect(component.getEvidenceMetrics()).toEqual(expect.arrayContaining([
+            { id: 'finds', label: '유물', count: 1, canCreate: false },
+            { id: 'samples', label: '시료', count: 1, canCreate: false }
+        ]));
+
+        const insights = component.getEvidenceInsights();
+        const findInsight = insights.find(insight => insight.id === 'findSpot:find-1');
+        const sampleInsight = insights.find(insight => insight.id === 'findSpot:sample-1');
+
+        expect(findInsight).toMatchObject({
+            appendText: [
+                '[유물 find-001 출토 위치]',
+                '출토 위치점: 1번 25%/75% bronze fragment',
+                '출토 위치: pit floor east edge',
+                '요약: bronze rim sherd'
+            ].join('\n'),
+            detail: 'find-001 · 출토 위치점 1: 1번 25%/75% bronze fragment',
+            label: '유물 위치',
+            tone: 'info'
+        });
+        expect(sampleInsight).toMatchObject({
+            appendText: [
+                '[시료 sample-001 채취 위치]',
+                '채취 위치점: 1번 50%/40% charcoal bag',
+                '시료 종류: charcoal',
+                '시료 목적: 절대연대',
+                '요약: floor charcoal sample'
+            ].join('\n'),
+            detail: 'sample-001 · 채취 위치점 1: 1번 50%/40% charcoal bag',
+            label: '시료 위치',
+            tone: 'info'
+        });
+
+        component.applyEvidenceInsight(findInsight!);
+        component.applyEvidenceInsight(sampleInsight!);
+        component.applyEvidenceInsight(findInsight!);
+        component.applyEvidenceInsight(sampleInsight!);
+
+        expect(feature.resource.description).toContain('기존 유구 설명.');
+        expect(feature.resource.description).toContain('[유물 find-001 출토 위치]');
+        expect(feature.resource.description).toContain('출토 위치점: 1번 25%/75% bronze fragment');
+        expect(feature.resource.description).toContain('[시료 sample-001 채취 위치]');
+        expect(feature.resource.description).toContain('채취 위치점: 1번 50%/40% charcoal bag');
+        expect(feature.resource.description.match(/\[유물 find-001 출토 위치]/g)).toHaveLength(1);
+        expect(feature.resource.description.match(/\[시료 sample-001 채취 위치]/g)).toHaveLength(1);
+        expect(feature.resource.description).not.toContain('"items"');
+        expect(handleChanged).toHaveBeenCalledTimes(2);
+    });
+
+
     it('appends linked tablet PenMemo handwriting evidence to the current record narrative once', async () => {
 
         const feature = createDocument('feature-1', 'Feature', 'F1', {}, {

@@ -1661,6 +1661,30 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
                     tone: 'info' as const
                 }];
             });
+        const findSampleSpotInsights = bundle.finds.concat(bundle.samples)
+            .flatMap(document => {
+                const summaries = getKoreanFieldworkFindSpotSummaries(document.resource.findSpotItems);
+                if (summaries.length === 0) return [];
+
+                const isSample = document.resource.category === 'Sample';
+                const locationLabel = isSample ? '채취 위치점' : '출토 위치점';
+                const visibleLocations = summaries.slice(0, 3).map(summary => summary.text);
+                const hiddenCount = summaries.length - visibleLocations.length;
+                const locationSummary = hiddenCount > 0
+                    ? `${visibleLocations.join(', ')} 외 ${hiddenCount}건`
+                    : visibleLocations.join(', ');
+                const insight: EvidenceInsight = {
+                    detail: `${this.getDocumentLabel(document)} · ${locationLabel} ${summaries.length}: ${locationSummary}`,
+                    id: `findSpot:${document.resource.id}`,
+                    label: isSample ? '시료 위치' : '유물 위치',
+                    tone: 'info' as const
+                };
+                const appendText = this.getFindSpotInsightAppendText(document, summaries);
+
+                return [canAppendEvidenceInsight && appendText
+                    ? { ...insight, appendText }
+                    : insight];
+            });
         const penMemoSketchInsights = getPenMemoSketchSummaries(bundle.penMemos)
             .map(summary => {
                 const sketchPreview = getPenMemoSketchPreview(summary.document.resource.penMemoStrokes);
@@ -1734,6 +1758,7 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
             ...soilColorInsights,
             ...soilColorSwatchInsights,
             ...soilProfileLayerMarkerInsights,
+            ...findSampleSpotInsights,
             ...drawingSketchInsights,
             ...drawingSurveyInsights,
             ...photoAnnotationInsights,
@@ -2086,6 +2111,42 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
     }
 
 
+    private getFindSpotInsightAppendText(document: Document,
+                                         summaries: KoreanFieldworkFindSpotSummary[]): string {
+
+        const isSample = document.resource.category === 'Sample';
+        const documentLabel = this.getDocumentLabel(document);
+        const locationLabel = isSample ? '채취 위치점' : '출토 위치점';
+        const recordSummary = this.getNonEmptyDocumentStringField(document, 'shortDescription')
+            ?? this.getNonEmptyDocumentStringField(document, 'description');
+        const lines = [
+            `[${isSample ? '시료' : '유물'} ${documentLabel} ${isSample ? '채취 위치' : '출토 위치'}]`,
+            this.getNotebookAppendLine(
+                locationLabel,
+                summaries.map(summary => summary.text).join(', ')
+            ),
+            isSample
+                ? this.getNotebookAppendLine(
+                    '시료 종류',
+                    this.getAppendableRecordFieldValue(document, 'sampleType')
+                )
+                : this.getNotebookAppendLine(
+                    '출토 위치',
+                    this.getAppendableRecordFieldValue(document, 'findSpotDescription')
+                ),
+            isSample
+                ? this.getNotebookAppendLine(
+                    '시료 목적',
+                    this.getAppendableRecordFieldValue(document, 'samplePurpose')
+                )
+                : undefined,
+            this.getNotebookAppendLine('요약', recordSummary)
+        ].filter((line): line is string => !!line && line.length > 0);
+
+        return lines.length > 1 ? lines.join('\n') : '';
+    }
+
+
     private getPenMemoSketchInsightAppendText(
             summary: KoreanFieldworkPenMemoSketchSummary,
             sketchPreview: KoreanFieldworkPenMemoSketchPreview|undefined
@@ -2155,6 +2216,26 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
         ].filter((line): line is string => !!line && line.length > 0);
 
         return lines.length > 1 ? lines.join('\n') : '';
+    }
+
+
+    private getAppendableRecordFieldValue(document: Document, fieldName: string): string|undefined {
+
+        const summary = getKoreanFieldworkRecordFieldValueSummary(fieldName, document.resource[fieldName]);
+        if (summary) return summary;
+
+        const value = document.resource[fieldName];
+
+        if (Array.isArray(value)) {
+            const values = value
+                .filter((entry): entry is string => typeof entry === 'string')
+                .map(entry => entry.trim())
+                .filter(entry => entry.length > 0);
+
+            return values.length > 0 ? values.join(', ') : undefined;
+        }
+
+        return this.getNonEmptyDocumentStringField(document, fieldName);
     }
 
 

@@ -3166,6 +3166,13 @@ function validateRecordPanelOrder() {
       || !desktopRecordContextPanelSpecText.includes('sketchPreview')) {
     findings.push('desktop record context panel must render tablet soil-color candidates and sketch memo details inside the opened record');
   }
+  if (!desktopRecordContextPanelText.includes('getFindSpotInsightAppendText')
+      || !desktopRecordContextPanelText.includes('findSpot:${document.resource.id}')
+      || !desktopRecordContextPanelSpecText.includes('linked tablet find and sample spot evidence')
+      || !desktopRecordContextPanelSpecText.includes('출토 위치점: 1번 25%/75% bronze fragment')
+      || !desktopRecordContextPanelSpecText.includes('채취 위치점: 1번 50%/40% charcoal bag')) {
+    findings.push('desktop record context panel must turn linked tablet find and sample spot points into appendable feature narrative evidence');
+  }
   if (!desktopRecordContextPanelText.includes('pushFeatureAttributeChip')
       || !desktopRecordContextPanelText.includes('formatFeatureAttributeLabels')
       || !desktopRecordContextPanelSpecText.includes('가마 핵심 연소부 기록·소성부 기록')
