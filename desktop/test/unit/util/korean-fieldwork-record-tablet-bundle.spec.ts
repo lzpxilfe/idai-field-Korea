@@ -173,9 +173,9 @@ describe('korean-fieldwork-record-tablet-bundle', () => {
         ].join('\r\n'));
         expect(photoGroup.copyText).toContain([
             '- P1',
-            '  - \uc0ac\uc9c4 \uc124\uba85: \ubd81\ubcbd \uc720\uad6c \ubc14\ub2e5\uba74',
-            '  - \uc6d0\ubcf8 \ud30c\uc77c: IMG_0001.JPG',
-            '  - \uc6d0\ubcf8: file:///tablet/photos/IMG_0001.JPG'
+            ' - \uc0ac\uc9c4 \uc124\uba85: \ubd81\ubcbd \uc720\uad6c \ubc14\ub2e5\uba74',
+            ' - \uc6d0\ubcf8 \ud30c\uc77c: IMG_0001.JPG',
+            ' - \uc6d0\ubcf8: file:///tablet/photos/IMG_0001.JPG'
         ].join('\r\n'));
         expect(photoSource.copyText).not.toContain('\t');
     });
