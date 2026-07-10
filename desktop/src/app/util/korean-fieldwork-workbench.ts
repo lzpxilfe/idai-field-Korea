@@ -1,4 +1,5 @@
 import {
+    getKoreanFieldworkFindSpotCountLabel,
     Document,
     getKoreanFieldworkRecordFieldValueSummary,
     getKoreanFieldworkTodaySummary,
@@ -63,6 +64,7 @@ const QUALITY_TRACKED_CATEGORIES = new Set<string>([
 const FEATURE_WORKFLOW_CATEGORIES = new Set<string>(['Feature', 'FeatureSegment']);
 const PHOTO_CATEGORY = 'Photo';
 const DRAWING_CATEGORY = 'Drawing';
+const FIND_SPOT_CATEGORIES = new Set<string>(['Find', 'FindCollection', 'Sample']);
 const FIELD_RECORD_QUALITY_REVIEW_CATEGORY = 'FieldRecordQualityReview';
 const PEN_MEMO_CATEGORY = 'PenMemo';
 const SOIL_PROFILE_PHOTO_CATEGORY = 'SoilProfilePhoto';
@@ -218,6 +220,10 @@ function getWorkbenchReasons(document: Document,
         reasons.push(...getDrawingReasons(document, issues));
     }
 
+    if (FIND_SPOT_CATEGORIES.has(document.resource.category)) {
+        reasons.push(...getFindSpotReasons(document));
+    }
+
     if (document.resource.category === PEN_MEMO_CATEGORY) {
         reasons.push(...getPenMemoReasons(document));
     }
@@ -306,6 +312,17 @@ function getDrawingReasons(document: Document, issues: KoreanFieldworkReadinessI
     }
 
     return reasons;
+}
+
+
+function getFindSpotReasons(document: Document): string[] {
+
+    const label = document.resource.category === 'Sample'
+        ? '\ucc44\ucde8 \uc704\uce58\uc810'
+        : '\ucd9c\ud1a0 \uc704\uce58\uc810';
+    const summary = getKoreanFieldworkFindSpotCountLabel(document.resource.findSpotItems, label);
+
+    return summary ? [summary] : [];
 }
 
 

@@ -33,6 +33,9 @@ import {
     parseKoreanFieldworkFieldNote
 } from './korean-fieldwork-field-note';
 import {
+    getKoreanFieldworkFindSpotSummaryText
+} from './korean-fieldwork-find-spots';
+import {
     getKoreanFieldworkFeaturePitLineSummaries,
     getKoreanFieldworkFeaturePitLineSummaryLabel
 } from './korean-fieldwork-pit-lines';
@@ -223,15 +226,6 @@ interface EvidenceDetailDefinition {
 interface LabeledEvidenceFieldDefinition {
     label: string;
     fieldName: string;
-}
-
-interface FindSpotHandoffItem {
-    label?: string;
-    number: number;
-    point: {
-        x: number;
-        y: number;
-    };
 }
 
 const KO = {
@@ -876,7 +870,7 @@ function getHandoffPrintableFieldValue(resource: NewResource, fieldName: string)
     }
 
     if (fieldName === 'findSpotItems') {
-        return getFindSpotItemsSummary(resource.findSpotItems);
+        return getKoreanFieldworkFindSpotSummaryText(resource.findSpotItems);
     }
 
     if (fieldName === 'drawingSketchStrokes') {
@@ -1139,7 +1133,7 @@ function getSummaryFieldValue(document: Document, fieldName: string): string|und
     }
 
     if (fieldName === 'findSpotItems') {
-        return getFindSpotItemsSummary(document.resource.findSpotItems);
+        return getKoreanFieldworkFindSpotSummaryText(document.resource.findSpotItems);
     }
 
     if (fieldName === 'dailyLogContent') {
@@ -1835,84 +1829,6 @@ function getLabeledEvidenceFieldSummary(
         ))
         .filter((value): value is string => !!value)
         .join(' / ') || undefined;
-}
-
-
-function getFindSpotItemsSummary(value: any): string|undefined {
-
-    const items = normalizeFindSpotHandoffItems(value);
-
-    return items.length > 0
-        ? items.map(getFindSpotItemSummary).join(', ')
-        : undefined;
-}
-
-
-function normalizeFindSpotHandoffItems(value: any): FindSpotHandoffItem[] {
-
-    const rawValue = typeof value === 'string' ? parseJsonValue(value) : value;
-    const rawItems = Array.isArray(rawValue)
-        ? rawValue
-        : isPlainRecord(rawValue) && Array.isArray(rawValue.items)
-            ? rawValue.items
-            : [];
-
-    return rawItems
-        .map(normalizeFindSpotHandoffItem)
-        .filter((item): item is FindSpotHandoffItem => !!item)
-        .sort((itemA, itemB) => itemA.number - itemB.number);
-}
-
-
-function normalizeFindSpotHandoffItem(value: any): FindSpotHandoffItem|undefined {
-
-    if (!isPlainRecord(value) || !isPlainRecord(value.point)) return undefined;
-
-    const number = normalizePositiveInteger(value.number);
-    const x = normalizeFindSpotPercent(value.point.x);
-    const y = normalizeFindSpotPercent(value.point.y);
-    if (number === undefined || x === undefined || y === undefined) return undefined;
-
-    return {
-        label: getPrintableValue(value.label),
-        number,
-        point: { x, y }
-    };
-}
-
-
-function normalizePositiveInteger(value: any): number|undefined {
-
-    return typeof value === 'number' && Number.isInteger(value) && value > 0
-        ? value
-        : undefined;
-}
-
-
-function normalizeFindSpotPercent(value: any): number|undefined {
-
-    return typeof value === 'number' && Number.isFinite(value)
-        ? Math.min(100, Math.max(0, value))
-        : undefined;
-}
-
-
-function getFindSpotItemSummary(item: FindSpotHandoffItem): string {
-
-    const coordinates = `${formatFindSpotPercent(item.point.x)}%/${formatFindSpotPercent(item.point.y)}%`;
-    const prefix = `${item.number}\ubc88 ${coordinates}`;
-
-    return item.label ? `${prefix} ${item.label}` : prefix;
-}
-
-
-function formatFindSpotPercent(value: number): string {
-
-    const rounded = Math.round(value * 10) / 10;
-
-    return Number.isInteger(rounded)
-        ? String(rounded)
-        : rounded.toFixed(1);
 }
 
 

@@ -827,6 +827,40 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
     });
 
 
+    it('shows tablet find spot points on opened desktop find records', async () => {
+
+        const find = createDocument('find-1', 'Find', 'FIND1', {}, {
+            findSpotItems: JSON.stringify({
+                version: 1,
+                items: [
+                    { number: 1, point: { x: 25, y: 75 }, label: 'bronze fragment' },
+                    { number: 2, point: { x: 40, y: 60 }, label: 'rim sherd' }
+                ]
+            }),
+            findSpotItemsUpdatedAt: '2026-07-10T08:15:00.000Z'
+        });
+        const component = createComponent({
+            find: jest.fn().mockResolvedValue({ documents: [find] })
+        });
+        component.document = find as any;
+        component.fieldDefinitions = [
+            field('findSpotItems')
+        ] as any;
+
+        await component.ngOnChanges();
+
+        expect(component.shouldShow()).toBe(true);
+        expect(component.getEvidenceMetrics()).toEqual(expect.arrayContaining([
+            { id: 'findSpotItems', label: '\ucd9c\ud1a0 \uc704\uce58\uc810', count: 2, canCreate: false }
+        ]));
+        expect(component.getReportHandoffItem()?.copyText)
+            .toContain('1\ubc88 25%/75% bronze fragment');
+        expect(component.getReportHandoffItem()?.copyText)
+            .toContain('2\ubc88 40%/60% rim sherd');
+        expect(component.getReportHandoffItem()?.copyText).not.toContain('"items"');
+    });
+
+
     it('summarizes tablet media review values on opened desktop photo records', async () => {
 
         const photo = createDocument('photo-1', 'Photo', 'P1', {}, {

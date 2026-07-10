@@ -14,6 +14,7 @@ import {
     makeKoreanFieldworkReportHandoff,
     ProjectConfiguration,
     getKoreanFieldworkFeaturePitLineSummaries,
+    getKoreanFieldworkFindSpotSummaries,
     getKoreanFieldworkRecordFieldValueSummary
 } from 'idai-field-core';
 import { Routing } from '../../../services/routing';
@@ -209,6 +210,8 @@ const KOREAN_FIELDWORK_CONTEXT_FIELDS = [
     'fieldworkPhotoAnnotationStrokes',
     'featureRecordingStatus',
     'fieldRecordQuality',
+    'findSpotItems',
+    'findSpotItemsUpdatedAt',
     'longAxisOrientation',
     'mediaEvidenceRole',
     'mediaQualityCheck',
@@ -1486,8 +1489,19 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
                 canCreate: false
             }]
             : [];
+        const findSpotCount = getKoreanFieldworkFindSpotSummaries(this.document.resource.findSpotItems).length;
+        const findSpotMetrics: EvidenceMetric[] = findSpotCount > 0
+            ? [{
+                id: 'findSpotItems',
+                label: this.document.resource.category === 'Sample'
+                    ? '\ucc44\ucde8 \uc704\uce58\uc810'
+                    : '\ucd9c\ud1a0 \uc704\uce58\uc810',
+                count: findSpotCount,
+                canCreate: false
+            }]
+            : [];
 
-        return evidenceMetrics.concat(featurePitLineMetrics, photoAnnotationMetrics, penMemoMetrics);
+        return evidenceMetrics.concat(featurePitLineMetrics, findSpotMetrics, photoAnnotationMetrics, penMemoMetrics);
     }
 
 

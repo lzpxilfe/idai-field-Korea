@@ -287,6 +287,50 @@ describe('korean-fieldwork-workbench', () => {
     });
 
 
+    it('surfaces tablet find and sample spot points as desktop processing records', () => {
+
+        const feature = createCompleteRecord('feature-1', 'Feature', '\uc720\uad6c 1');
+        const find = createCompleteRecord('find-1', 'Find', 'F1', {
+            isPresentIn: ['feature-1']
+        }) as any;
+        find.resource.findSpotItems = JSON.stringify({
+            version: 1,
+            items: [
+                { number: 1, point: { x: 25, y: 75 }, label: 'bronze fragment' },
+                { number: 2, point: { x: 40, y: 60 }, label: 'rim sherd' }
+            ]
+        });
+        const sample = createCompleteRecord('sample-1', 'Sample', 'S1', {
+            isPresentIn: ['feature-1']
+        }) as any;
+        sample.resource.findSpotItems = JSON.stringify({
+            version: 1,
+            items: [
+                { number: 1, point: { x: 50, y: 40 }, label: 'charcoal bag' }
+            ]
+        });
+
+        const items = makeKoreanFieldworkWorkbenchItems([
+            feature,
+            find,
+            sample
+        ] as any);
+
+        expect(items).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                id: 'find-1',
+                parentPath: '\uc720\uad6c 1',
+                reasons: expect.arrayContaining(['\ucd9c\ud1a0 \uc704\uce58\uc810 2'])
+            }),
+            expect.objectContaining({
+                id: 'sample-1',
+                parentPath: '\uc720\uad6c 1',
+                reasons: expect.arrayContaining(['\ucc44\ucde8 \uc704\uce58\uc810 1'])
+            })
+        ]));
+    });
+
+
     it('surfaces handwritten PenMemo records that still need transcription review', () => {
 
         const feature = createCompleteRecord('feature-1', 'Feature', '수혈 1');
