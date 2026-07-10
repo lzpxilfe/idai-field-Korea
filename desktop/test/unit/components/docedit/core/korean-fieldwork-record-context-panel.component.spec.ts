@@ -358,8 +358,11 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
         expect(template).toContain('openTabletRecordBundleSource(source)');
         expect(template).toContain('copyTabletRecordBundleGroup(group)');
         expect(template).toContain('korean-fieldwork-record-context-tablet-bundle-source');
+        expect(template).toContain('source.issueCount');
+        expect(template).toContain('source.issueDetails');
         expect(styles).toContain('.korean-fieldwork-record-context-tablet-bundle');
         expect(styles).toContain('.korean-fieldwork-record-context-tablet-bundle-group');
+        expect(styles).toContain('.korean-fieldwork-record-context-tablet-bundle-issue-badge');
         expect(styles).toContain('.korean-fieldwork-record-context-tablet-bundle-source-open');
     });
 

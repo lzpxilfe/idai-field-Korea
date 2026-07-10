@@ -102,6 +102,10 @@
                     <div class="korean-fieldwork-record-context-tablet-bundle-group-main">
                         <span class="korean-fieldwork-record-context-tablet-bundle-group-label">
                             {{group.label}} {{group.count}}
+                            <span *ngIf="group.issueCount > 0"
+                                  class="korean-fieldwork-record-context-tablet-bundle-issue-badge">
+                                &#54869;&#51064; {{group.issueCount}}
+                            </span>
                         </span>
                         <span class="korean-fieldwork-record-context-tablet-bundle-group-detail">
                             {{group.detail}}
@@ -130,14 +134,23 @@
                 <div *ngIf="isTabletRecordBundleGroupExpanded(group)"
                      class="korean-fieldwork-record-context-tablet-bundle-sources">
                     <div *ngFor="let source of group.sources"
-                         class="korean-fieldwork-record-context-tablet-bundle-source">
+                         class="korean-fieldwork-record-context-tablet-bundle-source"
+                         [class.warning]="source.tone === 'warning'">
                         <span class="korean-fieldwork-record-context-tablet-bundle-source-main">
                             <span class="korean-fieldwork-record-context-tablet-bundle-source-label">
                                 {{source.label}}
+                                <span *ngIf="source.issueCount > 0"
+                                      class="korean-fieldwork-record-context-tablet-bundle-issue-badge">
+                                    &#54869;&#51064; {{source.issueCount}}
+                                </span>
                             </span>
                             <span *ngIf="source.detail"
                                   class="korean-fieldwork-record-context-tablet-bundle-source-detail">
                                 {{source.detail}}
+                            </span>
+                            <span *ngFor="let issueDetail of source.issueDetails"
+                                  class="korean-fieldwork-record-context-tablet-bundle-source-issue">
+                                {{issueDetail}}
                             </span>
                         </span>
                         <button *ngIf="canOpenTabletRecordBundleSource(source)"

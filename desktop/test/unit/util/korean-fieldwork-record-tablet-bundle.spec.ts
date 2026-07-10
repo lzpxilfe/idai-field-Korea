@@ -62,6 +62,47 @@ describe('korean-fieldwork-record-tablet-bundle', () => {
     });
 
 
+    it('marks tablet bundle sources that still need desktop review', () => {
+
+        const feature = createDoc('feature-1', 'Feature', 'F1', {}, {
+            featureRecordingStatus: 'confirmed',
+            featureInvestigationChecklist: []
+        });
+        const photo = createDoc('photo-1', 'Photo', 'P1', {
+            depicts: ['feature-1']
+        }, {
+            fieldworkPhotoUri: 'file:///tablet/photos/P1.jpg'
+        });
+        const memo = createDoc('memo-1', 'PenMemo', 'M1', {
+            depicts: ['feature-1']
+        }, {
+            penMemoStrokes: '{"version":1,"strokes":[{"points":[{"x":10,"y":20}]}]}',
+            penMemoTranscriptionStatus: 'pending'
+        });
+
+        const bundle = makeKoreanFieldworkRecordTabletBundle(
+            feature,
+            [feature, photo, memo] as any
+        )!;
+        const penMemoGroup = bundle.groups.find(group => group.id === 'penMemos')!;
+        const [penMemoSource] = penMemoGroup.sources;
+
+        expect(bundle.issueCount).toBeGreaterThanOrEqual(1);
+        expect(bundle.summary).toContain('\ud655\uc778');
+        expect(penMemoGroup.issueCount).toBe(1);
+        expect(penMemoGroup.tone).toBe('warning');
+        expect(penMemoGroup.detail).toContain('\ud655\uc778 1\uac74');
+        expect(penMemoSource).toMatchObject({
+            documentId: 'memo-1',
+            issueCount: 1,
+            label: 'M1',
+            tone: 'warning'
+        });
+        expect(penMemoSource.issueDetails[0]).toContain('M1');
+        expect(penMemoGroup.copyText).toContain('\ud655\uc778: M1');
+    });
+
+
     it('stays hidden when the current record has no tablet evidence bundle', () => {
 
         const feature = createDoc('feature-1', 'Feature', 'F1');

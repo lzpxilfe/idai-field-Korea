@@ -22,6 +22,9 @@ export interface KoreanFieldworkTabletRecordBundleSource {
     label: string;
     detail?: string;
     documentId?: string;
+    issueCount: number;
+    issueDetails: string[];
+    tone: KoreanFieldworkTabletRecordBundleTone;
 }
 
 export interface KoreanFieldworkTabletRecordBundleGroup {
@@ -29,6 +32,7 @@ export interface KoreanFieldworkTabletRecordBundleGroup {
     label: string;
     count: number;
     detail: string;
+    issueCount: number;
     copyText: string;
     sources: KoreanFieldworkTabletRecordBundleSource[];
     tone: KoreanFieldworkTabletRecordBundleTone;
@@ -124,10 +128,11 @@ export function makeKoreanFieldworkRecordTabletBundle(
         documents,
         Number.MAX_SAFE_INTEGER
     );
+    const issueDetailsByDocumentId = getIssueDetailsByDocumentId(review.issues);
     const title = handoffItem?.title ?? getDocumentTitle(document);
     const groups = DOCUMENT_GROUPS
-        .map(definition => makeDocumentGroup(definition, review, title))
-        .concat(makeNotebookGroup(notebookEntries, title) ?? [])
+        .map(definition => makeDocumentGroup(definition, review, title, issueDetailsByDocumentId))
+        .concat(makeNotebookGroup(notebookEntries, title, issueDetailsByDocumentId) ?? [])
         .filter((group): group is KoreanFieldworkTabletRecordBundleGroup => !!group);
 
     if (groups.length === 0) return undefined;
@@ -162,11 +167,12 @@ export function makeKoreanFieldworkRecordTabletBundle(
 function makeDocumentGroup(
         definition: KoreanFieldworkTabletRecordBundleGroupDefinition,
         review: KoreanFieldworkEvidenceReview,
-        title: string
+        title: string,
+        issueDetailsByDocumentId: Map<string, string[]>
 ): KoreanFieldworkTabletRecordBundleGroup|undefined {
 
     const sources = getUniqueDocuments(definition.getDocuments(review))
-        .map(document => makeDocumentSource(document));
+        .map(document => makeDocumentSource(document, issueDetailsByDocumentId));
     if (sources.length === 0) return undefined;
 
     return makeGroup(
@@ -181,10 +187,11 @@ function makeDocumentGroup(
 
 function makeNotebookGroup(
         entries: KoreanFieldworkNotebookEntry[],
-        title: string
+        title: string,
+        issueDetailsByDocumentId: Map<string, string[]>
 ): KoreanFieldworkTabletRecordBundleGroup|undefined {
 
-    const sources = entries.map(entry => makeNotebookSource(entry));
+    const sources = entries.map(entry => makeNotebookSource(entry, issueDetailsByDocumentId));
     if (sources.length === 0) return undefined;
 
     return makeGroup(
@@ -203,47 +210,61 @@ function makeGroup(id: string,
                    sources: KoreanFieldworkTabletRecordBundleSource[],
                    title: string): KoreanFieldworkTabletRecordBundleGroup {
 
-    const detail = makePreviewLabel(sources.map(source => source.label));
+    const issueCount = sources.reduce((sum, source) => sum + source.issueCount, 0);
+    const detail = makeGroupDetail(sources, issueCount);
 
     return {
         id,
         label,
         count: sources.length,
         detail,
+        issueCount,
         copyText: makeGroupCopyText(title, label, sources),
         sources,
-        tone
+        tone: issueCount > 0 ? 'warning' : tone
     };
 }
 
 
-function makeDocumentSource(document: Document): KoreanFieldworkTabletRecordBundleSource {
+function makeDocumentSource(document: Document,
+                            issueDetailsByDocumentId: Map<string, string[]>)
+        : KoreanFieldworkTabletRecordBundleSource {
 
     const label = getDocumentIdentifier(document);
     const detail = getDocumentDetail(document);
+    const issueDetails = issueDetailsByDocumentId.get(document.resource.id) ?? [];
 
     return {
         id: document.resource.id,
         label,
         ...(detail ? { detail } : {}),
-        documentId: document.resource.id
+        documentId: document.resource.id,
+        issueCount: issueDetails.length,
+        issueDetails,
+        tone: issueDetails.length > 0 ? 'warning' : 'info'
     };
 }
 
 
-function makeNotebookSource(entry: KoreanFieldworkNotebookEntry): KoreanFieldworkTabletRecordBundleSource {
+function makeNotebookSource(entry: KoreanFieldworkNotebookEntry,
+                            issueDetailsByDocumentId: Map<string, string[]>)
+        : KoreanFieldworkTabletRecordBundleSource {
 
     const label = [
         entry.targetLabel,
         entry.sourceLabel,
         entry.dateLabel
     ].filter(value => value.length > 0).join(' \u00b7 ');
+    const issueDetails = issueDetailsByDocumentId.get(entry.sourceDocument.resource.id) ?? [];
 
     return {
         id: entry.id,
         label,
         detail: entry.detail,
-        documentId: entry.sourceDocument.resource.id
+        documentId: entry.sourceDocument.resource.id,
+        issueCount: issueDetails.length,
+        issueDetails,
+        tone: issueDetails.length > 0 ? 'warning' : 'info'
     };
 }
 
@@ -283,10 +304,13 @@ function makeGroupCopyText(
         `[${label}] ${title}`,
         ...sources.flatMap(source => {
             const firstLine = `- ${source.label}`;
+            const issueLines = source.issueDetails.map(issueDetail => `  \ud655\uc778: ${issueDetail}`);
 
-            return source.detail
-                ? [firstLine, `  ${source.detail}`]
-                : [firstLine];
+            return [
+                firstLine,
+                ...(source.detail ? [`  ${source.detail}`] : []),
+                ...issueLines
+            ];
         })
     ];
 
@@ -297,13 +321,45 @@ function makeGroupCopyText(
 function getIssueDetails(issues: KoreanFieldworkReadinessIssue[]): string[] {
 
     return issues
-        .map(issue => [
-            issue.identifier || issue.documentId,
-            issue.recommendedAction || issue.message
-        ].filter(value => value.length > 0).join(': '))
+        .map(getIssueDetail)
         .filter((issueDetail, index, issueDetails) =>
             issueDetail.length > 0 && issueDetails.indexOf(issueDetail) === index
         );
+}
+
+
+function getIssueDetailsByDocumentId(issues: KoreanFieldworkReadinessIssue[]): Map<string, string[]> {
+
+    const issueDetailsByDocumentId = new Map<string, string[]>();
+
+    issues.forEach(issue => {
+        const details = issueDetailsByDocumentId.get(issue.documentId) ?? [];
+        const issueDetail = getIssueDetail(issue);
+        if (issueDetail && !details.includes(issueDetail)) {
+            issueDetailsByDocumentId.set(issue.documentId, details.concat(issueDetail));
+        }
+    });
+
+    return issueDetailsByDocumentId;
+}
+
+
+function getIssueDetail(issue: KoreanFieldworkReadinessIssue): string {
+
+    return [
+        issue.identifier || issue.documentId,
+        issue.recommendedAction || issue.message
+    ].filter(value => value.length > 0).join(': ');
+}
+
+
+function makeGroupDetail(sources: KoreanFieldworkTabletRecordBundleSource[], issueCount: number): string {
+
+    const previewLabel = makePreviewLabel(sources.map(source => source.label));
+
+    return issueCount > 0
+        ? `${previewLabel} \u00b7 \ud655\uc778 ${issueCount}\uac74`
+        : previewLabel;
 }
 
 
