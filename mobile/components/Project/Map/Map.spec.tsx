@@ -267,6 +267,54 @@ describe('Map', () => {
     );
   });
 
+  it('starts a trench from map quick create before features in trial trench mode', async () => {
+    const operation = createDoc(C.OPERATION, 'operation-1');
+    const boundary = createDoc(C.SURVEY_BOUNDARY, 'boundary-1');
+    const addDocumentOfCategory = jest.fn();
+    (useMapData as jest.Mock).mockReturnValue([
+      [boundary],
+      [],
+      undefined,
+      undefined,
+      undefined,
+      jest.fn(),
+      undefined,
+    ]);
+
+    const { getAllByText } = render(
+      <ConfigurationContext.Provider value={createConfigurationMock() as any}>
+        <PreferencesContext.Provider value={createPreferencesMock() as any}>
+          <Map
+            repository={createRepositoryMock([operation]) as any}
+            documents={[operation, boundary]}
+            selectedDocumentIds={['operation-1']}
+            highlightedDocId="operation-1"
+            addDocument={jest.fn()}
+            addDocumentOfCategory={addDocumentOfCategory}
+            editDocument={jest.fn()}
+            removeDocument={jest.fn()}
+            selectParent={jest.fn()}
+            readinessIssues={[]}
+            investigationModeId="trialTrench"
+          />
+        </PreferencesContext.Provider>
+      </ConfigurationContext.Provider>
+    );
+
+    await waitFor(() => expect(getAllByText('트렌치 추가').length).toBeGreaterThan(0));
+
+    fireEvent.press(getAllByText('트렌치 추가')[0]);
+
+    expect(addDocumentOfCategory).toHaveBeenCalledWith(
+      operation,
+      C.TRENCH
+    );
+    expect(addDocumentOfCategory).not.toHaveBeenCalledWith(
+      operation,
+      C.FEATURE
+    );
+  });
+
   it('keeps users on the white map workspace after saving a hand-drawn boundary', async () => {
     const editDocument = jest.fn();
     const repository = createRepositoryMock();

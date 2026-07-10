@@ -295,6 +295,8 @@ const KoreanFieldworkFindSpotPanel: React.FC<Props> = ({
     pixelPoint: PixelPoint,
     viewportForPoint: FindSpotViewport
   ) => {
+    if (!featureSketch) return;
+
     const point = getNormalizedPoint(pixelPoint, canvasSize, viewportForPoint);
     if (!point) return;
 

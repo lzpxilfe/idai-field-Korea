@@ -88,28 +88,55 @@ function Test-FieldServer {
     }
 }
 
+function Test-IsCurrentRepoServerCommandLine {
+    param([string] $CommandLine)
+
+    if ([string]::IsNullOrWhiteSpace($CommandLine)) {
+        return $false
+    }
+
+    return $CommandLine.IndexOf($repoDir, [StringComparison]::OrdinalIgnoreCase) -ge 0 -or
+        $CommandLine.IndexOf($appDir, [StringComparison]::OrdinalIgnoreCase) -ge 0
+}
+
+function Get-Port4200ListenerProcesses {
+    $listeners = Get-NetTCPConnection -LocalPort 4200 -State Listen -ErrorAction SilentlyContinue |
+        Select-Object -ExpandProperty OwningProcess -Unique
+
+    foreach ($listenerPid in $listeners) {
+        Get-CimInstance Win32_Process -Filter "ProcessId=$listenerPid" -ErrorAction SilentlyContinue
+    }
+}
+
 function Stop-StaleFieldServer {
     try {
-        $listeners = Get-NetTCPConnection -LocalPort 4200 -State Listen -ErrorAction SilentlyContinue |
-            Select-Object -ExpandProperty OwningProcess -Unique
-
-        foreach ($listenerPid in $listeners) {
-            $process = Get-CimInstance Win32_Process -Filter "ProcessId=$listenerPid" -ErrorAction SilentlyContinue
-            if (-not $process) { continue }
-
+        foreach ($process in (Get-Port4200ListenerProcesses)) {
             $commandLine = [string]$process.CommandLine
-            $isCurrentRepoServer = $commandLine.Contains($repoDir) -or
-                $commandLine -match 'ng(\.cmd)?\s+serve' -or
-                $commandLine -match '@angular[\\/]cli'
+            $isCurrentRepoServer = Test-IsCurrentRepoServerCommandLine -CommandLine $commandLine
 
             if ($isCurrentRepoServer) {
-                Write-Host "Stopping stale development server on port 4200 (PID $listenerPid)."
-                & taskkill.exe /PID $listenerPid /T /F | Out-Null
+                Write-Host "Stopping stale development server on port 4200 (PID $($process.ProcessId))."
+                & taskkill.exe /PID $process.ProcessId /T /F | Out-Null
             }
         }
     } catch {
         Write-Host "Could not check for stale development server: $($_.Exception.Message)"
     }
+}
+
+function Assert-Port4200AvailableForField {
+    $otherListeners = @(Get-Port4200ListenerProcesses | Where-Object {
+        -not (Test-IsCurrentRepoServerCommandLine -CommandLine ([string]$_.CommandLine))
+    })
+
+    if ($otherListeners.Count -eq 0) {
+        return
+    }
+
+    $listenerSummary = ($otherListeners | ForEach-Object {
+        "$($_.Name) PID $($_.ProcessId)"
+    }) -join ', '
+    throw "Port 4200 is already used by another process ($listenerSummary). This launcher will not stop processes outside $repoDir."
 }
 
 function Stop-ProcessTree {
@@ -179,6 +206,7 @@ try {
 
     Write-Host 'Starting iDAI Field in Korean.'
     Stop-StaleFieldServer
+    Assert-Port4200AvailableForField
 
     if (Test-FieldServer) {
         Write-Host 'Development server is already ready.'

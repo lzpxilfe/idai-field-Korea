@@ -132,6 +132,33 @@ describe('KoreanFieldworkFindSpotPanel', () => {
     ]);
   });
 
+  it('does not store find spots before the parent feature has a sketch', () => {
+    const onUpdateResourceFields = jest.fn();
+    const feature = createDoc('feature-1', C.FEATURE);
+    const findResource = createFindResource();
+    const { getByTestId } = render(
+      <KoreanFieldworkFindSpotPanel
+        documents={[feature]}
+        parentDocument={feature}
+        resource={findResource}
+        onUpdateResourceFields={onUpdateResourceFields}
+      />
+    );
+    const canvas = getByTestId('findSpotCanvas');
+
+    fireEvent(canvas, 'layout', {
+      nativeEvent: { layout: { height: 200, width: 400 } },
+    });
+    fireEvent(canvas, 'responderGrant', {
+      nativeEvent: { locationX: 100, locationY: 150 },
+    });
+    fireEvent(canvas, 'responderRelease', {
+      nativeEvent: { locationX: 100, locationY: 150 },
+    });
+
+    expect(onUpdateResourceFields).not.toHaveBeenCalled();
+  });
+
   it('uses sample wording for existing sample spot labels', () => {
     const feature = createFeature();
     const sampleResource = createSampleResource({

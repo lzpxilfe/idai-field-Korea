@@ -243,6 +243,17 @@ const Map: React.FC<MapProps> = (props) => {
     usesTrenchWorkflow
     && !!primaryOperation
     && !!config?.getCategory(KOREAN_FIELDWORK_CATEGORIES.TRENCH);
+  const shouldCreateTrenchFromQuickCreate =
+    usesTrenchWorkflow && !featureParent;
+  const canUseQuickCreateAction = shouldCreateTrenchFromQuickCreate
+    ? canCreateTrench
+    : canCreateFeatureCandidate;
+  const quickCreateTitle = shouldCreateTrenchFromQuickCreate
+    ? '트렌치 추가'
+    : '유구 추가';
+  const quickCreateHint = shouldCreateTrenchFromQuickCreate
+    ? '시굴·표본조사는 트렌치 위치를 먼저 잡은 뒤 유구를 기록합니다.'
+    : '조사 경계 위에 유구 위치와 형태를 평면으로 그립니다.';
   const hasRenderableMapContent = geoDocuments.length > 0 || layerDocuments.length > 0;
   const hasSurveyBoundaryGeometry = geoDocuments.some((document) =>
     document.resource.category === KOREAN_FIELDWORK_CATEGORIES.SURVEY_BOUNDARY
@@ -387,6 +398,14 @@ const Map: React.FC<MapProps> = (props) => {
   };
 
   const createFeatureCandidateAndEdit = openFeatureSketchCreation;
+  const runQuickCreateAction = () => {
+    if (shouldCreateTrenchFromQuickCreate) {
+      createTrenchInPrimaryOperation();
+      return;
+    }
+
+    createFeatureCandidateAndEdit();
+  };
 
   const createPenMemoDraft = async () => {
     if (!highlightedDoc || !config?.getCategory(KOREAN_FIELDWORK_CATEGORIES.PEN_MEMO)) return;
@@ -718,12 +737,12 @@ const Map: React.FC<MapProps> = (props) => {
         <View style={styles.quickCreateContainer}>
           <Button
             variant="success"
-            title="유구 추가"
-            isDisabled={!canCreateFeatureCandidate}
-            onPress={createFeatureCandidateAndEdit}
+            title={quickCreateTitle}
+            isDisabled={!canUseQuickCreateAction}
+            onPress={runQuickCreateAction}
           />
           <Text style={styles.quickCreateHint}>
-            조사 경계 위에 유구 위치와 형태를 평면으로 그립니다.
+            {quickCreateHint}
           </Text>
           <View style={styles.quickSatelliteAction}>
             <Button
@@ -951,32 +970,38 @@ const getFeatureCandidateParent = (
   const usesTrenchWorkflow =
     shouldUseKoreanFieldworkTrenchWorkflow(investigationModeId);
 
+  if (usesTrenchWorkflow) {
+    if (highlightedDoc?.resource.category === KOREAN_FIELDWORK_CATEGORIES.TRENCH) {
+      return highlightedDoc;
+    }
+
+    if (highlightedDoc?.resource.category === KOREAN_FIELDWORK_CATEGORIES.FEATURE) {
+      const relatedTrench = findRelatedDocumentByCategory(
+        highlightedDoc,
+        documents,
+        [KOREAN_FIELDWORK_CATEGORIES.TRENCH]
+      );
+      if (relatedTrench) return relatedTrench;
+    }
+
+    return documents.find(
+      (document) => document.resource.category === KOREAN_FIELDWORK_CATEGORIES.TRENCH
+    );
+  }
+
   if (highlightedDoc) {
     if (highlightedDoc.resource.category === KOREAN_FIELDWORK_CATEGORIES.OPERATION) {
       return highlightedDoc;
     }
 
-    if (
-      highlightedDoc.resource.category === KOREAN_FIELDWORK_CATEGORIES.TRENCH
-      && usesTrenchWorkflow
-    ) {
-      return highlightedDoc;
-    }
-
     if (highlightedDoc.resource.category === KOREAN_FIELDWORK_CATEGORIES.FEATURE) {
-      const parentCategoryPreference = usesTrenchWorkflow
-        ? [
-          KOREAN_FIELDWORK_CATEGORIES.TRENCH,
-          KOREAN_FIELDWORK_CATEGORIES.OPERATION,
-        ]
-        : [
-          KOREAN_FIELDWORK_CATEGORIES.OPERATION,
-          KOREAN_FIELDWORK_CATEGORIES.TRENCH,
-        ];
       const relatedParent = findRelatedDocumentByCategory(
         highlightedDoc,
         documents,
-        parentCategoryPreference
+        [
+          KOREAN_FIELDWORK_CATEGORIES.OPERATION,
+          KOREAN_FIELDWORK_CATEGORIES.TRENCH,
+        ]
       );
       if (relatedParent) return relatedParent;
     }
