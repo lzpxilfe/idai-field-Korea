@@ -2289,7 +2289,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
             bodyText,
             '',
             '\ud0dc\ube14\ub9bf \uc790\ub8cc',
-            ...bundle.groups.map(group => `- ${group.label} ${group.count}\uac74: ${group.detail}`),
+            ...this.makeTabletWorkReportHandoffSourceLines(bundle),
             '',
             issueDetails.length > 0
                 ? `\ud655\uc778 \ud544\uc694 ${issueDetails.length}\uac74`
@@ -2298,6 +2298,19 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
         ];
 
         return normalizeKoreanFieldworkHwpPlainText(lines.filter(line => line.length > 0).join('\n'));
+    }
+
+
+    private makeTabletWorkReportHandoffSourceLines(bundle: KoreanFieldworkTabletRecordBundle): string[] {
+
+        return bundle.groups.flatMap(group => [
+            `- ${group.label} ${group.count}\uac74: ${group.detail}`,
+            ...group.sources.flatMap(source => [
+                `  - ${source.label}`,
+                ...(source.detail ? [`    ${source.detail}`] : []),
+                ...source.issueDetails.map(issueDetail => `    \ud655\uc778: ${issueDetail}`)
+            ])
+        ]);
     }
 
 
