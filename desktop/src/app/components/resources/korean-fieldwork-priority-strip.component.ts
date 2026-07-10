@@ -9,6 +9,7 @@ import {
     KoreanFieldworkReportHandoffItem,
     KoreanFieldworkReadinessIssue,
     makeKoreanFieldworkReportHandoff,
+    normalizeKoreanFieldworkHwpPlainText,
     PouchdbDatastore,
     ProjectConfiguration
 } from 'idai-field-core';
@@ -925,15 +926,19 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
             : `\ud0dc\ube14\ub9bf \ucc98\ub9ac \ubcf5\uc0ac ${this.getTabletWorkReportHandoffItemCount()}`;
 
     public getTabletWorkReportHandoffCopyText = () => {
-        const bundles = this.getTabletWorkReportHandoffItems()
-            .map(item => this.getReportHandoffTabletBundle(item))
-            .filter((bundle): bundle is KoreanFieldworkTabletRecordBundle => !!bundle?.copyText);
+        const copyBlocks = this.getTabletWorkReportHandoffItems()
+            .map(item => {
+                const bundle = this.getReportHandoffTabletBundle(item);
 
-        if (bundles.length === 0) return '';
+                return bundle ? this.makeTabletWorkReportHandoffCopyBlock(item, bundle) : '';
+            })
+            .filter(copyBlock => copyBlock.length > 0);
+
+        if (copyBlocks.length === 0) return '';
 
         return [
-            `[\ud0dc\ube14\ub9bf \ucc98\ub9ac \ub300\uc0c1] ${bundles.length}\uac74`,
-            ...bundles.flatMap(bundle => ['', bundle.copyText])
+            `[\ud0dc\ube14\ub9bf \ucc98\ub9ac \ub300\uc0c1] ${copyBlocks.length}\uac74`,
+            ...copyBlocks.flatMap(copyBlock => ['', copyBlock])
         ].join('\r\n');
     };
 
@@ -2134,6 +2139,62 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
         const bundle = this.getReportHandoffTabletBundle(item);
 
         return !!bundle && !bundle.reviewState.isReviewed;
+    }
+
+
+    private makeTabletWorkReportHandoffCopyBlock(
+            item: KoreanFieldworkReportHandoffItem,
+            bundle: KoreanFieldworkTabletRecordBundle
+    ): string {
+
+        const bodySection = this.getReportHandoffBodySection(item);
+        const bodyText = bodySection?.copyText ?? item.bodyPreview;
+        const issueDetails = this.getTabletWorkReportHandoffIssueDetails(item, bundle);
+        const lines = [
+            `[\ud0dc\ube14\ub9bf \ucc98\ub9ac] ${item.title}`,
+            bundle.summary,
+            `\ub370\uc2a4\ud06c\ud1b1 \ucc98\ub9ac: ${bundle.reviewState.label}`,
+            bodyText ? 'HWP \ubcf8\ubb38' : '',
+            bodyText,
+            '',
+            '\ud0dc\ube14\ub9bf \uc790\ub8cc',
+            ...bundle.groups.map(group => `- ${group.label} ${group.count}\uac74: ${group.detail}`),
+            '',
+            issueDetails.length > 0
+                ? `\ud655\uc778 \ud544\uc694 ${issueDetails.length}\uac74`
+                : '\ud655\uc778 \ud544\uc694 \uc5c6\uc74c',
+            ...issueDetails.map(issueDetail => `- ${issueDetail}`)
+        ];
+
+        return normalizeKoreanFieldworkHwpPlainText(lines.filter(line => line.length > 0).join('\n'));
+    }
+
+
+    private getTabletWorkReportHandoffIssueDetails(
+            item: KoreanFieldworkReportHandoffItem,
+            bundle: KoreanFieldworkTabletRecordBundle
+    ): string[] {
+
+        const sources = bundle.groups.flatMap(group => group.sources);
+        const issueTokens = [
+            item.documentId,
+            item.identifier,
+            item.title,
+            bundle.documentId,
+            ...sources.flatMap(source => [source.id, source.documentId ?? '', source.label])
+        ].filter((token, index, tokens) =>
+            token.length > 0 && tokens.indexOf(token) === index
+        );
+        const sourceIssueDetails = bundle.groups
+            .flatMap(group => group.sources)
+            .flatMap(source => source.issueDetails);
+
+        return item.issueDetails
+            .concat(sourceIssueDetails)
+            .filter((issueDetail, index, issueDetails) =>
+                issueDetail.length > 0 && issueDetails.indexOf(issueDetail) === index
+            )
+            .filter(issueDetail => issueTokens.some(token => issueDetail.includes(token)));
     }
 
 

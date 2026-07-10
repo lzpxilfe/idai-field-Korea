@@ -681,7 +681,11 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
 
             const tabletWorkCopyText = component.getTabletWorkReportHandoffCopyText();
             expect(tabletWorkCopyText).toContain('[\ud0dc\ube14\ub9bf \ucc98\ub9ac \ub300\uc0c1]');
-            expect(tabletWorkCopyText).toContain(featureTabletBundle.copyText);
+            expect(tabletWorkCopyText).toContain('[\ud0dc\ube14\ub9bf \ucc98\ub9ac]');
+            expect(tabletWorkCopyText).toContain(featureItem.title);
+            expect(tabletWorkCopyText)
+                .toContain(featureItem.copySections.find(section => section.id === 'body')!.copyText);
+            expect(tabletWorkCopyText).toContain('\ud0dc\ube14\ub9bf \uc790\ub8cc');
             expect(component.getReportHandoffTabletWorkCopyActionLabel())
                 .toContain('\ud0dc\ube14\ub9bf \ucc98\ub9ac \ubcf5\uc0ac');
 
