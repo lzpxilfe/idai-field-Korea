@@ -681,6 +681,8 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
 
             const tabletWorkCopyText = component.getTabletWorkReportHandoffCopyText();
             expect(tabletWorkCopyText).toContain('[\ud0dc\ube14\ub9bf \ucc98\ub9ac \ub300\uc0c1]');
+            expect(tabletWorkCopyText)
+                .toContain('\uc911\ubcf5 \uc6d0\uc790\ub8cc\ub294 \ucc98\uc74c \ub098\uc628 \ud56d\ubaa9\uc5d0\ub9cc \ud45c\uc2dc');
             expect(tabletWorkCopyText).toContain('[\ud0dc\ube14\ub9bf \ucc98\ub9ac]');
             expect(tabletWorkCopyText).toContain(featureItem.title);
             expect(tabletWorkCopyText)
@@ -693,6 +695,8 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
             expect(tabletWorkCopyText).toContain('soil-photo-1.jpg');
             expect(tabletWorkCopyText).toContain('- find-001');
             expect(tabletWorkCopyText).toContain('- sample-001');
+            expect(tabletWorkCopyText)
+                .toContain('\uc774\ubbf8 \uc55e\uc5d0\uc11c \uc815\ub9ac\ud55c \ud0dc\ube14\ub9bf \uc6d0\uc790\ub8cc\ub9cc \uc788\uc74c');
             expect(component.getReportHandoffTabletWorkCopyActionLabel())
                 .toContain('\ud0dc\ube14\ub9bf \ucc98\ub9ac \ubcf5\uc0ac');
 

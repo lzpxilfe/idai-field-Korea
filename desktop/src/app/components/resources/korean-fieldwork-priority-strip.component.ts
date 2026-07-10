@@ -931,11 +931,15 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
         `\ud0dc\ube14\ub9bf \ucc98\ub9ac \uc644\ub8cc ${this.getTabletWorkReportHandoffItemCount()}`;
 
     public getTabletWorkReportHandoffCopyText = () => {
+        const seenSourceKeys = new Set<string>();
+        const seenIssueDetails = new Set<string>();
         const copyBlocks = this.getTabletWorkReportHandoffItems()
             .map(item => {
                 const bundle = this.getReportHandoffTabletBundle(item);
 
-                return bundle ? this.makeTabletWorkReportHandoffCopyBlock(item, bundle) : '';
+                return bundle
+                    ? this.makeTabletWorkReportHandoffCopyBlock(item, bundle, seenSourceKeys, seenIssueDetails)
+                    : '';
             })
             .filter(copyBlock => copyBlock.length > 0);
 
@@ -943,6 +947,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
 
         return [
             `[\ud0dc\ube14\ub9bf \ucc98\ub9ac \ub300\uc0c1] ${copyBlocks.length}\uac74`,
+            '\uc911\ubcf5 \uc6d0\uc790\ub8cc\ub294 \ucc98\uc74c \ub098\uc628 \ud56d\ubaa9\uc5d0\ub9cc \ud45c\uc2dc',
             ...copyBlocks.flatMap(copyBlock => ['', copyBlock])
         ].join('\r\n');
     };
@@ -2289,12 +2294,17 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
 
     private makeTabletWorkReportHandoffCopyBlock(
             item: KoreanFieldworkReportHandoffItem,
-            bundle: KoreanFieldworkTabletRecordBundle
+            bundle: KoreanFieldworkTabletRecordBundle,
+            seenSourceKeys?: Set<string>,
+            seenIssueDetails?: Set<string>
     ): string {
 
         const bodySection = this.getReportHandoffBodySection(item);
         const bodyText = bodySection?.copyText ?? item.bodyPreview;
-        const issueDetails = this.getTabletWorkReportHandoffIssueDetails(item, bundle);
+        const issueDetails = this.filterTabletWorkReportHandoffIssueDetails(
+            this.getTabletWorkReportHandoffIssueDetails(item, bundle),
+            seenIssueDetails
+        );
         const lines = [
             `[\ud0dc\ube14\ub9bf \ucc98\ub9ac] ${item.title}`,
             bundle.summary,
@@ -2304,7 +2314,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
             bodyText,
             '',
             '\ud0dc\ube14\ub9bf \uc790\ub8cc',
-            ...this.makeTabletWorkReportHandoffSourceLines(bundle),
+            ...this.makeTabletWorkReportHandoffSourceLines(bundle, seenSourceKeys),
             '',
             issueDetails.length > 0
                 ? `\ud655\uc778 \ud544\uc694 ${issueDetails.length}\uac74`
@@ -2316,16 +2326,86 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
     }
 
 
-    private makeTabletWorkReportHandoffSourceLines(bundle: KoreanFieldworkTabletRecordBundle): string[] {
+    private makeTabletWorkReportHandoffSourceLines(
+            bundle: KoreanFieldworkTabletRecordBundle,
+            seenSourceKeys?: Set<string>
+    ): string[] {
 
-        return bundle.groups.flatMap(group => [
-            `- ${group.label} ${group.count}\uac74: ${group.detail}`,
-            ...group.sources.flatMap(source => [
-                `  - ${source.label}`,
-                ...(source.detail ? [`    ${source.detail}`] : []),
-                ...source.issueDetails.map(issueDetail => `    \ud655\uc778: ${issueDetail}`)
-            ])
-        ]);
+        const lines = bundle.groups.flatMap(group => {
+            const sources = this.getReportHandoffTabletBundleGroupSources(group)
+                .filter(source => this.keepFirstTabletWorkReportHandoffSource(source, seenSourceKeys));
+
+            if (sources.length === 0) return [];
+
+            return [
+                this.makeTabletWorkReportHandoffSourceGroupLine(group, sources),
+                ...sources.flatMap(source => [
+                    `  - ${source.label}`,
+                    ...(source.detail ? [`    ${source.detail}`] : []),
+                    ...source.issueDetails.map(issueDetail => `    \ud655\uc778: ${issueDetail}`)
+                ])
+            ];
+        });
+
+        return lines.length > 0
+            ? lines
+            : ['- \uc774\ubbf8 \uc55e\uc5d0\uc11c \uc815\ub9ac\ud55c \ud0dc\ube14\ub9bf \uc6d0\uc790\ub8cc\ub9cc \uc788\uc74c'];
+    }
+
+
+    private keepFirstTabletWorkReportHandoffSource(
+            source: KoreanFieldworkTabletRecordBundleSource,
+            seenSourceKeys?: Set<string>
+    ): boolean {
+
+        if (!seenSourceKeys) return true;
+
+        const sourceKey = this.getTabletWorkReportHandoffSourceKey(source);
+        if (seenSourceKeys.has(sourceKey)) return false;
+
+        seenSourceKeys.add(sourceKey);
+        return true;
+    }
+
+
+    private getTabletWorkReportHandoffSourceKey(source: KoreanFieldworkTabletRecordBundleSource): string {
+
+        return source.documentId ?? source.id;
+    }
+
+
+    private makeTabletWorkReportHandoffSourceGroupLine(
+            group: KoreanFieldworkTabletRecordBundleGroup,
+            sources: KoreanFieldworkTabletRecordBundleSource[]
+    ): string {
+
+        const issueCount = sources.reduce((sum, source) => sum + source.issueCount, 0);
+        const duplicateLabel = sources.length < group.count ? ' (\uc911\ubcf5 \uc81c\uc678)' : '';
+        const visibleLabels = sources.map(source => source.label).slice(0, 3);
+        const hiddenCount = sources.length - visibleLabels.length;
+        const previewLabel = hiddenCount > 0
+            ? `${visibleLabels.join(', ')} \uc678 ${hiddenCount}\uac74`
+            : visibleLabels.join(', ');
+
+        return `- ${group.label} ${sources.length}\uac74${duplicateLabel}: ${previewLabel}`
+            + (issueCount > 0 ? ` \u00b7 \ud655\uc778 ${issueCount}\uac74` : '');
+    }
+
+
+    private filterTabletWorkReportHandoffIssueDetails(
+            issueDetails: string[],
+            seenIssueDetails?: Set<string>
+    ): string[] {
+
+        if (!seenIssueDetails) return issueDetails;
+
+        return issueDetails.filter(issueDetail => {
+            const key = issueDetail.trim();
+            if (key.length === 0 || seenIssueDetails.has(key)) return false;
+
+            seenIssueDetails.add(key);
+            return true;
+        });
     }
 
 
