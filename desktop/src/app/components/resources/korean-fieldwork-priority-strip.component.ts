@@ -982,7 +982,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
             group: KoreanFieldworkTabletRecordBundleGroup
     ) => this.isReportHandoffTabletBundleGroupCopied(item, group) ? '\ubcf5\uc0ac\ub428' : `${group.label} \ubcf5\uc0ac`;
 
-    public getReportHandoffTabletBundleGroupSources(
+    public getReportHandoffTabletBundleGroupSources = (
             group: KoreanFieldworkTabletRecordBundleGroup
     ): KoreanFieldworkTabletRecordBundleSource[] =>
         getKoreanFieldworkTabletRecordBundleGroupSourcesForReview(group);
