@@ -847,6 +847,7 @@ function getDocumentDetail(document: Document): string|undefined {
 
     return [
         getFindSpotDetail(document),
+        getDirectFieldworkPhotoDetail(document),
         getPhotoDetail(document),
         getSoilProfilePhotoDetail(document),
         getDrawingDetail(document),
@@ -866,6 +867,18 @@ function getFindSpotDetail(document: Document): string|undefined {
     return document.resource.category === 'Sample'
         ? `\uc2dc\ub8cc \ucc44\ucde8 \uc704\uce58: ${summary}`
         : `\uc720\ubb3c \ucd9c\ud1a0 \uc704\uce58: ${summary}`;
+}
+
+
+function getDirectFieldworkPhotoDetail(document: Document): string|undefined {
+
+    if (['Photo', 'SoilProfilePhoto', 'Drawing'].includes(document.resource.category)) return undefined;
+
+    const sourceUri = getFirstTextValue(getMediaSourceUriFieldNames(document)
+        .map(fieldName => document.resource[fieldName]));
+    if (!sourceUri) return undefined;
+
+    return `\uc9c1\uc811 \ucca8\ubd80 \uc0ac\uc9c4: ${getCategoryFallbackLabel(document.resource.category)}`;
 }
 
 

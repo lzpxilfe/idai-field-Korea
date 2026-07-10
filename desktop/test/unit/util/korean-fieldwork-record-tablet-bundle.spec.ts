@@ -140,6 +140,50 @@ describe('korean-fieldwork-record-tablet-bundle', () => {
     });
 
 
+    it('opens directly attached tablet record photos as desktop handoff sources', () => {
+
+        const feature = createDoc('feature-1', 'Feature', 'F1', {}, {
+            shortDescription: '\uc720\uad6c \ubc14\ub2e5\uba74 \uc9c1\uc811 \ucd2c\uc601',
+            fieldworkPhotoCaption: '\ubc14\ub2e5\uba74 \uc815\ub9ac \ud6c4 \uc0ac\uc9c4',
+            originalFilename: 'feature-direct-1.jpg',
+            fieldworkPhotoUri: 'file:///tablet/photos/feature-direct-1.jpg',
+            fieldworkPhotoCapturedAt: '2026-07-11T10:05:00.000Z',
+            width: 1920,
+            height: 1080,
+            featureRecordingStatus: 'confirmed',
+            featureInvestigationChecklist: []
+        });
+
+        const bundle = makeKoreanFieldworkRecordTabletBundle(feature, [feature] as any)!;
+        const photoGroup = bundle.groups.find(group => group.id === 'photos')!;
+        const [photoSource] = photoGroup.sources;
+
+        expect(bundle).toBeDefined();
+        expect(bundle.sourceCount).toBe(1);
+        expect(photoGroup.count).toBe(1);
+        expect(photoSource).toMatchObject({
+            documentId: 'feature-1',
+            label: 'F1'
+        });
+        expect(photoSource.detail)
+            .toContain('\uc9c1\uc811 \ucca8\ubd80 \uc0ac\uc9c4: \uc720\uad6c');
+        expect(photoSource.detail)
+            .toContain('\uc0ac\uc9c4 \uc124\uba85: \ubc14\ub2e5\uba74 \uc815\ub9ac \ud6c4 \uc0ac\uc9c4');
+        expect(photoSource.detail)
+            .toContain('\uc6d0\ubcf8 \ud30c\uc77c: feature-direct-1.jpg');
+        expect(photoSource.detail)
+            .toContain('\uc6d0\ubcf8: file:///tablet/photos/feature-direct-1.jpg');
+        expect(photoSource.detail)
+            .toContain('\ucd2c\uc601: 2026-07-11 10:05');
+        expect(photoSource.copyText)
+            .toContain('\uc9c1\uc811 \ucca8\ubd80 \uc0ac\uc9c4: \uc720\uad6c');
+        expect(photoGroup.copyText)
+            .toContain('\uc6d0\ubcf8: file:///tablet/photos/feature-direct-1.jpg');
+        expect(bundle.copyText)
+            .toContain('\uc0ac\uc9c4 1\uac74: F1');
+    });
+
+
     it('carries tablet photo markings and sketch memos into desktop handoff source rows', () => {
 
         const photoStrokes = '{"version":1,"strokes":[{"points":[{"x":1000,"y":1000},{"x":5000,"y":5000}]}]}';
