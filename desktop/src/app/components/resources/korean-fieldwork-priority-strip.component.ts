@@ -877,6 +877,9 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
     public isReportHandoffCopyAllBodyCopied = () =>
         this.reportCopiedDocumentId === '__all_body__';
 
+    public isReportHandoffTabletWorkCopied = () =>
+        this.reportCopiedDocumentId === '__tablet_work__';
+
     public isReportHandoffSectionCopied = (
             item: KoreanFieldworkReportHandoffItem,
             section: KoreanFieldworkReportHandoffCopySection
@@ -915,6 +918,24 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
 
     public getReportHandoffCopyAllBodyActionLabel = () =>
         this.isReportHandoffCopyAllBodyCopied() ? '\ubcf5\uc0ac\ub428' : '\ubcf8\ubb38 \uc804\uccb4 \ubcf5\uc0ac';
+
+    public getReportHandoffTabletWorkCopyActionLabel = () =>
+        this.isReportHandoffTabletWorkCopied()
+            ? '\ubcf5\uc0ac\ub428'
+            : `\ud0dc\ube14\ub9bf \ucc98\ub9ac \ubcf5\uc0ac ${this.getTabletWorkReportHandoffItemCount()}`;
+
+    public getTabletWorkReportHandoffCopyText = () => {
+        const bundles = this.getTabletWorkReportHandoffItems()
+            .map(item => this.getReportHandoffTabletBundle(item))
+            .filter((bundle): bundle is KoreanFieldworkTabletRecordBundle => !!bundle?.copyText);
+
+        if (bundles.length === 0) return '';
+
+        return [
+            `[\ud0dc\ube14\ub9bf \ucc98\ub9ac \ub300\uc0c1] ${bundles.length}\uac74`,
+            ...bundles.flatMap(bundle => ['', bundle.copyText])
+        ].join('\r\n');
+    };
 
     public getReportHandoffBodyCopyActionLabel = (item: KoreanFieldworkReportHandoffItem) =>
         this.isReportHandoffBodyCopied(item) ? '\ubcf5\uc0ac\ub428' : '\ubcf8\ubb38 \ubcf5\uc0ac';
@@ -1065,6 +1086,21 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
         try {
             await writeKoreanFieldworkHwpClipboardText(this.reportHandoffCopyAllText);
             this.markReportHandoffCopied('__all__');
+        } catch (errWithParams) {
+            this.messages.add(errWithParams);
+        }
+    }
+
+    public async copyAllReportHandoffTabletWork(event?: Event) {
+
+        if (event) event.stopPropagation();
+
+        const copyText = this.getTabletWorkReportHandoffCopyText();
+        if (!copyText) return;
+
+        try {
+            await writeKoreanFieldworkHwpClipboardText(copyText);
+            this.markReportHandoffCopied('__tablet_work__');
         } catch (errWithParams) {
             this.messages.add(errWithParams);
         }
@@ -2082,8 +2118,14 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
     private getFilteredReportHandoffItems(): KoreanFieldworkReportHandoffItem[] {
 
         return this.reportHandoffShowsTabletWorkOnly
-            ? this.reportHandoffItems.filter(item => this.needsTabletReportHandoffProcessing(item))
+            ? this.getTabletWorkReportHandoffItems()
             : this.reportHandoffItems;
+    }
+
+
+    private getTabletWorkReportHandoffItems(): KoreanFieldworkReportHandoffItem[] {
+
+        return this.reportHandoffItems.filter(item => this.needsTabletReportHandoffProcessing(item));
     }
 
 

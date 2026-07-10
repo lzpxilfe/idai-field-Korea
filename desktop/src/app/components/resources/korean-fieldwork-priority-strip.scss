@@ -2839,6 +2839,22 @@ korean-fieldwork-priority-strip {
     color: #027a48;
   }
 
+  .korean-fieldwork-report-handoff-copy-all.tablet-work {
+    background: #ffffff;
+    border-color: #abefc6;
+    color: #027a48;
+
+    &:hover {
+      background: #ecfdf3;
+      border-color: #75e0a7;
+    }
+
+    &.copied {
+      background: #ecfdf3;
+      border-color: #75e0a7;
+    }
+  }
+
   .korean-fieldwork-report-handoff-list {
     display: grid;
     gap: 6px;

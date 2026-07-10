@@ -679,9 +679,23 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
             expect(component.getReportHandoffTabletBundleCopyActionLabel(featureItem))
                 .toBe('\ubcf5\uc0ac\ub428');
 
-            await component.copyAllReportHandoffBodies();
+            const tabletWorkCopyText = component.getTabletWorkReportHandoffCopyText();
+            expect(tabletWorkCopyText).toContain('[\ud0dc\ube14\ub9bf \ucc98\ub9ac \ub300\uc0c1]');
+            expect(tabletWorkCopyText).toContain(featureTabletBundle.copyText);
+            expect(component.getReportHandoffTabletWorkCopyActionLabel())
+                .toContain('\ud0dc\ube14\ub9bf \ucc98\ub9ac \ubcf5\uc0ac');
+
+            await component.copyAllReportHandoffTabletWork();
 
             expect(clear).toHaveBeenCalledTimes(5);
+            expect(writeText).toHaveBeenLastCalledWith(tabletWorkCopyText);
+            expect(write).not.toHaveBeenCalled();
+            expect(component.isReportHandoffTabletWorkCopied()).toBe(true);
+            expect(component.getReportHandoffTabletWorkCopyActionLabel()).toBe('\ubcf5\uc0ac\ub428');
+
+            await component.copyAllReportHandoffBodies();
+
+            expect(clear).toHaveBeenCalledTimes(6);
             expect(writeText).toHaveBeenLastCalledWith(component.reportHandoffCopyAllBodyText);
             expect(write).not.toHaveBeenCalled();
             expect(component.isReportHandoffCopyAllBodyCopied()).toBe(true);
@@ -689,7 +703,7 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
 
             await component.copyAllReportHandoffItems();
 
-            expect(clear).toHaveBeenCalledTimes(6);
+            expect(clear).toHaveBeenCalledTimes(7);
             expect(writeText).toHaveBeenLastCalledWith(component.reportHandoffCopyAllText);
             expect(write).not.toHaveBeenCalled();
             expect(component.reportHandoffCopyAllText).toContain(featureItem.copyText);
@@ -824,6 +838,13 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
             .toContain('\ud0dc\ube14\ub9bf \ucc98\ub9ac 6');
         expect(component.getReportHandoffTabletWorkFilterActionLabel())
             .toBe('\ud0dc\ube14\ub9bf \ucc98\ub9ac 6');
+        expect(component.getReportHandoffTabletWorkCopyActionLabel())
+            .toBe('\ud0dc\ube14\ub9bf \ucc98\ub9ac \ubcf5\uc0ac 6');
+        expect(component.getTabletWorkReportHandoffCopyText())
+            .toContain('[\ud0dc\ube14\ub9bf \ucc98\ub9ac \ub300\uc0c1] 6\uac74');
+        expect(component.getTabletWorkReportHandoffCopyText()).toContain('pit-open');
+        expect(component.getTabletWorkReportHandoffCopyText()).toContain('pit-stale');
+        expect(component.getTabletWorkReportHandoffCopyText()).not.toContain('pit-done');
 
         component.toggleReportHandoffTabletWorkFilter();
 
