@@ -67,6 +67,58 @@
         </div>
     </div>
 
+    <div *ngIf="getTabletRecordBundle() as tabletBundle"
+         class="korean-fieldwork-record-context-tablet-bundle">
+        <div class="korean-fieldwork-record-context-tablet-bundle-title">
+            <span class="mdi mdi-tablet-cellphone"></span>
+            <span>&#53468;&#48660;&#475릿; &#51088;&#47308; &#47926;&#51020;</span>
+            <span class="korean-fieldwork-record-context-tablet-bundle-summary">
+                {{tabletBundle.summary}}
+            </span>
+            <button type="button"
+                    class="korean-fieldwork-record-context-tablet-bundle-copy"
+                    [class.copied]="isTabletRecordBundleCopied()"
+                    (click)="copyTabletRecordBundle()">
+                <span class="mdi"
+                      [class.mdi-check]="isTabletRecordBundleCopied()"
+                      [class.mdi-content-copy]="!isTabletRecordBundleCopied()"></span>
+                <span>{{getTabletRecordBundleCopyActionLabel()}}</span>
+            </button>
+        </div>
+        <div class="korean-fieldwork-record-context-tablet-bundle-metrics">
+            <span>&#51088;&#47308; {{tabletBundle.sourceCount}}</span>
+            <span [class.warning]="tabletBundle.issueCount > 0">
+                &#54869;&#51064; {{tabletBundle.issueCount}}
+            </span>
+            <span *ngIf="tabletBundle.hwpSectionCount > 0">
+                HWP {{tabletBundle.hwpSectionCount}}
+            </span>
+        </div>
+        <div class="korean-fieldwork-record-context-tablet-bundle-groups">
+            <div *ngFor="let group of tabletBundle.groups"
+                 class="korean-fieldwork-record-context-tablet-bundle-group"
+                 [class.warning]="group.tone === 'warning'">
+                <div class="korean-fieldwork-record-context-tablet-bundle-group-main">
+                    <span class="korean-fieldwork-record-context-tablet-bundle-group-label">
+                        {{group.label}} {{group.count}}
+                    </span>
+                    <span class="korean-fieldwork-record-context-tablet-bundle-group-detail">
+                        {{group.detail}}
+                    </span>
+                </div>
+                <button type="button"
+                        class="korean-fieldwork-record-context-tablet-bundle-group-copy"
+                        [class.copied]="isTabletRecordBundleGroupCopied(group)"
+                        (click)="copyTabletRecordBundleGroup(group)">
+                    <span class="mdi"
+                          [class.mdi-check]="isTabletRecordBundleGroupCopied(group)"
+                          [class.mdi-content-copy]="!isTabletRecordBundleGroupCopied(group)"></span>
+                    <span>{{getTabletRecordBundleGroupCopyActionLabel(group)}}</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div *ngIf="getReportHandoffItem() as reportItem"
          class="korean-fieldwork-record-context-hwp">
         <div class="korean-fieldwork-record-context-hwp-title">

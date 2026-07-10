@@ -1003,6 +1003,149 @@ korean-fieldwork-record-context-panel {
     padding: 7px 9px;
   }
 
+  .korean-fieldwork-record-context-tablet-bundle {
+    background: #ffffff;
+    border: 1px solid #c7d7ea;
+    border-radius: 6px;
+    display: grid;
+    gap: 7px;
+    margin-top: 9px;
+    min-width: 0;
+    padding: 8px;
+  }
+
+  .korean-fieldwork-record-context-tablet-bundle-title {
+    align-items: center;
+    color: #194185;
+    display: flex;
+    flex-wrap: wrap;
+    font-size: 12px;
+    font-weight: 900;
+    gap: 6px;
+    line-height: 1.2;
+    min-width: 0;
+
+    > .mdi {
+      flex: 0 0 auto;
+      font-size: 16px;
+    }
+  }
+
+  .korean-fieldwork-record-context-tablet-bundle-summary {
+    color: #475467;
+    flex: 1 1 auto;
+    font-size: 11px;
+    font-weight: 800;
+    min-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .korean-fieldwork-record-context-tablet-bundle-copy,
+  .korean-fieldwork-record-context-tablet-bundle-group-copy {
+    align-items: center;
+    background: #f8fafc;
+    border: 1px solid #bfd7f6;
+    border-radius: 4px;
+    color: #175cd3;
+    display: inline-flex;
+    flex: 0 0 auto;
+    font-size: 11px;
+    font-weight: 900;
+    gap: 3px;
+    line-height: 1;
+    min-height: 25px;
+    padding: 4px 7px;
+
+    &.copied {
+      background: #eef4ff;
+      border-color: #84adff;
+      color: #194185;
+    }
+
+    &:hover {
+      background: #eff8ff;
+    }
+  }
+
+  .korean-fieldwork-record-context-tablet-bundle-metrics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+
+    span {
+      background: #f2f4f7;
+      border: 1px solid #d0d5dd;
+      border-radius: 4px;
+      color: #475467;
+      font-size: 11px;
+      font-weight: 800;
+      line-height: 1;
+      padding: 4px 6px;
+
+      &.warning {
+        background: #fffaeb;
+        border-color: #fedf89;
+        color: #b54708;
+      }
+    }
+  }
+
+  .korean-fieldwork-record-context-tablet-bundle-groups {
+    display: grid;
+    gap: 5px;
+    grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
+    min-width: 0;
+  }
+
+  .korean-fieldwork-record-context-tablet-bundle-group {
+    align-items: flex-start;
+    background: #f8fbff;
+    border: 1px solid #d1e9ff;
+    border-radius: 5px;
+    color: #1d2939;
+    display: flex;
+    gap: 6px;
+    min-width: 0;
+    padding: 6px 7px;
+
+    &.warning {
+      background: #fffbeb;
+      border-color: #fedf89;
+    }
+  }
+
+  .korean-fieldwork-record-context-tablet-bundle-group-main {
+    display: grid;
+    flex: 1 1 auto;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .korean-fieldwork-record-context-tablet-bundle-group-label {
+    color: #194185;
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 1.2;
+  }
+
+  .korean-fieldwork-record-context-tablet-bundle-group-detail {
+    color: #475467;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.25;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .korean-fieldwork-record-context-tablet-bundle-group-copy {
+    min-height: 24px;
+    padding: 3px 6px;
+  }
+
   .korean-fieldwork-record-context-hwp {
     background: #f8fbff;
     border: 1px solid #b2ddff;

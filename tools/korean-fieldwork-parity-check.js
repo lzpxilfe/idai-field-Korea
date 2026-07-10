@@ -2922,6 +2922,12 @@ function validateRecordPanelOrder() {
   const desktopRecordContextPanelSpecText = readTextFile(
     'desktop/test/unit/components/docedit/core/korean-fieldwork-record-context-panel.component.spec.ts'
   );
+  const desktopRecordTabletBundleText = readTextFile(
+    'desktop/src/app/util/korean-fieldwork-record-tablet-bundle.ts'
+  );
+  const desktopRecordTabletBundleSpecText = readTextFile(
+    'desktop/test/unit/util/korean-fieldwork-record-tablet-bundle.spec.ts'
+  );
   const desktopWorkbenchText = readTextFile(
     'desktop/src/app/util/korean-fieldwork-workbench.ts'
   );
@@ -3214,6 +3220,19 @@ function validateRecordPanelOrder() {
       || !desktopRecordContextPanelStyleText.includes('korean-fieldwork-record-context-notebook-action')
       || !desktopRecordContextPanelSpecText.includes('copies related tablet notebook entries as HWP-safe plain text from the record context')) {
     findings.push('desktop record context panel must let users copy related tablet notebook entries as HWP-safe plain text without leaving the opened record');
+  }
+  if (!desktopRecordTabletBundleText.includes('makeKoreanFieldworkEvidenceReview')
+      || !desktopRecordTabletBundleText.includes('makeKoreanFieldworkReportHandoff')
+      || !desktopRecordTabletBundleText.includes('getKoreanFieldworkNotebookEntriesForDocument')
+      || !desktopRecordTabletBundleText.includes('normalizeKoreanFieldworkHwpPlainText')
+      || !desktopRecordTabletBundleSpecText.includes('groups many tablet evidence records by kind for desktop handoff')
+      || !desktopRecordContextPanelText.includes('makeKoreanFieldworkRecordTabletBundle')
+      || !desktopRecordContextPanelText.includes('copyTabletRecordBundleGroup')
+      || !desktopRecordContextPanelTemplateText.includes('getTabletRecordBundle() as tabletBundle')
+      || !desktopRecordContextPanelTemplateText.includes('korean-fieldwork-record-context-tablet-bundle-groups')
+      || !desktopRecordContextPanelStyleText.includes('korean-fieldwork-record-context-tablet-bundle-group')
+      || !desktopRecordContextPanelSpecText.includes('shows a grouped tablet record bundle with HWP-safe copy actions')) {
+    findings.push('desktop record context panel must group linked tablet evidence, notebook entries, HWP copy readiness, and issues into a copyable per-record tablet bundle');
   }
   if (!desktopRecordContextPanelText.includes('pushFeatureAttributeChip')
       || !desktopRecordContextPanelText.includes('formatFeatureAttributeLabels')

@@ -233,6 +233,115 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
     });
 
 
+    it('shows a grouped tablet record bundle with HWP-safe copy actions', async () => {
+
+        const write = jest.fn();
+        const writeText = jest.fn();
+        const clear = jest.fn();
+        const testWindow = (global as any).window ?? ((global as any).window = {});
+        const previousRequire = testWindow.require;
+        testWindow.require = jest.fn().mockReturnValue({ clipboard: { clear, write, writeText } });
+
+        try {
+            const feature = createDocument('feature-1', 'Feature', 'F1', {}, {
+                shortDescription: '\uc6d0\ud615 \uc218\ud608',
+                featureRecordingStatus: 'confirmed',
+                featureInvestigationChecklist: []
+            });
+            const photos = [1, 2, 3, 4].map(index =>
+                createDocument(`photo-${index}`, 'Photo', `P${index}`, {
+                    depicts: ['feature-1']
+                }, {
+                    fieldworkPhotoUri: `file:///tablet/photos/P${index}.jpg`
+                })
+            );
+            const drawing = createDocument('drawing-1', 'Drawing', 'D1', {
+                depicts: ['feature-1']
+            }, {
+                description: '\ubc14\ub2e5\uba74 \uc2e4\uce21 \ub3c4\uba74'
+            });
+            const memo = createDocument('memo-1', 'PenMemo', 'M1', {
+                depicts: ['feature-1']
+            }, {
+                date: getTodayLabel(),
+                penMemoReviewedTranscript: '[\uad00\ucc30 \ub0b4\uc6a9] \ubc14\ub2e5\uba74 \ud53c\ud2b8\uc120 \ud655\uc778.'
+            });
+            const component = createComponent({
+                find: jest.fn().mockResolvedValue({
+                    documents: [feature, ...photos, drawing, memo]
+                })
+            });
+            component.document = feature as any;
+            component.fieldDefinitions = [
+                field('featureRecordingStatus'),
+                field('featureInvestigationChecklist')
+            ] as any;
+
+            await component.ngOnChanges();
+
+            const bundle = component.getTabletRecordBundle()!;
+            expect(component.hasTabletRecordBundle()).toBe(true);
+            expect(bundle.sourceCount).toBe(7);
+            expect(bundle.groups.map(group => [group.id, group.count])).toEqual([
+                ['photos', 4],
+                ['drawings', 1],
+                ['penMemos', 1],
+                ['notebookEntries', 1]
+            ]);
+            expect(bundle.groups.find(group => group.id === 'photos')?.detail)
+                .toBe('P1, P2, P3 \uc678 1\uac74');
+            expect(component.getTabletRecordBundleCopyActionLabel()).toBe('\ubb36\uc74c \ubcf5\uc0ac');
+
+            await component.copyTabletRecordBundle();
+
+            expect(clear).toHaveBeenCalledTimes(1);
+            expect(writeText).toHaveBeenCalledWith(bundle.copyText);
+            expect(write).not.toHaveBeenCalled();
+            expect(component.getTabletRecordBundleCopyActionLabel()).toBe('\ubcf5\uc0ac\ub428');
+
+            const photoGroup = bundle.groups.find(group => group.id === 'photos')!;
+            await component.copyTabletRecordBundleGroup(photoGroup);
+
+            expect(clear).toHaveBeenCalledTimes(2);
+            expect(writeText).toHaveBeenLastCalledWith(photoGroup.copyText);
+            expect(component.getTabletRecordBundleGroupCopyActionLabel(photoGroup))
+                .toBe('\ubcf5\uc0ac\ub428');
+        } finally {
+            testWindow.require = previousRequire;
+        }
+    });
+
+
+    it('keeps the grouped tablet record bundle section in the desktop record context template', () => {
+
+        const template = fs.readFileSync(
+            path.resolve(
+                __dirname,
+                '../../../../../src/app/components/docedit/core/korean-fieldwork-record-context-panel.html'
+            ),
+            'utf8'
+        );
+        const styles = fs.readFileSync(
+            path.resolve(
+                __dirname,
+                '../../../../../src/app/components/docedit/core/korean-fieldwork-record-context-panel.scss'
+            ),
+            'utf8'
+        );
+
+        const actionIndex = template.indexOf('primary-action-rail');
+        const bundleIndex = template.indexOf('getTabletRecordBundle() as tabletBundle');
+        const hwpIndex = template.indexOf('getReportHandoffItem() as reportItem');
+
+        expect(bundleIndex).toBeGreaterThan(actionIndex);
+        expect(bundleIndex).toBeLessThan(hwpIndex);
+        expect(template).toContain('korean-fieldwork-record-context-tablet-bundle-groups');
+        expect(template).toContain('copyTabletRecordBundleGroup(group)');
+        expect(styles).toContain('.korean-fieldwork-record-context-tablet-bundle');
+        expect(styles).toContain('.korean-fieldwork-record-context-tablet-bundle-group');
+    });
+
+
     it('surfaces tablet pit lines in desktop evidence metrics and HWP copy blocks', async () => {
 
         const feature = createDocument('feature-1', 'Feature', 'F1', {}, {

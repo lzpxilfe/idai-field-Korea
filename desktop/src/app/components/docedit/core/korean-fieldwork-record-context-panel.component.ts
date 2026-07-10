@@ -67,6 +67,11 @@ import {
     KoreanFieldworkRecordActionItem,
     makeKoreanFieldworkRecordActions
 } from '../../../util/korean-fieldwork-record-actions';
+import {
+    KoreanFieldworkTabletRecordBundle,
+    KoreanFieldworkTabletRecordBundleGroup,
+    makeKoreanFieldworkRecordTabletBundle
+} from '../../../util/korean-fieldwork-record-tablet-bundle';
 import { writeKoreanFieldworkHwpClipboardText } from '../../../util/korean-fieldwork-hwp-clipboard';
 import { getKoreanFieldworkBoundaryMethodLabel } from '../../../util/korean-fieldwork-boundary-summary';
 import { getKoreanFieldworkEvidenceChips } from '../../../util/korean-fieldwork-record-evidence';
@@ -799,7 +804,9 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
     public continuationActions: KoreanFieldworkContinuationAction[] = [];
     public recordActions: KoreanFieldworkRecordActionItem[] = [];
     public reportHandoffItem: KoreanFieldworkReportHandoffItem|undefined;
+    public tabletRecordBundle: KoreanFieldworkTabletRecordBundle|undefined;
     public reportHandoffCopiedId: string|undefined;
+    public tabletRecordBundleCopiedId: string|undefined;
     public evidenceInsightCopiedId: string|undefined;
     public notebookEntryCopiedId: string|undefined;
     public identifierRevisionNextValue: string = '';
@@ -898,6 +905,32 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
 
 
     public getRecordActions = () => this.recordActions;
+
+
+    public hasTabletRecordBundle = () => !!this.tabletRecordBundle;
+
+
+    public getTabletRecordBundle = () => this.tabletRecordBundle;
+
+
+    public isTabletRecordBundleCopied = () =>
+        !!this.tabletRecordBundle && this.tabletRecordBundleCopiedId === this.tabletRecordBundle.documentId;
+
+
+    public isTabletRecordBundleGroupCopied = (group: KoreanFieldworkTabletRecordBundleGroup) =>
+        !!this.tabletRecordBundle
+        && this.tabletRecordBundleCopiedId === this.getTabletRecordBundleGroupCopyId(
+            this.tabletRecordBundle,
+            group
+        );
+
+
+    public getTabletRecordBundleCopyActionLabel = () =>
+        this.isTabletRecordBundleCopied() ? '\ubcf5\uc0ac\ub428' : '\ubb36\uc74c \ubcf5\uc0ac';
+
+
+    public getTabletRecordBundleGroupCopyActionLabel = (group: KoreanFieldworkTabletRecordBundleGroup) =>
+        this.isTabletRecordBundleGroupCopied(group) ? '\ubcf5\uc0ac\ub428' : '\ubcf5\uc0ac';
 
 
     public hasReportHandoffItem = () => !!this.reportHandoffItem;
@@ -1460,6 +1493,26 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
     }
 
 
+    public async copyTabletRecordBundle() {
+
+        const bundle = this.tabletRecordBundle;
+        if (!bundle?.copyText) return;
+
+        await writeKoreanFieldworkHwpClipboardText(bundle.copyText);
+        this.markTabletRecordBundleCopied(bundle.documentId);
+    }
+
+
+    public async copyTabletRecordBundleGroup(group: KoreanFieldworkTabletRecordBundleGroup) {
+
+        const bundle = this.tabletRecordBundle;
+        if (!bundle || !group.copyText) return;
+
+        await writeKoreanFieldworkHwpClipboardText(group.copyText);
+        this.markTabletRecordBundleCopied(this.getTabletRecordBundleGroupCopyId(bundle, group));
+    }
+
+
     public async copyEvidenceInsight(insight: EvidenceInsight) {
 
         const copyText = this.getEvidenceInsightCopyText(insight);
@@ -1515,6 +1568,7 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
             this.continuationActions = [];
             this.recordActions = [];
             this.reportHandoffItem = undefined;
+            this.tabletRecordBundle = undefined;
             this.projectDocuments = [];
             return;
         }
@@ -1550,8 +1604,13 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
             this.projectConfiguration,
             4
         );
-        this.reportHandoffItem = makeKoreanFieldworkReportHandoff(documents)
-            .items.find(item => item.documentId === this.document.resource.id);
+        const reportHandoff = makeKoreanFieldworkReportHandoff(documents);
+        this.reportHandoffItem = reportHandoff.items.find(item => item.documentId === this.document.resource.id);
+        this.tabletRecordBundle = makeKoreanFieldworkRecordTabletBundle(
+            this.document,
+            documents,
+            this.reportHandoffItem
+        );
     }
 
 
@@ -2097,6 +2156,17 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
     }
 
 
+    private markTabletRecordBundleCopied(copiedId: string) {
+
+        this.tabletRecordBundleCopiedId = copiedId;
+        setTimeout(() => {
+            if (this.tabletRecordBundleCopiedId === copiedId) {
+                this.tabletRecordBundleCopiedId = undefined;
+            }
+        }, 1600);
+    }
+
+
     private markEvidenceInsightCopied(copiedId: string) {
 
         this.evidenceInsightCopiedId = copiedId;
@@ -2116,6 +2186,15 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
                 this.notebookEntryCopiedId = undefined;
             }
         }, 1600);
+    }
+
+
+    private getTabletRecordBundleGroupCopyId(
+            bundle: KoreanFieldworkTabletRecordBundle,
+            group: KoreanFieldworkTabletRecordBundleGroup
+    ): string {
+
+        return `${bundle.documentId}::tabletBundle::${group.id}`;
     }
 
 
