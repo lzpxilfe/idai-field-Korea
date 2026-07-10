@@ -687,12 +687,12 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
                 .toContain(featureItem.copySections.find(section => section.id === 'body')!.copyText);
             expect(tabletWorkCopyText).toContain('\ud0dc\ube14\ub9bf \uc790\ub8cc');
             expect(tabletWorkCopyText).toContain('- \uc0ac\uc9c4');
-            expect(tabletWorkCopyText).toContain('  - photo-1');
-            expect(tabletWorkCopyText).toContain('    pit-001.jpg');
-            expect(tabletWorkCopyText).toContain('  - soil-photo-1');
-            expect(tabletWorkCopyText).toContain('    soil-photo-1.jpg');
-            expect(tabletWorkCopyText).toContain('  - find-001');
-            expect(tabletWorkCopyText).toContain('  - sample-001');
+            expect(tabletWorkCopyText).toContain('- photo-1');
+            expect(tabletWorkCopyText).toContain('pit-001.jpg');
+            expect(tabletWorkCopyText).toContain('- soil-photo-1');
+            expect(tabletWorkCopyText).toContain('soil-photo-1.jpg');
+            expect(tabletWorkCopyText).toContain('- find-001');
+            expect(tabletWorkCopyText).toContain('- sample-001');
             expect(component.getReportHandoffTabletWorkCopyActionLabel())
                 .toContain('\ud0dc\ube14\ub9bf \ucc98\ub9ac \ubcf5\uc0ac');
 

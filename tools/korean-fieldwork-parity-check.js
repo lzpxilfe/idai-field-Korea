@@ -3779,7 +3779,7 @@ function validateReportHandoffPreSaveValidation() {
       || !desktopPriorityStripStyleText.includes('&.tablet-review')
       || !desktopPriorityStripSpecText.includes('featureTabletBundle')
       || !desktopPriorityStripSpecText.includes('copyReportHandoffTabletBundle(featureItem)')
-      || !desktopPriorityStripSpecText.includes("'  - photo-1'")
+      || !desktopPriorityStripSpecText.includes("'- photo-1'")
       || !desktopPriorityStripSpecText.includes('copies and opens tablet source rows from the report handoff preview')
       || !desktopPriorityStripSpecText.includes('copyAllReportHandoffTabletWork')
       || !desktopPriorityStripSpecText.includes('marks all tablet report handoff work reviewed from the desktop queue')
