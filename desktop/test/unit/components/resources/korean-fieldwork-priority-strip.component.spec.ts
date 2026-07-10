@@ -882,6 +882,66 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
     });
 
 
+    it('marks all tablet report handoff work reviewed from the desktop queue', async () => {
+
+        let documents = [
+            createDocument('project', 'Project'),
+            createDocument('feature-open', 'Feature', {
+                identifier: 'pit-open',
+                featureRecordingStatus: 'confirmed',
+                featureInvestigationChecklist: []
+            }),
+            createDocument('photo-open', 'Photo', {
+                identifier: 'photo-open',
+                fieldworkPhotoUri: 'file:///tablet/photos/open.jpg',
+                relations: { depicts: ['feature-open'] }
+            })
+        ];
+        const datastore = {
+            find: jest.fn().mockImplementation(() => Promise.resolve({ documents })),
+            get: jest.fn(),
+            bulkUpdate: jest.fn().mockImplementation(async (updatedDocuments: any[]) => {
+                documents = documents.map(document =>
+                    updatedDocuments.find(updatedDocument =>
+                        updatedDocument.resource.id === document.resource.id
+                    ) ?? document
+                );
+
+                return updatedDocuments;
+            })
+        };
+        const component = createComponent(datastore);
+
+        await component.refresh();
+
+        expect(component.getTabletWorkReportHandoffItemCount()).toBe(2);
+        expect(component.getReportHandoffTabletWorkReviewActionLabel())
+            .toBe('\ud0dc\ube14\ub9bf \ucc98\ub9ac \uc644\ub8cc 2');
+
+        await component.markAllReportHandoffTabletWorkReviewed();
+
+        expect(datastore.bulkUpdate).toHaveBeenCalledTimes(1);
+        expect(datastore.bulkUpdate).toHaveBeenCalledWith(expect.arrayContaining([
+            expect.objectContaining({
+                resource: expect.objectContaining({
+                    id: 'feature-open',
+                    [KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_AT_FIELD]: expect.any(String)
+                })
+            }),
+            expect.objectContaining({
+                resource: expect.objectContaining({
+                    id: 'photo-open',
+                    [KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_AT_FIELD]: expect.any(String)
+                })
+            })
+        ]));
+        expect(component.getTabletWorkReportHandoffItemCount()).toBe(0);
+        expect(component.hasTabletWorkReportHandoffItems()).toBe(false);
+        expect(component.getReportHandoffSummaryLabel())
+            .toContain('\ud0dc\ube14\ub9bf \ucc98\ub9ac 0');
+    });
+
+
     it('expands report handoff lists so tablet records are not left hidden', async () => {
 
         const featureDocuments = Array.from({ length: 10 }, (_, index) => {

@@ -925,6 +925,9 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
             ? '\ubcf5\uc0ac\ub428'
             : `\ud0dc\ube14\ub9bf \ucc98\ub9ac \ubcf5\uc0ac ${this.getTabletWorkReportHandoffItemCount()}`;
 
+    public getReportHandoffTabletWorkReviewActionLabel = () =>
+        `\ud0dc\ube14\ub9bf \ucc98\ub9ac \uc644\ub8cc ${this.getTabletWorkReportHandoffItemCount()}`;
+
     public getTabletWorkReportHandoffCopyText = () => {
         const copyBlocks = this.getTabletWorkReportHandoffItems()
             .map(item => {
@@ -1051,6 +1054,37 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
             await this.datastore.bulkUpdate([updatedDocument]);
             this.projectDocuments = this.projectDocuments.map(candidate =>
                 candidate.resource.id === updatedDocument.resource.id ? updatedDocument : candidate
+            );
+            await this.refresh();
+        } catch (errWithParams) {
+            this.messages.add(errWithParams);
+        }
+    }
+
+    public async markAllReportHandoffTabletWorkReviewed(event?: Event) {
+
+        if (event) event.stopPropagation();
+
+        const reviewedAt = new Date().toISOString();
+        const updatedDocuments = this.getTabletWorkReportHandoffItems()
+            .map(item => {
+                const bundle = this.getReportHandoffTabletBundle(item);
+                const document = this.projectDocuments.find(candidate => candidate.resource.id === item.documentId);
+
+                return bundle && document
+                    ? createKoreanFieldworkTabletHandoffReviewUpdate(document, bundle, true, reviewedAt)
+                    : undefined;
+            })
+            .filter((document): document is Document => !!document);
+
+        if (updatedDocuments.length === 0) return;
+
+        try {
+            await this.datastore.bulkUpdate(updatedDocuments);
+            const updatedDocumentsById = new Map(updatedDocuments.map(document => [document.resource.id, document]));
+
+            this.projectDocuments = this.projectDocuments.map(candidate =>
+                updatedDocumentsById.get(candidate.resource.id) ?? candidate
             );
             await this.refresh();
         } catch (errWithParams) {

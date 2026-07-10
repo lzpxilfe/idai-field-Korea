@@ -216,6 +216,13 @@
                       [class.mdi-tablet-cellphone]="!isReportHandoffTabletWorkCopied()"></span>
                 <span>{{getReportHandoffTabletWorkCopyActionLabel()}}</span>
             </button>
+            <button *ngIf="hasTabletWorkReportHandoffItems()"
+                    type="button"
+                    class="korean-fieldwork-report-handoff-copy-all tablet-review-all"
+                    (click)="markAllReportHandoffTabletWorkReviewed($event)">
+                <span class="mdi mdi-check-circle-outline"></span>
+                <span>{{getReportHandoffTabletWorkReviewActionLabel()}}</span>
+            </button>
             <button type="button"
                     class="korean-fieldwork-report-handoff-copy-all"
                     [class.copied]="isReportHandoffCopyAllBodyCopied()"

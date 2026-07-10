@@ -2855,6 +2855,17 @@ korean-fieldwork-priority-strip {
     }
   }
 
+  .korean-fieldwork-report-handoff-copy-all.tablet-review-all {
+    background: #ecfdf3;
+    border-color: #75e0a7;
+    color: #027a48;
+
+    &:hover {
+      background: #d1fadf;
+      border-color: #47cd89;
+    }
+  }
+
   .korean-fieldwork-report-handoff-list {
     display: grid;
     gap: 6px;
