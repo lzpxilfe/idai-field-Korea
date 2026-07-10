@@ -35,10 +35,12 @@ const WORKBENCH_CATEGORIES = new Set<string>([
     'Feature',
     'FeatureSegment',
     'Layer',
+    'Photo',
     'Find',
     'FindCollection',
     'Sample',
     'SoilProfilePhoto',
+    'Drawing',
     'PenMemo',
     'DailyLog',
     'FieldRecordQualityReview'
@@ -59,12 +61,14 @@ const QUALITY_TRACKED_CATEGORIES = new Set<string>([
 ]);
 
 const FEATURE_WORKFLOW_CATEGORIES = new Set<string>(['Feature', 'FeatureSegment']);
+const PHOTO_CATEGORY = 'Photo';
+const DRAWING_CATEGORY = 'Drawing';
 const FIELD_RECORD_QUALITY_REVIEW_CATEGORY = 'FieldRecordQualityReview';
 const PEN_MEMO_CATEGORY = 'PenMemo';
 const SOIL_PROFILE_PHOTO_CATEGORY = 'SoilProfilePhoto';
 
 const REVIEW_VERIFICATION_STATES = new Set(['conflictingEvidence', 'needsRecheck']);
-const PARENT_RELATIONS = ['liesWithin', 'isRecordedInFeature', 'isRecordedIn', 'depicts'];
+const PARENT_RELATIONS = ['liesWithin', 'isRecordedInFeature', 'isPresentIn', 'isRecordedIn', 'depicts', 'isDepictedIn'];
 
 const CATEGORY_ORDER = [
     'Operation',
@@ -73,10 +77,12 @@ const CATEGORY_ORDER = [
     'Feature',
     'FeatureSegment',
     'Layer',
+    'Photo',
     'Find',
     'FindCollection',
     'Sample',
     'SoilProfilePhoto',
+    'Drawing',
     'PenMemo',
     'DailyLog',
     'FieldRecordQualityReview'
@@ -153,7 +159,7 @@ function makeWorkbenchItem(document: Document,
         documentId: document.resource.id,
         identifier: document.resource.identifier || document.resource.id,
         category: document.resource.category,
-        categoryLabel: CATEGORY_LABELS[document.resource.category] ?? document.resource.category,
+        categoryLabel: getWorkbenchCategoryLabel(document.resource.category),
         parentPath: getParentPath(document, documentsById),
         reasons,
         issueCount: issues.length,
@@ -204,6 +210,14 @@ function getWorkbenchReasons(document: Document,
         reasons.push(...getSoilProfilePhotoReasons(document));
     }
 
+    if (document.resource.category === PHOTO_CATEGORY) {
+        reasons.push(...getPhotoReasons(document, issues));
+    }
+
+    if (document.resource.category === DRAWING_CATEGORY) {
+        reasons.push(...getDrawingReasons(document, issues));
+    }
+
     if (document.resource.category === PEN_MEMO_CATEGORY) {
         reasons.push(...getPenMemoReasons(document));
     }
@@ -252,6 +266,46 @@ function getFieldRecordQualityReviewReasons(document: Document): string[] {
             return summary ? `${prefix} ${summary}` : undefined;
         })
         .filter((reason): reason is string => !!reason);
+}
+
+
+function getPhotoReasons(document: Document, issues: KoreanFieldworkReadinessIssue[]): string[] {
+
+    if (!isTabletPhotoRecord(document.resource)) return [];
+
+    const reasons: string[] = [];
+
+    if (hasIssue(issues, 'fieldwork-photo-upload-missing')) {
+        reasons.push('\uc6d0\ubcf8 \ubcf4\uc874 \ud655\uc778');
+    }
+
+    if (isPhotoReportMetadataIncomplete(document.resource)) {
+        reasons.push('\uc0ac\uc9c4 \uc815\ubcf4 \ud655\uc778');
+    }
+
+    if (needsPhotoAnnotationExplanation(document.resource)) {
+        reasons.push('\uc0ac\uc9c4 \ud45c\uc2dc \uc124\uba85');
+    }
+
+    return reasons;
+}
+
+
+function getDrawingReasons(document: Document, issues: KoreanFieldworkReadinessIssue[]): string[] {
+
+    if (!isTabletDrawingRecord(document.resource)) return [];
+
+    const reasons: string[] = [];
+
+    if (hasIssue(issues, 'fieldwork-drawing-upload-missing')) {
+        reasons.push('\ub3c4\uba74 \uc6d0\ubcf8 \ud655\uc778');
+    }
+
+    if (hasSketchEvidence(document.resource.drawingSketchStrokes)) {
+        reasons.push('\ud0dc\ube14\ub9bf \uc2a4\ucf00\uce58 \ud655\uc778');
+    }
+
+    return reasons;
 }
 
 
@@ -315,6 +369,14 @@ function getWorkbenchActionLabel(document: Document, reasons: string[]): string 
         return '\uac80\ud1a0 \uc5f4\uae30';
     }
 
+    if (document.resource.category === PHOTO_CATEGORY) {
+        return '\uc0ac\uc9c4 \uac80\ud1a0';
+    }
+
+    if (document.resource.category === DRAWING_CATEGORY) {
+        return '\ub3c4\uba74 \uac80\ud1a0';
+    }
+
     return document.resource.category === SOIL_PROFILE_PHOTO_CATEGORY
         && reasons.some(reason => reason.startsWith('토색'))
             ? '토색 검토'
@@ -362,6 +424,15 @@ function getCategoryRank(categoryName: string): number {
 }
 
 
+function getWorkbenchCategoryLabel(categoryName: string): string {
+
+    if (categoryName === PHOTO_CATEGORY) return '\uc0ac\uc9c4';
+    if (categoryName === DRAWING_CATEGORY) return '\ub3c4\uba74';
+
+    return CATEGORY_LABELS[categoryName] ?? categoryName;
+}
+
+
 function groupIssuesByDocumentId(
         issues: KoreanFieldworkReadinessIssue[]
 ): Map<string, KoreanFieldworkReadinessIssue[]> {
@@ -404,6 +475,93 @@ function getParentIds(document: Document): string[] {
             ? targets.filter(target => typeof target === 'string')
             : [];
     });
+}
+
+
+function hasIssue(issues: KoreanFieldworkReadinessIssue[], ruleId: string): boolean {
+
+    return issues.some(issue => issue.ruleId === ruleId);
+}
+
+
+function isTabletPhotoRecord(resource: Record<string, unknown>): boolean {
+
+    return hasAnyTextField(resource, ['fieldworkPhotoUri', 'imageUri', 'fileUri'])
+        || hasSketchEvidence(resource.fieldworkPhotoAnnotationStrokes);
+}
+
+
+function isTabletDrawingRecord(resource: Record<string, unknown>): boolean {
+
+    return hasAnyTextField(resource, ['fieldworkPhotoUri', 'imageUri', 'fileUri'])
+        || hasSketchEvidence(resource.drawingSketchStrokes);
+}
+
+
+function isPhotoReportMetadataIncomplete(resource: Record<string, unknown>): boolean {
+
+    return !hasTextValue(resource.originalFilename)
+        || !hasTextValue(resource.fieldworkPhotoCapturedAt)
+        || !hasPositiveNumber(resource.width)
+        || !hasPositiveNumber(resource.height);
+}
+
+
+function needsPhotoAnnotationExplanation(resource: Record<string, unknown>): boolean {
+
+    return hasSketchEvidence(resource.fieldworkPhotoAnnotationStrokes)
+        && !hasTextValue(resource.description)
+        && !hasTextValue(resource.shortDescription);
+}
+
+
+function hasAnyTextField(resource: Record<string, unknown>, fieldNames: string[]): boolean {
+
+    return fieldNames.some(fieldName => hasTextValue(resource[fieldName]));
+}
+
+
+function hasPositiveNumber(value: unknown): boolean {
+
+    const numberValue = typeof value === 'number'
+        ? value
+        : typeof value === 'string'
+            ? Number(value)
+            : NaN;
+
+    return Number.isFinite(numberValue) && numberValue > 0;
+}
+
+
+function hasSketchEvidence(value: unknown): boolean {
+
+    if (!hasTextValue(value)) return false;
+
+    const text = (value as string).trim();
+    const parsedValue = parseJsonValue(text);
+    if (Array.isArray(parsedValue)) return parsedValue.length > 0;
+    if (isRecord(parsedValue)) {
+        if (Array.isArray(parsedValue.strokes)) return parsedValue.strokes.length > 0;
+        if (Array.isArray(parsedValue.points)) return parsedValue.points.length > 0;
+    }
+
+    return !['[]', '{}'].includes(text);
+}
+
+
+function parseJsonValue(value: string): unknown|undefined {
+
+    try {
+        return JSON.parse(value);
+    } catch {
+        return undefined;
+    }
+}
+
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+
+    return !!value && typeof value === 'object' && !Array.isArray(value);
 }
 
 

@@ -222,6 +222,71 @@ describe('korean-fieldwork-workbench', () => {
     });
 
 
+    it('surfaces tablet photos and drawings as desktop processing records', () => {
+
+        const feature = createDocument('feature-1', 'Feature', '\uc720\uad6c 1', {}, {
+            fieldRecordQuality: ['immediateRecording'],
+            recordCreationTiming: 'duringFieldwork',
+            verificationState: 'observedInField',
+            featureRecordingStatus: 'confirmed',
+            featureInvestigationChecklist: [
+                'preInvestigationPhotoTaken',
+                'inProgressPhotoTaken',
+                'soilProfilePhotoLinked',
+                'measuredDrawingCompleted',
+                'preRecoveryFindPhotoTaken',
+                'findsRecovered',
+                'findRecordsLinked',
+                'samplesCollected',
+                'penMemoReviewed'
+            ]
+        });
+        const photo = createDocument('photo-1', 'Photo', 'P1', {
+            depicts: ['feature-1']
+        }, {
+            fieldworkPhotoUri: 'file:///tablet/photos/P1.jpg',
+            fieldworkPhotoAnnotationStrokes:
+                '{"version":1,"strokes":[{"points":[{"x":1000,"y":1000},{"x":2000,"y":2000}]}]}'
+        });
+        const drawing = createDocument('drawing-1', 'Drawing', 'D1', {
+            isDepictedIn: ['feature-1']
+        }, {
+            drawingSketchStrokes:
+                '{"version":1,"strokes":[{"points":[{"x":10,"y":20},{"x":30,"y":40}]}]}'
+        });
+
+        const items = makeKoreanFieldworkWorkbenchItems([
+            feature,
+            photo,
+            drawing
+        ] as any);
+
+        expect(items).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                id: 'photo-1',
+                categoryLabel: '\uc0ac\uc9c4',
+                parentPath: '\uc720\uad6c 1',
+                reasons: [
+                    '\ud655\uc778 1',
+                    '\uc6d0\ubcf8 \ubcf4\uc874 \ud655\uc778',
+                    '\uc0ac\uc9c4 \uc815\ubcf4 \ud655\uc778',
+                    '\uc0ac\uc9c4 \ud45c\uc2dc \uc124\uba85'
+                ],
+                tone: 'warning',
+                actionLabel: '\uc0ac\uc9c4 \uac80\ud1a0'
+            }),
+            expect.objectContaining({
+                id: 'drawing-1',
+                categoryLabel: '\ub3c4\uba74',
+                parentPath: '\uc720\uad6c 1',
+                reasons: ['\ud0dc\ube14\ub9bf \uc2a4\ucf00\uce58 \ud655\uc778'],
+                tone: 'neutral',
+                actionLabel: '\ub3c4\uba74 \uac80\ud1a0'
+            })
+        ]));
+    });
+
+
     it('surfaces handwritten PenMemo records that still need transcription review', () => {
 
         const feature = createCompleteRecord('feature-1', 'Feature', '수혈 1');
