@@ -1,6 +1,7 @@
 import {
     createKoreanFieldworkTabletHandoffReviewUpdate,
     createKoreanFieldworkTabletHandoffSourceReviewUpdate,
+    containsKoreanFieldworkTabletRecordBundleSource,
     getKoreanFieldworkTabletRecordBundleGroupSourcesForReview,
     KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_AT_FIELD,
     KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_FINGERPRINT_FIELD,
@@ -11,7 +12,8 @@ import {
     KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_FINGERPRINT_FIELD,
     KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_ISSUE_COUNT_FIELD,
     KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_LABEL_FIELD,
-    makeKoreanFieldworkRecordTabletBundle
+    makeKoreanFieldworkRecordTabletBundle,
+    wouldKoreanFieldworkTabletRecordBundleBeReviewedAfterSourceReview
 } from '../../../src/app/util/korean-fieldwork-record-tablet-bundle';
 
 
@@ -287,6 +289,29 @@ describe('korean-fieldwork-record-tablet-bundle', () => {
             'unreviewed',
             'reviewed'
         ]);
+    });
+
+
+    it('detects when reviewing a source row finishes the whole tablet bundle', () => {
+
+        const reviewed = makeSource('reviewed', 0, true, false);
+        const pending = makeSource('pending', 0, false, false);
+        const bundle = {
+            groups: [
+                {
+                    id: 'photos',
+                    sources: [reviewed, pending]
+                }
+            ]
+        } as any;
+
+        expect(containsKoreanFieldworkTabletRecordBundleSource(bundle, pending)).toBe(true);
+        expect(containsKoreanFieldworkTabletRecordBundleSource(bundle, makeSource('missing', 0, false, false)))
+            .toBe(false);
+        expect(wouldKoreanFieldworkTabletRecordBundleBeReviewedAfterSourceReview(bundle, pending))
+            .toBe(true);
+        expect(wouldKoreanFieldworkTabletRecordBundleBeReviewedAfterSourceReview(bundle, reviewed))
+            .toBe(false);
     });
 
 

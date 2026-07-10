@@ -403,6 +403,83 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
     });
 
 
+    it('marks the opened tablet bundle reviewed when its last source row is reviewed', async () => {
+
+        const feature = createDocument('feature-1', 'Feature', 'F1', {}, {
+            shortDescription: '\uc6d0\ud615 \uc218\ud608',
+            featureRecordingStatus: 'confirmed',
+            featureInvestigationChecklist: [],
+            fieldRecordQuality: ['checked']
+        });
+        const photo = createDocument('photo-1', 'Photo', 'P1', {
+            depicts: ['feature-1']
+        }, {
+            fieldworkPhotoUri: 'file:///tablet/photos/P1.jpg'
+        });
+        let documents = [feature, photo];
+        const datastore = {
+            find: jest.fn().mockImplementation(async () => ({ documents })),
+            bulkUpdate: jest.fn().mockImplementation(async (updatedDocuments: any[]) => {
+                documents = documents.map(document =>
+                    updatedDocuments.find(updatedDocument =>
+                        updatedDocument.resource.id === document.resource.id
+                    ) ?? document
+                );
+
+                return updatedDocuments;
+            })
+        };
+        const component = createComponent(datastore);
+        const handleChanged = jest.fn();
+        component.onChanged.subscribe(handleChanged);
+        component.document = feature as any;
+        component.fieldDefinitions = [
+            field('featureRecordingStatus'),
+            field('featureInvestigationChecklist')
+        ] as any;
+
+        await component.ngOnChanges();
+
+        const photoSource = component.getTabletRecordBundle()!.groups
+            .flatMap(group => group.sources)
+            .find(source => source.documentId === 'photo-1')!;
+
+        expect(component.isTabletRecordBundleReviewed()).toBe(false);
+
+        await component.toggleTabletRecordBundleSourceReviewed(photoSource);
+
+        expect(datastore.bulkUpdate).toHaveBeenCalledWith(expect.arrayContaining([
+            expect.objectContaining({
+                resource: expect.objectContaining({
+                    id: 'feature-1',
+                    [KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_AT_FIELD]: expect.any(String)
+                })
+            }),
+            expect.objectContaining({
+                resource: expect.objectContaining({
+                    id: 'photo-1',
+                    [KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_AT_FIELD]: expect.any(String)
+                })
+            })
+        ]));
+        expect(component.isTabletRecordBundleReviewed()).toBe(true);
+        expect(handleChanged).toHaveBeenCalledTimes(1);
+
+        const reviewedPhotoSource = component.getTabletRecordBundle()!.groups
+            .flatMap(group => group.sources)
+            .find(source => source.documentId === 'photo-1')!;
+
+        await component.toggleTabletRecordBundleSourceReviewed(reviewedPhotoSource);
+
+        expect(feature.resource[KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_AT_FIELD]).toBeUndefined();
+        expect(documents.find(document =>
+            document.resource.id === 'photo-1'
+        )!.resource[KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_AT_FIELD]).toBeUndefined();
+        expect(component.isTabletRecordBundleReviewed()).toBe(false);
+        expect(handleChanged).toHaveBeenCalledTimes(2);
+    });
+
+
     it('keeps the grouped tablet record bundle section in the desktop record context template', () => {
 
         const template = fs.readFileSync(

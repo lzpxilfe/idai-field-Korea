@@ -124,13 +124,15 @@ import {
     KoreanFieldworkFeatureGuidancePreset
 } from '../../util/korean-fieldwork-feature-guidance';
 import {
+    containsKoreanFieldworkTabletRecordBundleSource,
     createKoreanFieldworkTabletHandoffReviewUpdate,
     createKoreanFieldworkTabletHandoffSourceReviewUpdate,
     getKoreanFieldworkTabletRecordBundleGroupSourcesForReview,
     KoreanFieldworkTabletRecordBundle,
     KoreanFieldworkTabletRecordBundleGroup,
     KoreanFieldworkTabletRecordBundleSource,
-    makeKoreanFieldworkRecordTabletBundle
+    makeKoreanFieldworkRecordTabletBundle,
+    wouldKoreanFieldworkTabletRecordBundleBeReviewedAfterSourceReview
 } from '../../util/korean-fieldwork-record-tablet-bundle';
 import { DoceditLauncher } from './service/docedit-launcher';
 
@@ -2128,7 +2130,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
         if (!entry) return;
 
         const shouldUpdateBundle = reviewed
-            ? this.wouldEveryTabletBundleSourceBeReviewed(entry.bundle, source)
+            ? wouldKoreanFieldworkTabletRecordBundleBeReviewedAfterSourceReview(entry.bundle, source)
             : entry.bundle.reviewState.isReviewed;
         if (!shouldUpdateBundle) return;
 
@@ -2149,54 +2151,19 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
 
         if (preferredItem) {
             const preferredBundle = this.getReportHandoffTabletBundle(preferredItem);
-            if (preferredBundle && this.tabletBundleContainsSource(preferredBundle, source)) {
+            if (preferredBundle && containsKoreanFieldworkTabletRecordBundleSource(preferredBundle, source)) {
                 return { item: preferredItem, bundle: preferredBundle };
             }
         }
 
         for (const item of this.reportHandoffItems) {
             const bundle = this.getReportHandoffTabletBundle(item);
-            if (bundle && this.tabletBundleContainsSource(bundle, source)) {
+            if (bundle && containsKoreanFieldworkTabletRecordBundleSource(bundle, source)) {
                 return { item, bundle };
             }
         }
 
         return undefined;
-    }
-
-
-    private tabletBundleContainsSource(
-            bundle: KoreanFieldworkTabletRecordBundle,
-            source: KoreanFieldworkTabletRecordBundleSource
-    ): boolean {
-
-        return bundle.groups.some(group =>
-            group.sources.some(candidate => this.isSameTabletBundleSource(candidate, source))
-        );
-    }
-
-
-    private wouldEveryTabletBundleSourceBeReviewed(
-            bundle: KoreanFieldworkTabletRecordBundle,
-            toggledSource: KoreanFieldworkTabletRecordBundleSource
-    ): boolean {
-
-        return bundle.groups
-            .flatMap(group => group.sources)
-            .every(source =>
-                this.isSameTabletBundleSource(source, toggledSource)
-                    || source.reviewState.isReviewed
-            );
-    }
-
-
-    private isSameTabletBundleSource(
-            left: KoreanFieldworkTabletRecordBundleSource,
-            right: KoreanFieldworkTabletRecordBundleSource
-    ): boolean {
-
-        return left.id === right.id
-            && left.documentId === right.documentId;
     }
 
 

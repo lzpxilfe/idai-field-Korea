@@ -340,6 +340,41 @@ export function getKoreanFieldworkTabletRecordBundleGroupSourcesForReview(
 }
 
 
+export function containsKoreanFieldworkTabletRecordBundleSource(
+        bundle: KoreanFieldworkTabletRecordBundle,
+        source: KoreanFieldworkTabletRecordBundleSource
+): boolean {
+
+    return bundle.groups.some(group =>
+        group.sources.some(candidate => isKoreanFieldworkTabletRecordBundleSourceMatch(candidate, source))
+    );
+}
+
+
+export function wouldKoreanFieldworkTabletRecordBundleBeReviewedAfterSourceReview(
+        bundle: KoreanFieldworkTabletRecordBundle,
+        toggledSource: KoreanFieldworkTabletRecordBundleSource
+): boolean {
+
+    return bundle.groups
+        .flatMap(group => group.sources)
+        .every(source =>
+            isKoreanFieldworkTabletRecordBundleSourceMatch(source, toggledSource)
+                || source.reviewState.isReviewed
+        );
+}
+
+
+function isKoreanFieldworkTabletRecordBundleSourceMatch(
+        left: KoreanFieldworkTabletRecordBundleSource,
+        right: KoreanFieldworkTabletRecordBundleSource
+): boolean {
+
+    return left.id === right.id
+        && left.documentId === right.documentId;
+}
+
+
 function getTabletSourceProcessingPriority(source: KoreanFieldworkTabletRecordBundleSource): number {
 
     if (source.reviewState?.isStale) return 0;

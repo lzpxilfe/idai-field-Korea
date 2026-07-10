@@ -74,7 +74,8 @@ import {
     KoreanFieldworkTabletRecordBundle,
     KoreanFieldworkTabletRecordBundleGroup,
     KoreanFieldworkTabletRecordBundleSource,
-    makeKoreanFieldworkRecordTabletBundle
+    makeKoreanFieldworkRecordTabletBundle,
+    wouldKoreanFieldworkTabletRecordBundleBeReviewedAfterSourceReview
 } from '../../../util/korean-fieldwork-record-tablet-bundle';
 import { writeKoreanFieldworkHwpClipboardText } from '../../../util/korean-fieldwork-hwp-clipboard';
 import { getKoreanFieldworkBoundaryMethodLabel } from '../../../util/korean-fieldwork-boundary-summary';
@@ -1597,11 +1598,19 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
 
         if (!source.documentId) return;
 
+        const reviewedAt = new Date().toISOString();
+        const reviewed = !source.reviewState.isReviewed;
         const updatedDocumentsById = new Map<string, Document>();
         this.collectTabletRecordBundleSourceReviewUpdate(
             source,
-            !source.reviewState.isReviewed,
-            new Date().toISOString(),
+            reviewed,
+            reviewedAt,
+            updatedDocumentsById
+        );
+        this.collectTabletRecordBundleReviewUpdateForSource(
+            source,
+            reviewed,
+            reviewedAt,
             updatedDocumentsById
         );
 
@@ -1664,6 +1673,31 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
 
         this.stageTabletRecordBundleDocumentUpdate(
             createKoreanFieldworkTabletHandoffSourceReviewUpdate(document, source, reviewed, reviewedAt),
+            updatedDocumentsById
+        );
+    }
+
+
+    private collectTabletRecordBundleReviewUpdateForSource(
+            source: KoreanFieldworkTabletRecordBundleSource,
+            reviewed: boolean,
+            reviewedAt: string,
+            updatedDocumentsById: Map<string, Document>
+    ) {
+
+        const bundle = this.tabletRecordBundle;
+        if (!bundle) return;
+
+        const shouldUpdateBundle = reviewed
+            ? wouldKoreanFieldworkTabletRecordBundleBeReviewedAfterSourceReview(bundle, source)
+            : bundle.reviewState.isReviewed;
+        if (!shouldUpdateBundle) return;
+
+        const document = this.getTabletRecordBundleDocumentForUpdate(bundle.documentId, updatedDocumentsById);
+        if (!document) return;
+
+        this.stageTabletRecordBundleDocumentUpdate(
+            createKoreanFieldworkTabletHandoffReviewUpdate(document, bundle, reviewed, reviewedAt),
             updatedDocumentsById
         );
     }
