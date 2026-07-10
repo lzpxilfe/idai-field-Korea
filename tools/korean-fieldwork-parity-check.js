@@ -3838,14 +3838,20 @@ function validateReportHandoffPreSaveValidation() {
       || !desktopPriorityStripText.includes('tabletProcessingRecordIds')
       || !desktopPriorityStripText.includes('getTabletProcessingRecordIds')
       || !desktopPriorityStripText.includes('openTabletProcessingRecord')
+      || !desktopPriorityStripText.includes('openRecordWorkDocument')
+      || !desktopPriorityStripText.includes('openFeatureOverviewItem')
       || !desktopPriorityStripText.includes('getProgressItemActionLabel')
       || !desktopPriorityStripText.includes('reportHandoffTabletBundlesByDocumentId')
       || !desktopPriorityStripTemplateText.includes('[class.tablet-work]="isTabletProcessingRecord(item.documentId)"')
       || !desktopPriorityStripTemplateText.includes('getProgressItemActionLabel(item)')
+      || !desktopPriorityStripTemplateText.includes('openFeatureOverviewItem(item)')
       || !desktopPriorityStripStyleText.includes('&.tablet-work')
       || !desktopPriorityStripSpecText.includes('includes unprocessed tablet handoff records in the desktop review filter')
+      || !desktopPriorityStripSpecText.includes('openFeatureOverviewItem(tabletFeatureOverviewItem)')
+      || !desktopPriorityStripSpecText.includes('openHierarchyItem(tabletHierarchyItem)')
+      || !desktopPriorityStripSpecText.includes('openSelectedRecordWorkbenchDocument()')
       || !desktopPriorityStripSpecText.includes('reportHandoffShowsTabletWorkOnly')) {
-    findings.push('desktop record work filters must include unprocessed tablet handoff records in the review queue');
+    findings.push('desktop record work filters must route unprocessed tablet handoff records from every records-panel list into the processing queue');
   }
   if (!desktopRecordContextText.includes('makeKoreanFieldworkReportHandoff')
       || !desktopRecordContextText.includes('writeKoreanFieldworkHwpClipboardText')

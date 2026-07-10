@@ -579,7 +579,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
         this.tabletProcessingRecordIds.has(documentId);
 
     public getProgressItemActionLabel = (item: KoreanFieldworkProgressItem) =>
-        this.shouldOpenTabletProcessingFromRecordFilter(item.documentId)
+        this.isTabletProcessingRecord(item.documentId)
             ? '\ud0dc\ube14\ub9bf \ucc98\ub9ac'
             : item.actionLabel;
 
@@ -1476,12 +1476,17 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
     public async openProgressItem(item: KoreanFieldworkProgressItem) {
 
         try {
-            if (this.shouldOpenTabletProcessingFromRecordFilter(item.documentId)) {
-                this.openTabletProcessingRecord(item.documentId);
-                return;
-            }
+            await this.openRecordWorkDocument(item.documentId);
+        } catch (errWithParams) {
+            this.messages.add(errWithParams);
+        }
+    }
 
-            await this.openDocument(item.documentId);
+
+    public async openFeatureOverviewItem(item: KoreanFieldworkFeatureOverviewItem) {
+
+        try {
+            await this.openRecordWorkDocument(item.documentId);
         } catch (errWithParams) {
             this.messages.add(errWithParams);
         }
@@ -1491,7 +1496,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
     public async openUnitMatrixItem(item: KoreanFieldworkUnitMatrixItem) {
 
         try {
-            await this.openDocument(item.documentId);
+            await this.openRecordWorkDocument(item.documentId);
         } catch (errWithParams) {
             this.messages.add(errWithParams);
         }
@@ -1517,7 +1522,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
     public async openWorkbenchItem(item: KoreanFieldworkWorkbenchItem) {
 
         try {
-            await this.openDocument(item.documentId);
+            await this.openRecordWorkDocument(item.documentId);
         } catch (errWithParams) {
             this.messages.add(errWithParams);
         }
@@ -1533,7 +1538,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
         try {
             switch (action.type) {
                 case 'openDocument':
-                    await this.openDocument(action.documentId ?? item.documentId);
+                    await this.openRecordWorkDocument(action.documentId ?? item.documentId);
                     return;
                 case 'createDocument':
                     if (!action.categoryName) return;
@@ -1555,7 +1560,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
         if (!selectedDocument) return;
 
         try {
-            await this.routing.jumpToResource(selectedDocument);
+            await this.openRecordWorkDocument(selectedDocument.resource.id);
         } catch (errWithParams) {
             this.messages.add(errWithParams);
         }
@@ -1591,7 +1596,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
         if (event) event.stopPropagation();
 
         try {
-            await this.openDocument(item.documentId);
+            await this.openRecordWorkDocument(item.documentId);
         } catch (errWithParams) {
             this.messages.add(errWithParams);
         }
@@ -1626,7 +1631,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
         try {
             switch (action.type) {
                 case 'openDocument':
-                    await this.openDocument(action.documentId ?? selectedDocument.resource.id);
+                    await this.openRecordWorkDocument(action.documentId ?? selectedDocument.resource.id);
                     return;
                 case 'createDocument':
                     if (!action.categoryName) return;
@@ -2069,6 +2074,14 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
     private async openDocument(documentId: string) {
 
         await this.routing.jumpToResource(await this.datastore.get(documentId));
+    }
+
+
+    private async openRecordWorkDocument(documentId: string) {
+
+        if (this.openTabletProcessingRecord(documentId)) return;
+
+        await this.openDocument(documentId);
     }
 
 
@@ -2655,13 +2668,6 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
             new Date(),
             this.tabletProcessingRecordIds
         );
-    }
-
-
-    private shouldOpenTabletProcessingFromRecordFilter(documentId: string): boolean {
-
-        return this.activeRecordWorkFilterId === 'needsReview'
-            && this.isTabletProcessingRecord(documentId);
     }
 
 

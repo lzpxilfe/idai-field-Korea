@@ -1390,34 +1390,40 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
     it('includes unprocessed tablet handoff records in the desktop review filter', async () => {
 
         const routing = { jumpToResource: jest.fn() };
+        const featureDocument = createDocument('feature-tablet', 'Feature', {
+            featureRecordingStatus: 'confirmed',
+            featureInvestigationChecklist: [],
+            fieldRecordQuality: ['checked']
+        });
+        const photoDocument = createDocument('photo-tablet', 'Photo', {
+            relations: { depicts: ['feature-tablet'] },
+            fieldworkPhotoUri: 'file:///tablet/photos/feature-tablet.jpg',
+            fieldworkImageUploadStatus: 'uploaded',
+            fieldworkImageUploadedAt: '2026-07-11T01:02:03.000Z',
+            fieldworkImageUploadedUri: 'file:///tablet/photos/feature-tablet.jpg',
+            fieldworkImageUploadTarget:
+                'https://field.example/files/project/photo-tablet?type=original_image',
+            fieldworkImageUploadedProject: 'project',
+            fieldworkImageUploadedSizeBytes: 481516,
+            fieldworkImageUploadedMd5: 'tablet-md5',
+            fieldworkImageStoredSizeBytes: 481516,
+            fieldworkImageStoredMd5: 'tablet-md5',
+            fieldworkImageStoredSha256: 'server-sha256'
+        });
         const component = createComponent({
             find: jest.fn().mockResolvedValue({
                 documents: [
                     createDocument('project', 'Project'),
-                    createDocument('feature-tablet', 'Feature', {
-                        featureRecordingStatus: 'confirmed',
-                        featureInvestigationChecklist: [],
-                        fieldRecordQuality: ['checked']
-                    }),
-                    createDocument('photo-tablet', 'Photo', {
-                        relations: { depicts: ['feature-tablet'] },
-                        fieldworkPhotoUri: 'file:///tablet/photos/feature-tablet.jpg',
-                        fieldworkImageUploadStatus: 'uploaded',
-                        fieldworkImageUploadedAt: '2026-07-11T01:02:03.000Z',
-                        fieldworkImageUploadedUri: 'file:///tablet/photos/feature-tablet.jpg',
-                        fieldworkImageUploadTarget:
-                            'https://field.example/files/project/photo-tablet?type=original_image',
-                        fieldworkImageUploadedProject: 'project',
-                        fieldworkImageUploadedSizeBytes: 481516,
-                        fieldworkImageUploadedMd5: 'tablet-md5',
-                        fieldworkImageStoredSizeBytes: 481516,
-                        fieldworkImageStoredMd5: 'tablet-md5',
-                        fieldworkImageStoredSha256: 'server-sha256'
-                    })
+                    featureDocument,
+                    photoDocument
                 ]
             }),
             get: jest.fn()
-        }, createProjectConfiguration(), routing);
+        }, createProjectConfiguration(), routing, {
+            deselect: jest.fn(),
+            setMode: jest.fn(),
+            getSelectedDocument: jest.fn().mockReturnValue(featureDocument)
+        });
 
         await component.refresh();
 
@@ -1431,19 +1437,47 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
 
         expect(component.getFilteredProgressItems().map(item => item.documentId))
             .toContain('feature-tablet');
+        expect(component.getFilteredFeatureOverviewItems().map(item => item.documentId))
+            .toContain('feature-tablet');
+        expect(component.getFilteredUnitMatrixItems().map(item => item.documentId))
+            .toContain('feature-tablet');
+        expect(component.getFilteredWorkbenchItems().map(item => item.documentId))
+            .toContain('feature-tablet');
 
         const tabletProgressItem = component.getFilteredProgressItems()
+            .find(item => item.documentId === 'feature-tablet')!;
+        const tabletFeatureOverviewItem = component.getFilteredFeatureOverviewItems()
+            .find(item => item.documentId === 'feature-tablet')!;
+        const tabletUnitMatrixItem = component.getFilteredUnitMatrixItems()
+            .find(item => item.documentId === 'feature-tablet')!;
+        const tabletWorkbenchItem = component.getFilteredWorkbenchItems()
+            .find(item => item.documentId === 'feature-tablet')!;
+        const tabletHierarchyItem = component.getHierarchyLanes()
+            .flatMap(lane => lane.items)
             .find(item => item.documentId === 'feature-tablet')!;
 
         expect(component.getProgressItemActionLabel(tabletProgressItem))
             .toBe('\ud0dc\ube14\ub9bf \ucc98\ub9ac');
 
-        await component.openProgressItem(tabletProgressItem);
+        const expectTabletProcessingPreview = async (openItem: () => Promise<void>) => {
+            routing.jumpToResource.mockClear();
+            component.activePanel = 'records';
+            component.reportHandoffShowsTabletWorkOnly = false;
 
-        expect(routing.jumpToResource).not.toHaveBeenCalled();
-        expect(component.activePanel).toBe('report');
-        expect(component.reportHandoffShowsTabletWorkOnly).toBe(true);
-        expect(component.getReportHandoffPreviewItem()?.documentId).toBe('feature-tablet');
+            await openItem();
+
+            expect(routing.jumpToResource).not.toHaveBeenCalled();
+            expect(component.activePanel).toBe('report');
+            expect(component.reportHandoffShowsTabletWorkOnly).toBe(true);
+            expect(component.getReportHandoffPreviewItem()?.documentId).toBe('feature-tablet');
+        };
+
+        await expectTabletProcessingPreview(() => component.openProgressItem(tabletProgressItem));
+        await expectTabletProcessingPreview(() => component.openFeatureOverviewItem(tabletFeatureOverviewItem));
+        await expectTabletProcessingPreview(() => component.openUnitMatrixItem(tabletUnitMatrixItem));
+        await expectTabletProcessingPreview(() => component.openWorkbenchItem(tabletWorkbenchItem));
+        await expectTabletProcessingPreview(() => component.openHierarchyItem(tabletHierarchyItem));
+        await expectTabletProcessingPreview(() => component.openSelectedRecordWorkbenchDocument());
     });
 
 

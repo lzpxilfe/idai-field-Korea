@@ -1188,8 +1188,8 @@
                  [class.info]="item.tone === 'info'"
                  [class.success]="item.tone === 'success'"
                  [class.neutral]="item.tone === 'neutral'"
-                 (click)="openUnitMatrixItem(item)"
-                 (keydown.enter)="openUnitMatrixItem(item)">
+                 (click)="openFeatureOverviewItem(item)"
+                 (keydown.enter)="openFeatureOverviewItem(item)">
                 <span class="korean-fieldwork-feature-overview-feature">
                     <span class="korean-fieldwork-feature-overview-identifier">{{item.identifier}}</span>
                     <span *ngIf="item.parentPath" class="korean-fieldwork-feature-overview-parent">
@@ -1210,7 +1210,7 @@
                 <span class="korean-fieldwork-feature-overview-actions">
                     <button type="button"
                             class="korean-fieldwork-feature-overview-action"
-                            (click)="openUnitMatrixItem(item); $event.stopPropagation()">
+                            (click)="openFeatureOverviewItem(item); $event.stopPropagation()">
                         <span class="mdi mdi-open-in-new"></span>
                     </button>
                 </span>
