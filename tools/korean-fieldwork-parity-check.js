@@ -3178,6 +3178,14 @@ function validateRecordPanelOrder() {
       || !desktopRecordContextPanelSpecText.includes('findSpot:find-6')) {
     findings.push('desktop record context panel must not truncate linked tablet evidence insights when one feature has many field records');
   }
+  if (!desktopRecordContextPanelText.includes('applyAllEvidenceInsights')
+      || !desktopRecordContextPanelText.includes('getApplicableEvidenceInsights')
+      || !desktopRecordContextPanelTemplateText.includes('applyAllEvidenceInsights()')
+      || !desktopRecordContextPanelTemplateText.includes('mdi-playlist-check')
+      || !desktopRecordContextPanelStyleText.includes('korean-fieldwork-record-context-evidence-apply-all')
+      || !desktopRecordContextPanelSpecText.includes('applies all linked tablet evidence insights')) {
+    findings.push('desktop record context panel must provide a one-click path to append all linked tablet evidence summaries into the current narrative');
+  }
   if (!desktopRecordContextPanelText.includes('pushFeatureAttributeChip')
       || !desktopRecordContextPanelText.includes('formatFeatureAttributeLabels')
       || !desktopRecordContextPanelSpecText.includes('가마 핵심 연소부 기록·소성부 기록')

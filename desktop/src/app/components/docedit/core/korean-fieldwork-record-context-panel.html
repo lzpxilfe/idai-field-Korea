@@ -463,6 +463,13 @@
         <div class="korean-fieldwork-record-context-evidence-title">
             <span class="mdi mdi-file-document-check-outline"></span>
             <span>자료 확인</span>
+            <button *ngIf="hasApplicableEvidenceInsights()"
+                    type="button"
+                    class="korean-fieldwork-record-context-evidence-apply-all"
+                    (click)="applyAllEvidenceInsights()">
+                <span class="mdi mdi-playlist-check"></span>
+                <span>{{getEvidenceInsightsApplyAllActionLabel()}}</span>
+            </button>
         </div>
         <div class="korean-fieldwork-record-context-evidence-row">
             <span *ngFor="let metric of getEvidenceMetrics()"

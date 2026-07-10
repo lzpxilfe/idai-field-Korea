@@ -1966,6 +1966,62 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
     });
 
 
+    it('applies all linked tablet evidence insights to the current feature narrative once', async () => {
+
+        const feature = createDocument('feature-1', 'Feature', 'F1', {}, {
+            description: 'feature narrative'
+        });
+        const finds = Array.from({ length: 6 }, (_, index) => {
+            const number = index + 1;
+
+            return createDocument(`find-${number}`, 'Find', `find-${number}`, {
+                isPresentIn: ['feature-1']
+            }, {
+                findSpotItems: JSON.stringify({
+                    version: 1,
+                    items: [
+                        {
+                            number: 1,
+                            point: { x: 10 + number, y: 20 + number },
+                            label: `artifact ${number}`
+                        }
+                    ]
+                }),
+                shortDescription: `artifact summary ${number}`
+            });
+        });
+        const component = createComponent({
+            find: jest.fn().mockResolvedValue({
+                documents: [feature, ...finds]
+            })
+        });
+        const handleChanged = jest.fn();
+        component.onChanged.subscribe(handleChanged);
+        component.document = feature as any;
+        component.fieldDefinitions = [
+            field('featureRecordingStatus'),
+            textField('description', '설명')
+        ] as any;
+
+        await component.ngOnChanges();
+
+        expect(component.hasApplicableEvidenceInsights()).toBe(true);
+        expect(component.getApplicableEvidenceInsights()).toHaveLength(6);
+        expect(component.getEvidenceInsightsApplyAllActionLabel()).toBe('설명에 자료 6건 반영');
+
+        component.applyAllEvidenceInsights();
+        component.applyAllEvidenceInsights();
+
+        expect(feature.resource.description).toContain('feature narrative');
+        for (let number = 1; number <= 6; number++) {
+            expect(feature.resource.description).toContain(`artifact ${number}`);
+            expect(feature.resource.description.match(new RegExp(`artifact ${number}`, 'g'))).toHaveLength(1);
+        }
+        expect(feature.resource.description).not.toContain('"items"');
+        expect(handleChanged).toHaveBeenCalledTimes(1);
+    });
+
+
     it('appends linked tablet PenMemo handwriting evidence to the current record narrative once', async () => {
 
         const feature = createDocument('feature-1', 'Feature', 'F1', {}, {

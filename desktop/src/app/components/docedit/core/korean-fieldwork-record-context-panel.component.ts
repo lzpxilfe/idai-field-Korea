@@ -1246,6 +1246,14 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
         !!this.getEvidenceInsightAppendTargetField(insight);
 
 
+    public getApplicableEvidenceInsights = (): EvidenceInsight[] =>
+        this.evidenceInsights.filter(insight => this.canApplyEvidenceInsight(insight));
+
+
+    public hasApplicableEvidenceInsights = () =>
+        this.getApplicableEvidenceInsights().length > 0;
+
+
     public getNotebookEntryApplyTargetLabel(entry: KoreanFieldworkNotebookEntry): string {
 
         const fieldName = this.getNotebookAppendTargetField(entry);
@@ -1263,6 +1271,16 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
 
         const field = this.getField(fieldName);
         return field ? this.labels.get(field) : fieldName;
+    }
+
+
+    public getEvidenceInsightsApplyAllActionLabel(): string {
+
+        const fieldName = this.getNarrativeAppendTargetField();
+        const field = fieldName ? this.getField(fieldName) : undefined;
+        const fieldLabel = field ? this.labels.get(field) : fieldName ?? '기록';
+
+        return `${fieldLabel}에 자료 ${this.getApplicableEvidenceInsights().length}건 반영`;
     }
 
 
@@ -1297,6 +1315,26 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
 
         const currentValue = this.getStringResourceFieldValue(targetField);
         const nextValue = this.appendNotebookText(currentValue, insight.appendText);
+        if (currentValue === nextValue) return;
+
+        this.document.resource[targetField] = nextValue;
+        this.onChanged.emit();
+    }
+
+
+    public applyAllEvidenceInsights() {
+
+        if (!this.document?.resource) return;
+
+        const targetField = this.getNarrativeAppendTargetField();
+        if (!targetField) return;
+
+        const currentValue = this.getStringResourceFieldValue(targetField);
+        const nextValue = this.getApplicableEvidenceInsights()
+            .map(insight => insight.appendText)
+            .filter((appendText): appendText is string => !!appendText && appendText.trim().length > 0)
+            .reduce((value, appendText) => this.appendNotebookText(value, appendText), currentValue);
+
         if (currentValue === nextValue) return;
 
         this.document.resource[targetField] = nextValue;
