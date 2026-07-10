@@ -3732,6 +3732,18 @@ function validateReportHandoffPreSaveValidation() {
       || !desktopPriorityStripSpecText.includes('evidenceSection.copyText')) {
     findings.push('desktop report handoff preview must support direct body and section-level HWP copy buttons for selective pasting');
   }
+  if (!desktopPriorityStripText.includes('makeReportHandoffTabletBundles')
+      || !desktopPriorityStripText.includes('getReportHandoffTabletBundle')
+      || !desktopPriorityStripText.includes('copyReportHandoffTabletBundle')
+      || !desktopPriorityStripText.includes('makeKoreanFieldworkRecordTabletBundle')
+      || !desktopPriorityStripTemplateText.includes('korean-fieldwork-report-handoff-tablet-bundle')
+      || !desktopPriorityStripTemplateText.includes('getReportHandoffTabletBundle(previewItem)')
+      || !desktopPriorityStripTemplateText.includes('copyReportHandoffTabletBundle(previewItem, $event)')
+      || !desktopPriorityStripStyleText.includes('.korean-fieldwork-report-handoff-tablet-bundle')
+      || !desktopPriorityStripSpecText.includes('featureTabletBundle')
+      || !desktopPriorityStripSpecText.includes('copyReportHandoffTabletBundle(featureItem)')) {
+    findings.push('desktop report handoff panel must surface each record tablet bundle and copy it separately for office-side HWP processing');
+  }
   if (!desktopRecordContextText.includes('makeKoreanFieldworkReportHandoff')
       || !desktopRecordContextText.includes('writeKoreanFieldworkHwpClipboardText')
       || !desktopRecordContextText.includes('copyReportHandoffSection')

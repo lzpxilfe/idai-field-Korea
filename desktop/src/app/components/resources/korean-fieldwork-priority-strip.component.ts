@@ -122,6 +122,10 @@ import {
     KOREAN_FIELDWORK_FEATURE_GUIDANCE_PRESETS,
     KoreanFieldworkFeatureGuidancePreset
 } from '../../util/korean-fieldwork-feature-guidance';
+import {
+    KoreanFieldworkTabletRecordBundle,
+    makeKoreanFieldworkRecordTabletBundle
+} from '../../util/korean-fieldwork-record-tablet-bundle';
 import { DoceditLauncher } from './service/docedit-launcher';
 
 type KoreanFieldworkPriorityPanelId = 'overview'|'workflow'|'today'|'records'|'notebook'|'report'|'closeout';
@@ -224,6 +228,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
     public notebookDigest: KoreanFieldworkDailyNotebookDigest|undefined;
     public notebookDailyLogParentDocumentId: string|undefined;
     public reportHandoffItems: KoreanFieldworkReportHandoffItem[] = [];
+    public reportHandoffTabletBundlesByDocumentId: Map<string, KoreanFieldworkTabletRecordBundle> = new Map();
     public reportHandoffCopyAllText: string = '';
     public reportHandoffCopyAllBodyText: string = '';
     public reportCopiedDocumentId: string|undefined;
@@ -866,6 +871,15 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
         this.reportHandoffItems.find(item => item.documentId === this.selectedReportHandoffDocumentId)
         ?? this.reportHandoffItems[0];
 
+    public getReportHandoffTabletBundle = (item: KoreanFieldworkReportHandoffItem) =>
+        this.reportHandoffTabletBundlesByDocumentId.get(item.documentId);
+
+    public hasReportHandoffTabletBundle = (item: KoreanFieldworkReportHandoffItem) =>
+        this.getReportHandoffTabletBundle(item) !== undefined;
+
+    public getReportHandoffTabletBundleCopyActionLabel = (item: KoreanFieldworkReportHandoffItem) =>
+        this.isReportHandoffTabletBundleCopied(item) ? '\ubcf5\uc0ac\ub428' : '\ud0dc\ube14\ub9bf \ubb36\uc74c';
+
     public getReportHandoffCopyActionLabel = (item: KoreanFieldworkReportHandoffItem) =>
         this.isReportHandoffItemCopied(item) ? '\ubcf5\uc0ac\ub428' : '\ubcf5\uc0ac';
 
@@ -877,6 +891,9 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
 
     public getReportHandoffBodyCopyActionLabel = (item: KoreanFieldworkReportHandoffItem) =>
         this.isReportHandoffBodyCopied(item) ? '\ubcf5\uc0ac\ub428' : '\ubcf8\ubb38 \ubcf5\uc0ac';
+
+    public isReportHandoffTabletBundleCopied = (item: KoreanFieldworkReportHandoffItem) =>
+        this.reportCopiedDocumentId === this.getReportHandoffTabletBundleCopyId(item);
 
     public getReportHandoffSectionCopyActionLabel = (
             item: KoreanFieldworkReportHandoffItem,
@@ -927,6 +944,22 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
             this.selectedReportHandoffDocumentId = item.documentId;
             await writeKoreanFieldworkHwpClipboardText(item.copyText);
             this.markReportHandoffCopied(item.documentId);
+        } catch (errWithParams) {
+            this.messages.add(errWithParams);
+        }
+    }
+
+    public async copyReportHandoffTabletBundle(item: KoreanFieldworkReportHandoffItem, event?: Event) {
+
+        if (event) event.stopPropagation();
+
+        const bundle = this.getReportHandoffTabletBundle(item);
+        if (!bundle?.copyText) return;
+
+        try {
+            this.selectedReportHandoffDocumentId = item.documentId;
+            await writeKoreanFieldworkHwpClipboardText(bundle.copyText);
+            this.markReportHandoffCopied(this.getReportHandoffTabletBundleCopyId(item));
         } catch (errWithParams) {
             this.messages.add(errWithParams);
         }
@@ -1526,6 +1559,9 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
             const reportHandoff = stats
                 ? makeKoreanFieldworkReportHandoff(documents)
                 : undefined;
+            const reportHandoffTabletBundlesByDocumentId = stats && reportHandoff
+                ? makeReportHandoffTabletBundles(reportHandoff.items, documentsById, documents)
+                : new Map<string, KoreanFieldworkTabletRecordBundle>();
 
             if (currentRefreshId === this.refreshId) {
                 this.stats = stats;
@@ -1544,6 +1580,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
                 this.notebookDigest = notebookDigest;
                 this.notebookDailyLogParentDocumentId = notebookDailyLogParentDocumentId;
                 this.reportHandoffItems = reportHandoff?.items ?? [];
+                this.reportHandoffTabletBundlesByDocumentId = reportHandoffTabletBundlesByDocumentId;
                 this.reportHandoffCopyAllText = reportHandoff?.copyAllText ?? '';
                 this.reportHandoffCopyAllBodyText = reportHandoff?.copyAllBodyText ?? '';
                 this.ensureReportHandoffPreviewSelection();
@@ -1568,6 +1605,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
                 this.notebookDigest = undefined;
                 this.notebookDailyLogParentDocumentId = undefined;
                 this.reportHandoffItems = [];
+                this.reportHandoffTabletBundlesByDocumentId = new Map();
                 this.reportHandoffCopyAllText = '';
                 this.reportHandoffCopyAllBodyText = '';
                 this.selectedReportHandoffDocumentId = undefined;
@@ -1741,6 +1779,11 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
     ): string {
 
         return `${item.documentId}::${section.id}`;
+    }
+
+    private getReportHandoffTabletBundleCopyId(item: KoreanFieldworkReportHandoffItem): string {
+
+        return `${item.documentId}::tabletBundle`;
     }
 
     private getReportHandoffBodySection(
@@ -2079,6 +2122,26 @@ function makeWorkbenchActionsByDocumentId(workbenchItems: KoreanFieldworkWorkben
     });
 
     return actionsByDocumentId;
+}
+
+
+function makeReportHandoffTabletBundles(items: KoreanFieldworkReportHandoffItem[],
+                                        documentsById: Map<string, Document>,
+                                        documents: Document[])
+        : Map<string, KoreanFieldworkTabletRecordBundle> {
+
+    const bundlesByDocumentId = new Map<string, KoreanFieldworkTabletRecordBundle>();
+
+    items.forEach(item => {
+        const document = documentsById.get(item.documentId);
+        const bundle = document
+            ? makeKoreanFieldworkRecordTabletBundle(document, documents, item)
+            : undefined;
+
+        if (bundle) bundlesByDocumentId.set(item.documentId, bundle);
+    });
+
+    return bundlesByDocumentId;
 }
 
 

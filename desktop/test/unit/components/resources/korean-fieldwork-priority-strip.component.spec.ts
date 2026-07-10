@@ -340,6 +340,20 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
                 evidenceCount: 6,
                 tone: 'review'
             });
+            const featureTabletBundle = component.getReportHandoffTabletBundle(featureItem)!;
+            expect(featureTabletBundle).toBeDefined();
+            expect(component.hasReportHandoffTabletBundle(featureItem)).toBe(true);
+            expect(component.getReportHandoffTabletBundleCopyActionLabel(featureItem))
+                .toBe('\ud0dc\ube14\ub9bf \ubb36\uc74c');
+            expect(featureTabletBundle.summary).toContain('\uc790\ub8cc');
+            expect(featureTabletBundle.groups.map(group => group.id)).toEqual(expect.arrayContaining([
+                'photos',
+                'soilProfilePhotos',
+                'drawings',
+                'penMemos'
+            ]));
+            expect(featureTabletBundle.copyText).toContain('[\ud0dc\ube14\ub9bf \uc790\ub8cc \ubb36\uc74c]');
+            expect(featureTabletBundle.copyText).toContain('pit-001');
             expect(component.getReportHandoffPreviewItem()?.documentId).toBe('feature-1');
             expect(component.isReportHandoffItemSelected(featureItem)).toBe(true);
             expect(featureItem.details.join('\n'))
@@ -651,9 +665,19 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
             expect(component.getReportHandoffSectionCopyActionLabel(featureItem, evidenceSection))
                 .toBe('\ubcf5\uc0ac\ub428');
 
-            await component.copyAllReportHandoffBodies();
+            await component.copyReportHandoffTabletBundle(featureItem);
 
             expect(clear).toHaveBeenCalledTimes(4);
+            expect(writeText).toHaveBeenLastCalledWith(featureTabletBundle.copyText);
+            expect(write).not.toHaveBeenCalled();
+            expect(component.getReportHandoffPreviewItem()?.documentId).toBe('feature-1');
+            expect(component.isReportHandoffTabletBundleCopied(featureItem)).toBe(true);
+            expect(component.getReportHandoffTabletBundleCopyActionLabel(featureItem))
+                .toBe('\ubcf5\uc0ac\ub428');
+
+            await component.copyAllReportHandoffBodies();
+
+            expect(clear).toHaveBeenCalledTimes(5);
             expect(writeText).toHaveBeenLastCalledWith(component.reportHandoffCopyAllBodyText);
             expect(write).not.toHaveBeenCalled();
             expect(component.isReportHandoffCopyAllBodyCopied()).toBe(true);
@@ -661,7 +685,7 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
 
             await component.copyAllReportHandoffItems();
 
-            expect(clear).toHaveBeenCalledTimes(5);
+            expect(clear).toHaveBeenCalledTimes(6);
             expect(writeText).toHaveBeenLastCalledWith(component.reportHandoffCopyAllText);
             expect(write).not.toHaveBeenCalled();
             expect(component.reportHandoffCopyAllText).toContain(featureItem.copyText);

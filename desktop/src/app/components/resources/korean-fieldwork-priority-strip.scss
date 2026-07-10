@@ -2888,6 +2888,10 @@ korean-fieldwork-priority-strip {
     min-width: 0;
   }
 
+  .korean-fieldwork-report-handoff-metrics {
+    flex-wrap: wrap;
+  }
+
   .korean-fieldwork-report-handoff-category {
     background: #f2f4f7;
     border-radius: 3px;
@@ -3057,6 +3061,7 @@ korean-fieldwork-priority-strip {
 
   .korean-fieldwork-report-handoff-preview-metrics {
     color: #667085;
+    flex-wrap: wrap;
     font-size: 11px;
     font-weight: 800;
     white-space: nowrap;
@@ -3099,6 +3104,98 @@ korean-fieldwork-priority-strip {
       background: #ecfdf3;
       border-color: #abefc6;
       color: #027a48;
+    }
+
+    &.tablet {
+      background: #f8fbff;
+      border-color: #bfd7f6;
+
+      &:hover {
+        background: #eef4ff;
+      }
+    }
+  }
+
+  .korean-fieldwork-report-handoff-preview-actions {
+    flex-wrap: wrap;
+  }
+
+  .korean-fieldwork-report-handoff-tablet-bundle {
+    background: #f8fbff;
+    border-left: 3px solid #2e90fa;
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+    padding: 7px 8px;
+
+    &.warning {
+      background: #fffbeb;
+      border-left-color: #f79009;
+    }
+  }
+
+  .korean-fieldwork-report-handoff-tablet-bundle-header {
+    align-items: center;
+    color: #194185;
+    display: flex;
+    gap: 6px;
+    min-width: 0;
+
+    > span:nth-child(2) {
+      flex: 0 0 auto;
+      font-size: 11px;
+      font-weight: 900;
+      line-height: 1.2;
+    }
+
+    > span:nth-child(3) {
+      color: #667085;
+      font-size: 11px;
+      font-weight: 800;
+      line-height: 1.2;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  .korean-fieldwork-report-handoff-tablet-bundle-groups {
+    display: grid;
+    gap: 4px;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    min-width: 0;
+  }
+
+  .korean-fieldwork-report-handoff-tablet-bundle-group {
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid #d1e9ff;
+    border-radius: 4px;
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+    padding: 5px 6px;
+
+    &.warning {
+      border-color: #fedf89;
+    }
+
+    > span:first-child {
+      color: #194185;
+      font-size: 11px;
+      font-weight: 900;
+      line-height: 1.2;
+    }
+
+    > span:last-child {
+      color: #667085;
+      font-size: 10px;
+      font-weight: 800;
+      line-height: 1.2;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
   }
 
