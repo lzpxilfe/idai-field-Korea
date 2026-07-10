@@ -1908,6 +1908,65 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
     });
 
 
+    it('shows tablet drawing sketch previews and appends a desktop narrative summary once', async () => {
+
+        const feature = createDocument('feature-1', 'Feature', 'F1', {}, {
+            description: '\uae30\uc874 \uc720\uad6c \uc124\uba85.'
+        });
+        const drawing = createDocument('drawing-1', 'Drawing', 'D1', {
+            depicts: ['feature-1']
+        }, {
+            description: '\ub3d9\ucabd \ubcbd\uba74 \ud3c9\uba74\ub3c4 \ubcf4\uc815\uc120.',
+            drawingSketchStrokes: '{"version":1,"strokes":[{"points":[{"x":10,"y":20},{"x":50,"y":60}]}]}',
+            fileUri: 'file:///tablet/drawings/pit-plan.png'
+        });
+        const component = createComponent({
+            find: jest.fn().mockResolvedValue({
+                documents: [feature, drawing]
+            })
+        });
+        const handleChanged = jest.fn();
+        component.onChanged.subscribe(handleChanged);
+        component.document = feature as any;
+        component.fieldDefinitions = [
+            field('featureRecordingStatus'),
+            textField('description', '\uc124\uba85')
+        ] as any;
+
+        await component.ngOnChanges();
+
+        const [insight] = component.getEvidenceInsights();
+        expect(insight).toMatchObject({
+            id: 'drawingSketch:drawing-1',
+            label: '\ub3c4\uba74 \uc2a4\ucf00\uce58',
+            detail: 'D1 \u00b7 \ud0dc\ube14\ub9bf \uc2a4\ucf00\uce58 1\ud68d/2\uc810',
+            sketchPreview: {
+                label: '\ud0dc\ube14\ub9bf \uc2a4\ucf00\uce58 1\ud68d/2\uc810',
+                path: 'M 32 8 L 88 64',
+                viewBox: '0 0 120 72'
+            },
+            appendText: [
+                '[\ub3c4\uba74 D1]',
+                '\uc2a4\ucf00\uce58 \uc694\uc57d: \ud0dc\ube14\ub9bf \uc2a4\ucf00\uce58 1\ud68d/2\uc810',
+                '\ub3c4\uba74 \uc124\uba85: \ub3d9\ucabd \ubcbd\uba74 \ud3c9\uba74\ub3c4 \ubcf4\uc815\uc120.',
+                '\uc6d0\ubcf8: file:///tablet/drawings/pit-plan.png'
+            ].join('\n')
+        });
+        expect(component.canApplyEvidenceInsight(insight)).toBe(true);
+
+        component.applyEvidenceInsight(insight);
+        component.applyEvidenceInsight(insight);
+
+        expect(feature.resource.description).toContain('\uae30\uc874 \uc720\uad6c \uc124\uba85.');
+        expect(feature.resource.description).toContain('[\ub3c4\uba74 D1]');
+        expect(feature.resource.description).toContain(
+            '\uc2a4\ucf00\uce58 \uc694\uc57d: \ud0dc\ube14\ub9bf \uc2a4\ucf00\uce58 1\ud68d/2\uc810'
+        );
+        expect(feature.resource.description.match(/\[\ub3c4\uba74 D1\]/g)).toHaveLength(1);
+        expect(handleChanged).toHaveBeenCalledTimes(1);
+    });
+
+
     it('appends tablet photo annotation summaries to the current record narrative once', async () => {
 
         const feature = createDocument('feature-1', 'Feature', 'F1', {}, {

@@ -52,6 +52,7 @@ import {
     getPenMemoSketchPreview,
     KoreanFieldworkPenMemoSketchPreview,
     getPenMemoSketchSummaryLabel,
+    getKoreanFieldworkReviewDrawingDocuments,
     getKoreanFieldworkReviewPhotoDocuments,
     getKoreanFieldworkReviewSoilProfilePhotoDocuments,
     getPhotoAnnotationSummaries,
@@ -1600,6 +1601,7 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
 
         const reviewPhotos = getKoreanFieldworkReviewPhotoDocuments(this.document, bundle);
         const reviewSoilProfilePhotos = getKoreanFieldworkReviewSoilProfilePhotoDocuments(this.document, bundle);
+        const reviewDrawings = getKoreanFieldworkReviewDrawingDocuments(this.document, bundle);
         const canAppendEvidenceInsight = !!this.getNarrativeAppendTargetField();
         const soilColorCandidateSummaries = getSoilColorCandidateSummaries(reviewSoilProfilePhotos);
         const soilColorCandidateDocumentIds = new Set(
@@ -1663,6 +1665,24 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
                 sketchPreview: getPenMemoSketchPreview(summary.document.resource.penMemoStrokes),
                 tone: summary.pendingTranscription ? 'warning' as const : 'info' as const
             }));
+        const drawingSketchInsights = reviewDrawings
+            .flatMap(document => {
+                const sketchPreview = this.getDrawingSketchPreview(document);
+                if (!sketchPreview) return [];
+
+                const insight: EvidenceInsight = {
+                    detail: `${this.getDocumentLabel(document)} · ${sketchPreview.label}`,
+                    id: `drawingSketch:${document.resource.id}`,
+                    label: '도면 스케치',
+                    sketchPreview,
+                    tone: 'info' as const
+                };
+                const appendText = this.getDrawingSketchInsightAppendText(document, sketchPreview);
+
+                return [canAppendEvidenceInsight && appendText
+                    ? { ...insight, appendText }
+                    : insight];
+            });
         const photoAnnotationInsights = getPhotoAnnotationSummaries(reviewPhotos, reviewSoilProfilePhotos)
             .map(summary => {
                 const insight: EvidenceInsight = {
@@ -1683,6 +1703,7 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
             ...soilColorInsights,
             ...soilColorSwatchInsights,
             ...soilProfileLayerMarkerInsights,
+            ...drawingSketchInsights,
             ...photoAnnotationInsights,
             ...penMemoSketchInsights
         ]
@@ -1773,6 +1794,25 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
         }
 
         return `층 번호 위치 ${markers.length}점`;
+    }
+
+
+    private getDrawingSketchPreview(document: Document): KoreanFieldworkPenMemoSketchPreview|undefined {
+
+        const preview = getPenMemoSketchPreview(document.resource.drawingSketchStrokes);
+        const label = this.getDrawingSketchSummaryLabel(document);
+
+        return preview && label
+            ? { ...preview, label }
+            : undefined;
+    }
+
+
+    private getDrawingSketchSummaryLabel(document: Document): string {
+
+        return getPenMemoSketchSummaryLabel(document.resource.drawingSketchStrokes)
+            .replace('스케치 메모', '태블릿 스케치')
+            .replace(/[.。\s]+$/, '');
     }
 
 
@@ -2008,6 +2048,26 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
             this.getNotebookAppendLine('표시 요약', annotationLabel),
             this.getNotebookAppendLine('표시 설명', photoDescription ?? '사진 원본에서 표시 위치 확인 필요'),
             this.getNotebookAppendLine('수정 시각', summary.updatedAt)
+        ].filter((line): line is string => !!line && line.length > 0);
+
+        return lines.length > 1 ? lines.join('\n') : '';
+    }
+
+
+    private getDrawingSketchInsightAppendText(document: Document,
+                                             sketchPreview: KoreanFieldworkPenMemoSketchPreview): string {
+
+        const documentLabel = this.getDocumentLabel(document);
+        const drawingDescription = this.getNonEmptyDocumentStringField(document, 'description')
+            ?? this.getNonEmptyDocumentStringField(document, 'shortDescription');
+        const drawingSource = this.getNonEmptyDocumentStringField(document, 'fileUri')
+            ?? this.getNonEmptyDocumentStringField(document, 'imageUri')
+            ?? this.getNonEmptyDocumentStringField(document, 'fieldworkPhotoUri');
+        const lines = [
+            `[도면 ${documentLabel}]`,
+            this.getNotebookAppendLine('스케치 요약', sketchPreview.label),
+            this.getNotebookAppendLine('도면 설명', drawingDescription),
+            this.getNotebookAppendLine('원본', drawingSource)
         ].filter((line): line is string => !!line && line.length > 0);
 
         return lines.length > 1 ? lines.join('\n') : '';
