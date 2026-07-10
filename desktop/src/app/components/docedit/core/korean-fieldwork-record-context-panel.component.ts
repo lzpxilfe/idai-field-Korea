@@ -17,7 +17,9 @@ import {
     getKoreanFieldworkFeaturePitLineSummaries,
     KoreanFieldworkFindSpotSummary,
     getKoreanFieldworkFindSpotSummaries,
-    getKoreanFieldworkRecordFieldValueSummary
+    getKoreanFieldworkRecordFieldValueSummary,
+    parseSoilProfileColorSwatchRows,
+    SoilProfileColorSwatchRow
 } from 'idai-field-core';
 import { Routing } from '../../../services/routing';
 import {
@@ -312,6 +314,10 @@ const FEATURE_SKETCH_VIEWBOX = '0 0 120 80';
 const FEATURE_SKETCH_WIDTH = 120;
 const FEATURE_SKETCH_HEIGHT = 80;
 const FEATURE_SKETCH_PADDING = 8;
+const SOIL_COLOR_SAMPLE_VIEWBOX = '0 0 120 72';
+const SOIL_COLOR_SAMPLE_WIDTH = 120;
+const SOIL_COLOR_SAMPLE_HEIGHT = 72;
+const SOIL_COLOR_SAMPLE_MARKER_RADIUS = 4;
 const FEATURE_GEOMETRY_EDIT_STATUS_FIELD = 'featureGeometryEditStatus';
 const FEATURE_FREE_DRAWING_STROKES_FIELD = 'featureFreeDrawingStrokes';
 const FEATURE_FREE_DRAWING_UPDATED_AT_FIELD = 'featureFreeDrawingUpdatedAt';
@@ -1595,9 +1601,11 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
         );
         const soilColorInsights = soilColorCandidateSummaries
             .map(summary => {
+                const sketchPreview = this.getSoilColorSampleSketchPreview(summary.document);
                 const insight: EvidenceInsight = {
                     detail: `${this.getDocumentLabel(summary.document)} · ${summary.label}`,
                     id: `soilColor:${summary.document.resource.id}`,
+                    ...(sketchPreview ? { sketchPreview } : {}),
                     label: '토색 후보',
                     tone: summary.document.resource.soilColorAssistStatus === 'lowConfidence'
                         ? 'warning' as const
@@ -1612,9 +1620,11 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
         const soilColorSwatchInsights = getSoilColorSwatchSummaries(reviewSoilProfilePhotos)
             .filter(summary => !soilColorCandidateDocumentIds.has(summary.document.resource.id))
             .map(summary => {
+                const sketchPreview = this.getSoilColorSampleSketchPreview(summary.document);
                 const insight: EvidenceInsight = {
                     detail: `${this.getDocumentLabel(summary.document)} · ${summary.label}`,
                     id: `soilColorSwatches:${summary.document.resource.id}`,
+                    ...(sketchPreview ? { sketchPreview } : {}),
                     label: '층별 토색',
                     tone: 'info' as const
                 };
@@ -1659,6 +1669,48 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
     private getDocumentLabel(document: Document): string {
 
         return document.resource.identifier || document.resource.id;
+    }
+
+
+    private getSoilColorSampleSketchPreview(document: Document): KoreanFieldworkPenMemoSketchPreview|undefined {
+
+        const rows = parseSoilProfileColorSwatchRows(document.resource.soilProfileColorSwatches)
+            .filter(row => !!row.sample?.point);
+        if (rows.length === 0) return undefined;
+
+        return {
+            label: this.getSoilColorSampleSketchPreviewLabel(rows),
+            path: rows.map(row => this.getSoilColorSampleMarkerPath(row)).join(' '),
+            viewBox: SOIL_COLOR_SAMPLE_VIEWBOX
+        };
+    }
+
+
+    private getSoilColorSampleSketchPreviewLabel(rows: SoilProfileColorSwatchRow[]): string {
+
+        if (rows.length === 1) {
+            const row = rows[0];
+
+            return `스포이드 위치 ${row.number}층 ${row.sample?.pointLabel ?? ''}`.trim();
+        }
+
+        return `스포이드 위치 ${rows.length}점`;
+    }
+
+
+    private getSoilColorSampleMarkerPath(row: SoilProfileColorSwatchRow): string {
+
+        const point = row.sample?.point;
+        if (!point) return '';
+
+        const x = this.roundSvg((point.xPercent / 100) * SOIL_COLOR_SAMPLE_WIDTH);
+        const y = this.roundSvg((point.yPercent / 100) * SOIL_COLOR_SAMPLE_HEIGHT);
+        const radius = SOIL_COLOR_SAMPLE_MARKER_RADIUS;
+
+        return [
+            `M ${this.roundSvg(x - radius)} ${y} H ${this.roundSvg(x + radius)}`,
+            `M ${x} ${this.roundSvg(y - radius)} V ${this.roundSvg(y + radius)}`
+        ].join(' ');
     }
 
 

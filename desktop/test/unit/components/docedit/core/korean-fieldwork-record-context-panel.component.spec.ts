@@ -1446,6 +1446,11 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
                 '촬영 조건: 오전 확산광.'
             ].join('\n')
         });
+        expect(insight.sketchPreview).toEqual({
+            label: '\uc2a4\ud3ec\uc774\ub4dc \uc704\uce58 1\uce35 20%/50%',
+            path: 'M 20 36 H 28 M 24 32 V 40',
+            viewBox: '0 0 120 72'
+        });
         expect(component.canApplyEvidenceInsight(insight)).toBe(true);
         expect(component.getEvidenceInsightApplyTargetLabel(insight)).toBe('설명');
 
@@ -1463,6 +1468,42 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
         expect(feature.resource.description).toContain('촬영 조건: 오전 확산광.');
         expect(feature.resource.description.match(/\[토층사진 SP1\]/g)).toHaveLength(1);
         expect(handleChanged).toHaveBeenCalledTimes(1);
+    });
+
+
+    it('shows tablet soil-photo color sample points on swatch-only evidence', async () => {
+
+        const feature = createDocument('feature-1', 'Feature', 'F1');
+        const soilProfilePhoto = createDocument('soil-photo-1', 'SoilProfilePhoto', 'SP1', {
+            depicts: ['feature-1']
+        }, {
+            soilProfileColorSwatches: [
+                '1: 10YR 4/3 RGB 111/87/61 @ 20%/50%',
+                '2: 2.5Y 5/3 RGB 139/128/88 @ 80%/45%'
+            ].join('\n')
+        });
+        const component = createComponent({
+            find: jest.fn().mockResolvedValue({
+                documents: [feature, soilProfilePhoto]
+            })
+        });
+        component.document = feature as any;
+        component.fieldDefinitions = [
+            field('featureRecordingStatus'),
+            textField('description', '\uc124\uba85')
+        ] as any;
+
+        await component.ngOnChanges();
+
+        const [insight] = component.getEvidenceInsights();
+        expect(insight).toMatchObject({
+            id: 'soilColorSwatches:soil-photo-1',
+            sketchPreview: {
+                label: '\uc2a4\ud3ec\uc774\ub4dc \uc704\uce58 2\uc810',
+                path: 'M 20 36 H 28 M 24 32 V 40 M 92 32.4 H 100 M 96 28.4 V 36.4',
+                viewBox: '0 0 120 72'
+            }
+        });
     });
 
 
