@@ -501,8 +501,18 @@
                           [attr.y]="text.y"
                           text-anchor="middle">{{text.text}}</text>
                 </svg>
-                <span *ngIf="canApplyEvidenceInsight(insight) || isEvidenceInsightApplied(insight) || canOpenEvidenceInsight(insight)"
+                <span *ngIf="canCopyEvidenceInsight(insight) || canApplyEvidenceInsight(insight) || isEvidenceInsightApplied(insight) || canOpenEvidenceInsight(insight)"
                       class="korean-fieldwork-record-context-evidence-insight-actions">
+                    <button *ngIf="canCopyEvidenceInsight(insight)"
+                            type="button"
+                            class="korean-fieldwork-record-context-evidence-insight-action copy"
+                            [class.copied]="isEvidenceInsightCopied(insight)"
+                            (click)="copyEvidenceInsight(insight)">
+                        <span class="mdi"
+                              [class.mdi-check]="isEvidenceInsightCopied(insight)"
+                              [class.mdi-content-copy]="!isEvidenceInsightCopied(insight)"></span>
+                        <span>{{getEvidenceInsightCopyActionLabel(insight)}}</span>
+                    </button>
                     <button *ngIf="canApplyEvidenceInsight(insight)"
                             type="button"
                             class="korean-fieldwork-record-context-evidence-insight-action apply"

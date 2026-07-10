@@ -799,6 +799,7 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
     public recordActions: KoreanFieldworkRecordActionItem[] = [];
     public reportHandoffItem: KoreanFieldworkReportHandoffItem|undefined;
     public reportHandoffCopiedId: string|undefined;
+    public evidenceInsightCopiedId: string|undefined;
     public identifierRevisionNextValue: string = '';
     public identifierRevisionReason: string = '';
 
@@ -929,6 +930,18 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
 
     public getReportHandoffSectionCopyActionLabel = (section: KoreanFieldworkReportHandoffCopySection) =>
         this.isReportHandoffSectionCopied(section) ? '\ubcf5\uc0ac\ub428' : section.label;
+
+
+    public canCopyEvidenceInsight = (insight: EvidenceInsight) =>
+        !!this.getEvidenceInsightCopyText(insight);
+
+
+    public isEvidenceInsightCopied = (insight: EvidenceInsight) =>
+        this.evidenceInsightCopiedId === insight.id;
+
+
+    public getEvidenceInsightCopyActionLabel = (insight: EvidenceInsight) =>
+        this.isEvidenceInsightCopied(insight) ? '복사됨' : '복사';
 
 
     public hasEvidenceMetrics = () => this.evidenceMetrics.length > 0;
@@ -1427,6 +1440,16 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
 
         await writeKoreanFieldworkHwpClipboardText(section.copyText);
         this.markReportHandoffCopied(this.getReportHandoffSectionCopyId(item, section));
+    }
+
+
+    public async copyEvidenceInsight(insight: EvidenceInsight) {
+
+        const copyText = this.getEvidenceInsightCopyText(insight);
+        if (!copyText) return;
+
+        await writeKoreanFieldworkHwpClipboardText(copyText);
+        this.markEvidenceInsightCopied(insight.id);
     }
 
 
@@ -2057,6 +2080,17 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
     }
 
 
+    private markEvidenceInsightCopied(copiedId: string) {
+
+        this.evidenceInsightCopiedId = copiedId;
+        setTimeout(() => {
+            if (this.evidenceInsightCopiedId === copiedId) {
+                this.evidenceInsightCopiedId = undefined;
+            }
+        }, 1600);
+    }
+
+
     private getReportHandoffSectionCopyId(
             item: KoreanFieldworkReportHandoffItem,
             section: KoreanFieldworkReportHandoffCopySection
@@ -2098,6 +2132,19 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
     private getEvidenceInsightAppendTargetField(insight: EvidenceInsight): string|undefined {
 
         return insight.appendText ? this.getNarrativeAppendTargetField() : undefined;
+    }
+
+
+    private getEvidenceInsightCopyText(insight: EvidenceInsight): string|undefined {
+
+        if (insight.appendText?.trim()) return insight.appendText;
+
+        const lines = [
+            insight.label,
+            insight.detail
+        ].filter(line => line.trim().length > 0);
+
+        return lines.length > 0 ? lines.join('\n') : undefined;
     }
 
 

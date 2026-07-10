@@ -1949,6 +1949,63 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
     });
 
 
+    it('copies linked tablet evidence insights as HWP-safe plain text', async () => {
+
+        const write = jest.fn();
+        const writeText = jest.fn();
+        const clear = jest.fn();
+        const testWindow = (global as any).window ?? ((global as any).window = {});
+        const previousRequire = testWindow.require;
+        testWindow.require = jest.fn().mockReturnValue({ clipboard: { clear, write, writeText } });
+
+        try {
+            const feature = createDocument('feature-1', 'Feature', 'F1', {}, {
+                description: 'feature narrative'
+            });
+            const find = createDocument('find-1', 'Find', 'find-001', {
+                isPresentIn: ['feature-1']
+            }, {
+                findSpotItems: JSON.stringify({
+                    version: 1,
+                    items: [
+                        { number: 1, point: { x: 25, y: 75 }, label: 'bronze fragment' }
+                    ]
+                }),
+                shortDescription: 'bronze rim sherd'
+            });
+            const component = createComponent({
+                find: jest.fn().mockResolvedValue({
+                    documents: [feature, find]
+                })
+            });
+            component.document = feature as any;
+            component.fieldDefinitions = [
+                field('featureRecordingStatus'),
+                textField('description', 'Description')
+            ] as any;
+
+            await component.ngOnChanges();
+
+            const insight = component.getEvidenceInsights()
+                .find(candidate => candidate.id === 'findSpot:find-1');
+
+            expect(component.canCopyEvidenceInsight(insight!)).toBe(true);
+            expect(component.getEvidenceInsightCopyActionLabel(insight!)).toBe('복사');
+
+            await component.copyEvidenceInsight(insight!);
+
+            expect(clear).toHaveBeenCalledTimes(1);
+            expect(writeText).toHaveBeenCalledWith(expect.stringContaining('bronze fragment'));
+            expect(writeText).toHaveBeenCalledWith(expect.stringContaining('bronze rim sherd'));
+            expect(write).not.toHaveBeenCalled();
+            expect(component.isEvidenceInsightCopied(insight!)).toBe(true);
+            expect(component.getEvidenceInsightCopyActionLabel(insight!)).toBe('복사됨');
+        } finally {
+            testWindow.require = previousRequire;
+        }
+    });
+
+
     it('does not truncate linked tablet evidence insights when a feature has more than four records', async () => {
 
         const feature = createDocument('feature-1', 'Feature', 'F1', {}, {
