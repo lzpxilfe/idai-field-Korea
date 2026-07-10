@@ -7,7 +7,9 @@ import {
 } from '../../../../../src/app/components/docedit/core/korean-fieldwork-record-context-panel.component';
 import { getPhotoAnnotationSummaryLabel } from '../../../../../src/app/util/korean-fieldwork-evidence-review';
 import {
-    KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_AT_FIELD
+    KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_AT_FIELD,
+    KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_AT_FIELD,
+    KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_FINGERPRINT_FIELD
 } from '../../../../../src/app/util/korean-fieldwork-record-tablet-bundle';
 import { getKoreanFieldworkRecordFieldValueSummary } from 'idai-field-core';
 import * as fs from 'fs';
@@ -269,11 +271,21 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
                 date: getTodayLabel(),
                 penMemoReviewedTranscript: '[\uad00\ucc30 \ub0b4\uc6a9] \ubc14\ub2e5\uba74 \ud53c\ud2b8\uc120 \ud655\uc778.'
             });
+            let documents = [feature, ...photos, drawing, memo];
             const datastore = {
-                find: jest.fn().mockResolvedValue({
-                    documents: [feature, ...photos, drawing, memo]
-                }),
-                get: jest.fn().mockResolvedValue(photos[3])
+                find: jest.fn().mockImplementation(async () => ({ documents })),
+                get: jest.fn().mockImplementation(async (documentId: string) =>
+                    documents.find(document => document.resource.id === documentId)
+                ),
+                bulkUpdate: jest.fn().mockImplementation(async (updatedDocuments: any[]) => {
+                    documents = documents.map(document =>
+                        updatedDocuments.find(updatedDocument =>
+                            updatedDocument.resource.id === document.resource.id
+                        ) ?? document
+                    );
+
+                    return updatedDocuments;
+                })
             };
             const routing = { jumpToResource: jest.fn() };
             const component = createComponent({
@@ -344,19 +356,44 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
 
             expect(datastore.get).toHaveBeenCalledWith('photo-4');
             expect(routing.jumpToResource).toHaveBeenCalledWith(photos[3]);
+            expect(component.getTabletRecordBundleSourceReviewActionLabel(photoGroup.sources[3]))
+                .toBe('\ucc98\ub9ac \uc644\ub8cc');
 
-            component.toggleTabletRecordBundleReviewed();
+            await component.toggleTabletRecordBundleSourceReviewed(photoGroup.sources[3]);
 
             expect(handleChanged).toHaveBeenCalledTimes(1);
+            expect(datastore.bulkUpdate).toHaveBeenCalledWith([
+                expect.objectContaining({
+                    resource: expect.objectContaining({
+                        id: 'photo-4',
+                        [KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_AT_FIELD]: expect.any(String),
+                        [KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_FINGERPRINT_FIELD]:
+                            photoGroup.sources[3].fingerprint
+                    })
+                })
+            ]);
+            const reviewedPhotoSource = component.getTabletRecordBundle()!.groups
+                .find(group => group.id === 'photos')!.sources
+                .find(source => source.documentId === 'photo-4')!;
+            expect(reviewedPhotoSource.reviewState).toMatchObject({
+                isReviewed: true,
+                label: expect.stringContaining('\ucc98\ub9ac\ub428')
+            });
+            expect(component.getTabletRecordBundleSourceReviewActionLabel(reviewedPhotoSource))
+                .toBe('\ucc98\ub9ac \ud574\uc81c');
+
+            await component.toggleTabletRecordBundleReviewed();
+
+            expect(handleChanged).toHaveBeenCalledTimes(2);
             expect(feature.resource[KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_AT_FIELD])
                 .toEqual(expect.any(String));
             expect(component.isTabletRecordBundleReviewed()).toBe(true);
             expect(component.getTabletRecordBundleReviewActionLabel()).toBe('\ucc98\ub9ac \ud574\uc81c');
             expect(component.getTabletRecordBundle()!.reviewState.label).toContain('\ucc98\ub9ac\ub428');
 
-            component.toggleTabletRecordBundleReviewed();
+            await component.toggleTabletRecordBundleReviewed();
 
-            expect(handleChanged).toHaveBeenCalledTimes(2);
+            expect(handleChanged).toHaveBeenCalledTimes(3);
             expect(feature.resource[KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_AT_FIELD])
                 .toBeUndefined();
             expect(component.isTabletRecordBundleReviewed()).toBe(false);
@@ -394,8 +431,10 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
         expect(template).toContain('openTabletRecordBundleSource(source)');
         expect(template).toContain('copyTabletRecordBundleGroup(group)');
         expect(template).toContain('copyTabletRecordBundleSource(group, source)');
+        expect(template).toContain('toggleTabletRecordBundleSourceReviewed(source)');
         expect(template).toContain('toggleTabletRecordBundleReviewed()');
         expect(template).toContain('tabletBundle.reviewState.label');
+        expect(template).toContain('source.reviewState.label');
         expect(template).toContain('isTabletRecordBundleSourceCopied(group, source)');
         expect(template).toContain('korean-fieldwork-record-context-tablet-bundle-source');
         expect(template).toContain('source.issueCount');
@@ -406,6 +445,8 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
         expect(styles).toContain('.korean-fieldwork-record-context-tablet-bundle-review-status');
         expect(styles).toContain('.korean-fieldwork-record-context-tablet-bundle-review-toggle');
         expect(styles).toContain('.korean-fieldwork-record-context-tablet-bundle-source-copy');
+        expect(styles).toContain('.korean-fieldwork-record-context-tablet-bundle-source-review');
+        expect(styles).toContain('.korean-fieldwork-record-context-tablet-bundle-source-review-detail');
         expect(styles).toContain('.korean-fieldwork-record-context-tablet-bundle-source-open');
     });
 

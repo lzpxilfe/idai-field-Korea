@@ -69,6 +69,7 @@ import {
 } from '../../../util/korean-fieldwork-record-actions';
 import {
     createKoreanFieldworkTabletHandoffReviewUpdate,
+    createKoreanFieldworkTabletHandoffSourceReviewUpdate,
     KoreanFieldworkTabletRecordBundle,
     KoreanFieldworkTabletRecordBundleGroup,
     KoreanFieldworkTabletRecordBundleSource,
@@ -961,6 +962,11 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
     ) => this.isTabletRecordBundleSourceCopied(group, source) ? '\ubcf5\uc0ac\ub428' : '\ubcf5\uc0ac';
 
 
+    public getTabletRecordBundleSourceReviewActionLabel = (
+            source: KoreanFieldworkTabletRecordBundleSource
+    ) => source.reviewState.isReviewed ? '\ucc98\ub9ac \ud574\uc81c' : '\ucc98\ub9ac \uc644\ub8cc';
+
+
     public isTabletRecordBundleGroupExpanded = (group: KoreanFieldworkTabletRecordBundleGroup) =>
         this.expandedTabletRecordBundleGroupIds.includes(group.id);
 
@@ -1582,26 +1588,123 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
     }
 
 
-    public toggleTabletRecordBundleReviewed() {
+    public async toggleTabletRecordBundleSourceReviewed(source: KoreanFieldworkTabletRecordBundleSource) {
+
+        if (!source.documentId) return;
+
+        const updatedDocumentsById = new Map<string, Document>();
+        this.collectTabletRecordBundleSourceReviewUpdate(
+            source,
+            !source.reviewState.isReviewed,
+            new Date().toISOString(),
+            updatedDocumentsById
+        );
+
+        if (updatedDocumentsById.size === 0) return;
+
+        await this.datastore.bulkUpdate([...updatedDocumentsById.values()]);
+        this.applyTabletRecordBundleDocumentUpdates(updatedDocumentsById);
+        this.refreshTabletRecordBundle();
+        this.onChanged.emit();
+    }
+
+
+    public async toggleTabletRecordBundleReviewed() {
 
         const bundle = this.tabletRecordBundle;
         if (!bundle || !this.document?.resource) return;
 
-        const updatedDocument = createKoreanFieldworkTabletHandoffReviewUpdate(
-            this.document,
-            bundle,
-            !bundle.reviewState.isReviewed
+        const reviewed = !bundle.reviewState.isReviewed;
+        const reviewedAt = new Date().toISOString();
+        const updatedDocumentsById = new Map<string, Document>();
+
+        this.stageTabletRecordBundleDocumentUpdate(
+            createKoreanFieldworkTabletHandoffReviewUpdate(
+                this.document,
+                bundle,
+                reviewed,
+                reviewedAt
+            ),
+            updatedDocumentsById
         );
-        this.document.resource = updatedDocument.resource;
+        bundle.groups
+            .flatMap(group => group.sources)
+            .forEach(source => this.collectTabletRecordBundleSourceReviewUpdate(
+                source,
+                reviewed,
+                reviewedAt,
+                updatedDocumentsById
+            ));
+
+        if (updatedDocumentsById.size === 0) return;
+
+        await this.datastore.bulkUpdate([...updatedDocumentsById.values()]);
+        this.applyTabletRecordBundleDocumentUpdates(updatedDocumentsById);
+        this.refreshTabletRecordBundle();
+        this.onChanged.emit();
+    }
+
+
+    private collectTabletRecordBundleSourceReviewUpdate(
+            source: KoreanFieldworkTabletRecordBundleSource,
+            reviewed: boolean,
+            reviewedAt: string,
+            updatedDocumentsById: Map<string, Document>
+    ) {
+
+        if (!source.documentId) return;
+
+        const document = this.getTabletRecordBundleDocumentForUpdate(source.documentId, updatedDocumentsById);
+        if (!document) return;
+
+        this.stageTabletRecordBundleDocumentUpdate(
+            createKoreanFieldworkTabletHandoffSourceReviewUpdate(document, source, reviewed, reviewedAt),
+            updatedDocumentsById
+        );
+    }
+
+
+    private getTabletRecordBundleDocumentForUpdate(
+            documentId: string,
+            updatedDocumentsById: Map<string, Document>
+    ): Document|undefined {
+
+        return updatedDocumentsById.get(documentId)
+            ?? this.projectDocuments.find(document => document.resource.id === documentId);
+    }
+
+
+    private stageTabletRecordBundleDocumentUpdate(
+            document: Document,
+            updatedDocumentsById: Map<string, Document>
+    ) {
+
+        updatedDocumentsById.set(document.resource.id, document);
+    }
+
+
+    private applyTabletRecordBundleDocumentUpdates(updatedDocumentsById: Map<string, Document>) {
+
+        if (this.document?.resource?.id) {
+            const updatedCurrentDocument = updatedDocumentsById.get(this.document.resource.id);
+            if (updatedCurrentDocument) this.document.resource = updatedCurrentDocument.resource;
+        }
+
         this.projectDocuments = this.projectDocuments.map(document =>
-            document.resource.id === this.document.resource.id ? this.document : document
+            updatedDocumentsById.get(document.resource.id) ?? document
         );
+    }
+
+
+    private refreshTabletRecordBundle() {
+
+        if (!this.document?.resource) return;
+
         this.tabletRecordBundle = makeKoreanFieldworkRecordTabletBundle(
             this.document,
             this.projectDocuments,
             this.reportHandoffItem
         );
-        this.onChanged.emit();
     }
 
 

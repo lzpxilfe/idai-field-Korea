@@ -153,7 +153,8 @@
                      class="korean-fieldwork-record-context-tablet-bundle-sources">
                     <div *ngFor="let source of group.sources"
                          class="korean-fieldwork-record-context-tablet-bundle-source"
-                         [class.warning]="source.tone === 'warning'">
+                         [class.warning]="source.issueCount > 0 || source.reviewState.tone === 'warning'"
+                         [class.reviewed]="source.reviewState.isReviewed">
                         <span class="korean-fieldwork-record-context-tablet-bundle-source-main">
                             <span class="korean-fieldwork-record-context-tablet-bundle-source-label">
                                 {{source.label}}
@@ -161,6 +162,17 @@
                                       class="korean-fieldwork-record-context-tablet-bundle-issue-badge">
                                     &#54869;&#51064; {{source.issueCount}}
                                 </span>
+                                <span class="review"
+                                      [class.success]="source.reviewState.tone === 'success'"
+                                      [class.warning]="source.reviewState.tone === 'warning'">
+                                    {{source.reviewState.label}}
+                                </span>
+                            </span>
+                            <span *ngIf="source.reviewState.isReviewed || source.reviewState.isStale"
+                                  class="korean-fieldwork-record-context-tablet-bundle-source-review-detail"
+                                  [class.success]="source.reviewState.tone === 'success'"
+                                  [class.warning]="source.reviewState.tone === 'warning'">
+                                {{source.reviewState.detail}}
                             </span>
                             <span *ngIf="source.detail"
                                   class="korean-fieldwork-record-context-tablet-bundle-source-detail">
@@ -180,6 +192,16 @@
                                       [class.mdi-check]="isTabletRecordBundleSourceCopied(group, source)"
                                       [class.mdi-content-copy]="!isTabletRecordBundleSourceCopied(group, source)"></span>
                                 <span>{{getTabletRecordBundleSourceCopyActionLabel(group, source)}}</span>
+                            </button>
+                            <button *ngIf="canOpenTabletRecordBundleSource(source)"
+                                    type="button"
+                                    class="korean-fieldwork-record-context-tablet-bundle-source-review"
+                                    [class.reviewed]="source.reviewState.isReviewed"
+                                    (click)="toggleTabletRecordBundleSourceReviewed(source)">
+                                <span class="mdi"
+                                      [class.mdi-backup-restore]="source.reviewState.isReviewed"
+                                      [class.mdi-check-circle-outline]="!source.reviewState.isReviewed"></span>
+                                <span>{{getTabletRecordBundleSourceReviewActionLabel(source)}}</span>
                             </button>
                             <button *ngIf="canOpenTabletRecordBundleSource(source)"
                                     type="button"
