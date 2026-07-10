@@ -587,9 +587,9 @@ describe('korean-fieldwork-record-tablet-bundle', () => {
             tone: 'success'
         });
         expect(reviewedBundle.groups.find(group => group.id === 'photos')!.copyText)
-            .toContain('\ucc98\ub9ac: \ucc98\ub9ac\ub428 2026-07-11 - \ud655\uc778 \uc5c6\uc74c');
+            .toContain('\ucc98\ub9ac: \ucc98\ub9ac\ub428 2026-07-11 - \ud655\uc778 1\uac74');
         expect(reviewedBundle.copyText)
-            .toContain('\ucc98\ub9ac: \ucc98\ub9ac\ub428 2026-07-11 - \ud655\uc778 \uc5c6\uc74c');
+            .toContain('\ucc98\ub9ac: \ucc98\ub9ac\ub428 2026-07-11 - \ud655\uc778 1\uac74');
 
         const changedPhoto = createDoc('photo-1', 'Photo', 'P1', {
             depicts: ['feature-1']
