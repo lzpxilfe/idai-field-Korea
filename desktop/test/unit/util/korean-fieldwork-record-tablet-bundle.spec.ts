@@ -53,7 +53,11 @@ describe('korean-fieldwork-record-tablet-bundle', () => {
             ['notebookEntries', 1]
         ]);
         expect(bundle.groups.find(group => group.id === 'photos')?.detail)
-            .toBe('P1, P2, P3 \uc678 1\uac74');
+            .toBe('P1, P2, P3 \uc678 1\uac74 \u00b7 \ud655\uc778 4\uac74');
+        expect(bundle.groups.find(group => group.id === 'photos')?.issueCount)
+            .toBe(4);
+        expect(bundle.groups.find(group => group.id === 'photos')?.tone)
+            .toBe('warning');
         expect(bundle.groups.find(group => group.id === 'photos')?.copyText)
             .toContain('- P4');
         expect(bundle.copyText).toContain('[\ud0dc\ube14\ub9bf \uc790\ub8cc \ubb36\uc74c]');

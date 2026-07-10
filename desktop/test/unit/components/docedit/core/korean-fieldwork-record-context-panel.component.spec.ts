@@ -294,7 +294,11 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
                 ['notebookEntries', 1]
             ]);
             expect(bundle.groups.find(group => group.id === 'photos')?.detail)
-                .toBe('P1, P2, P3 \uc678 1\uac74');
+                .toBe('P1, P2, P3 \uc678 1\uac74 \u00b7 \ud655\uc778 4\uac74');
+            expect(bundle.groups.find(group => group.id === 'photos')?.issueCount)
+                .toBe(4);
+            expect(bundle.groups.find(group => group.id === 'photos')?.tone)
+                .toBe('warning');
             expect(component.getTabletRecordBundleCopyActionLabel()).toBe('\ubb36\uc74c \ubcf5\uc0ac');
 
             await component.copyTabletRecordBundle();
