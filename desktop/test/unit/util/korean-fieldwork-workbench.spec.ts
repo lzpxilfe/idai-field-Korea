@@ -224,7 +224,7 @@ describe('korean-fieldwork-workbench', () => {
 
     it('surfaces tablet photos and drawings as desktop processing records', () => {
 
-        const feature = createDocument('feature-1', 'Feature', '\uc720\uad6c 1', {}, {
+        const feature = createDocument('feature-1', 'Feature', '유구 1', {}, {
             fieldRecordQuality: ['immediateRecording'],
             recordCreationTiming: 'duringFieldwork',
             verificationState: 'observedInField',
@@ -284,6 +284,55 @@ describe('korean-fieldwork-workbench', () => {
                 actionLabel: '\ub3c4\uba74 \uac80\ud1a0'
             })
         ]));
+    });
+
+
+    it('surfaces tablet feature sketches and pit lines as desktop processing records', () => {
+
+        const feature = createDocument('feature-1', 'Feature', '\uc720\uad6c 1', {}, {
+            fieldRecordQuality: ['immediateRecording'],
+            recordCreationTiming: 'duringFieldwork',
+            verificationState: 'observedInField',
+            featureRecordingStatus: 'confirmed',
+            featureLocationSketch: JSON.stringify({
+                shape: 'oval',
+                center: { x: 50, y: 50 },
+                scale: 80
+            }),
+            featureFreeDrawingStrokes: JSON.stringify({
+                version: 1,
+                strokes: [
+                    { points: [{ x: 10, y: 20 }, { x: 40, y: 50 }] }
+                ]
+            }),
+            featureSoilPitLines: JSON.stringify([
+                {
+                    label: '1',
+                    start: { x: 10, y: 20 },
+                    end: { x: 80, y: 25 },
+                    points: [{ x: 10, y: 20 }, { x: 80, y: 25 }]
+                },
+                {
+                    label: '2',
+                    start: { x: 30, y: 40 },
+                    end: { x: 30, y: 70 },
+                    points: [{ x: 30, y: 40 }, { x: 30, y: 70 }]
+                }
+            ])
+        });
+
+        const items = makeKoreanFieldworkWorkbenchItems([feature] as any);
+
+        expect(items).toEqual([
+            expect.objectContaining({
+                id: 'feature-1',
+                reasons: expect.arrayContaining([
+                    '위치 약도',
+                    '자유 스케치',
+                    '피트선 2'
+                ])
+            })
+        ]);
     });
 
 

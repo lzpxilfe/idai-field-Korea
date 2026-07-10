@@ -1,4 +1,5 @@
 import {
+    getKoreanFieldworkFeaturePitLineSummaryLabel,
     getKoreanFieldworkFindSpotCountLabel,
     Document,
     getKoreanFieldworkRecordFieldValueSummary,
@@ -62,6 +63,7 @@ const QUALITY_TRACKED_CATEGORIES = new Set<string>([
 ]);
 
 const FEATURE_WORKFLOW_CATEGORIES = new Set<string>(['Feature', 'FeatureSegment']);
+const FEATURE_SKETCH_CATEGORIES = new Set<string>(['Feature', 'FeatureSegment']);
 const PHOTO_CATEGORY = 'Photo';
 const DRAWING_CATEGORY = 'Drawing';
 const FIND_SPOT_CATEGORIES = new Set<string>(['Find', 'FindCollection', 'Sample']);
@@ -179,6 +181,10 @@ function getWorkbenchReasons(document: Document,
 
     if (issues.length > 0) reasons.push(`확인 ${issues.length}`);
 
+    if (FEATURE_SKETCH_CATEGORIES.has(document.resource.category)) {
+        reasons.push(...getFeatureSketchReasons(document));
+    }
+
     if (FEATURE_WORKFLOW_CATEGORIES.has(document.resource.category)) {
         const featureRecordingStatus = document.resource.featureRecordingStatus;
         if (featureRecordingStatus === 'candidate') reasons.push('조사 전');
@@ -272,6 +278,20 @@ function getFieldRecordQualityReviewReasons(document: Document): string[] {
             return summary ? `${prefix} ${summary}` : undefined;
         })
         .filter((reason): reason is string => !!reason);
+}
+
+
+function getFeatureSketchReasons(document: Document): string[] {
+
+    return [
+        hasSketchEvidence(document.resource.featureLocationSketch)
+            ? '위치 약도'
+            : undefined,
+        hasSketchEvidence(document.resource.featureFreeDrawingStrokes)
+            ? '자유 스케치'
+            : undefined,
+        getKoreanFieldworkFeaturePitLineSummaryLabel(document.resource)
+    ].filter((reason): reason is string => !!reason);
 }
 
 
