@@ -704,7 +704,7 @@ function makeGroupCopyText(
 
             return [
                 firstLine,
-                ...(source.detail ? [`  ${source.detail}`] : []),
+                ...makeDetailCopyLines(source.detail, '  '),
                 ...issueLines
             ];
         })
@@ -722,7 +722,7 @@ function makeSourceCopyText(
 
     const lines = [
         `[\ud0dc\ube14\ub9bf \uc6d0\ubcf8] ${label}`,
-        detail ?? '',
+        ...(detail ? ['\uc0c1\uc138:', ...makeDetailCopyLines(detail)] : []),
         ...(
             issueDetails.length > 0
                 ? [
@@ -734,6 +734,18 @@ function makeSourceCopyText(
     ];
 
     return normalizeKoreanFieldworkHwpPlainText(lines.filter(line => line.length > 0).join('\n'));
+}
+
+
+function makeDetailCopyLines(detail: string|undefined, indent: string = ''): string[] {
+
+    if (!detail) return [];
+
+    return detail
+        .split(' \u00b7 ')
+        .map(part => part.trim())
+        .filter(part => part.length > 0)
+        .map(part => `${indent}- ${part}`);
 }
 
 

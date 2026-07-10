@@ -140,6 +140,47 @@ describe('korean-fieldwork-record-tablet-bundle', () => {
     });
 
 
+    it('formats tablet source copies as HWP-safe detail lines', () => {
+
+        const feature = createDoc('feature-1', 'Feature', 'F1', {}, {
+            featureRecordingStatus: 'confirmed',
+            featureInvestigationChecklist: []
+        });
+        const photo = createDoc('photo-1', 'Photo', 'P1', {
+            depicts: ['feature-1']
+        }, {
+            fieldworkPhotoCaption: '\ubd81\ubcbd \uc720\uad6c \ubc14\ub2e5\uba74',
+            originalFilename: 'IMG_0001.JPG',
+            fieldworkPhotoUri: 'file:///tablet/photos/IMG_0001.JPG'
+        });
+
+        const bundle = makeKoreanFieldworkRecordTabletBundle(
+            feature,
+            [feature, photo] as any
+        )!;
+        const photoGroup = bundle.groups.find(group => group.id === 'photos')!;
+        const [photoSource] = photoGroup.sources;
+
+        expect(photoSource.detail)
+            .toContain('\uc0ac\uc9c4 \uc124\uba85: \ubd81\ubcbd \uc720\uad6c \ubc14\ub2e5\uba74 \u00b7 '
+                + '\uc6d0\ubcf8 \ud30c\uc77c: IMG_0001.JPG');
+        expect(photoSource.copyText).toContain([
+            '[\ud0dc\ube14\ub9bf \uc6d0\ubcf8] P1',
+            '\uc0c1\uc138:',
+            '- \uc0ac\uc9c4 \uc124\uba85: \ubd81\ubcbd \uc720\uad6c \ubc14\ub2e5\uba74',
+            '- \uc6d0\ubcf8 \ud30c\uc77c: IMG_0001.JPG',
+            '- \uc6d0\ubcf8: file:///tablet/photos/IMG_0001.JPG'
+        ].join('\r\n'));
+        expect(photoGroup.copyText).toContain([
+            '- P1',
+            '  - \uc0ac\uc9c4 \uc124\uba85: \ubd81\ubcbd \uc720\uad6c \ubc14\ub2e5\uba74',
+            '  - \uc6d0\ubcf8 \ud30c\uc77c: IMG_0001.JPG',
+            '  - \uc6d0\ubcf8: file:///tablet/photos/IMG_0001.JPG'
+        ].join('\r\n'));
+        expect(photoSource.copyText).not.toContain('\t');
+    });
+
+
     it('opens directly attached tablet record photos as desktop handoff sources', () => {
 
         const feature = createDoc('feature-1', 'Feature', 'F1', {}, {
