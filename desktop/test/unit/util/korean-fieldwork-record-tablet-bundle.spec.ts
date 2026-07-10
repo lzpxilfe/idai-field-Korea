@@ -15,6 +15,10 @@ import {
     makeKoreanFieldworkRecordTabletBundle,
     wouldKoreanFieldworkTabletRecordBundleBeReviewedAfterSourceReview
 } from '../../../src/app/util/korean-fieldwork-record-tablet-bundle';
+import {
+    getPenMemoSketchSummaryLabel,
+    getPhotoAnnotationSummaryLabel
+} from '../../../src/app/util/korean-fieldwork-evidence-review';
 
 
 describe('korean-fieldwork-record-tablet-bundle', () => {
@@ -133,6 +137,81 @@ describe('korean-fieldwork-record-tablet-bundle', () => {
         expect(penMemoGroup.copyText).toContain('\ud655\uc778: M1');
         expect(penMemoSource.copyText).toContain('[\ud0dc\ube14\ub9bf \uc6d0\ubcf8] M1');
         expect(penMemoSource.copyText).toContain('\ud655\uc778 \ud544\uc694:');
+    });
+
+
+    it('carries tablet photo markings and sketch memos into desktop handoff source rows', () => {
+
+        const photoStrokes = '{"version":1,"strokes":[{"points":[{"x":1000,"y":1000},{"x":5000,"y":5000}]}]}';
+        const soilPhotoStrokes = '{"version":1,"strokes":[{"points":[{"x":2000,"y":3000}]}]}';
+        const soilLineStrokes = '[[{"x":1,"y":2},{"x":3,"y":4}]]';
+        const drawingStrokes = '{"version":1,"strokes":[{"points":[{"x":10,"y":20},{"x":30,"y":40}]}]}';
+        const penMemoStrokes = '{"version":1,"strokes":[{"points":[{"x":10,"y":20},{"x":11,"y":21}]}]}';
+        const feature = createDoc('feature-1', 'Feature', 'F1', {}, {
+            featureRecordingStatus: 'confirmed',
+            featureInvestigationChecklist: []
+        });
+        const photo = createDoc('photo-1', 'Photo', 'P1', {
+            depicts: ['feature-1']
+        }, {
+            fieldworkPhotoUri: 'file:///tablet/photos/photo-1.jpg',
+            fieldworkPhotoAnnotationStrokes: photoStrokes
+        });
+        const soilProfilePhoto = createDoc('soil-photo-1', 'SoilProfilePhoto', 'SP1', {
+            depicts: ['feature-1']
+        }, {
+            soilProfilePhotoUri: 'file:///tablet/photos/profile-1.jpg',
+            soilProfilePhotoAnnotationStrokes: soilPhotoStrokes,
+            soilProfileAnnotationStrokes: soilLineStrokes,
+            soilProfileLayerMarkers: JSON.stringify([
+                { x: 20, y: 50, label: '1' },
+                { x: 80, y: 45, label: '2' }
+            ])
+        });
+        const drawing = createDoc('drawing-1', 'Drawing', 'D1', {
+            depicts: ['feature-1']
+        }, {
+            drawingSketchStrokes: drawingStrokes
+        });
+        const memo = createDoc('memo-1', 'PenMemo', 'M1', {
+            depicts: ['feature-1']
+        }, {
+            penMemoStrokes,
+            penMemoAutoTranscript: '\ubc14\ub2e5\uba74 \ud53c\ud2b8\uc120 \ud655\uc778',
+            penMemoTranscriptionStatus: 'pending'
+        });
+
+        const bundle = makeKoreanFieldworkRecordTabletBundle(
+            feature,
+            [feature, photo, soilProfilePhoto, drawing, memo] as any
+        )!;
+        const photoSource = bundle.groups.find(group => group.id === 'photos')!.sources[0];
+        const soilProfilePhotoSource = bundle.groups.find(group => group.id === 'soilProfilePhotos')!.sources[0];
+        const drawingSource = bundle.groups.find(group => group.id === 'drawings')!.sources[0];
+        const memoSource = bundle.groups.find(group => group.id === 'penMemos')!.sources[0];
+
+        expect(photoSource.detail)
+            .toContain(`\uc0ac\uc9c4 \ud45c\uc2dc: ${getPhotoAnnotationSummaryLabel(photoStrokes)}`);
+        expect(photoSource.copyText)
+            .toContain(`\uc0ac\uc9c4 \ud45c\uc2dc: ${getPhotoAnnotationSummaryLabel(photoStrokes)}`);
+
+        expect(soilProfilePhotoSource.detail)
+            .toContain(`\uc0ac\uc9c4 \ud45c\uc2dc: ${getPhotoAnnotationSummaryLabel(soilPhotoStrokes)}`);
+        expect(soilProfilePhotoSource.detail)
+            .toContain(`\ud1a0\uce35\uc120 \ud45c\uc2dc: ${getPhotoAnnotationSummaryLabel(soilLineStrokes)}`);
+        expect(soilProfilePhotoSource.detail)
+            .toContain('\uce35 \ubc88\ud638 \ud45c\uc2dc: 1\uce35 20%/50%, 2\uce35 80%/45%');
+        expect(bundle.groups.find(group => group.id === 'soilProfilePhotos')?.copyText)
+            .toContain('\uce35 \ubc88\ud638 \ud45c\uc2dc: 1\uce35 20%/50%, 2\uce35 80%/45%');
+
+        expect(drawingSource.detail)
+            .toContain(`\ud0dc\ube14\ub9bf \uc2a4\ucf00\uce58: ${getPenMemoSketchSummaryLabel(drawingStrokes)}`);
+        expect(memoSource.detail)
+            .toContain(getPenMemoSketchSummaryLabel(penMemoStrokes));
+        expect(memoSource.detail)
+            .toContain('\uc790\ub3d9 \ud544\uc0ac: \ubc14\ub2e5\uba74 \ud53c\ud2b8\uc120 \ud655\uc778');
+        expect(memoSource.copyText)
+            .toContain('\uc790\ub3d9 \ud544\uc0ac: \ubc14\ub2e5\uba74 \ud53c\ud2b8\uc120 \ud655\uc778');
     });
 
 

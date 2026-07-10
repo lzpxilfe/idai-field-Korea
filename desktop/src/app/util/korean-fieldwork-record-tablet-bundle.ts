@@ -9,6 +9,9 @@ import {
 } from 'idai-field-core';
 import {
     KoreanFieldworkEvidenceReview,
+    getPenMemoSketchSummaryLabel,
+    getPenMemoTranscriptionSummaryLabel,
+    getPhotoAnnotationSummaryLabel,
     makeKoreanFieldworkEvidenceReview
 } from './korean-fieldwork-evidence-review';
 import {
@@ -92,6 +95,12 @@ interface KoreanFieldworkTabletRecordBundleGroupDefinition {
 }
 
 type SoilProfileColorSwatchRow = ReturnType<typeof parseSoilProfileColorSwatchRows>[number];
+
+interface SoilProfileLayerMarker {
+    label: string;
+    xPercent: number;
+    yPercent: number;
+}
 
 const PREVIEW_LIMIT = 3;
 
@@ -851,7 +860,10 @@ function getDocumentDetail(document: Document): string|undefined {
 
     return [
         getFindSpotDetail(document),
+        getPhotoDetail(document),
         getSoilProfilePhotoDetail(document),
+        getDrawingDetail(document),
+        getPenMemoDetail(document),
         fieldDetails
     ].filter((value): value is string => !!value).join(' \u00b7 ') || undefined;
 }
@@ -870,6 +882,17 @@ function getFindSpotDetail(document: Document): string|undefined {
 }
 
 
+function getPhotoDetail(document: Document): string|undefined {
+
+    if (document.resource.category !== 'Photo') return undefined;
+
+    return getPhotoAnnotationDetail(
+        '\uc0ac\uc9c4 \ud45c\uc2dc',
+        document.resource.fieldworkPhotoAnnotationStrokes
+    );
+}
+
+
 function getSoilProfilePhotoDetail(document: Document): string|undefined {
 
     if (document.resource.category !== 'SoilProfilePhoto') return undefined;
@@ -884,12 +907,57 @@ function getSoilProfilePhotoDetail(document: Document): string|undefined {
     const captureNote = getTextValue(document.resource.soilProfileCaptureNote);
 
     return [
+        getPhotoAnnotationDetail('\uc0ac\uc9c4 \ud45c\uc2dc', document.resource.soilProfilePhotoAnnotationStrokes),
+        getPhotoAnnotationDetail('\ud1a0\uce35\uc120 \ud45c\uc2dc', document.resource.soilProfileAnnotationStrokes),
+        getSoilProfileLayerMarkerDetail(document.resource.soilProfileLayerMarkers),
         candidateLabel,
         sampleSourceLabel ? `\uc2a4\ud3ec\uc774\ub4dc \uc704\uce58: ${sampleSourceLabel}` : undefined,
         swatchLabel ? `\uce35\ubcc4 \ud1a0\uc0c9: ${swatchLabel}` : undefined,
         colorNote ? `\ud1a0\uc0c9 \uba54\ubaa8: ${colorNote}` : undefined,
         captureNote ? `\ucd2c\uc601 \uba54\ubaa8: ${captureNote}` : undefined
     ].filter((value): value is string => !!value).join(' \u00b7 ') || undefined;
+}
+
+
+function getDrawingDetail(document: Document): string|undefined {
+
+    if (document.resource.category !== 'Drawing') return undefined;
+
+    return getSketchDetail('\ud0dc\ube14\ub9bf \uc2a4\ucf00\uce58', document.resource.drawingSketchStrokes);
+}
+
+
+function getPenMemoDetail(document: Document): string|undefined {
+
+    if (document.resource.category !== 'PenMemo') return undefined;
+
+    const reviewedTranscript = getTextValue(document.resource.penMemoReviewedTranscript);
+    const autoTranscript = getTextValue(document.resource.penMemoAutoTranscript);
+    const sketchLabel = getPenMemoSketchSummaryLabel(document.resource.penMemoStrokes);
+
+    return [
+        sketchLabel || reviewedTranscript || autoTranscript
+            ? `\ud544\uae30 \uc0c1\ud0dc: ${getPenMemoTranscriptionSummaryLabel(document)}`
+            : undefined,
+        reviewedTranscript ? `\uac80\ud1a0 \ud544\uc0ac: ${reviewedTranscript}` : undefined,
+        !reviewedTranscript && autoTranscript ? `\uc790\ub3d9 \ud544\uc0ac: ${autoTranscript}` : undefined
+    ].filter((value): value is string => !!value).join(' \u00b7 ') || undefined;
+}
+
+
+function getPhotoAnnotationDetail(label: string, value: unknown): string|undefined {
+
+    const summary = getPhotoAnnotationSummaryLabel(value);
+
+    return summary ? `${label}: ${summary}` : undefined;
+}
+
+
+function getSketchDetail(label: string, value: unknown): string|undefined {
+
+    const summary = getPenMemoSketchSummaryLabel(value);
+
+    return summary ? `${label}: ${summary}` : undefined;
 }
 
 
@@ -918,6 +986,88 @@ function getSoilProfileColorSwatchRowLabel(row: SoilProfileColorSwatchRow): stri
     return parts.length > 0
         ? `${row.number}\uce35 ${parts.join(' ')}`
         : undefined;
+}
+
+
+function getSoilProfileLayerMarkerDetail(value: unknown): string|undefined {
+
+    const markers = getSoilProfileLayerMarkers(value);
+    if (markers.length === 0) return undefined;
+
+    const markerLabels = markers.map(marker => `${marker.label}\uce35 ${marker.xPercent}%/${marker.yPercent}%`);
+    const detail = markerLabels.length > PREVIEW_LIMIT
+        ? `${markerLabels.slice(0, PREVIEW_LIMIT).join(', ')} \uc678 ${markerLabels.length - PREVIEW_LIMIT}\uac74`
+        : markerLabels.join(', ');
+
+    return `\uce35 \ubc88\ud638 \ud45c\uc2dc: ${detail}`;
+}
+
+
+function getSoilProfileLayerMarkers(value: unknown): SoilProfileLayerMarker[] {
+
+    const markers = parseSoilProfileLayerMarkers(value);
+
+    return markers
+        .map((marker, index) => getSoilProfileLayerMarker(marker, index))
+        .filter((marker): marker is SoilProfileLayerMarker => !!marker);
+}
+
+
+function parseSoilProfileLayerMarkers(value: unknown): unknown[] {
+
+    if (Array.isArray(value)) return value;
+    if (typeof value !== 'string') return [];
+
+    const trimmedValue = value.trim();
+    if (!trimmedValue || trimmedValue === '[]') return [];
+
+    try {
+        const parsedValue = JSON.parse(trimmedValue);
+
+        return Array.isArray(parsedValue) ? parsedValue : [];
+    } catch (_err) {
+        return [];
+    }
+}
+
+
+function getSoilProfileLayerMarker(value: unknown, index: number): SoilProfileLayerMarker|undefined {
+
+    if (!isRecord(value)) return undefined;
+
+    const xPercent = getPercentValue(value.x);
+    const yPercent = getPercentValue(value.y);
+    if (xPercent === undefined || yPercent === undefined) return undefined;
+
+    return {
+        label: getLayerMarkerLabel(value, index),
+        xPercent,
+        yPercent
+    };
+}
+
+
+function getLayerMarkerLabel(value: Record<string, unknown>, index: number): string {
+
+    const rawLabel = value.label ?? value.number ?? value.layer ?? value.layerNumber;
+    const label = rawLabel === undefined || rawLabel === null ? '' : String(rawLabel).trim();
+
+    return label || String(index + 1);
+}
+
+
+function getPercentValue(value: unknown): number|undefined {
+
+    const numberValue = typeof value === 'number' ? value : Number(value);
+    if (!Number.isFinite(numberValue)) return undefined;
+
+    return Math.max(0, Math.min(100, numberValue));
+}
+
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 
