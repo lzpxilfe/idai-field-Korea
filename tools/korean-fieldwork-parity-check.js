@@ -3233,6 +3233,7 @@ function validateRecordPanelOrder() {
       || !desktopRecordTabletBundleText.includes('reviewState')
       || !desktopRecordTabletBundleText.includes('KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_FINGERPRINT_FIELD')
       || !desktopRecordTabletBundleText.includes('makeBundleFingerprint')
+      || !desktopRecordTabletBundleText.includes('hashFingerprintPayload')
       || !desktopRecordTabletBundleSpecText.includes('groups many tablet evidence records by kind for desktop handoff')
       || !desktopRecordTabletBundleSpecText.includes('marks tablet bundle sources that still need desktop review')
       || !desktopRecordTabletBundleSpecText.includes('tracks desktop review state for tablet bundle handoff processing')

@@ -51,7 +51,8 @@ describe('korean-fieldwork-record-tablet-bundle', () => {
         expect(bundle.title).toContain('F1');
         expect(bundle.sourceCount).toBe(8);
         expect(bundle.summary).toContain('\uc790\ub8cc 8\uac74');
-        expect(bundle.fingerprint).toContain('"photos"');
+        expect(bundle.fingerprint).toMatch(/^v1:[0-9a-f]{8}:\d+$/);
+        expect(bundle.fingerprint.length).toBeLessThan(24);
         expect(bundle.reviewState).toMatchObject({
             isReviewed: false,
             isStale: false,

@@ -294,7 +294,7 @@ function makeBundleFingerprint(
         bodyPreview: string|undefined
 ): string {
 
-    return JSON.stringify({
+    const payload = JSON.stringify({
         version: 1,
         title,
         hwpSectionCount,
@@ -317,6 +317,21 @@ function makeBundleFingerprint(
         })),
         issueDetails
     });
+
+    return `v1:${hashFingerprintPayload(payload)}:${payload.length}`;
+}
+
+
+function hashFingerprintPayload(payload: string): string {
+
+    let hash = 0x811c9dc5;
+
+    for (let i = 0; i < payload.length; i++) {
+        hash ^= payload.charCodeAt(i);
+        hash = Math.imul(hash, 0x01000193);
+    }
+
+    return (hash >>> 0).toString(16).padStart(8, '0');
 }
 
 
