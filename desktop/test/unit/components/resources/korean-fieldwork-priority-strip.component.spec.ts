@@ -875,6 +875,62 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
     });
 
 
+    it('orders tablet source rows needing review before clean rows in the report handoff preview', () => {
+
+        const component = createComponent({ find: jest.fn(), get: jest.fn() });
+        const orderedSources = component.getReportHandoffTabletBundleGroupSources({
+            id: 'photos',
+            label: '\uc0ac\uc9c4',
+            count: 4,
+            detail: '',
+            issueCount: 2,
+            copyText: '',
+            tone: 'warning',
+            sources: [
+                {
+                    id: 'photo-clean-1',
+                    label: 'photo-clean-1',
+                    issueCount: 0,
+                    issueDetails: [],
+                    copyText: '',
+                    tone: 'info'
+                },
+                {
+                    id: 'photo-review-1',
+                    label: 'photo-review-1',
+                    issueCount: 1,
+                    issueDetails: ['backup missing'],
+                    copyText: '',
+                    tone: 'warning'
+                },
+                {
+                    id: 'photo-clean-2',
+                    label: 'photo-clean-2',
+                    issueCount: 0,
+                    issueDetails: [],
+                    copyText: '',
+                    tone: 'info'
+                },
+                {
+                    id: 'photo-review-2',
+                    label: 'photo-review-2',
+                    issueCount: 1,
+                    issueDetails: ['caption missing'],
+                    copyText: '',
+                    tone: 'warning'
+                }
+            ]
+        } as any);
+
+        expect(orderedSources.map(source => source.id)).toEqual([
+            'photo-review-1',
+            'photo-review-2',
+            'photo-clean-1',
+            'photo-clean-2'
+        ]);
+    });
+
+
     it('filters the report handoff list to tablet bundles that still need desktop processing', async () => {
 
         const component = createComponent({

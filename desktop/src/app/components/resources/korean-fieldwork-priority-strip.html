@@ -444,7 +444,7 @@
                             </button>
                         </span>
                         <span class="korean-fieldwork-report-handoff-tablet-bundle-sources">
-                            <span *ngFor="let source of group.sources"
+                            <span *ngFor="let source of getReportHandoffTabletBundleGroupSources(group)"
                                   class="korean-fieldwork-report-handoff-tablet-bundle-source"
                                   [class.warning]="source.issueCount > 0">
                                 <span class="korean-fieldwork-report-handoff-tablet-bundle-source-main">
