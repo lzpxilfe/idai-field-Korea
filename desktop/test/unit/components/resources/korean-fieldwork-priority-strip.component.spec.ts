@@ -787,6 +787,87 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
     });
 
 
+    it('copies and opens tablet source rows from the report handoff preview', async () => {
+
+        const write = jest.fn();
+        const writeText = jest.fn();
+        const clear = jest.fn();
+        const testWindow = (global as any).window ?? ((global as any).window = {});
+        const previousRequire = testWindow.require;
+        testWindow.require = jest.fn().mockReturnValue({ clipboard: { clear, write, writeText } });
+
+        try {
+            const documents = [
+                createDocument('project', 'Project'),
+                createDocument('feature-1', 'Feature', {
+                    identifier: 'pit-001',
+                    shortDescription: 'round pit',
+                    featureRecordingStatus: 'confirmed',
+                    featureInvestigationChecklist: []
+                }),
+                createDocument('photo-1', 'Photo', {
+                    identifier: 'photo-001',
+                    fieldworkPhotoUri: 'file:///tablet/photos/photo-001.jpg',
+                    relations: { depicts: ['feature-1'] }
+                }),
+                createDocument('photo-2', 'Photo', {
+                    identifier: 'photo-002',
+                    fieldworkPhotoUri: 'file:///tablet/photos/photo-002.jpg',
+                    relations: { depicts: ['feature-1'] }
+                })
+            ];
+            const datastore = {
+                find: jest.fn().mockResolvedValue({ documents }),
+                get: jest.fn().mockImplementation(async (documentId: string) =>
+                    documents.find(document => document.resource.id === documentId)
+                )
+            };
+            const routing = { jumpToResource: jest.fn() };
+            const component = createComponent(datastore, createProjectConfiguration(), routing);
+
+            await component.refresh();
+
+            const featureItem = component.getReportHandoffItems()
+                .find(item => item.documentId === 'feature-1')!;
+            const tabletBundle = component.getReportHandoffTabletBundle(featureItem)!;
+            const photoGroup = tabletBundle.groups.find(group => group.id === 'photos')!;
+            const [photoSource] = photoGroup.sources;
+
+            expect(photoGroup.sources).toHaveLength(2);
+            expect(component.getReportHandoffTabletBundleGroupCopyActionLabel(featureItem, photoGroup))
+                .toBe('\uc0ac\uc9c4 \ubcf5\uc0ac');
+            expect(component.getReportHandoffTabletBundleSourceCopyActionLabel(featureItem, photoGroup, photoSource))
+                .toBe('\ubcf5\uc0ac');
+            expect(component.canOpenReportHandoffTabletBundleSource(photoSource)).toBe(true);
+
+            await component.copyReportHandoffTabletBundleGroup(featureItem, photoGroup);
+
+            expect(clear).toHaveBeenCalledTimes(1);
+            expect(writeText).toHaveBeenLastCalledWith(photoGroup.copyText);
+            expect(write).not.toHaveBeenCalled();
+            expect(component.isReportHandoffTabletBundleGroupCopied(featureItem, photoGroup)).toBe(true);
+            expect(component.getReportHandoffTabletBundleGroupCopyActionLabel(featureItem, photoGroup))
+                .toBe('\ubcf5\uc0ac\ub428');
+
+            await component.copyReportHandoffTabletBundleSource(featureItem, photoGroup, photoSource);
+
+            expect(clear).toHaveBeenCalledTimes(2);
+            expect(writeText).toHaveBeenLastCalledWith(photoSource.copyText);
+            expect(component.isReportHandoffTabletBundleSourceCopied(featureItem, photoGroup, photoSource))
+                .toBe(true);
+            expect(component.getReportHandoffTabletBundleSourceCopyActionLabel(featureItem, photoGroup, photoSource))
+                .toBe('\ubcf5\uc0ac\ub428');
+
+            await component.openReportHandoffTabletBundleSource(photoSource);
+
+            expect(datastore.get).toHaveBeenCalledWith('photo-1');
+            expect(routing.jumpToResource).toHaveBeenCalledWith(documents[2]);
+        } finally {
+            testWindow.require = previousRequire;
+        }
+    });
+
+
     it('filters the report handoff list to tablet bundles that still need desktop processing', async () => {
 
         const component = createComponent({

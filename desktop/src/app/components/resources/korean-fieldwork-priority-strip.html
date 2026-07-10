@@ -414,6 +414,72 @@
                         <span>{{group.detail}}</span>
                     </span>
                 </span>
+                <div class="korean-fieldwork-report-handoff-tablet-bundle-source-groups">
+                    <div *ngFor="let group of tabletBundle.groups"
+                         class="korean-fieldwork-report-handoff-tablet-bundle-source-group"
+                         [class.warning]="group.issueCount > 0">
+                        <span class="korean-fieldwork-report-handoff-tablet-bundle-source-group-header">
+                            <span class="korean-fieldwork-report-handoff-tablet-bundle-source-group-main">
+                                <span class="korean-fieldwork-report-handoff-tablet-bundle-source-group-title">
+                                    {{group.label}} {{group.count}}
+                                    <span *ngIf="group.issueCount > 0">
+                                        &#54869;&#51064; {{group.issueCount}}
+                                    </span>
+                                </span>
+                                <span>{{group.detail}}</span>
+                            </span>
+                            <button type="button"
+                                    class="korean-fieldwork-report-handoff-tablet-bundle-source-group-copy"
+                                    [class.copied]="isReportHandoffTabletBundleGroupCopied(previewItem, group)"
+                                    (click)="copyReportHandoffTabletBundleGroup(previewItem, group, $event)">
+                                <span class="mdi"
+                                      [class.mdi-check]="isReportHandoffTabletBundleGroupCopied(previewItem, group)"
+                                      [class.mdi-content-copy]="!isReportHandoffTabletBundleGroupCopied(previewItem, group)"></span>
+                                <span>{{getReportHandoffTabletBundleGroupCopyActionLabel(previewItem, group)}}</span>
+                            </button>
+                        </span>
+                        <span class="korean-fieldwork-report-handoff-tablet-bundle-sources">
+                            <span *ngFor="let source of group.sources"
+                                  class="korean-fieldwork-report-handoff-tablet-bundle-source"
+                                  [class.warning]="source.issueCount > 0">
+                                <span class="korean-fieldwork-report-handoff-tablet-bundle-source-main">
+                                    <span class="korean-fieldwork-report-handoff-tablet-bundle-source-label">
+                                        {{source.label}}
+                                        <span *ngIf="source.issueCount > 0">
+                                            &#54869;&#51064; {{source.issueCount}}
+                                        </span>
+                                    </span>
+                                    <span *ngIf="source.detail"
+                                          class="korean-fieldwork-report-handoff-tablet-bundle-source-detail">
+                                        {{source.detail}}
+                                    </span>
+                                    <span *ngFor="let issueDetail of source.issueDetails"
+                                          class="korean-fieldwork-report-handoff-tablet-bundle-source-issue">
+                                        {{issueDetail}}
+                                    </span>
+                                </span>
+                                <span class="korean-fieldwork-report-handoff-tablet-bundle-source-actions">
+                                    <button type="button"
+                                            class="korean-fieldwork-report-handoff-tablet-bundle-source-copy"
+                                            [class.copied]="isReportHandoffTabletBundleSourceCopied(previewItem, group, source)"
+                                            (click)="copyReportHandoffTabletBundleSource(previewItem, group, source, $event)">
+                                        <span class="mdi"
+                                              [class.mdi-check]="isReportHandoffTabletBundleSourceCopied(previewItem, group, source)"
+                                              [class.mdi-content-copy]="!isReportHandoffTabletBundleSourceCopied(previewItem, group, source)"></span>
+                                        <span>{{getReportHandoffTabletBundleSourceCopyActionLabel(previewItem, group, source)}}</span>
+                                    </button>
+                                    <button *ngIf="canOpenReportHandoffTabletBundleSource(source)"
+                                            type="button"
+                                            class="korean-fieldwork-report-handoff-tablet-bundle-source-open"
+                                            (click)="openReportHandoffTabletBundleSource(source, $event)">
+                                        <span class="mdi mdi-open-in-new"></span>
+                                        <span>&#50676;&#44592;</span>
+                                    </button>
+                                </span>
+                            </span>
+                        </span>
+                    </div>
+                </div>
             </div>
             <div *ngIf="previewItem.bodyPreview"
                  class="korean-fieldwork-report-handoff-preview-body">

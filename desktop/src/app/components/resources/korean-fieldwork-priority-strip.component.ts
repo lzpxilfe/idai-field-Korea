@@ -126,6 +126,8 @@ import {
 import {
     createKoreanFieldworkTabletHandoffReviewUpdate,
     KoreanFieldworkTabletRecordBundle,
+    KoreanFieldworkTabletRecordBundleGroup,
+    KoreanFieldworkTabletRecordBundleSource,
     makeKoreanFieldworkRecordTabletBundle
 } from '../../util/korean-fieldwork-record-tablet-bundle';
 import { DoceditLauncher } from './service/docedit-launcher';
@@ -951,11 +953,36 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
     public isReportHandoffTabletBundleCopied = (item: KoreanFieldworkReportHandoffItem) =>
         this.reportCopiedDocumentId === this.getReportHandoffTabletBundleCopyId(item);
 
+    public isReportHandoffTabletBundleGroupCopied = (
+            item: KoreanFieldworkReportHandoffItem,
+            group: KoreanFieldworkTabletRecordBundleGroup
+    ) => this.reportCopiedDocumentId === this.getReportHandoffTabletBundleGroupCopyId(item, group);
+
+    public isReportHandoffTabletBundleSourceCopied = (
+            item: KoreanFieldworkReportHandoffItem,
+            group: KoreanFieldworkTabletRecordBundleGroup,
+            source: KoreanFieldworkTabletRecordBundleSource
+    ) => this.reportCopiedDocumentId === this.getReportHandoffTabletBundleSourceCopyId(item, group, source);
+
     public isReportHandoffTabletBundleReviewed = (item: KoreanFieldworkReportHandoffItem) =>
         this.getReportHandoffTabletBundle(item)?.reviewState.isReviewed === true;
 
     public getReportHandoffTabletBundleReviewActionLabel = (item: KoreanFieldworkReportHandoffItem) =>
         this.isReportHandoffTabletBundleReviewed(item) ? '\ucc98\ub9ac \ud574\uc81c' : '\ucc98\ub9ac \uc644\ub8cc';
+
+    public getReportHandoffTabletBundleGroupCopyActionLabel = (
+            item: KoreanFieldworkReportHandoffItem,
+            group: KoreanFieldworkTabletRecordBundleGroup
+    ) => this.isReportHandoffTabletBundleGroupCopied(item, group) ? '\ubcf5\uc0ac\ub428' : `${group.label} \ubcf5\uc0ac`;
+
+    public getReportHandoffTabletBundleSourceCopyActionLabel = (
+            item: KoreanFieldworkReportHandoffItem,
+            group: KoreanFieldworkTabletRecordBundleGroup,
+            source: KoreanFieldworkTabletRecordBundleSource
+    ) => this.isReportHandoffTabletBundleSourceCopied(item, group, source) ? '\ubcf5\uc0ac\ub428' : '\ubcf5\uc0ac';
+
+    public canOpenReportHandoffTabletBundleSource = (source: KoreanFieldworkTabletRecordBundleSource) =>
+        !!source.documentId;
 
     public getReportHandoffSectionCopyActionLabel = (
             item: KoreanFieldworkReportHandoffItem,
@@ -1031,6 +1058,58 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
             this.selectedReportHandoffDocumentId = item.documentId;
             await writeKoreanFieldworkHwpClipboardText(bundle.copyText);
             this.markReportHandoffCopied(this.getReportHandoffTabletBundleCopyId(item));
+        } catch (errWithParams) {
+            this.messages.add(errWithParams);
+        }
+    }
+
+    public async copyReportHandoffTabletBundleGroup(
+            item: KoreanFieldworkReportHandoffItem,
+            group: KoreanFieldworkTabletRecordBundleGroup,
+            event?: Event
+    ) {
+
+        if (event) event.stopPropagation();
+        if (!group.copyText) return;
+
+        try {
+            this.selectedReportHandoffDocumentId = item.documentId;
+            await writeKoreanFieldworkHwpClipboardText(group.copyText);
+            this.markReportHandoffCopied(this.getReportHandoffTabletBundleGroupCopyId(item, group));
+        } catch (errWithParams) {
+            this.messages.add(errWithParams);
+        }
+    }
+
+    public async copyReportHandoffTabletBundleSource(
+            item: KoreanFieldworkReportHandoffItem,
+            group: KoreanFieldworkTabletRecordBundleGroup,
+            source: KoreanFieldworkTabletRecordBundleSource,
+            event?: Event
+    ) {
+
+        if (event) event.stopPropagation();
+        if (!source.copyText) return;
+
+        try {
+            this.selectedReportHandoffDocumentId = item.documentId;
+            await writeKoreanFieldworkHwpClipboardText(source.copyText);
+            this.markReportHandoffCopied(this.getReportHandoffTabletBundleSourceCopyId(item, group, source));
+        } catch (errWithParams) {
+            this.messages.add(errWithParams);
+        }
+    }
+
+    public async openReportHandoffTabletBundleSource(
+            source: KoreanFieldworkTabletRecordBundleSource,
+            event?: Event
+    ) {
+
+        if (event) event.stopPropagation();
+        if (!source.documentId) return;
+
+        try {
+            await this.openDocument(source.documentId);
         } catch (errWithParams) {
             this.messages.add(errWithParams);
         }
@@ -1927,6 +2006,23 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
     private getReportHandoffTabletBundleCopyId(item: KoreanFieldworkReportHandoffItem): string {
 
         return `${item.documentId}::tabletBundle`;
+    }
+
+    private getReportHandoffTabletBundleGroupCopyId(
+            item: KoreanFieldworkReportHandoffItem,
+            group: KoreanFieldworkTabletRecordBundleGroup
+    ): string {
+
+        return `${this.getReportHandoffTabletBundleCopyId(item)}::${group.id}`;
+    }
+
+    private getReportHandoffTabletBundleSourceCopyId(
+            item: KoreanFieldworkReportHandoffItem,
+            group: KoreanFieldworkTabletRecordBundleGroup,
+            source: KoreanFieldworkTabletRecordBundleSource
+    ): string {
+
+        return `${this.getReportHandoffTabletBundleGroupCopyId(item, group)}::${source.id}`;
     }
 
     private getReportHandoffBodySection(
