@@ -136,6 +136,59 @@ describe('korean-fieldwork-record-tablet-bundle', () => {
     });
 
 
+    it('carries tablet find and sample spot points into desktop handoff source rows', () => {
+
+        const feature = createDoc('feature-1', 'Feature', 'F1', {}, {
+            featureRecordingStatus: 'confirmed',
+            featureInvestigationChecklist: []
+        });
+        const find = createDoc('find-1', 'Find', 'Find 1', {
+            isRecordedInFeature: ['feature-1']
+        }, {
+            shortDescription: '\uccad\ub3d9 \uc870\uac01',
+            findSpotItems: JSON.stringify({
+                version: 1,
+                items: [
+                    { number: 1, point: { x: 25, y: 75 }, label: 'bronze fragment' }
+                ]
+            })
+        });
+        const sample = createDoc('sample-1', 'Sample', 'Sample 1', {
+            isRecordedInFeature: ['feature-1']
+        }, {
+            samplePurpose: '\ud0c4\ud654\ubb3c \ubd84\uc11d',
+            findSpotItems: JSON.stringify({
+                version: 1,
+                items: [
+                    { number: 1, point: { x: 50, y: 40 }, label: 'charcoal bag' }
+                ]
+            })
+        });
+
+        const bundle = makeKoreanFieldworkRecordTabletBundle(
+            feature,
+            [feature, find, sample] as any
+        )!;
+        const findSource = bundle.groups.find(group => group.id === 'finds')!.sources[0];
+        const sampleSource = bundle.groups.find(group => group.id === 'samples')!.sources[0];
+
+        expect(findSource.detail)
+            .toContain('\uc720\ubb3c \ucd9c\ud1a0 \uc704\uce58: 1\ubc88 25%/75% bronze fragment');
+        expect(findSource.detail).toContain('\uccad\ub3d9 \uc870\uac01');
+        expect(findSource.copyText)
+            .toContain('\uc720\ubb3c \ucd9c\ud1a0 \uc704\uce58: 1\ubc88 25%/75% bronze fragment');
+        expect(bundle.groups.find(group => group.id === 'finds')?.copyText)
+            .toContain('\uc720\ubb3c \ucd9c\ud1a0 \uc704\uce58: 1\ubc88 25%/75% bronze fragment');
+
+        expect(sampleSource.detail)
+            .toContain('\uc2dc\ub8cc \ucc44\ucde8 \uc704\uce58: 1\ubc88 50%/40% charcoal bag');
+        expect(sampleSource.copyText)
+            .toContain('\uc2dc\ub8cc \ucc44\ucde8 \uc704\uce58: 1\ubc88 50%/40% charcoal bag');
+        expect(bundle.groups.find(group => group.id === 'samples')?.copyText)
+            .toContain('\uc2dc\ub8cc \ucc44\ucde8 \uc704\uce58: 1\ubc88 50%/40% charcoal bag');
+    });
+
+
     it('tracks desktop review state for tablet bundle handoff processing', () => {
 
         const feature = createDoc('feature-1', 'Feature', 'F1', {}, {

@@ -1,5 +1,6 @@
 import {
     Document,
+    getKoreanFieldworkFindSpotSummaryText,
     KoreanFieldworkReportHandoffItem,
     KoreanFieldworkReadinessIssue,
     makeKoreanFieldworkReportHandoff,
@@ -828,7 +829,7 @@ function getDocumentIdentifier(document: Document): string {
 
 function getDocumentDetail(document: Document): string|undefined {
 
-    return [
+    const fieldDetails = [
         'shortDescription',
         'description',
         'fieldworkPhotoCaption',
@@ -839,6 +840,24 @@ function getDocumentDetail(document: Document): string|undefined {
     ]
         .map(fieldName => getTextValue(document.resource[fieldName]))
         .find(value => !!value);
+
+    return [
+        getFindSpotDetail(document),
+        fieldDetails
+    ].filter((value): value is string => !!value).join(' \u00b7 ') || undefined;
+}
+
+
+function getFindSpotDetail(document: Document): string|undefined {
+
+    if (!['Find', 'FindCollection', 'Sample'].includes(document.resource.category)) return undefined;
+
+    const summary = getKoreanFieldworkFindSpotSummaryText(document.resource.findSpotItems);
+    if (!summary) return undefined;
+
+    return document.resource.category === 'Sample'
+        ? `\uc2dc\ub8cc \ucc44\ucde8 \uc704\uce58: ${summary}`
+        : `\uc720\ubb3c \ucd9c\ud1a0 \uc704\uce58: ${summary}`;
 }
 
 
