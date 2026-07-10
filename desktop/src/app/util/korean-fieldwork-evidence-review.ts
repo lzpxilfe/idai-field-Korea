@@ -32,7 +32,14 @@ export interface KoreanFieldworkPenMemoSketchSummary {
 export interface KoreanFieldworkPenMemoSketchPreview {
     label: string;
     path: string;
+    texts?: KoreanFieldworkSketchPreviewText[];
     viewBox: string;
+}
+
+export interface KoreanFieldworkSketchPreviewText {
+    text: string;
+    x: number;
+    y: number;
 }
 
 export interface KoreanFieldworkPhotoAnnotationSummary {

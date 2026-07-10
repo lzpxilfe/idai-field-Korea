@@ -189,6 +189,12 @@ interface FindSpotPreview {
     viewBox: string;
 }
 
+interface SoilProfileLayerMarker {
+    label: string;
+    xPercent: number;
+    yPercent: number;
+}
+
 interface DailyJournalBoundaryMemoPreview {
     importedAt?: string;
     path: string;
@@ -1634,6 +1640,19 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
                     ? { ...insight, appendText }
                     : insight;
             });
+        const soilProfileLayerMarkerInsights = reviewSoilProfilePhotos
+            .flatMap(document => {
+                const sketchPreview = this.getSoilProfileLayerMarkerSketchPreview(document);
+                if (!sketchPreview) return [];
+
+                return [{
+                    detail: `${this.getDocumentLabel(document)} · ${sketchPreview.label}`,
+                    id: `soilLayerMarkers:${document.resource.id}`,
+                    label: '층 번호 표시',
+                    sketchPreview,
+                    tone: 'info' as const
+                }];
+            });
         const penMemoSketchInsights = getPenMemoSketchSummaries(bundle.penMemos)
             .map(summary => ({
                 detail: summary.pendingTranscription
@@ -1660,7 +1679,13 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
                     : insight;
             });
 
-        return [...soilColorInsights, ...soilColorSwatchInsights, ...photoAnnotationInsights, ...penMemoSketchInsights]
+        return [
+            ...soilColorInsights,
+            ...soilColorSwatchInsights,
+            ...soilProfileLayerMarkerInsights,
+            ...photoAnnotationInsights,
+            ...penMemoSketchInsights
+        ]
             .filter(insight => insight.detail.trim().length > 0)
             .slice(0, 4);
     }
@@ -1705,12 +1730,128 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
 
         const x = this.roundSvg((point.xPercent / 100) * SOIL_COLOR_SAMPLE_WIDTH);
         const y = this.roundSvg((point.yPercent / 100) * SOIL_COLOR_SAMPLE_HEIGHT);
+
+        return this.getMarkerCrossPath(x, y);
+    }
+
+
+    private getSoilProfileLayerMarkerSketchPreview(document: Document): KoreanFieldworkPenMemoSketchPreview|undefined {
+
+        const markers = this.getSoilProfileLayerMarkers(document.resource.soilProfileLayerMarkers);
+        if (markers.length === 0) return undefined;
+
+        const previewMarkers = markers.map(marker => {
+            const x = this.roundSvg((marker.xPercent / 100) * SOIL_COLOR_SAMPLE_WIDTH);
+            const y = this.roundSvg((marker.yPercent / 100) * SOIL_COLOR_SAMPLE_HEIGHT);
+
+            return {
+                label: marker.label,
+                x,
+                y
+            };
+        });
+
+        return {
+            label: this.getSoilProfileLayerMarkerSketchPreviewLabel(markers),
+            path: previewMarkers.map(marker => this.getMarkerCrossPath(marker.x, marker.y)).join(' '),
+            texts: previewMarkers.map(marker => ({
+                text: marker.label,
+                x: marker.x,
+                y: this.roundSvg(this.clamp(marker.y - 7, 9, SOIL_COLOR_SAMPLE_HEIGHT - 4))
+            })),
+            viewBox: SOIL_COLOR_SAMPLE_VIEWBOX
+        };
+    }
+
+
+    private getSoilProfileLayerMarkerSketchPreviewLabel(markers: SoilProfileLayerMarker[]): string {
+
+        if (markers.length === 1) {
+            const marker = markers[0];
+
+            return `층 번호 위치 ${marker.label}층 ${marker.xPercent}%/${marker.yPercent}%`;
+        }
+
+        return `층 번호 위치 ${markers.length}점`;
+    }
+
+
+    private getMarkerCrossPath(x: number, y: number): string {
+
         const radius = SOIL_COLOR_SAMPLE_MARKER_RADIUS;
 
         return [
             `M ${this.roundSvg(x - radius)} ${y} H ${this.roundSvg(x + radius)}`,
             `M ${x} ${this.roundSvg(y - radius)} V ${this.roundSvg(y + radius)}`
         ].join(' ');
+    }
+
+
+    private getSoilProfileLayerMarkers(value: unknown): SoilProfileLayerMarker[] {
+
+        const markers = this.parseSoilProfileLayerMarkers(value);
+
+        return markers
+            .map((marker, index) => this.getSoilProfileLayerMarker(marker, index))
+            .filter((marker): marker is SoilProfileLayerMarker => !!marker);
+    }
+
+
+    private parseSoilProfileLayerMarkers(value: unknown): unknown[] {
+
+        if (Array.isArray(value)) return value;
+        if (typeof value !== 'string') return [];
+
+        const trimmedValue = value.trim();
+        if (!trimmedValue || trimmedValue === '[]') return [];
+
+        try {
+            const parsedValue = JSON.parse(trimmedValue);
+
+            return Array.isArray(parsedValue) ? parsedValue : [];
+        } catch (_err) {
+            return [];
+        }
+    }
+
+
+    private getSoilProfileLayerMarker(value: unknown, index: number): SoilProfileLayerMarker|undefined {
+
+        if (!this.isPlainRecord(value)) return undefined;
+
+        const xPercent = this.getPercentValue(value.x);
+        const yPercent = this.getPercentValue(value.y);
+        if (xPercent === undefined || yPercent === undefined) return undefined;
+
+        return {
+            label: this.getLayerMarkerLabel(value, index),
+            xPercent,
+            yPercent
+        };
+    }
+
+
+    private getLayerMarkerLabel(value: Record<string, unknown>, index: number): string {
+
+        const rawLabel = value.label ?? value.number ?? value.layer ?? value.layerNumber;
+        const label = rawLabel === undefined || rawLabel === null ? '' : String(rawLabel).trim();
+
+        return label || String(index + 1);
+    }
+
+
+    private getPercentValue(value: unknown): number|undefined {
+
+        const numberValue = typeof value === 'number' ? value : Number(value);
+        if (!Number.isFinite(numberValue)) return undefined;
+
+        return this.clamp(numberValue, 0, 100);
+    }
+
+
+    private isPlainRecord(value: unknown): value is Record<string, unknown> {
+
+        return typeof value === 'object' && value !== null && !Array.isArray(value);
     }
 
 

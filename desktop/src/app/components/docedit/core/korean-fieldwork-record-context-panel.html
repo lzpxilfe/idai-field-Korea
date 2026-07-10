@@ -485,6 +485,10 @@
                      role="img"
                      [attr.aria-label]="sketchPreview.label">
                     <path [attr.d]="sketchPreview.path"></path>
+                    <text *ngFor="let text of sketchPreview.texts"
+                          [attr.x]="text.x"
+                          [attr.y]="text.y"
+                          text-anchor="middle">{{text.text}}</text>
                 </svg>
                 <span *ngIf="canApplyEvidenceInsight(insight)"
                       class="korean-fieldwork-record-context-evidence-insight-actions">

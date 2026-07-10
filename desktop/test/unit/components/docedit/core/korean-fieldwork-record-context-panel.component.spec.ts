@@ -1865,6 +1865,49 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
     });
 
 
+    it('shows tablet soil-photo layer number markers in the record context evidence', async () => {
+
+        const feature = createDocument('feature-1', 'Feature', 'F1');
+        const soilProfilePhoto = createDocument('soil-photo-1', 'SoilProfilePhoto', 'SP1', {
+            depicts: ['feature-1']
+        }, {
+            soilProfileLayerMarkers: JSON.stringify([
+                { x: 20, y: 50, label: '1' },
+                { x: 80, y: 45, label: '2' }
+            ])
+        });
+        const component = createComponent({
+            find: jest.fn().mockResolvedValue({
+                documents: [feature, soilProfilePhoto]
+            })
+        });
+        component.document = feature as any;
+        component.fieldDefinitions = [
+            field('featureRecordingStatus')
+        ] as any;
+
+        await component.ngOnChanges();
+
+        expect(component.getEvidenceInsights()).toEqual([
+            {
+                id: 'soilLayerMarkers:soil-photo-1',
+                label: '\uce35 \ubc88\ud638 \ud45c\uc2dc',
+                detail: 'SP1 \u00b7 \uce35 \ubc88\ud638 \uc704\uce58 2\uc810',
+                sketchPreview: {
+                    label: '\uce35 \ubc88\ud638 \uc704\uce58 2\uc810',
+                    path: 'M 20 36 H 28 M 24 32 V 40 M 92 32.4 H 100 M 96 28.4 V 36.4',
+                    texts: [
+                        { text: '1', x: 24, y: 29 },
+                        { text: '2', x: 96, y: 25.4 }
+                    ],
+                    viewBox: '0 0 120 72'
+                },
+                tone: 'info'
+            }
+        ]);
+    });
+
+
     it('appends tablet photo annotation summaries to the current record narrative once', async () => {
 
         const feature = createDocument('feature-1', 'Feature', 'F1', {}, {
