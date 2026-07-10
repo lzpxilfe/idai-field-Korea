@@ -817,22 +817,33 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
 
         await component.refresh();
 
-        expect(component.getTabletWorkReportHandoffItemCount()).toBe(2);
+        expect(component.getTabletWorkReportHandoffItemCount()).toBe(6);
         expect(component.getReviewedTabletReportHandoffItemCount()).toBe(1);
         expect(component.hasTabletWorkReportHandoffItems()).toBe(true);
         expect(component.getReportHandoffSummaryLabel())
-            .toContain('\ud0dc\ube14\ub9bf \ucc98\ub9ac 2');
+            .toContain('\ud0dc\ube14\ub9bf \ucc98\ub9ac 6');
         expect(component.getReportHandoffTabletWorkFilterActionLabel())
-            .toBe('\ud0dc\ube14\ub9bf \ucc98\ub9ac 2');
+            .toBe('\ud0dc\ube14\ub9bf \ucc98\ub9ac 6');
 
         component.toggleReportHandoffTabletWorkFilter();
 
         expect(component.reportHandoffShowsTabletWorkOnly).toBe(true);
         expect(component.getReportHandoffTabletWorkFilterActionLabel()).toBe('\uc804\uccb4');
-        expect(component.getReportHandoffItems().map(item => item.documentId))
-            .toEqual(['feature-open', 'feature-stale']);
+        const filteredDocumentIds = component.getReportHandoffItems().map(item => item.documentId);
+        expect(filteredDocumentIds).toHaveLength(6);
+        expect(filteredDocumentIds).toEqual(expect.arrayContaining([
+            'feature-open',
+            'photo-open',
+            'photo-done',
+            'feature-stale',
+            'photo-stale-1',
+            'photo-stale-2'
+        ]));
+        expect(filteredDocumentIds).not.toContain('feature-done');
         expect(component.getReportHandoffPreviewItem()?.documentId).toBe('feature-open');
-        expect(component.getReportHandoffTabletBundle(component.getReportHandoffItems()[1])!.reviewState)
+        const staleItem = component.getReportHandoffItems()
+            .find(item => item.documentId === 'feature-stale')!;
+        expect(component.getReportHandoffTabletBundle(staleItem)!.reviewState)
             .toMatchObject({
                 isStale: true,
                 label: '\ub2e4\uc2dc \ud655\uc778'
