@@ -1310,6 +1310,7 @@
                 [class.info]="item.tone === 'info'"
                 [class.warning]="item.tone === 'warning'"
                 [class.danger]="item.tone === 'danger'"
+                [class.tablet-work]="isTabletProcessingRecord(item.documentId)"
                 [ngbTooltip]="item.detail"
                 container="body"
                 placement="bottom"
@@ -1330,7 +1331,7 @@
                 </span>
             </span>
             <span class="korean-fieldwork-progress-action">
-                {{item.actionLabel}}
+                {{getProgressItemActionLabel(item)}}
                 <span class="mdi mdi-open-in-new"></span>
             </span>
         </button>

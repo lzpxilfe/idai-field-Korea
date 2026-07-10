@@ -3827,8 +3827,14 @@ function validateReportHandoffPreSaveValidation() {
       || !desktopRecordWorkFilterSpecText.includes('matches tablet handoff records that still need desktop processing')
       || !desktopPriorityStripText.includes('tabletProcessingRecordIds')
       || !desktopPriorityStripText.includes('getTabletProcessingRecordIds')
+      || !desktopPriorityStripText.includes('openTabletProcessingRecord')
+      || !desktopPriorityStripText.includes('getProgressItemActionLabel')
       || !desktopPriorityStripText.includes('reportHandoffTabletBundlesByDocumentId')
-      || !desktopPriorityStripSpecText.includes('includes unprocessed tablet handoff records in the desktop review filter')) {
+      || !desktopPriorityStripTemplateText.includes('[class.tablet-work]="isTabletProcessingRecord(item.documentId)"')
+      || !desktopPriorityStripTemplateText.includes('getProgressItemActionLabel(item)')
+      || !desktopPriorityStripStyleText.includes('&.tablet-work')
+      || !desktopPriorityStripSpecText.includes('includes unprocessed tablet handoff records in the desktop review filter')
+      || !desktopPriorityStripSpecText.includes('reportHandoffShowsTabletWorkOnly')) {
     findings.push('desktop record work filters must include unprocessed tablet handoff records in the review queue');
   }
   if (!desktopRecordContextText.includes('makeKoreanFieldworkReportHandoff')

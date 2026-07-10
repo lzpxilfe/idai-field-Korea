@@ -573,6 +573,14 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
     public hasFilteredProgressItems = () =>
         this.getFilteredProgressItems().length > 0;
 
+    public isTabletProcessingRecord = (documentId: string) =>
+        this.tabletProcessingRecordIds.has(documentId);
+
+    public getProgressItemActionLabel = (item: KoreanFieldworkProgressItem) =>
+        this.shouldOpenTabletProcessingFromRecordFilter(item.documentId)
+            ? '\ud0dc\ube14\ub9bf \ucc98\ub9ac'
+            : item.actionLabel;
+
     public getFilteredFeatureOverviewItems = () =>
         this.featureOverviewItems.filter(item => this.matchesActiveRecordWorkFilter(item.documentId));
 
@@ -1040,6 +1048,20 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
         }
     }
 
+    public openTabletProcessingRecord(documentId: string, event?: Event): boolean {
+
+        if (event) event.stopPropagation();
+        if (!this.isTabletProcessingRecord(documentId)) return false;
+
+        this.selectedReportHandoffDocumentId = documentId;
+        this.reportHandoffShowsTabletWorkOnly = true;
+        this.reportHandoffShowsAll = false;
+        this.activePanel = 'report';
+        this.ensureReportHandoffPreviewSelection();
+
+        return this.getReportHandoffPreviewItem()?.documentId === documentId;
+    }
+
     public async openReportHandoffItem(item: KoreanFieldworkReportHandoffItem, event?: Event) {
 
         if (event) event.stopPropagation();
@@ -1443,6 +1465,11 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
     public async openProgressItem(item: KoreanFieldworkProgressItem) {
 
         try {
+            if (this.shouldOpenTabletProcessingFromRecordFilter(item.documentId)) {
+                this.openTabletProcessingRecord(item.documentId);
+                return;
+            }
+
             await this.openDocument(item.documentId);
         } catch (errWithParams) {
             this.messages.add(errWithParams);
@@ -2568,6 +2595,13 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
             new Date(),
             this.tabletProcessingRecordIds
         );
+    }
+
+
+    private shouldOpenTabletProcessingFromRecordFilter(documentId: string): boolean {
+
+        return this.activeRecordWorkFilterId === 'needsReview'
+            && this.isTabletProcessingRecord(documentId);
     }
 
 

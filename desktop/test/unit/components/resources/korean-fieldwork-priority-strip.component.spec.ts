@@ -1301,6 +1301,7 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
 
     it('includes unprocessed tablet handoff records in the desktop review filter', async () => {
 
+        const routing = { jumpToResource: jest.fn() };
         const component = createComponent({
             find: jest.fn().mockResolvedValue({
                 documents: [
@@ -1328,7 +1329,7 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
                 ]
             }),
             get: jest.fn()
-        });
+        }, createProjectConfiguration(), routing);
 
         await component.refresh();
 
@@ -1342,6 +1343,19 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
 
         expect(component.getFilteredProgressItems().map(item => item.documentId))
             .toContain('feature-tablet');
+
+        const tabletProgressItem = component.getFilteredProgressItems()
+            .find(item => item.documentId === 'feature-tablet')!;
+
+        expect(component.getProgressItemActionLabel(tabletProgressItem))
+            .toBe('\ud0dc\ube14\ub9bf \ucc98\ub9ac');
+
+        await component.openProgressItem(tabletProgressItem);
+
+        expect(routing.jumpToResource).not.toHaveBeenCalled();
+        expect(component.activePanel).toBe('report');
+        expect(component.reportHandoffShowsTabletWorkOnly).toBe(true);
+        expect(component.getReportHandoffPreviewItem()?.documentId).toBe('feature-tablet');
     });
 
 
