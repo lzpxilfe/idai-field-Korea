@@ -270,6 +270,50 @@ describe('Korean fieldwork report handoff', () => {
     });
 
 
+    it('carries tablet straight pit lines into HWP copy blocks without dumping tablet JSON', () => {
+
+        const handoff = makeKoreanFieldworkReportHandoff([
+            makeDocument('feature-1', 'Feature', {
+                identifier: 'pit-001',
+                featureSoilPitLines: JSON.stringify([
+                    {
+                        label: '1',
+                        points: [{ x: 10, y: 20 }, { x: 80, y: 25 }],
+                        start: { x: 10, y: 20 },
+                        end: { x: 80, y: 25 },
+                        version: 2
+                    },
+                    {
+                        label: '2',
+                        points: [{ x: 30, y: 40 }, { x: 30, y: 70 }],
+                        start: { x: 30, y: 40 },
+                        end: { x: 30, y: 70 },
+                        version: 2
+                    }
+                ]),
+                featureRecordingStatus: 'candidate',
+                featureInvestigationChecklist: []
+            })
+        ] as any);
+
+        const featureItem = handoff.items.find(item => item.documentId === 'feature-1');
+
+        expect(featureItem?.summary).toBe('\ud53c\ud2b8\uc120 2');
+        expect(featureItem?.details.join('\n')).toContain('\uc704\uce58/\ub3c4\uba74: \ud53c\ud2b8\uc120 2');
+        expect(featureItem?.evidenceLabel).toContain('\ud53c\ud2b8\uc120 2');
+        expect(featureItem?.evidenceCount).toBe(2);
+        expect(featureItem?.evidenceDetails.join('\n'))
+            .toContain('\ud53c\ud2b8\uc120 1: \uc2dc\uc791 10%/20%, \ub05d 80%/25%');
+        expect(featureItem?.evidenceDetails.join('\n'))
+            .toContain('\ud53c\ud2b8\uc120 2: \uc2dc\uc791 30%/40%, \ub05d 30%/70%');
+        expect(featureItem?.copyText).toContain('\uc694\uc57d: \ud53c\ud2b8\uc120 2');
+        expect(featureItem?.copyText)
+            .toContain('\ud53c\ud2b8\uc120 1: \uc2dc\uc791 10%/20%, \ub05d 80%/25%');
+        expect(featureItem?.copyText).not.toContain('featureSoilPitLines');
+        expect(featureItem?.copyText).not.toContain('"points"');
+    });
+
+
     it('carries selected-record tablet field notes into HWP copy blocks without dumping handwriting JSON', () => {
 
         const handoff = makeKoreanFieldworkReportHandoff([

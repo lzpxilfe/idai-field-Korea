@@ -32,6 +32,10 @@ import {
     KoreanFieldworkFieldNoteSectionId,
     parseKoreanFieldworkFieldNote
 } from './korean-fieldwork-field-note';
+import {
+    getKoreanFieldworkFeaturePitLineSummaries,
+    getKoreanFieldworkFeaturePitLineSummaryLabel
+} from './korean-fieldwork-pit-lines';
 
 
 export type KoreanFieldworkReportHandoffTone = 'ready'|'review';
@@ -384,6 +388,8 @@ const DETAIL_FIELDS: DetailFieldDefinition[] = [
             'featureLocationSketch',
             'findSpotItems',
             'featureFreeDrawingStrokes',
+            'featureSoilPitLines',
+            'featureSoilPitLine',
             'surveyBoundaryAccuracy',
             'surveyBoundarySource'
         ]
@@ -451,6 +457,8 @@ const SUMMARY_FIELDS = [
     'featureGeometryRevisionNote',
     'featureLocationSketch',
     'featureFreeDrawingStrokes',
+    'featureSoilPitLines',
+    'featureSoilPitLine',
     'dailyLogContent',
     'dailyLogBoundaryMemoStrokes',
     'surveyBoundaryNote',
@@ -594,6 +602,10 @@ const EVIDENCE_COUNTS: EvidenceCountDefinition[] = [
     {
         label: '\uc2dc\ub8cc',
         getCount: bundle => bundle.samples.length
+    },
+    {
+        label: '\ud53c\ud2b8\uc120',
+        getCount: bundle => getKoreanFieldworkFeaturePitLineSummaries(bundle.rootDocument.resource).length
     },
     {
         label: '\ud53c\ud2b8',
@@ -859,6 +871,10 @@ function getHandoffPrintableFieldValue(resource: NewResource, fieldName: string)
         return getStrokeEvidenceLabel('\uc790\uc720 \uc2a4\ucf00\uce58', resource.featureFreeDrawingStrokes);
     }
 
+    if (fieldName === 'featureSoilPitLine' || fieldName === 'featureSoilPitLines') {
+        return getKoreanFieldworkFeaturePitLineSummaryLabel(resource);
+    }
+
     if (fieldName === 'findSpotItems') {
         return getFindSpotItemsSummary(resource.findSpotItems);
     }
@@ -1118,6 +1134,10 @@ function getSummaryFieldValue(document: Document, fieldName: string): string|und
         return getStrokeEvidenceLabel('\uc790\uc720 \uc2a4\ucf00\uce58', document.resource.featureFreeDrawingStrokes);
     }
 
+    if (fieldName === 'featureSoilPitLine' || fieldName === 'featureSoilPitLines') {
+        return getKoreanFieldworkFeaturePitLineSummaryLabel(document.resource);
+    }
+
     if (fieldName === 'findSpotItems') {
         return getFindSpotItemsSummary(document.resource.findSpotItems);
     }
@@ -1287,7 +1307,8 @@ function getLocationDrawingDetailSummary(document: Document): string|undefined {
             'surveyBoundarySource'
         ].map(fieldName => getHandoffPrintableFieldValue(document.resource, fieldName)),
         getStrokeEvidenceLabel('\uc704\uce58 \uc57d\ub3c4', document.resource.featureLocationSketch),
-        getStrokeEvidenceLabel('\uc790\uc720 \uc2a4\ucf00\uce58', document.resource.featureFreeDrawingStrokes)
+        getStrokeEvidenceLabel('\uc790\uc720 \uc2a4\ucf00\uce58', document.resource.featureFreeDrawingStrokes),
+        getKoreanFieldworkFeaturePitLineSummaryLabel(document.resource)
     ].filter((value): value is string => !!value).join(', ') || undefined;
 }
 
@@ -1657,10 +1678,13 @@ function getEvidenceLabel(bundle: EvidenceBundle): string {
 
 function getEvidenceDetails(bundle: EvidenceBundle): string[] {
 
-    return EVIDENCE_DETAILS.flatMap(definition =>
+    const featurePitLineDetails = getKoreanFieldworkFeaturePitLineSummaries(bundle.rootDocument.resource)
+        .map(summary => summary.text);
+
+    return featurePitLineDetails.concat(EVIDENCE_DETAILS.flatMap(definition =>
         definition.getDocuments(bundle)
             .map(document => getEvidenceDetailLine(document, definition))
-    );
+    ));
 }
 
 

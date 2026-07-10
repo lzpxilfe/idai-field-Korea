@@ -13,6 +13,7 @@ import {
     Labels,
     makeKoreanFieldworkReportHandoff,
     ProjectConfiguration,
+    getKoreanFieldworkFeaturePitLineSummaries,
     getKoreanFieldworkRecordFieldValueSummary
 } from 'idai-field-core';
 import { Routing } from '../../../services/routing';
@@ -187,6 +188,9 @@ const KOREAN_FIELDWORK_CONTEXT_FIELDS = [
     'dailyLogWorkerCount',
     'featureFreeDrawingStrokes',
     'featureFreeDrawingUpdatedAt',
+    'featureSoilPitLine',
+    'featureSoilPitLines',
+    'featureSoilPitLineUpdatedAt',
     'featureBlockInclusionAssessment',
     'featureBurialProcessAssessment',
     'featureFillInterpretation',
@@ -1473,7 +1477,17 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
             }]
             : [];
 
-        return evidenceMetrics.concat(photoAnnotationMetrics, penMemoMetrics);
+        const featurePitLineCount = getKoreanFieldworkFeaturePitLineSummaries(this.document.resource).length;
+        const featurePitLineMetrics: EvidenceMetric[] = featurePitLineCount > 0
+            ? [{
+                id: 'featureSoilPitLines',
+                label: '\ud53c\ud2b8\uc120',
+                count: featurePitLineCount,
+                canCreate: false
+            }]
+            : [];
+
+        return evidenceMetrics.concat(featurePitLineMetrics, photoAnnotationMetrics, penMemoMetrics);
     }
 
 

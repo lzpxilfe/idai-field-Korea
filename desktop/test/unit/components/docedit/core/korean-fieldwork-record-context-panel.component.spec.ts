@@ -233,6 +233,48 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
     });
 
 
+    it('surfaces tablet pit lines in desktop evidence metrics and HWP copy blocks', async () => {
+
+        const feature = createDocument('feature-1', 'Feature', 'F1', {}, {
+            featureSoilPitLines: JSON.stringify([
+                {
+                    label: '1',
+                    points: [{ x: 10, y: 20 }, { x: 80, y: 25 }],
+                    start: { x: 10, y: 20 },
+                    end: { x: 80, y: 25 },
+                    version: 2
+                },
+                {
+                    label: '2',
+                    points: [{ x: 30, y: 40 }, { x: 30, y: 70 }],
+                    start: { x: 30, y: 40 },
+                    end: { x: 30, y: 70 },
+                    version: 2
+                }
+            ]),
+            featureRecordingStatus: 'candidate',
+            featureInvestigationChecklist: []
+        });
+        const component = createComponent({
+            find: jest.fn().mockResolvedValue({ documents: [feature] })
+        });
+        component.document = feature as any;
+        component.fieldDefinitions = [
+            field('featureSoilPitLines')
+        ] as any;
+
+        await component.ngOnChanges();
+
+        expect(component.getEvidenceMetrics()).toEqual(expect.arrayContaining([
+            { id: 'featureSoilPitLines', label: '\ud53c\ud2b8\uc120', count: 2, canCreate: false }
+        ]));
+        expect(component.getReportHandoffItem()?.evidenceLabel).toContain('\ud53c\ud2b8\uc120 2');
+        expect(component.getReportHandoffItem()?.copyText)
+            .toContain('\ud53c\ud2b8\uc120 1: \uc2dc\uc791 10%/20%, \ub05d 80%/25%');
+        expect(component.getReportHandoffItem()?.copyText).not.toContain('"points"');
+    });
+
+
     it('surfaces tablet field record quality reviews in the desktop record context', async () => {
 
         const operation = createDocument('operation-1', 'Operation', 'OP1');
