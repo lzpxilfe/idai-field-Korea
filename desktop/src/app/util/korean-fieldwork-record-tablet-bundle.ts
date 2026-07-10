@@ -22,6 +22,7 @@ export const KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_AT_FIELD = 'tabletHandoffR
 export const KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_SOURCE_COUNT_FIELD = 'tabletHandoffReviewedSourceCount';
 export const KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_ISSUE_COUNT_FIELD = 'tabletHandoffReviewedIssueCount';
 export const KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_SUMMARY_FIELD = 'tabletHandoffReviewedSummary';
+export const KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_FINGERPRINT_FIELD = 'tabletHandoffReviewedFingerprint';
 
 export interface KoreanFieldworkTabletHandoffReviewState {
     isReviewed: boolean;
@@ -62,6 +63,7 @@ export interface KoreanFieldworkTabletRecordBundle {
     sourceCount: number;
     issueCount: number;
     hwpSectionCount: number;
+    fingerprint: string;
     reviewState: KoreanFieldworkTabletHandoffReviewState;
     groups: KoreanFieldworkTabletRecordBundleGroup[];
     issueDetails: string[];
@@ -161,7 +163,19 @@ export function makeKoreanFieldworkRecordTabletBundle(
     const hwpSectionCount = handoffItem?.copySections
         .filter(section => section.copyText.trim().length > 0)
         .length ?? 0;
-    const reviewState = getKoreanFieldworkTabletHandoffReviewState(document, sourceCount, issueCount);
+    const fingerprint = makeBundleFingerprint(
+        title,
+        groups,
+        issueDetails,
+        hwpSectionCount,
+        handoffItem?.bodyPreview
+    );
+    const reviewState = getKoreanFieldworkTabletHandoffReviewState(
+        document,
+        sourceCount,
+        issueCount,
+        fingerprint
+    );
     const summary = [
         `\uc790\ub8cc ${sourceCount}\uac74`,
         issueCount > 0
@@ -177,6 +191,7 @@ export function makeKoreanFieldworkRecordTabletBundle(
         sourceCount,
         issueCount,
         hwpSectionCount,
+        fingerprint,
         reviewState,
         groups,
         issueDetails,
@@ -188,16 +203,21 @@ export function makeKoreanFieldworkRecordTabletBundle(
 export function getKoreanFieldworkTabletHandoffReviewState(
         document: Document,
         sourceCount?: number,
-        issueCount?: number
+        issueCount?: number,
+        fingerprint?: string
 ): KoreanFieldworkTabletHandoffReviewState {
 
     const resource = document?.resource as Record<string, unknown>|undefined;
     const reviewedAt = getTextValue(resource?.[KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_AT_FIELD]);
     const reviewedSourceCount = getNumberValue(resource?.[KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_SOURCE_COUNT_FIELD]);
     const reviewedIssueCount = getNumberValue(resource?.[KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_ISSUE_COUNT_FIELD]);
+    const reviewedFingerprint = getTextValue(
+        resource?.[KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_FINGERPRINT_FIELD]
+    );
     const isStale = !!reviewedAt && (
         (sourceCount !== undefined && reviewedSourceCount !== undefined && reviewedSourceCount !== sourceCount)
         || (issueCount !== undefined && reviewedIssueCount !== undefined && reviewedIssueCount !== issueCount)
+        || (fingerprint !== undefined && reviewedFingerprint !== undefined && reviewedFingerprint !== fingerprint)
     );
     const reviewedAtLabel = reviewedAt ? formatReviewDateLabel(reviewedAt) : undefined;
 
@@ -253,14 +273,50 @@ export function createKoreanFieldworkTabletHandoffReviewUpdate(
         resource[KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_SOURCE_COUNT_FIELD] = bundle.sourceCount;
         resource[KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_ISSUE_COUNT_FIELD] = bundle.issueCount;
         resource[KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_SUMMARY_FIELD] = bundle.summary;
+        resource[KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_FINGERPRINT_FIELD] = bundle.fingerprint;
     } else {
         delete resource[KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_AT_FIELD];
         delete resource[KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_SOURCE_COUNT_FIELD];
         delete resource[KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_ISSUE_COUNT_FIELD];
         delete resource[KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_SUMMARY_FIELD];
+        delete resource[KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_FINGERPRINT_FIELD];
     }
 
     return updatedDocument;
+}
+
+
+function makeBundleFingerprint(
+        title: string,
+        groups: KoreanFieldworkTabletRecordBundleGroup[],
+        issueDetails: string[],
+        hwpSectionCount: number,
+        bodyPreview: string|undefined
+): string {
+
+    return JSON.stringify({
+        version: 1,
+        title,
+        hwpSectionCount,
+        bodyPreview: bodyPreview ?? '',
+        groups: groups.map(group => ({
+            id: group.id,
+            label: group.label,
+            count: group.count,
+            detail: group.detail,
+            issueCount: group.issueCount,
+            sources: group.sources.map(source => ({
+                id: source.id,
+                label: source.label,
+                detail: source.detail ?? '',
+                documentId: source.documentId ?? '',
+                issueCount: source.issueCount,
+                issueDetails: source.issueDetails,
+                copyText: source.copyText
+            }))
+        })),
+        issueDetails
+    });
 }
 
 
