@@ -215,6 +215,60 @@ describe('korean-fieldwork-record-tablet-bundle', () => {
     });
 
 
+    it('keeps tablet media captions and original file references together for desktop processing', () => {
+
+        const feature = createDoc('feature-1', 'Feature', 'F1', {}, {
+            featureRecordingStatus: 'confirmed',
+            featureInvestigationChecklist: []
+        });
+        const photo = createDoc('photo-1', 'Photo', 'P1', {
+            depicts: ['feature-1']
+        }, {
+            fieldworkPhotoCaption: '\ubd81\ubcbd \uc720\uad6c \ubc14\ub2e5\uba74',
+            originalFilename: 'IMG_0001.JPG',
+            fieldworkPhotoUri: 'file:///tablet/photos/IMG_0001.JPG',
+            fieldworkPhotoCapturedAt: '2026-07-11T09:12:34.000Z',
+            width: 4032,
+            height: 3024,
+            fieldworkImageUploadStatus: 'uploaded',
+            fieldworkImageUploadedAt: '2026-07-11T09:15:00.000Z',
+            fieldworkImageUploadedUri: 'file:///tablet/photos/IMG_0001.JPG',
+            fieldworkImageUploadTarget: 'https://field.example/files/fieldwork/photo-1?type=original_image',
+            fieldworkImageUploadedProject: 'field-office',
+            fieldworkImageUploadedSizeBytes: 481516,
+            fieldworkImageUploadedMd5: 'tablet-md5',
+            fieldworkImageStoredSha256: 'fieldhub-sha256'
+        });
+
+        const bundle = makeKoreanFieldworkRecordTabletBundle(
+            feature,
+            [feature, photo] as any
+        )!;
+        const photoSource = bundle.groups.find(group => group.id === 'photos')!.sources[0];
+
+        expect(photoSource.detail)
+            .toContain('\uc0ac\uc9c4 \uc124\uba85: \ubd81\ubcbd \uc720\uad6c \ubc14\ub2e5\uba74');
+        expect(photoSource.detail)
+            .toContain('\uc6d0\ubcf8 \ud30c\uc77c: IMG_0001.JPG');
+        expect(photoSource.detail)
+            .toContain('\uc6d0\ubcf8: file:///tablet/photos/IMG_0001.JPG');
+        expect(photoSource.detail)
+            .toContain('\ucd2c\uc601: 2026-07-11 09:12');
+        expect(photoSource.detail)
+            .toContain('\ud06c\uae30: 4032x3024');
+        expect(photoSource.detail)
+            .toContain('\uc774\ubbf8\uc9c0 \uc5c5\ub85c\ub4dc: \uc5c5\ub85c\ub4dc \uc644\ub8cc');
+        expect(photoSource.detail)
+            .toContain('\ub300\uc0c1 https://field.example/files/fieldwork/photo-1?type=original_image');
+        expect(photoSource.detail)
+            .toContain('MD5 tablet-md5');
+        expect(photoSource.copyText)
+            .toContain('\uc6d0\ubcf8 \ud30c\uc77c: IMG_0001.JPG');
+        expect(bundle.groups.find(group => group.id === 'photos')?.copyText)
+            .toContain('\uc6d0\ubcf8: file:///tablet/photos/IMG_0001.JPG');
+    });
+
+
     it('carries tablet find and sample spot points into desktop handoff source rows', () => {
 
         const feature = createDoc('feature-1', 'Feature', 'F1', {}, {

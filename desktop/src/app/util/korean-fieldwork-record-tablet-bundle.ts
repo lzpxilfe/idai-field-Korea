@@ -845,26 +845,13 @@ function getDocumentIdentifier(document: Document): string {
 
 function getDocumentDetail(document: Document): string|undefined {
 
-    const fieldDetails = [
-        'shortDescription',
-        'description',
-        'fieldworkPhotoCaption',
-        'originalFilename',
-        'soilProfilePhotoUri',
-        'fieldworkPhotoUri',
-        'imageUri',
-        'fileUri'
-    ]
-        .map(fieldName => getTextValue(document.resource[fieldName]))
-        .find(value => !!value);
-
     return [
         getFindSpotDetail(document),
         getPhotoDetail(document),
         getSoilProfilePhotoDetail(document),
         getDrawingDetail(document),
         getPenMemoDetail(document),
-        fieldDetails
+        getDocumentFieldDetails(document)
     ].filter((value): value is string => !!value).join(' \u00b7 ') || undefined;
 }
 
@@ -942,6 +929,116 @@ function getPenMemoDetail(document: Document): string|undefined {
         reviewedTranscript ? `\uac80\ud1a0 \ud544\uc0ac: ${reviewedTranscript}` : undefined,
         !reviewedTranscript && autoTranscript ? `\uc790\ub3d9 \ud544\uc0ac: ${autoTranscript}` : undefined
     ].filter((value): value is string => !!value).join(' \u00b7 ') || undefined;
+}
+
+
+function getDocumentFieldDetails(document: Document): string|undefined {
+
+    return [
+        getLabeledTextDetail('\uc694\uc57d', document.resource.shortDescription),
+        getLabeledTextDetail('\uc124\uba85', document.resource.description),
+        getLabeledTextDetail('\uc0ac\uc9c4 \uc124\uba85', document.resource.fieldworkPhotoCaption),
+        getLabeledTextDetail('\uc6d0\ubcf8 \ud30c\uc77c', document.resource.originalFilename),
+        getMediaSourceDetail(document),
+        getCapturedAtDetail(document),
+        getImageSizeDetail(document),
+        getImageUploadDetail(document)
+    ].filter((value): value is string => !!value).join(' \u00b7 ') || undefined;
+}
+
+
+function getLabeledTextDetail(label: string, value: unknown): string|undefined {
+
+    const text = getTextValue(value);
+
+    return text ? `${label}: ${text}` : undefined;
+}
+
+
+function getMediaSourceDetail(document: Document): string|undefined {
+
+    const sourceUri = getFirstTextValue(getMediaSourceUriFieldNames(document)
+        .map(fieldName => document.resource[fieldName]));
+
+    return sourceUri ? `\uc6d0\ubcf8: ${sourceUri}` : undefined;
+}
+
+
+function getMediaSourceUriFieldNames(document: Document): string[] {
+
+    switch (document.resource.category) {
+        case 'SoilProfilePhoto':
+            return ['soilProfilePhotoUri', 'imageUri', 'fieldworkPhotoUri', 'fileUri'];
+        case 'Drawing':
+            return ['fileUri', 'imageUri', 'fieldworkPhotoUri'];
+        default:
+            return ['fieldworkPhotoUri', 'imageUri', 'fileUri', 'soilProfilePhotoUri'];
+    }
+}
+
+
+function getCapturedAtDetail(document: Document): string|undefined {
+
+    const capturedAt = getFirstTextValue([
+        document.resource.fieldworkPhotoCapturedAt,
+        document.resource.soilProfilePhotoCapturedAt
+    ]);
+    if (!capturedAt) return undefined;
+
+    const match = capturedAt.match(/^(\d{4}-\d{2}-\d{2})(?:[T\s](\d{2}:\d{2}))?/);
+    const label = !match ? capturedAt : (match[2] ? `${match[1]} ${match[2]}` : match[1]);
+
+    return `\ucd2c\uc601: ${label}`;
+}
+
+
+function getImageSizeDetail(document: Document): string|undefined {
+
+    const width = getNumberValue(document.resource.width);
+    const height = getNumberValue(document.resource.height);
+
+    return width !== undefined && height !== undefined
+        ? `\ud06c\uae30: ${width}x${height}`
+        : undefined;
+}
+
+
+function getImageUploadDetail(document: Document): string|undefined {
+
+    const status = getTextValue(document.resource.fieldworkImageUploadStatus);
+    const uploadedAt = getTextValue(document.resource.fieldworkImageUploadedAt);
+    const uploadedUri = getTextValue(document.resource.fieldworkImageUploadedUri);
+    const uploadTarget = getTextValue(document.resource.fieldworkImageUploadTarget);
+    const uploadedProject = getTextValue(document.resource.fieldworkImageUploadedProject);
+    const uploadedSizeBytes = getNumberValue(document.resource.fieldworkImageUploadedSizeBytes);
+    const uploadedMd5 = getTextValue(document.resource.fieldworkImageUploadedMd5);
+    const storedSha256 = getTextValue(document.resource.fieldworkImageStoredSha256);
+    const details = [
+        status ? getImageUploadStatusLabel(status) : undefined,
+        uploadedAt ? `\uc2dc\uac01 ${uploadedAt}` : undefined,
+        uploadedUri ? `\uc6d0\ubcf8 ${uploadedUri}` : undefined,
+        uploadTarget ? `\ub300\uc0c1 ${uploadTarget}` : undefined,
+        uploadedProject ? `\ud504\ub85c\uc81d\ud2b8 ${uploadedProject}` : undefined,
+        uploadedSizeBytes !== undefined ? `\ud06c\uae30 ${uploadedSizeBytes}B` : undefined,
+        uploadedMd5 ? `MD5 ${uploadedMd5}` : undefined,
+        storedSha256 ? `SHA256 ${storedSha256}` : undefined
+    ].filter((value): value is string => !!value);
+
+    return details.length > 0 ? `\uc774\ubbf8\uc9c0 \uc5c5\ub85c\ub4dc: ${details.join(', ')}` : undefined;
+}
+
+
+function getImageUploadStatusLabel(status: string): string {
+
+    return status === 'uploaded'
+        ? '\uc5c5\ub85c\ub4dc \uc644\ub8cc'
+        : status;
+}
+
+
+function getFirstTextValue(values: unknown[]): string|undefined {
+
+    return values.map(getTextValue).find((value): value is string => !!value);
 }
 
 
