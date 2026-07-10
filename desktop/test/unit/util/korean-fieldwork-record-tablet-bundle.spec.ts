@@ -177,6 +177,12 @@ describe('korean-fieldwork-record-tablet-bundle', () => {
             ' - \uc6d0\ubcf8 \ud30c\uc77c: IMG_0001.JPG',
             ' - \uc6d0\ubcf8: file:///tablet/photos/IMG_0001.JPG'
         ].join('\r\n'));
+        expect(bundle.copyText).toContain([
+            '- P1',
+            ' - \uc0ac\uc9c4 \uc124\uba85: \ubd81\ubcbd \uc720\uad6c \ubc14\ub2e5\uba74',
+            ' - \uc6d0\ubcf8 \ud30c\uc77c: IMG_0001.JPG',
+            ' - \uc6d0\ubcf8: file:///tablet/photos/IMG_0001.JPG'
+        ].join('\r\n'));
         expect(photoSource.copyText).not.toContain('\t');
     });
 
@@ -430,6 +436,8 @@ describe('korean-fieldwork-record-tablet-bundle', () => {
             .toContain('\uc2dc\ub8cc \ubaa9\uc801: \ud0c4\ud654\ubb3c \ubd84\uc11d');
         expect(bundle.groups.find(group => group.id === 'samples')?.copyText)
             .toContain('\uc2dc\ub8cc \ucc44\ucde8 \uc704\uce58: 1\ubc88 50%/40% charcoal bag');
+        expect(bundle.copyText)
+            .toContain('\uc2dc\ub8cc \ubaa9\uc801: \ud0c4\ud654\ubb3c \ubd84\uc11d');
     });
 
 

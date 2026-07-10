@@ -679,7 +679,7 @@ function makeBundleCopyText(
         `\ucc98\ub9ac \uc0c1\uc138: ${reviewState.detail}`,
         bodyPreview ? `HWP \ubcf8\ubb38: ${bodyPreview}` : '',
         '',
-        ...groups.map(group => `${group.label} ${group.count}\uac74: ${group.detail}`),
+        ...makeBundleGroupCopyLines(groups),
         '',
         issueDetails.length > 0
             ? `\ud655\uc778 \ud544\uc694 ${issueDetails.length}\uac74`
@@ -688,6 +688,19 @@ function makeBundleCopyText(
     ];
 
     return normalizeKoreanFieldworkHwpPlainText(lines.filter(line => line.length > 0).join('\n'));
+}
+
+
+function makeBundleGroupCopyLines(groups: KoreanFieldworkTabletRecordBundleGroup[]): string[] {
+
+    return groups.flatMap(group => [
+        `${group.label} ${group.count}\uac74: ${group.detail}`,
+        ...group.sources.flatMap(source => [
+            `- ${source.label}`,
+            ...makeDetailCopyLines(source.detail, '  '),
+            ...source.issueDetails.map(issueDetail => `  \ud655\uc778: ${issueDetail}`)
+        ])
+    ]);
 }
 
 

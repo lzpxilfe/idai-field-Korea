@@ -3249,6 +3249,7 @@ function validateRecordPanelOrder() {
       || !desktopRecordTabletBundleText.includes('makeKoreanFieldworkReportHandoff')
       || !desktopRecordTabletBundleText.includes('getKoreanFieldworkNotebookEntriesForDocument')
       || !desktopRecordTabletBundleText.includes('normalizeKoreanFieldworkHwpPlainText')
+      || !desktopRecordTabletBundleText.includes('makeBundleGroupCopyLines')
       || !desktopRecordTabletBundleText.includes('makeDetailCopyLines')
       || !desktopRecordTabletBundleText.includes('createKoreanFieldworkTabletHandoffReviewUpdate')
       || !desktopRecordTabletBundleText.includes('createKoreanFieldworkTabletHandoffSourceReviewUpdate')
