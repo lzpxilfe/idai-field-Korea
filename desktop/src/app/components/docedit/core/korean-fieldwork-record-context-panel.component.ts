@@ -13,6 +13,7 @@ import {
     Labels,
     makeKoreanFieldworkReportHandoff,
     ProjectConfiguration,
+    KoreanFieldworkFeaturePitLineSummary,
     getKoreanFieldworkFeaturePitLineSummaries,
     getKoreanFieldworkFindSpotSummaries,
     getKoreanFieldworkRecordFieldValueSummary
@@ -158,6 +159,21 @@ interface FeatureFreeDrawingPreview {
     viewBox: string;
 }
 
+interface FeaturePitLineSvgLine {
+    end: FeatureSketchSvgPoint;
+    label: string;
+    labelPoint: FeatureSketchSvgPoint;
+    start: FeatureSketchSvgPoint;
+    text: string;
+}
+
+interface FeaturePitLinePreview {
+    lines: FeaturePitLineSvgLine[];
+    summary: string;
+    updatedAt?: string;
+    viewBox: string;
+}
+
 interface DailyJournalBoundaryMemoPreview {
     importedAt?: string;
     path: string;
@@ -286,6 +302,7 @@ const FEATURE_SKETCH_PADDING = 8;
 const FEATURE_GEOMETRY_EDIT_STATUS_FIELD = 'featureGeometryEditStatus';
 const FEATURE_FREE_DRAWING_STROKES_FIELD = 'featureFreeDrawingStrokes';
 const FEATURE_FREE_DRAWING_UPDATED_AT_FIELD = 'featureFreeDrawingUpdatedAt';
+const FEATURE_PIT_LINE_UPDATED_AT_FIELD = 'featureSoilPitLineUpdatedAt';
 const DAILY_LOG_CATEGORY_NAME = 'DailyLog';
 const DAILY_LOG_BOUNDARY_MEMO_IMPORTED_AT_FIELD = 'dailyLogBoundaryMemoImportedAt';
 const DAILY_LOG_BOUNDARY_MEMO_STROKES_FIELD = 'dailyLogBoundaryMemoStrokes';
@@ -970,6 +987,28 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
             summary: this.getFeatureFreeDrawingSummary(),
             updatedAt: this.getFeatureFreeDrawingUpdatedAtLabel(),
             viewBox: preview.viewBox
+        };
+    }
+
+
+    public hasFeaturePitLinePreview = () =>
+        this.getFeaturePitLinePreview() !== undefined;
+
+
+    public getFeaturePitLinePreview(): FeaturePitLinePreview|undefined {
+
+        if (!this.document?.resource || !['Feature', 'FeatureSegment'].includes(this.document.resource.category)) {
+            return undefined;
+        }
+
+        const summaries = getKoreanFieldworkFeaturePitLineSummaries(this.document.resource);
+        if (summaries.length === 0) return undefined;
+
+        return {
+            lines: summaries.map(summary => this.makeFeaturePitLineSvgLine(summary)),
+            summary: `피트선 ${summaries.length}`,
+            updatedAt: this.getDateFieldLabel(FEATURE_PIT_LINE_UPDATED_AT_FIELD),
+            viewBox: FEATURE_SKETCH_VIEWBOX
         };
     }
 
@@ -2146,6 +2185,33 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
     private getFeatureFreeDrawingUpdatedAtLabel(): string|undefined {
 
         return this.getDateFieldLabel(FEATURE_FREE_DRAWING_UPDATED_AT_FIELD);
+    }
+
+
+    private makeFeaturePitLineSvgLine(summary: KoreanFieldworkFeaturePitLineSummary): FeaturePitLineSvgLine {
+
+        const start = this.roundFeatureSketchSvgPoint(this.projectFeatureSketchPoint(summary.start));
+        const end = this.roundFeatureSketchSvgPoint(this.projectFeatureSketchPoint(summary.end));
+
+        return {
+            end,
+            label: summary.label,
+            labelPoint: {
+                x: this.roundSvg((start.x + end.x) / 2),
+                y: this.roundSvg(((start.y + end.y) / 2) - 3)
+            },
+            start,
+            text: summary.text
+        };
+    }
+
+
+    private roundFeatureSketchSvgPoint(point: FeatureSketchPoint): FeatureSketchSvgPoint {
+
+        return {
+            x: this.roundSvg(point.x),
+            y: this.roundSvg(point.y)
+        };
     }
 
 

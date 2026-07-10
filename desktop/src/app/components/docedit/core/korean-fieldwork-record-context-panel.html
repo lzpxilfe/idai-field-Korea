@@ -279,6 +279,50 @@
         </div>
     </div>
 
+    <div *ngIf="getFeaturePitLinePreview() as pitLinePreview"
+         class="korean-fieldwork-record-context-pit-lines">
+        <div class="korean-fieldwork-record-context-pit-lines-title">
+            <span class="mdi mdi-vector-line"></span>
+            <span>피트선</span>
+            <span class="korean-fieldwork-record-context-pit-lines-summary">
+                {{pitLinePreview.summary}}
+            </span>
+            <span *ngIf="pitLinePreview.updatedAt"
+                  class="korean-fieldwork-record-context-pit-lines-updated">
+                {{pitLinePreview.updatedAt}}
+            </span>
+        </div>
+        <svg class="korean-fieldwork-record-context-pit-lines-svg"
+             [attr.viewBox]="pitLinePreview.viewBox"
+             role="img"
+             aria-label="태블릿 피트선 미리보기">
+            <path class="pit-line-frame" d="M 8 8 H 112 V 72 H 8 Z"></path>
+            <path class="pit-line-grid" d="M 34 8 V 72 M 60 8 V 72 M 86 8 V 72 M 8 29 H 112 M 8 51 H 112"></path>
+            <g *ngFor="let line of pitLinePreview.lines"
+               class="pit-line-item">
+                <line [attr.x1]="line.start.x"
+                      [attr.y1]="line.start.y"
+                      [attr.x2]="line.end.x"
+                      [attr.y2]="line.end.y"></line>
+                <circle class="pit-line-point start"
+                        [attr.cx]="line.start.x"
+                        [attr.cy]="line.start.y"
+                        r="2.6"></circle>
+                <circle class="pit-line-point end"
+                        [attr.cx]="line.end.x"
+                        [attr.cy]="line.end.y"
+                        r="2.6"></circle>
+                <text [attr.x]="line.labelPoint.x"
+                      [attr.y]="line.labelPoint.y">{{line.label}}</text>
+            </g>
+        </svg>
+        <div class="korean-fieldwork-record-context-pit-lines-list">
+            <span *ngFor="let line of pitLinePreview.lines">
+                {{line.text}}
+            </span>
+        </div>
+    </div>
+
     <div *ngIf="getFeatureFreeDrawingPreview() as freeDrawingPreview"
          class="korean-fieldwork-record-context-free-drawing">
         <div class="korean-fieldwork-record-context-free-drawing-title">

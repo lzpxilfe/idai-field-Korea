@@ -252,6 +252,7 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
                     version: 2
                 }
             ]),
+            featureSoilPitLineUpdatedAt: '2026-07-10T08:20:00.000Z',
             featureRecordingStatus: 'candidate',
             featureInvestigationChecklist: []
         });
@@ -268,10 +269,58 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
         expect(component.getEvidenceMetrics()).toEqual(expect.arrayContaining([
             { id: 'featureSoilPitLines', label: '\ud53c\ud2b8\uc120', count: 2, canCreate: false }
         ]));
+        expect(component.hasFeaturePitLinePreview()).toBe(true);
+        expect(component.getFeaturePitLinePreview()).toEqual({
+            lines: [
+                {
+                    end: { x: 91.2, y: 24 },
+                    label: '1',
+                    labelPoint: { x: 54.8, y: 19.4 },
+                    start: { x: 18.4, y: 20.8 },
+                    text: '\ud53c\ud2b8\uc120 1: \uc2dc\uc791 10%/20%, \ub05d 80%/25%'
+                },
+                {
+                    end: { x: 39.2, y: 52.8 },
+                    label: '2',
+                    labelPoint: { x: 39.2, y: 40.2 },
+                    start: { x: 39.2, y: 33.6 },
+                    text: '\ud53c\ud2b8\uc120 2: \uc2dc\uc791 30%/40%, \ub05d 30%/70%'
+                }
+            ],
+            summary: '\ud53c\ud2b8\uc120 2',
+            updatedAt: '2026-07-10',
+            viewBox: '0 0 120 80'
+        });
         expect(component.getReportHandoffItem()?.evidenceLabel).toContain('\ud53c\ud2b8\uc120 2');
         expect(component.getReportHandoffItem()?.copyText)
             .toContain('\ud53c\ud2b8\uc120 1: \uc2dc\uc791 10%/20%, \ub05d 80%/25%');
         expect(component.getReportHandoffItem()?.copyText).not.toContain('"points"');
+    });
+
+
+    it('keeps the tablet pit line preview section in the desktop record context template', () => {
+
+        const template = fs.readFileSync(
+            path.resolve(
+                __dirname,
+                '../../../../../src/app/components/docedit/core/korean-fieldwork-record-context-panel.html'
+            ),
+            'utf8'
+        );
+        const styles = fs.readFileSync(
+            path.resolve(
+                __dirname,
+                '../../../../../src/app/components/docedit/core/korean-fieldwork-record-context-panel.scss'
+            ),
+            'utf8'
+        );
+
+        expect(template).toContain('getFeaturePitLinePreview() as pitLinePreview');
+        expect(template).toContain('\ud53c\ud2b8\uc120');
+        expect(template).toContain('\ud0dc\ube14\ub9bf \ud53c\ud2b8\uc120 \ubbf8\ub9ac\ubcf4\uae30');
+        expect(template).toContain('pitLinePreview.lines');
+        expect(styles).toContain('.korean-fieldwork-record-context-pit-lines-svg');
+        expect(styles).toContain('.pit-line-item line');
     });
 
 

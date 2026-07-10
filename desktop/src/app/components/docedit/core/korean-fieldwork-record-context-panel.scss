@@ -320,6 +320,114 @@ korean-fieldwork-record-context-panel {
     }
   }
 
+  .korean-fieldwork-record-context-pit-lines {
+    border-top: 1px solid #e4e7ec;
+    display: grid;
+    gap: 7px;
+    margin-top: 9px;
+    padding-top: 9px;
+  }
+
+  .korean-fieldwork-record-context-pit-lines-title {
+    align-items: center;
+    color: #244d3c;
+    display: flex;
+    flex-wrap: wrap;
+    font-size: 12px;
+    font-weight: 800;
+    gap: 5px;
+    line-height: 1.2;
+  }
+
+  .korean-fieldwork-record-context-pit-lines-summary,
+  .korean-fieldwork-record-context-pit-lines-updated {
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2px 5px;
+  }
+
+  .korean-fieldwork-record-context-pit-lines-summary {
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    color: #c2410c;
+  }
+
+  .korean-fieldwork-record-context-pit-lines-updated {
+    background: #f2f4f7;
+    border: 1px solid #d0d5dd;
+    color: #475467;
+  }
+
+  .korean-fieldwork-record-context-pit-lines-svg {
+    background: #fffdf8;
+    border: 1px solid #d0d5dd;
+    border-radius: 5px;
+    display: block;
+    height: 132px;
+    width: 100%;
+
+    .pit-line-frame {
+      fill: #ffffff;
+      stroke: #98a2b3;
+      stroke-width: 0.9;
+    }
+
+    .pit-line-grid {
+      fill: none;
+      stroke: rgba(52, 64, 84, 0.14);
+      stroke-width: 0.7;
+    }
+
+    .pit-line-item line {
+      stroke: #c2410c;
+      stroke-linecap: round;
+      stroke-width: 2.7;
+    }
+
+    .pit-line-point {
+      fill: #ffffff;
+      stroke: #c2410c;
+      stroke-width: 1.5;
+    }
+
+    .pit-line-point.start {
+      fill: #ecfdf3;
+    }
+
+    .pit-line-point.end {
+      fill: #fff7ed;
+    }
+
+    text {
+      fill: #7c2d12;
+      font-size: 6px;
+      font-weight: 900;
+      paint-order: stroke;
+      pointer-events: none;
+      stroke: #ffffff;
+      stroke-width: 2px;
+      text-anchor: middle;
+    }
+  }
+
+  .korean-fieldwork-record-context-pit-lines-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+
+    span {
+      background: #ffffff;
+      border: 1px solid #fed7aa;
+      border-radius: 4px;
+      color: #7c2d12;
+      font-size: 10px;
+      font-weight: 800;
+      line-height: 1.25;
+      padding: 3px 6px;
+    }
+  }
+
   .korean-fieldwork-record-context-free-drawing {
     border-top: 1px solid #e4e7ec;
     display: grid;
