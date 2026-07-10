@@ -1812,6 +1812,58 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
     });
 
 
+    it('appends linked tablet PenMemo handwriting evidence to the current record narrative once', async () => {
+
+        const feature = createDocument('feature-1', 'Feature', 'F1', {}, {
+            description: '기존 유구 설명.'
+        });
+        const memo = createDocument('memo-1', 'PenMemo', 'M1', {
+            depicts: ['feature-1']
+        }, {
+            penMemoReviewedTranscript: '[관찰 내용] 북쪽 교란 경계 약도.',
+            penMemoStrokes: '{"version":1,"strokes":[{"points":[{"x":10,"y":20},{"x":30,"y":40}]}]}'
+        });
+        const component = createComponent({
+            find: jest.fn().mockResolvedValue({
+                documents: [feature, memo]
+            })
+        });
+        const handleChanged = jest.fn();
+        component.onChanged.subscribe(handleChanged);
+        component.document = feature as any;
+        component.fieldDefinitions = [
+            field('featureRecordingStatus'),
+            textField('description', '설명')
+        ] as any;
+
+        await component.ngOnChanges();
+
+        const [insight] = component.getEvidenceInsights();
+        expect(insight).toMatchObject({
+            appendText: [
+                '[메모 M1 손글씨]',
+                '손글씨 원본: 스케치 메모 1획/2점.',
+                '검토 필사: [관찰 내용] 북쪽 교란 경계 약도.'
+            ].join('\n'),
+            id: 'penMemoSketch:memo-1',
+            label: '야장 스케치',
+            tone: 'info'
+        });
+        expect(component.canApplyEvidenceInsight(insight)).toBe(true);
+
+        component.applyEvidenceInsight(insight);
+        component.applyEvidenceInsight(insight);
+
+        expect(feature.resource.description).toContain('기존 유구 설명.');
+        expect(feature.resource.description).toContain('[메모 M1 손글씨]');
+        expect(feature.resource.description).toContain('손글씨 원본: 스케치 메모 1획/2점.');
+        expect(feature.resource.description).toContain('검토 필사: [관찰 내용] 북쪽 교란 경계 약도.');
+        expect(feature.resource.description).not.toContain('"strokes"');
+        expect(feature.resource.description.match(/\[메모 M1 손글씨\]/g)).toHaveLength(1);
+        expect(handleChanged).toHaveBeenCalledTimes(1);
+    });
+
+
     it('shows tablet photo annotation previews in the record context evidence', async () => {
 
         const feature = createDocument('feature-1', 'Feature', 'F1', {}, {

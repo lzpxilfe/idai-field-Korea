@@ -51,6 +51,7 @@ import {
 import {
     getPenMemoSketchSummaries,
     getPenMemoSketchPreview,
+    KoreanFieldworkPenMemoSketchSummary,
     KoreanFieldworkPenMemoSketchPreview,
     getPenMemoSketchSummaryLabel,
     getKoreanFieldworkReviewDrawingDocuments,
@@ -1661,15 +1662,23 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
                 }];
             });
         const penMemoSketchInsights = getPenMemoSketchSummaries(bundle.penMemos)
-            .map(summary => ({
-                detail: summary.pendingTranscription
-                    ? `${this.getDocumentLabel(summary.document)} · ${getPenMemoTranscriptionSummaryLabel(summary.document)}`
-                    : `${this.getDocumentLabel(summary.document)} · ${getPenMemoSketchSummaryLabel(summary.document.resource.penMemoStrokes)}`,
-                id: `penMemoSketch:${summary.document.resource.id}`,
-                label: summary.pendingTranscription ? '태블릿 야장 전사' : '야장 스케치',
-                sketchPreview: getPenMemoSketchPreview(summary.document.resource.penMemoStrokes),
-                tone: summary.pendingTranscription ? 'warning' as const : 'info' as const
-            }));
+            .map(summary => {
+                const sketchPreview = getPenMemoSketchPreview(summary.document.resource.penMemoStrokes);
+                const insight: EvidenceInsight = {
+                    detail: summary.pendingTranscription
+                        ? `${this.getDocumentLabel(summary.document)} · ${getPenMemoTranscriptionSummaryLabel(summary.document)}`
+                        : `${this.getDocumentLabel(summary.document)} · ${getPenMemoSketchSummaryLabel(summary.document.resource.penMemoStrokes)}`,
+                    id: `penMemoSketch:${summary.document.resource.id}`,
+                    label: summary.pendingTranscription ? '태블릿 야장 전사' : '야장 스케치',
+                    ...(sketchPreview ? { sketchPreview } : {}),
+                    tone: summary.pendingTranscription ? 'warning' as const : 'info' as const
+                };
+                const appendText = this.getPenMemoSketchInsightAppendText(summary, sketchPreview);
+
+                return canAppendEvidenceInsight && appendText
+                    ? { ...insight, appendText }
+                    : insight;
+            });
         const drawingSketchInsights = reviewDrawings
             .flatMap(document => {
                 const sketchPreview = this.getDrawingSketchPreview(document);
@@ -2071,6 +2080,39 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
             this.getNotebookAppendLine('표시 요약', annotationLabel),
             this.getNotebookAppendLine('표시 설명', photoDescription ?? '사진 원본에서 표시 위치 확인 필요'),
             this.getNotebookAppendLine('수정 시각', summary.updatedAt)
+        ].filter((line): line is string => !!line && line.length > 0);
+
+        return lines.length > 1 ? lines.join('\n') : '';
+    }
+
+
+    private getPenMemoSketchInsightAppendText(
+            summary: KoreanFieldworkPenMemoSketchSummary,
+            sketchPreview: KoreanFieldworkPenMemoSketchPreview|undefined
+    ): string {
+
+        const document = summary.document;
+        const documentLabel = this.getDocumentLabel(document);
+        const reviewedTranscript = this.getNonEmptyDocumentStringField(document, 'penMemoReviewedTranscript');
+        const autoTranscript = this.getNonEmptyDocumentStringField(document, 'penMemoAutoTranscript');
+        const memoDescription = this.getNonEmptyDocumentStringField(document, 'description')
+            ?? this.getNonEmptyDocumentStringField(document, 'shortDescription');
+        const transcriptLabel = reviewedTranscript
+            ? '검토 필사'
+            : autoTranscript
+                ? '자동 필사'
+                : '메모';
+        const transcriptText = reviewedTranscript ?? autoTranscript ?? memoDescription;
+        const lines = [
+            `[메모 ${documentLabel} 손글씨]`,
+            this.getNotebookAppendLine(
+                '손글씨 원본',
+                sketchPreview?.label ?? getPenMemoSketchSummaryLabel(document.resource.penMemoStrokes)
+            ),
+            this.getNotebookAppendLine(transcriptLabel, transcriptText),
+            summary.pendingTranscription
+                ? this.getNotebookAppendLine('전사 상태', '검토 전사 필요')
+                : undefined
         ].filter((line): line is string => !!line && line.length > 0);
 
         return lines.length > 1 ? lines.join('\n') : '';

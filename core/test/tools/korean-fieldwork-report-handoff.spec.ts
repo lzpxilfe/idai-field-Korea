@@ -812,15 +812,36 @@ describe('Korean fieldwork report handoff', () => {
         const evidenceDetails = featureItem?.evidenceDetails.join('\n') ?? '';
 
         expect(evidenceDetails)
-            .toContain('\ud544\uae30 \uc6d0\ubcf8: \uc788\uc74c');
+            .toContain('필기 원본: 1획 2점');
         expect(featureItem?.copyText)
-            .toContain('\ud544\uae30 \uc6d0\ubcf8: \uc788\uc74c');
+            .toContain('필기 원본: 1획 2점');
         expect(featureItem?.copyText)
             .toContain('\ud0dc\ube14\ub9bf \uc190\uae00\uc528 \uc57c\uc7a5 \uba54\ubaa8');
         expect(featureItem?.copyText)
             .not.toContain('pen-memo-handwriting-transcription');
         expect(featureItem?.copyText)
             .not.toContain('"strokes"');
+    });
+
+
+    it('uses tablet handwriting strokes as standalone PenMemo HWP summary content', () => {
+
+        const handoff = makeKoreanFieldworkReportHandoff([
+            makeDocument('memo-handwritten', 'PenMemo', {
+                identifier: 'M-1',
+                penMemoStrokes: '{"version":1,"strokes":[{"points":[{"x":10,"y":20},{"x":30,"y":40}]}]}',
+                penMemoTranscriptionStatus: 'pending',
+                relations: { depicts: ['feature-1'] }
+            })
+        ] as any);
+
+        const memoItem = handoff.items.find(item => item.documentId === 'memo-handwritten');
+        const detailText = memoItem?.details.join('\n') ?? '';
+
+        expect(memoItem?.summary).toBe('필기 원본: 1획 2점');
+        expect(detailText).toContain('메모: 필기 원본: 1획 2점');
+        expect(memoItem?.copyText).toContain('필기 원본: 1획 2점');
+        expect(memoItem?.copyText).not.toContain('"strokes"');
     });
 
 

@@ -442,7 +442,7 @@ const DETAIL_FIELDS: DetailFieldDefinition[] = [
     },
     {
         label: '\uba54\ubaa8',
-        fields: ['description', 'penMemoReviewedTranscript', 'penMemoAutoTranscript']
+        fields: ['description', 'penMemoReviewedTranscript', 'penMemoAutoTranscript', 'penMemoStrokes']
     }
 ];
 
@@ -453,6 +453,7 @@ const SUMMARY_FIELDS = [
     'fieldNote',
     'penMemoReviewedTranscript',
     'penMemoAutoTranscript',
+    'penMemoStrokes',
     'featureGeometryRevisionNote',
     'featureLocationSketch',
     'featureFreeDrawingStrokes',
@@ -908,6 +909,10 @@ function getHandoffPrintableFieldValue(resource: NewResource, fieldName: string)
         );
     }
 
+    if (fieldName === 'penMemoStrokes') {
+        return getPenMemoStrokeEvidenceLabel(resource.penMemoStrokes);
+    }
+
     if (fieldName === 'fieldNote') {
         return getFieldNoteSummary(resource.fieldNote);
     }
@@ -1165,6 +1170,10 @@ function getSummaryFieldValue(document: Document, fieldName: string): string|und
             '\uc791\uc5c5\uc77c\uc9c0 \uacbd\uacc4 \uba54\ubaa8',
             document.resource.dailyLogBoundaryMemoStrokes
         );
+    }
+
+    if (fieldName === 'penMemoStrokes') {
+        return getPenMemoStrokeEvidenceLabel(document.resource.penMemoStrokes);
     }
 
     if (fieldName === 'fieldNote') {
@@ -1867,7 +1876,14 @@ function getLabeledEvidenceFieldSummary(
 
 function getPenMemoStrokeEvidenceLabel(value: any): string|undefined {
 
-    return getStrokeEvidenceLabel('\ud544\uae30 \uc6d0\ubcf8', value);
+    const stats = getStrokeEvidenceStats(value);
+    if (!stats || stats.strokeCount === 0) return undefined;
+
+    const countLabel = stats.pointCount > 0
+        ? `${stats.strokeCount}\ud68d ${stats.pointCount}\uc810`
+        : `${stats.strokeCount}\ud68d`;
+
+    return `\ud544\uae30 \uc6d0\ubcf8: ${countLabel}`;
 }
 
 
@@ -1902,6 +1918,76 @@ function hasStrokeEvidence(value: any): boolean {
     }
 
     return !!String(value).trim();
+}
+
+
+function getStrokeEvidenceStats(value: any): { strokeCount: number; pointCount: number }|undefined {
+
+    if (value === undefined || value === null) return undefined;
+
+    if (typeof value === 'string') {
+        const text = value.trim();
+        if (!text || text === '[]' || text === '{}') return undefined;
+
+        const parsed = parseJsonValue(text);
+        return parsed === undefined
+            ? { strokeCount: 1, pointCount: 0 }
+            : getStrokeEvidenceStats(parsed);
+    }
+
+    if (Array.isArray(value)) {
+        if (value.length === 0) return undefined;
+        if (value.every(isStrokePointValue)) {
+            return { strokeCount: 1, pointCount: value.length };
+        }
+
+        return mergeStrokeEvidenceStats(value.map(getStrokeEvidenceStats));
+    }
+
+    if (typeof value === 'object') {
+        if (isStrokePointValue(value)) return { strokeCount: 1, pointCount: 1 };
+
+        if (Array.isArray(value.points)) {
+            const pointCount = value.points.filter(isStrokePointValue).length;
+            return pointCount > 0 ? { strokeCount: 1, pointCount } : undefined;
+        }
+
+        if (Array.isArray(value.strokes)) {
+            return mergeStrokeEvidenceStats(value.strokes.map(getStrokeEvidenceStats));
+        }
+
+        return mergeStrokeEvidenceStats(
+            Object.keys(value)
+                .filter(key => key !== 'version')
+                .map(key => getStrokeEvidenceStats(value[key]))
+        );
+    }
+
+    return String(value).trim() ? { strokeCount: 1, pointCount: 0 } : undefined;
+}
+
+
+function mergeStrokeEvidenceStats(
+        statsList: Array<{ strokeCount: number; pointCount: number }|undefined>
+): { strokeCount: number; pointCount: number }|undefined {
+
+    const stats = statsList.filter((entry): entry is { strokeCount: number; pointCount: number } => !!entry);
+    if (stats.length === 0) return undefined;
+
+    return {
+        strokeCount: stats.reduce((sum, entry) => sum + entry.strokeCount, 0),
+        pointCount: stats.reduce((sum, entry) => sum + entry.pointCount, 0)
+    };
+}
+
+
+function isStrokePointValue(value: any): boolean {
+
+    return !!value
+        && typeof value === 'object'
+        && !Array.isArray(value)
+        && Number.isFinite(Number(value.x))
+        && Number.isFinite(Number(value.y));
 }
 
 

@@ -425,7 +425,7 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
             expect(featureItem.copyText)
                 .not.toContain('\uc0ac\uc9c4 \uc120\ud0dd \uc9c0\uc810 20%/50% \ud3c9\uade0 RGB 111/87/61');
             expect(featureItem.copyText)
-                .toContain('\ud544\uae30 \uc6d0\ubcf8: \uc788\uc74c');
+                .toContain('필기 원본: 1획 2점');
             expect(featureItem.copyText)
                 .toContain('\ud0dc\ube14\ub9bf \uc2a4\ucf00\uce58: \uc788\uc74c');
             expect(featureItem.copyText)

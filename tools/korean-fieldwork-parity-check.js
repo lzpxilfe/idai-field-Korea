@@ -3558,7 +3558,7 @@ function validateReportHandoffPreSaveValidation() {
       || !coreReportHandoffText.includes('hasStrokeEvidence')
       || !coreReportHandoffSpecText.includes('handwritten tablet pen memos without dumping stroke JSON')
       || !coreReportHandoffSpecText.includes('empty tablet handwriting stroke containers')
-      || !desktopPriorityStripSpecText.includes('\\ud544\\uae30 \\uc6d0\\ubcf8: \\uc788\\uc74c')
+      || !desktopPriorityStripSpecText.includes('필기 원본: 1획 2점')
       || !desktopPriorityStripSpecText.includes("not.toContain('\"strokes\"')")) {
     findings.push('report handoff HWP copy blocks must summarize tablet handwritten PenMemo strokes without leaking stroke JSON');
   }
