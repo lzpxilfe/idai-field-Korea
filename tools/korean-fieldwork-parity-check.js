@@ -3839,6 +3839,7 @@ function validateReportHandoffPreSaveValidation() {
       || !desktopPriorityStripText.includes('getTabletProcessingRecordIds')
       || !desktopPriorityStripText.includes('openTabletProcessingRecord')
       || !desktopPriorityStripText.includes('openRecordWorkDocument')
+      || !desktopPriorityStripText.includes('shouldOpenTabletProcessingFromRecordWork')
       || !desktopPriorityStripText.includes('openFeatureOverviewItem')
       || !desktopPriorityStripText.includes('getProgressItemActionLabel')
       || !desktopPriorityStripText.includes('reportHandoffTabletBundlesByDocumentId')

@@ -579,7 +579,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
         this.tabletProcessingRecordIds.has(documentId);
 
     public getProgressItemActionLabel = (item: KoreanFieldworkProgressItem) =>
-        this.isTabletProcessingRecord(item.documentId)
+        this.shouldOpenTabletProcessingFromRecordWork(item.documentId)
             ? '\ud0dc\ube14\ub9bf \ucc98\ub9ac'
             : item.actionLabel;
 
@@ -2079,7 +2079,10 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
 
     private async openRecordWorkDocument(documentId: string) {
 
-        if (this.openTabletProcessingRecord(documentId)) return;
+        if (this.shouldOpenTabletProcessingFromRecordWork(documentId)
+                && this.openTabletProcessingRecord(documentId)) {
+            return;
+        }
 
         await this.openDocument(documentId);
     }
@@ -2668,6 +2671,13 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
             new Date(),
             this.tabletProcessingRecordIds
         );
+    }
+
+
+    private shouldOpenTabletProcessingFromRecordWork(documentId: string): boolean {
+
+        return this.activeRecordWorkFilterId === 'needsReview'
+            && this.isTabletProcessingRecord(documentId);
     }
 
 
