@@ -1,6 +1,7 @@
 import {
     Document,
     getKoreanFieldworkFindSpotSummaryText,
+    getKoreanFieldworkRecordFieldValueSummary,
     KoreanFieldworkReportHandoffItem,
     KoreanFieldworkReadinessIssue,
     makeKoreanFieldworkReportHandoff,
@@ -859,6 +860,7 @@ function getDocumentDetail(document: Document): string|undefined {
 
     return [
         getFindSpotDetail(document),
+        getFindSampleRecordDetail(document),
         getDirectFieldworkPhotoDetail(document),
         getPhotoDetail(document),
         getSoilProfilePhotoDetail(document),
@@ -879,6 +881,39 @@ function getFindSpotDetail(document: Document): string|undefined {
     return document.resource.category === 'Sample'
         ? `\uc2dc\ub8cc \ucc44\ucde8 \uc704\uce58: ${summary}`
         : `\uc720\ubb3c \ucd9c\ud1a0 \uc704\uce58: ${summary}`;
+}
+
+
+function getFindSampleRecordDetail(document: Document): string|undefined {
+
+    switch (document.resource.category) {
+        case 'Find':
+        case 'FindCollection':
+            return [
+                getFieldValueDetail('\ucd9c\ud1a0 \uc704\uce58 \uc124\uba85', 'findSpotDescription', document),
+                getFieldValueDetail(
+                    '\uc720\ubb3c\u00b7\uc2dc\ub8cc \uc5f0\uad6c\ubc94\uc704',
+                    'findSampleResearchScope',
+                    document
+                )
+            ].filter((value): value is string => !!value).join(' \u00b7 ') || undefined;
+        case 'Sample':
+            return [
+                getFieldValueDetail('\ucc44\ucde8 \uc704\uce58 \uc124\uba85', 'findSpotDescription', document),
+                getFieldValueDetail('\uc2dc\ub8cc \uc885\ub958', 'sampleType', document),
+                getFieldValueDetail('\uc2e4\ud5d8\uc2e4 \ubc88\ud638', 'labNumber', document),
+                getFieldValueDetail('\ubb34\uac8c', 'weight', document),
+                getFieldValueDetail('\ubd80\ud53c', 'volume', document),
+                getFieldValueDetail('\uc2dc\ub8cc \ubaa9\uc801', 'samplePurpose', document),
+                getFieldValueDetail(
+                    '\uc720\ubb3c\u00b7\uc2dc\ub8cc \uc5f0\uad6c\ubc94\uc704',
+                    'findSampleResearchScope',
+                    document
+                )
+            ].filter((value): value is string => !!value).join(' \u00b7 ') || undefined;
+        default:
+            return undefined;
+    }
 }
 
 
@@ -969,6 +1004,14 @@ function getDocumentFieldDetails(document: Document): string|undefined {
         getImageSizeDetail(document),
         getImageUploadDetail(document)
     ].filter((value): value is string => !!value).join(' \u00b7 ') || undefined;
+}
+
+
+function getFieldValueDetail(label: string, fieldName: string, document: Document): string|undefined {
+
+    const summary = getKoreanFieldworkRecordFieldValueSummary(fieldName, document.resource[fieldName]);
+
+    return summary ? `${label}: ${summary}` : undefined;
 }
 
 

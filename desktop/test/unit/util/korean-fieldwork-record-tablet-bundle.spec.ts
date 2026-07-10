@@ -364,6 +364,8 @@ describe('korean-fieldwork-record-tablet-bundle', () => {
             isRecordedInFeature: ['feature-1']
         }, {
             shortDescription: '\uccad\ub3d9 \uc870\uac01',
+            findSpotDescription: '\ubd81\ubcbd \ubc14\ub2e5\uba74 \uc790\uac08 \uc0ac\uc774',
+            findSampleResearchScope: '\ud604\uc7a5 \uc138\ucc99 \ud6c4 \uc784\uc2dc\ubcf4\uad00',
             findSpotItems: JSON.stringify({
                 version: 1,
                 items: [
@@ -374,7 +376,13 @@ describe('korean-fieldwork-record-tablet-bundle', () => {
         const sample = createDoc('sample-1', 'Sample', 'Sample 1', {
             isRecordedInFeature: ['feature-1']
         }, {
+            findSpotDescription: '\ub0a8\ubcbd \ud1a0\uce35 2\uce35 \uc911\uc559',
+            sampleType: '\ud0c4\ud654\ubb3c',
+            labNumber: 'LAB-2026-001',
+            weight: '120g',
+            volume: '250ml',
             samplePurpose: '\ud0c4\ud654\ubb3c \ubd84\uc11d',
+            findSampleResearchScope: '\ubd84\uc11d\uc6a9 \ud558\ub098, \ubcf4\uad00\uc6a9 \ud558\ub098',
             findSpotItems: JSON.stringify({
                 version: 1,
                 items: [
@@ -392,6 +400,10 @@ describe('korean-fieldwork-record-tablet-bundle', () => {
 
         expect(findSource.detail)
             .toContain('\uc720\ubb3c \ucd9c\ud1a0 \uc704\uce58: 1\ubc88 25%/75% bronze fragment');
+        expect(findSource.detail)
+            .toContain('\ucd9c\ud1a0 \uc704\uce58 \uc124\uba85: \ubd81\ubcbd \ubc14\ub2e5\uba74 \uc790\uac08 \uc0ac\uc774');
+        expect(findSource.detail)
+            .toContain('\uc720\ubb3c\u00b7\uc2dc\ub8cc \uc5f0\uad6c\ubc94\uc704: \ud604\uc7a5 \uc138\ucc99 \ud6c4 \uc784\uc2dc\ubcf4\uad00');
         expect(findSource.detail).toContain('\uccad\ub3d9 \uc870\uac01');
         expect(findSource.copyText)
             .toContain('\uc720\ubb3c \ucd9c\ud1a0 \uc704\uce58: 1\ubc88 25%/75% bronze fragment');
@@ -400,8 +412,22 @@ describe('korean-fieldwork-record-tablet-bundle', () => {
 
         expect(sampleSource.detail)
             .toContain('\uc2dc\ub8cc \ucc44\ucde8 \uc704\uce58: 1\ubc88 50%/40% charcoal bag');
+        expect(sampleSource.detail)
+            .toContain('\ucc44\ucde8 \uc704\uce58 \uc124\uba85: \ub0a8\ubcbd \ud1a0\uce35 2\uce35 \uc911\uc559');
+        expect(sampleSource.detail)
+            .toContain('\uc2dc\ub8cc \uc885\ub958: \ud0c4\ud654\ubb3c');
+        expect(sampleSource.detail)
+            .toContain('\uc2e4\ud5d8\uc2e4 \ubc88\ud638: LAB-2026-001');
+        expect(sampleSource.detail)
+            .toContain('\ubb34\uac8c: 120g');
+        expect(sampleSource.detail)
+            .toContain('\ubd80\ud53c: 250ml');
+        expect(sampleSource.detail)
+            .toContain('\uc2dc\ub8cc \ubaa9\uc801: \ud0c4\ud654\ubb3c \ubd84\uc11d');
         expect(sampleSource.copyText)
             .toContain('\uc2dc\ub8cc \ucc44\ucde8 \uc704\uce58: 1\ubc88 50%/40% charcoal bag');
+        expect(sampleSource.copyText)
+            .toContain('\uc2dc\ub8cc \ubaa9\uc801: \ud0c4\ud654\ubb3c \ubd84\uc11d');
         expect(bundle.groups.find(group => group.id === 'samples')?.copyText)
             .toContain('\uc2dc\ub8cc \ucc44\ucde8 \uc704\uce58: 1\ubc88 50%/40% charcoal bag');
     });
