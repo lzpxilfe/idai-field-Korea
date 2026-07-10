@@ -126,6 +126,7 @@ import {
 import {
     createKoreanFieldworkTabletHandoffReviewUpdate,
     createKoreanFieldworkTabletHandoffSourceReviewUpdate,
+    getKoreanFieldworkTabletRecordBundleGroupSourcesForReview,
     KoreanFieldworkTabletRecordBundle,
     KoreanFieldworkTabletRecordBundleGroup,
     KoreanFieldworkTabletRecordBundleSource,
@@ -983,18 +984,8 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
 
     public getReportHandoffTabletBundleGroupSources(
             group: KoreanFieldworkTabletRecordBundleGroup
-    ): KoreanFieldworkTabletRecordBundleSource[] {
-
-        return group.sources
-            .map((source, index) => ({ source, index }))
-            .sort((left, right) => {
-                const leftPriority = left.source.issueCount > 0 ? 0 : 1;
-                const rightPriority = right.source.issueCount > 0 ? 0 : 1;
-
-                return leftPriority - rightPriority || left.index - right.index;
-            })
-            .map(entry => entry.source);
-    }
+    ): KoreanFieldworkTabletRecordBundleSource[] =>
+        getKoreanFieldworkTabletRecordBundleGroupSourcesForReview(group);
 
     public getReportHandoffTabletBundleSourceCopyActionLabel = (
             item: KoreanFieldworkReportHandoffItem,

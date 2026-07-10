@@ -70,6 +70,7 @@ import {
 import {
     createKoreanFieldworkTabletHandoffReviewUpdate,
     createKoreanFieldworkTabletHandoffSourceReviewUpdate,
+    getKoreanFieldworkTabletRecordBundleGroupSourcesForReview,
     KoreanFieldworkTabletRecordBundle,
     KoreanFieldworkTabletRecordBundleGroup,
     KoreanFieldworkTabletRecordBundleSource,
@@ -973,6 +974,10 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
 
     public getTabletRecordBundleGroupToggleLabel = (group: KoreanFieldworkTabletRecordBundleGroup) =>
         this.isTabletRecordBundleGroupExpanded(group) ? '\uc811\uae30' : '\ud3bc\uce58\uae30';
+
+
+    public getTabletRecordBundleGroupSources = (group: KoreanFieldworkTabletRecordBundleGroup) =>
+        getKoreanFieldworkTabletRecordBundleGroupSourcesForReview(group);
 
 
     public toggleTabletRecordBundleGroup(group: KoreanFieldworkTabletRecordBundleGroup) {

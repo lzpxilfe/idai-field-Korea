@@ -55,6 +55,8 @@ jobs:
           node-version: 22
       - name: Run Korean fieldwork parity check
         run: node tools/korean-fieldwork-parity-check.js
+      - name: Run Korean fieldwork media contract check
+        run: node tools/korean-fieldwork-media-contract-check.js
       - name: Install dependencies
         run: node tools/ci-retry-command.js npm run bootstrap
       - name: Build core

@@ -324,6 +324,31 @@ export function createKoreanFieldworkTabletHandoffSourceReviewUpdate(
 }
 
 
+export function getKoreanFieldworkTabletRecordBundleGroupSourcesForReview(
+        group: KoreanFieldworkTabletRecordBundleGroup
+): KoreanFieldworkTabletRecordBundleSource[] {
+
+    return group.sources
+        .map((source, index) => ({ source, index }))
+        .sort((left, right) =>
+            getTabletSourceProcessingPriority(left.source)
+            - getTabletSourceProcessingPriority(right.source)
+            || right.source.issueCount - left.source.issueCount
+            || left.index - right.index
+        )
+        .map(entry => entry.source);
+}
+
+
+function getTabletSourceProcessingPriority(source: KoreanFieldworkTabletRecordBundleSource): number {
+
+    if (source.reviewState.isStale) return 0;
+    if (source.issueCount > 0) return 1;
+    if (!source.reviewState.isReviewed) return 2;
+    return 3;
+}
+
+
 function getTabletHandoffStaleReasons(
         sourceCount: number|undefined,
         reviewedSourceCount: number|undefined,

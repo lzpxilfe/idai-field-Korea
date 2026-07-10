@@ -1,6 +1,7 @@
 import {
     createKoreanFieldworkTabletHandoffReviewUpdate,
     createKoreanFieldworkTabletHandoffSourceReviewUpdate,
+    getKoreanFieldworkTabletRecordBundleGroupSourcesForReview,
     KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_AT_FIELD,
     KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_FINGERPRINT_FIELD,
     KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_ISSUE_COUNT_FIELD,
@@ -267,6 +268,28 @@ describe('korean-fieldwork-record-tablet-bundle', () => {
     });
 
 
+    it('orders tablet source rows by desktop processing priority', () => {
+
+        const reviewed = makeSource('reviewed', 0, true, false);
+        const unreviewed = makeSource('unreviewed', 0, false, false);
+        const issueLow = makeSource('issue-low', 1, false, false);
+        const issueHigh = makeSource('issue-high', 2, false, false);
+        const stale = makeSource('stale', 0, false, true);
+
+        const orderedSources = getKoreanFieldworkTabletRecordBundleGroupSourcesForReview({
+            sources: [reviewed, unreviewed, issueLow, issueHigh, stale]
+        } as any);
+
+        expect(orderedSources.map(source => source.id)).toEqual([
+            'stale',
+            'issue-high',
+            'issue-low',
+            'unreviewed',
+            'reviewed'
+        ]);
+    });
+
+
     it('marks reviewed tablet bundles stale when tablet evidence changes later', () => {
 
         const feature = createDoc('feature-1', 'Feature', 'F1', {}, {
@@ -365,4 +388,28 @@ const createDoc = (
         relations,
         ...extraResource
     }
+} as any);
+
+
+const makeSource = (
+    id: string,
+    issueCount: number,
+    isReviewed: boolean,
+    isStale: boolean
+) => ({
+    id,
+    label: id,
+    documentId: id,
+    issueCount,
+    issueDetails: [],
+    copyText: id,
+    fingerprint: id,
+    reviewState: {
+        isReviewed,
+        isStale,
+        label: isStale ? '\ub2e4\uc2dc \ud655\uc778' : (isReviewed ? '\ucc98\ub9ac\ub428' : '\ubbf8\ucc98\ub9ac'),
+        detail: id,
+        tone: isStale ? 'warning' : (isReviewed ? 'success' : 'neutral')
+    },
+    tone: issueCount > 0 ? 'warning' : 'info'
 } as any);

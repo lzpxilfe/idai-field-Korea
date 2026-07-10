@@ -428,6 +428,7 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
         expect(bundleIndex).toBeLessThan(hwpIndex);
         expect(template).toContain('korean-fieldwork-record-context-tablet-bundle-groups');
         expect(template).toContain('toggleTabletRecordBundleGroup(group)');
+        expect(template).toContain('getTabletRecordBundleGroupSources(group)');
         expect(template).toContain('openTabletRecordBundleSource(source)');
         expect(template).toContain('copyTabletRecordBundleGroup(group)');
         expect(template).toContain('copyTabletRecordBundleSource(group, source)');
