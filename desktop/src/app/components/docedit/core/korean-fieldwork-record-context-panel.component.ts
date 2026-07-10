@@ -17,6 +17,7 @@ import {
     getKoreanFieldworkFeaturePitLineSummaries,
     KoreanFieldworkFindSpotSummary,
     getKoreanFieldworkFindSpotSummaries,
+    getKoreanFieldworkDrawingSurveySummary,
     getKoreanFieldworkRecordFieldValueSummary,
     parseSoilProfileColorSwatchRows,
     SoilProfileColorSwatchRow
@@ -225,6 +226,10 @@ const KOREAN_FIELDWORK_CONTEXT_FIELDS = [
     'dailyLogSafetyEducationStretching',
     'dailyLogWorkMemoUpdatedAt',
     'dailyLogWorkerCount',
+    'drawingSurveyMethods',
+    'drawingThreeDDevices',
+    'drawingSurveyStages',
+    'drawingSurveyUpdatedAt',
     'featureFreeDrawingStrokes',
     'featureFreeDrawingUpdatedAt',
     'featureSoilPitLine',
@@ -1683,6 +1688,23 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
                     ? { ...insight, appendText }
                     : insight];
             });
+        const drawingSurveyInsights = reviewDrawings
+            .flatMap(document => {
+                const summary = getKoreanFieldworkDrawingSurveySummary(document.resource);
+                if (!summary) return [];
+
+                const insight: EvidenceInsight = {
+                    detail: `${this.getDocumentLabel(document)} · ${summary}`,
+                    id: `drawingSurvey:${document.resource.id}`,
+                    label: '도면 실측',
+                    tone: 'info' as const
+                };
+                const appendText = this.getDrawingSurveyInsightAppendText(document, summary);
+
+                return [canAppendEvidenceInsight && appendText
+                    ? { ...insight, appendText }
+                    : insight];
+            });
         const photoAnnotationInsights = getPhotoAnnotationSummaries(reviewPhotos, reviewSoilProfilePhotos)
             .map(summary => {
                 const insight: EvidenceInsight = {
@@ -1704,6 +1726,7 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
             ...soilColorSwatchInsights,
             ...soilProfileLayerMarkerInsights,
             ...drawingSketchInsights,
+            ...drawingSurveyInsights,
             ...photoAnnotationInsights,
             ...penMemoSketchInsights
         ]
@@ -2066,6 +2089,25 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
         const lines = [
             `[도면 ${documentLabel}]`,
             this.getNotebookAppendLine('스케치 요약', sketchPreview.label),
+            this.getNotebookAppendLine('도면 설명', drawingDescription),
+            this.getNotebookAppendLine('원본', drawingSource)
+        ].filter((line): line is string => !!line && line.length > 0);
+
+        return lines.length > 1 ? lines.join('\n') : '';
+    }
+
+
+    private getDrawingSurveyInsightAppendText(document: Document, summary: string): string {
+
+        const documentLabel = this.getDocumentLabel(document);
+        const drawingDescription = this.getNonEmptyDocumentStringField(document, 'description')
+            ?? this.getNonEmptyDocumentStringField(document, 'shortDescription');
+        const drawingSource = this.getNonEmptyDocumentStringField(document, 'fileUri')
+            ?? this.getNonEmptyDocumentStringField(document, 'imageUri')
+            ?? this.getNonEmptyDocumentStringField(document, 'fieldworkPhotoUri');
+        const lines = [
+            `[도면 ${documentLabel} 실측]`,
+            this.getNotebookAppendLine('도면 실측', summary),
             this.getNotebookAppendLine('도면 설명', drawingDescription),
             this.getNotebookAppendLine('원본', drawingSource)
         ].filter((line): line is string => !!line && line.length > 0);

@@ -1967,6 +1967,62 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
     });
 
 
+    it('shows tablet drawing survey checks and appends a desktop narrative summary once', async () => {
+
+        const feature = createDocument('feature-1', 'Feature', 'F1', {}, {
+            description: '\uae30\uc874 \ub3c4\uba74 \uc124\uba85.'
+        });
+        const drawing = createDocument('drawing-1', 'Drawing', 'D1', {
+            depicts: ['feature-1']
+        }, {
+            description: '\ub3d9\ucabd \ubcbd\uba74 \uc2e4\uce21 \ub3c4\uba74.',
+            drawingSurveyMethods: ['handMeasured', 'threeDMeasured'],
+            drawingThreeDDevices: ['drone'],
+            drawingSurveyStages: ['afterCompletion'],
+            fileUri: 'file:///tablet/drawings/pit-plan.png'
+        });
+        const component = createComponent({
+            find: jest.fn().mockResolvedValue({
+                documents: [feature, drawing]
+            })
+        });
+        const handleChanged = jest.fn();
+        component.onChanged.subscribe(handleChanged);
+        component.document = feature as any;
+        component.fieldDefinitions = [
+            field('featureRecordingStatus'),
+            textField('description', '\uc124\uba85')
+        ] as any;
+
+        await component.ngOnChanges();
+
+        const [insight] = component.getEvidenceInsights();
+        expect(insight).toMatchObject({
+            id: 'drawingSurvey:drawing-1',
+            label: '\ub3c4\uba74 \uc2e4\uce21',
+            detail: 'D1 \u00b7 \uc2e4\uce21 \ubc29\uc2dd: \uc190\uc2e4\uce21\u00b73D \uc2e4\uce21 / 3D \uc7a5\ube44: \ub4dc\ub860 / \uc2e4\uce21 \ub2e8\uacc4: \uc870\uc0ac \uc644\ub8cc',
+            appendText: [
+                '[\ub3c4\uba74 D1 \uc2e4\uce21]',
+                '\ub3c4\uba74 \uc2e4\uce21: \uc2e4\uce21 \ubc29\uc2dd: \uc190\uc2e4\uce21\u00b73D \uc2e4\uce21 / 3D \uc7a5\ube44: \ub4dc\ub860 / \uc2e4\uce21 \ub2e8\uacc4: \uc870\uc0ac \uc644\ub8cc',
+                '\ub3c4\uba74 \uc124\uba85: \ub3d9\ucabd \ubcbd\uba74 \uc2e4\uce21 \ub3c4\uba74.',
+                '\uc6d0\ubcf8: file:///tablet/drawings/pit-plan.png'
+            ].join('\n')
+        });
+        expect(component.canApplyEvidenceInsight(insight)).toBe(true);
+
+        component.applyEvidenceInsight(insight);
+        component.applyEvidenceInsight(insight);
+
+        expect(feature.resource.description).toContain('\uae30\uc874 \ub3c4\uba74 \uc124\uba85.');
+        expect(feature.resource.description).toContain('[\ub3c4\uba74 D1 \uc2e4\uce21]');
+        expect(feature.resource.description).toContain(
+            '\ub3c4\uba74 \uc2e4\uce21: \uc2e4\uce21 \ubc29\uc2dd: \uc190\uc2e4\uce21\u00b73D \uc2e4\uce21'
+        );
+        expect(feature.resource.description.match(/\[\ub3c4\uba74 D1 \uc2e4\uce21\]/g)).toHaveLength(1);
+        expect(handleChanged).toHaveBeenCalledTimes(1);
+    });
+
+
     it('appends tablet photo annotation summaries to the current record narrative once', async () => {
 
         const feature = createDocument('feature-1', 'Feature', 'F1', {}, {

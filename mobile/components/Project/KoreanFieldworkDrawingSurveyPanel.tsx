@@ -1,5 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import {
+  KOREAN_FIELDWORK_DRAWING_SURVEY_FIELDS,
   NewResource,
   Resource,
 } from 'idai-field-core';
@@ -26,12 +27,7 @@ interface Props {
   resource: EditableDrawingResource;
 }
 
-export const KOREAN_FIELDWORK_DRAWING_SURVEY_FIELDS = {
-  devices: 'drawingThreeDDevices',
-  methods: 'drawingSurveyMethods',
-  stages: 'drawingSurveyStages',
-  updatedAt: 'drawingSurveyUpdatedAt',
-} as const;
+export { KOREAN_FIELDWORK_DRAWING_SURVEY_FIELDS } from 'idai-field-core';
 
 const METHOD_OPTIONS: Option[] = [
   {

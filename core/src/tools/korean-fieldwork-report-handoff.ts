@@ -39,6 +39,9 @@ import {
     getKoreanFieldworkFeaturePitLineSummaries,
     getKoreanFieldworkFeaturePitLineSummaryLabel
 } from './korean-fieldwork-pit-lines';
+import {
+    getKoreanFieldworkDrawingSurveySummary
+} from './korean-fieldwork-drawing-survey';
 
 
 export type KoreanFieldworkReportHandoffTone = 'ready'|'review';
@@ -410,6 +413,7 @@ const DETAIL_FIELDS: DetailFieldDefinition[] = [
             'originalFilename',
             'fieldworkPhotoCapturedAt',
             'soilProfilePhotoCapturedAt',
+            'drawingSurveySummary',
             'width',
             'height',
             'drawingSketchStrokes',
@@ -645,7 +649,14 @@ const EVIDENCE_DETAILS: EvidenceDetailDefinition[] = [
         label: '\ub3c4\uba74',
         getDocuments: bundle => bundle.drawings,
         getSummary: getDrawingEvidenceSummary,
-        fields: ['shortDescription', 'fileUri', 'imageUri', 'fieldworkPhotoUri', 'drawingSketchStrokes']
+        fields: [
+            'shortDescription',
+            'fileUri',
+            'imageUri',
+            'fieldworkPhotoUri',
+            'drawingSurveySummary',
+            'drawingSketchStrokes'
+        ]
     },
     {
         label: '\ud604\uc7a5\uba54\ubaa8',
@@ -875,6 +886,10 @@ function getHandoffPrintableFieldValue(resource: NewResource, fieldName: string)
 
     if (fieldName === 'drawingSketchStrokes') {
         return getStrokeEvidenceLabel('\ud0dc\ube14\ub9bf \uc2a4\ucf00\uce58', resource.drawingSketchStrokes);
+    }
+
+    if (fieldName === 'drawingSurveySummary') {
+        return getKoreanFieldworkDrawingSurveySummary(resource);
     }
 
     if (fieldName === 'dailyLogContent') {
@@ -1784,6 +1799,7 @@ function getDrawingEvidenceSummary(document: Document): string|undefined {
             'imageUri',
             'fieldworkPhotoUri'
         ])),
+        getKoreanFieldworkDrawingSurveySummary(document.resource),
         getStrokeEvidenceLabel('\ud0dc\ube14\ub9bf \uc2a4\ucf00\uce58', document.resource.drawingSketchStrokes)
     ].filter((value): value is string => !!value).join(' / ') || undefined;
 }
