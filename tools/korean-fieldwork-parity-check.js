@@ -3225,6 +3225,7 @@ function validateRecordPanelOrder() {
   }
   if (!desktopRecordTabletBundleText.includes('makeKoreanFieldworkEvidenceReview')
       || !desktopRecordTabletBundleText.includes('getIssueDetailsByDocumentId')
+      || !desktopRecordTabletBundleText.includes('makeSourceCopyText')
       || !desktopRecordTabletBundleText.includes('makeKoreanFieldworkReportHandoff')
       || !desktopRecordTabletBundleText.includes('getKoreanFieldworkNotebookEntriesForDocument')
       || !desktopRecordTabletBundleText.includes('normalizeKoreanFieldworkHwpPlainText')
@@ -3232,17 +3233,20 @@ function validateRecordPanelOrder() {
       || !desktopRecordTabletBundleSpecText.includes('marks tablet bundle sources that still need desktop review')
       || !desktopRecordContextPanelText.includes('makeKoreanFieldworkRecordTabletBundle')
       || !desktopRecordContextPanelText.includes('copyTabletRecordBundleGroup')
+      || !desktopRecordContextPanelText.includes('copyTabletRecordBundleSource')
       || !desktopRecordContextPanelText.includes('toggleTabletRecordBundleGroup')
       || !desktopRecordContextPanelText.includes('openTabletRecordBundleSource')
       || !desktopRecordContextPanelTemplateText.includes('getTabletRecordBundle() as tabletBundle')
       || !desktopRecordContextPanelTemplateText.includes('korean-fieldwork-record-context-tablet-bundle-groups')
       || !desktopRecordContextPanelTemplateText.includes('korean-fieldwork-record-context-tablet-bundle-source')
       || !desktopRecordContextPanelTemplateText.includes('source.issueDetails')
+      || !desktopRecordContextPanelTemplateText.includes('copyTabletRecordBundleSource(group, source)')
       || !desktopRecordContextPanelStyleText.includes('korean-fieldwork-record-context-tablet-bundle-group')
       || !desktopRecordContextPanelStyleText.includes('korean-fieldwork-record-context-tablet-bundle-issue-badge')
+      || !desktopRecordContextPanelStyleText.includes('korean-fieldwork-record-context-tablet-bundle-source-copy')
       || !desktopRecordContextPanelStyleText.includes('korean-fieldwork-record-context-tablet-bundle-source-open')
       || !desktopRecordContextPanelSpecText.includes('shows a grouped tablet record bundle with HWP-safe copy and source-open actions')) {
-    findings.push('desktop record context panel must group linked tablet evidence, notebook entries, HWP copy readiness, and source-level issues into a copyable and openable per-record tablet bundle');
+    findings.push('desktop record context panel must group linked tablet evidence, notebook entries, HWP copy readiness, and source-level issues into a copyable source-by-source and openable per-record tablet bundle');
   }
   if (!desktopRecordContextPanelText.includes('pushFeatureAttributeChip')
       || !desktopRecordContextPanelText.includes('formatFeatureAttributeLabels')

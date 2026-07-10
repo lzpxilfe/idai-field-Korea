@@ -927,12 +927,29 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
         );
 
 
+    public isTabletRecordBundleSourceCopied = (
+            group: KoreanFieldworkTabletRecordBundleGroup,
+            source: KoreanFieldworkTabletRecordBundleSource
+    ) => !!this.tabletRecordBundle
+        && this.tabletRecordBundleCopiedId === this.getTabletRecordBundleSourceCopyId(
+            this.tabletRecordBundle,
+            group,
+            source
+        );
+
+
     public getTabletRecordBundleCopyActionLabel = () =>
         this.isTabletRecordBundleCopied() ? '\ubcf5\uc0ac\ub428' : '\ubb36\uc74c \ubcf5\uc0ac';
 
 
     public getTabletRecordBundleGroupCopyActionLabel = (group: KoreanFieldworkTabletRecordBundleGroup) =>
         this.isTabletRecordBundleGroupCopied(group) ? '\ubcf5\uc0ac\ub428' : '\ubcf5\uc0ac';
+
+
+    public getTabletRecordBundleSourceCopyActionLabel = (
+            group: KoreanFieldworkTabletRecordBundleGroup,
+            source: KoreanFieldworkTabletRecordBundleSource
+    ) => this.isTabletRecordBundleSourceCopied(group, source) ? '\ubcf5\uc0ac\ub428' : '\ubcf5\uc0ac';
 
 
     public isTabletRecordBundleGroupExpanded = (group: KoreanFieldworkTabletRecordBundleGroup) =>
@@ -1532,6 +1549,19 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
 
         await writeKoreanFieldworkHwpClipboardText(group.copyText);
         this.markTabletRecordBundleCopied(this.getTabletRecordBundleGroupCopyId(bundle, group));
+    }
+
+
+    public async copyTabletRecordBundleSource(
+            group: KoreanFieldworkTabletRecordBundleGroup,
+            source: KoreanFieldworkTabletRecordBundleSource
+    ) {
+
+        const bundle = this.tabletRecordBundle;
+        if (!bundle || !source.copyText) return;
+
+        await writeKoreanFieldworkHwpClipboardText(source.copyText);
+        this.markTabletRecordBundleCopied(this.getTabletRecordBundleSourceCopyId(bundle, group, source));
     }
 
 
@@ -2228,6 +2258,16 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
     ): string {
 
         return `${bundle.documentId}::tabletBundle::${group.id}`;
+    }
+
+
+    private getTabletRecordBundleSourceCopyId(
+            bundle: KoreanFieldworkTabletRecordBundle,
+            group: KoreanFieldworkTabletRecordBundleGroup,
+            source: KoreanFieldworkTabletRecordBundleSource
+    ): string {
+
+        return `${this.getTabletRecordBundleGroupCopyId(bundle, group)}::${source.id}`;
     }
 
 

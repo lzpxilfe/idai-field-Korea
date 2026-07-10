@@ -153,13 +153,24 @@
                                 {{issueDetail}}
                             </span>
                         </span>
-                        <button *ngIf="canOpenTabletRecordBundleSource(source)"
-                                type="button"
-                                class="korean-fieldwork-record-context-tablet-bundle-source-open"
-                                (click)="openTabletRecordBundleSource(source)">
-                            <span class="mdi mdi-open-in-new"></span>
-                            <span>&#50676;&#44592;</span>
-                        </button>
+                        <span class="korean-fieldwork-record-context-tablet-bundle-source-actions">
+                            <button type="button"
+                                    class="korean-fieldwork-record-context-tablet-bundle-source-copy"
+                                    [class.copied]="isTabletRecordBundleSourceCopied(group, source)"
+                                    (click)="copyTabletRecordBundleSource(group, source)">
+                                <span class="mdi"
+                                      [class.mdi-check]="isTabletRecordBundleSourceCopied(group, source)"
+                                      [class.mdi-content-copy]="!isTabletRecordBundleSourceCopied(group, source)"></span>
+                                <span>{{getTabletRecordBundleSourceCopyActionLabel(group, source)}}</span>
+                            </button>
+                            <button *ngIf="canOpenTabletRecordBundleSource(source)"
+                                    type="button"
+                                    class="korean-fieldwork-record-context-tablet-bundle-source-open"
+                                    (click)="openTabletRecordBundleSource(source)">
+                                <span class="mdi mdi-open-in-new"></span>
+                                <span>&#50676;&#44592;</span>
+                            </button>
+                        </span>
                     </div>
                 </div>
             </div>

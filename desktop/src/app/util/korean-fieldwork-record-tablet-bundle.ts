@@ -24,6 +24,7 @@ export interface KoreanFieldworkTabletRecordBundleSource {
     documentId?: string;
     issueCount: number;
     issueDetails: string[];
+    copyText: string;
     tone: KoreanFieldworkTabletRecordBundleTone;
 }
 
@@ -241,6 +242,7 @@ function makeDocumentSource(document: Document,
         documentId: document.resource.id,
         issueCount: issueDetails.length,
         issueDetails,
+        copyText: makeSourceCopyText(label, detail, issueDetails),
         tone: issueDetails.length > 0 ? 'warning' : 'info'
     };
 }
@@ -264,6 +266,7 @@ function makeNotebookSource(entry: KoreanFieldworkNotebookEntry,
         documentId: entry.sourceDocument.resource.id,
         issueCount: issueDetails.length,
         issueDetails,
+        copyText: makeSourceCopyText(label, entry.detail, issueDetails),
         tone: issueDetails.length > 0 ? 'warning' : 'info'
     };
 }
@@ -315,6 +318,29 @@ function makeGroupCopyText(
     ];
 
     return normalizeKoreanFieldworkHwpPlainText(lines.join('\n'));
+}
+
+
+function makeSourceCopyText(
+        label: string,
+        detail: string|undefined,
+        issueDetails: string[]
+): string {
+
+    const lines = [
+        `[\ud0dc\ube14\ub9bf \uc6d0\ubcf8] ${label}`,
+        detail ?? '',
+        ...(
+            issueDetails.length > 0
+                ? [
+                    '\ud655\uc778 \ud544\uc694:',
+                    ...issueDetails.map(issueDetail => `- ${issueDetail}`)
+                ]
+                : []
+        )
+    ];
+
+    return normalizeKoreanFieldworkHwpPlainText(lines.filter(line => line.length > 0).join('\n'));
 }
 
 

@@ -60,6 +60,10 @@ describe('korean-fieldwork-record-tablet-bundle', () => {
             .toBe('warning');
         expect(bundle.groups.find(group => group.id === 'photos')?.copyText)
             .toContain('- P4');
+        expect(bundle.groups.find(group => group.id === 'photos')?.sources[3].copyText)
+            .toContain('[\ud0dc\ube14\ub9bf \uc6d0\ubcf8] P4');
+        expect(bundle.groups.find(group => group.id === 'photos')?.sources[3].copyText)
+            .toContain('\ud655\uc778 \ud544\uc694:');
         expect(bundle.copyText).toContain('[\ud0dc\ube14\ub9bf \uc790\ub8cc \ubb36\uc74c]');
         expect(bundle.copyText).toContain('\uc0ac\uc9c4 4\uac74: P1, P2, P3 \uc678 1\uac74');
         expect(bundle.copyText).toContain('\r\n');
@@ -104,6 +108,8 @@ describe('korean-fieldwork-record-tablet-bundle', () => {
         });
         expect(penMemoSource.issueDetails[0]).toContain('M1');
         expect(penMemoGroup.copyText).toContain('\ud655\uc778: M1');
+        expect(penMemoSource.copyText).toContain('[\ud0dc\ube14\ub9bf \uc6d0\ubcf8] M1');
+        expect(penMemoSource.copyText).toContain('\ud655\uc778 \ud544\uc694:');
     });
 
 

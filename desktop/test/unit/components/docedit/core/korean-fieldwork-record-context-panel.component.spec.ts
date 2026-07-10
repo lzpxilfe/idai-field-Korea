@@ -324,6 +324,15 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
             expect(component.getTabletRecordBundleGroupToggleLabel(photoGroup)).toBe('\uc811\uae30');
             expect(component.canOpenTabletRecordBundleSource(photoGroup.sources[3])).toBe(true);
 
+            await component.copyTabletRecordBundleSource(photoGroup, photoGroup.sources[3]);
+
+            expect(clear).toHaveBeenCalledTimes(3);
+            expect(writeText).toHaveBeenLastCalledWith(photoGroup.sources[3].copyText);
+            expect(component.isTabletRecordBundleSourceCopied(photoGroup, photoGroup.sources[3]))
+                .toBe(true);
+            expect(component.getTabletRecordBundleSourceCopyActionLabel(photoGroup, photoGroup.sources[3]))
+                .toBe('\ubcf5\uc0ac\ub428');
+
             await component.openTabletRecordBundleSource(photoGroup.sources[3]);
 
             expect(datastore.get).toHaveBeenCalledWith('photo-4');
@@ -361,12 +370,15 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
         expect(template).toContain('toggleTabletRecordBundleGroup(group)');
         expect(template).toContain('openTabletRecordBundleSource(source)');
         expect(template).toContain('copyTabletRecordBundleGroup(group)');
+        expect(template).toContain('copyTabletRecordBundleSource(group, source)');
+        expect(template).toContain('isTabletRecordBundleSourceCopied(group, source)');
         expect(template).toContain('korean-fieldwork-record-context-tablet-bundle-source');
         expect(template).toContain('source.issueCount');
         expect(template).toContain('source.issueDetails');
         expect(styles).toContain('.korean-fieldwork-record-context-tablet-bundle');
         expect(styles).toContain('.korean-fieldwork-record-context-tablet-bundle-group');
         expect(styles).toContain('.korean-fieldwork-record-context-tablet-bundle-issue-badge');
+        expect(styles).toContain('.korean-fieldwork-record-context-tablet-bundle-source-copy');
         expect(styles).toContain('.korean-fieldwork-record-context-tablet-bundle-source-open');
     });
 
