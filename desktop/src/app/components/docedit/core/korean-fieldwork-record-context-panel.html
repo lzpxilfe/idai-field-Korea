@@ -323,6 +323,41 @@
         </div>
     </div>
 
+    <div *ngIf="getFindSpotPreview() as findSpotPreview"
+         class="korean-fieldwork-record-context-find-spots">
+        <div class="korean-fieldwork-record-context-find-spots-title">
+            <span class="mdi mdi-map-marker-radius-outline"></span>
+            <span>{{findSpotPreview.title}}</span>
+            <span class="korean-fieldwork-record-context-find-spots-summary">
+                {{findSpotPreview.summary}}
+            </span>
+            <span *ngIf="findSpotPreview.updatedAt"
+                  class="korean-fieldwork-record-context-find-spots-updated">
+                {{findSpotPreview.updatedAt}}
+            </span>
+        </div>
+        <svg class="korean-fieldwork-record-context-find-spots-svg"
+             [attr.viewBox]="findSpotPreview.viewBox"
+             role="img"
+             aria-label="태블릿 유물·시료 위치점 미리보기">
+            <path class="find-spot-frame" d="M 8 8 H 112 V 72 H 8 Z"></path>
+            <path class="find-spot-grid" d="M 34 8 V 72 M 60 8 V 72 M 86 8 V 72 M 8 29 H 112 M 8 51 H 112"></path>
+            <g *ngFor="let point of findSpotPreview.points"
+               class="find-spot-item">
+                <circle [attr.cx]="point.x"
+                        [attr.cy]="point.y"
+                        r="5"></circle>
+                <text [attr.x]="point.x"
+                      [attr.y]="point.y + 1.8">{{point.label}}</text>
+            </g>
+        </svg>
+        <div class="korean-fieldwork-record-context-find-spots-list">
+            <span *ngFor="let point of findSpotPreview.points">
+                {{point.text}}
+            </span>
+        </div>
+    </div>
+
     <div *ngIf="getFeatureFreeDrawingPreview() as freeDrawingPreview"
          class="korean-fieldwork-record-context-free-drawing">
         <div class="korean-fieldwork-record-context-free-drawing-title">

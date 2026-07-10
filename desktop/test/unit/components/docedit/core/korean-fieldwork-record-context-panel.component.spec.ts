@@ -902,11 +902,100 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
         expect(component.getEvidenceMetrics()).toEqual(expect.arrayContaining([
             { id: 'findSpotItems', label: '\ucd9c\ud1a0 \uc704\uce58\uc810', count: 2, canCreate: false }
         ]));
+        expect(component.hasFindSpotPreview()).toBe(true);
+        expect(component.getFindSpotPreview()).toEqual({
+            points: [
+                {
+                    label: '1',
+                    text: '1\ubc88 25%/75% bronze fragment',
+                    x: 34,
+                    y: 56
+                },
+                {
+                    label: '2',
+                    text: '2\ubc88 40%/60% rim sherd',
+                    x: 49.6,
+                    y: 46.4
+                }
+            ],
+            summary: '\ucd9c\ud1a0 \uc704\uce58\uc810 2',
+            title: '\ucd9c\ud1a0 \uc704\uce58\uc810',
+            updatedAt: '2026-07-10',
+            viewBox: '0 0 120 80'
+        });
         expect(component.getReportHandoffItem()?.copyText)
             .toContain('1\ubc88 25%/75% bronze fragment');
         expect(component.getReportHandoffItem()?.copyText)
             .toContain('2\ubc88 40%/60% rim sherd');
         expect(component.getReportHandoffItem()?.copyText).not.toContain('"items"');
+    });
+
+
+    it('labels tablet sample spot points as collection locations on desktop', async () => {
+
+        const sample = createDocument('sample-1', 'Sample', 'SAMPLE1', {}, {
+            findSpotItems: JSON.stringify({
+                version: 1,
+                items: [
+                    { number: 1, point: { x: 15, y: 35 }, label: 'charcoal sample' }
+                ]
+            }),
+            findSpotItemsUpdatedAt: '2026-07-10T08:30:00.000Z'
+        });
+        const component = createComponent({
+            find: jest.fn().mockResolvedValue({ documents: [sample] })
+        });
+        component.document = sample as any;
+        component.fieldDefinitions = [
+            field('findSpotItems')
+        ] as any;
+
+        await component.ngOnChanges();
+
+        expect(component.getEvidenceMetrics()).toEqual(expect.arrayContaining([
+            { id: 'findSpotItems', label: '\ucc44\ucde8 \uc704\uce58\uc810', count: 1, canCreate: false }
+        ]));
+        expect(component.getFindSpotPreview()).toEqual({
+            points: [
+                {
+                    label: '1',
+                    text: '1\ubc88 15%/35% charcoal sample',
+                    x: 23.6,
+                    y: 30.4
+                }
+            ],
+            summary: '\ucc44\ucde8 \uc704\uce58\uc810 1',
+            title: '\ucc44\ucde8 \uc704\uce58\uc810',
+            updatedAt: '2026-07-10',
+            viewBox: '0 0 120 80'
+        });
+        expect(component.getReportHandoffItem()?.copyText)
+            .toContain('1\ubc88 15%/35% charcoal sample');
+    });
+
+
+    it('keeps the tablet find and sample spot preview section in the desktop record context template', () => {
+
+        const template = fs.readFileSync(
+            path.resolve(
+                __dirname,
+                '../../../../../src/app/components/docedit/core/korean-fieldwork-record-context-panel.html'
+            ),
+            'utf8'
+        );
+        const styles = fs.readFileSync(
+            path.resolve(
+                __dirname,
+                '../../../../../src/app/components/docedit/core/korean-fieldwork-record-context-panel.scss'
+            ),
+            'utf8'
+        );
+
+        expect(template).toContain('getFindSpotPreview() as findSpotPreview');
+        expect(template).toContain('\ud0dc\ube14\ub9bf \uc720\ubb3c\u00b7\uc2dc\ub8cc \uc704\uce58\uc810 \ubbf8\ub9ac\ubcf4\uae30');
+        expect(template).toContain('findSpotPreview.points');
+        expect(styles).toContain('.korean-fieldwork-record-context-find-spots-svg');
+        expect(styles).toContain('.find-spot-item circle');
     });
 
 

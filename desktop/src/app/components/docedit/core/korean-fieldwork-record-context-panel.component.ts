@@ -15,6 +15,7 @@ import {
     ProjectConfiguration,
     KoreanFieldworkFeaturePitLineSummary,
     getKoreanFieldworkFeaturePitLineSummaries,
+    KoreanFieldworkFindSpotSummary,
     getKoreanFieldworkFindSpotSummaries,
     getKoreanFieldworkRecordFieldValueSummary
 } from 'idai-field-core';
@@ -174,6 +175,18 @@ interface FeaturePitLinePreview {
     viewBox: string;
 }
 
+interface FindSpotSvgPoint extends FeatureSketchSvgPoint {
+    text: string;
+}
+
+interface FindSpotPreview {
+    points: FindSpotSvgPoint[];
+    summary: string;
+    title: string;
+    updatedAt?: string;
+    viewBox: string;
+}
+
 interface DailyJournalBoundaryMemoPreview {
     importedAt?: string;
     path: string;
@@ -303,6 +316,8 @@ const FEATURE_GEOMETRY_EDIT_STATUS_FIELD = 'featureGeometryEditStatus';
 const FEATURE_FREE_DRAWING_STROKES_FIELD = 'featureFreeDrawingStrokes';
 const FEATURE_FREE_DRAWING_UPDATED_AT_FIELD = 'featureFreeDrawingUpdatedAt';
 const FEATURE_PIT_LINE_UPDATED_AT_FIELD = 'featureSoilPitLineUpdatedAt';
+const FIND_SPOT_CATEGORIES = new Set<string>(['Find', 'FindCollection', 'Sample']);
+const FIND_SPOT_UPDATED_AT_FIELD = 'findSpotItemsUpdatedAt';
 const DAILY_LOG_CATEGORY_NAME = 'DailyLog';
 const DAILY_LOG_BOUNDARY_MEMO_IMPORTED_AT_FIELD = 'dailyLogBoundaryMemoImportedAt';
 const DAILY_LOG_BOUNDARY_MEMO_STROKES_FIELD = 'dailyLogBoundaryMemoStrokes';
@@ -1008,6 +1023,31 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
             lines: summaries.map(summary => this.makeFeaturePitLineSvgLine(summary)),
             summary: `피트선 ${summaries.length}`,
             updatedAt: this.getDateFieldLabel(FEATURE_PIT_LINE_UPDATED_AT_FIELD),
+            viewBox: FEATURE_SKETCH_VIEWBOX
+        };
+    }
+
+
+    public hasFindSpotPreview = () =>
+        this.getFindSpotPreview() !== undefined;
+
+
+    public getFindSpotPreview(): FindSpotPreview|undefined {
+
+        if (!this.document?.resource || !FIND_SPOT_CATEGORIES.has(this.document.resource.category)) {
+            return undefined;
+        }
+
+        const summaries = getKoreanFieldworkFindSpotSummaries(this.document.resource.findSpotItems);
+        if (summaries.length === 0) return undefined;
+
+        const title = this.getFindSpotPreviewTitle();
+
+        return {
+            points: summaries.map(summary => this.makeFindSpotSvgPoint(summary)),
+            summary: `${title} ${summaries.length}`,
+            title,
+            updatedAt: this.getDateFieldLabel(FIND_SPOT_UPDATED_AT_FIELD),
             viewBox: FEATURE_SKETCH_VIEWBOX
         };
     }
@@ -2212,6 +2252,27 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
             x: this.roundSvg(point.x),
             y: this.roundSvg(point.y)
         };
+    }
+
+
+    private makeFindSpotSvgPoint(summary: KoreanFieldworkFindSpotSummary): FindSpotSvgPoint {
+
+        const point = this.roundFeatureSketchSvgPoint(this.projectFeatureSketchPoint(summary.point));
+
+        return {
+            label: `${summary.number}`,
+            text: summary.text,
+            x: point.x,
+            y: point.y
+        };
+    }
+
+
+    private getFindSpotPreviewTitle(): string {
+
+        return this.document?.resource?.category === 'Sample'
+            ? '채취 위치점'
+            : '출토 위치점';
     }
 
 
