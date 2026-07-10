@@ -3207,6 +3207,14 @@ function validateRecordPanelOrder() {
       || !desktopRecordContextPanelSpecText.includes('copies linked tablet evidence insights as HWP-safe plain text')) {
     findings.push('desktop record context panel must let users copy individual linked tablet evidence insights as HWP-safe plain text');
   }
+  if (!desktopRecordContextPanelText.includes('copyNotebookEntry')
+      || !desktopRecordContextPanelText.includes('makeKoreanFieldworkNotebookEntryCopyText')
+      || !desktopRecordContextPanelTemplateText.includes('copyNotebookEntry(entry)')
+      || !desktopRecordContextPanelTemplateText.includes('isNotebookEntryCopied(entry)')
+      || !desktopRecordContextPanelStyleText.includes('korean-fieldwork-record-context-notebook-action')
+      || !desktopRecordContextPanelSpecText.includes('copies related tablet notebook entries as HWP-safe plain text from the record context')) {
+    findings.push('desktop record context panel must let users copy related tablet notebook entries as HWP-safe plain text without leaving the opened record');
+  }
   if (!desktopRecordContextPanelText.includes('pushFeatureAttributeChip')
       || !desktopRecordContextPanelText.includes('formatFeatureAttributeLabels')
       || !desktopRecordContextPanelSpecText.includes('가마 핵심 연소부 기록·소성부 기록')

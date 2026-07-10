@@ -1355,6 +1355,55 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
     });
 
 
+    it('copies related tablet notebook entries as HWP-safe plain text from the record context', async () => {
+
+        const write = jest.fn();
+        const writeText = jest.fn();
+        const clear = jest.fn();
+        const testWindow = (global as any).window ?? ((global as any).window = {});
+        const previousRequire = testWindow.require;
+        testWindow.require = jest.fn().mockReturnValue({ clipboard: { clear, write, writeText } });
+
+        try {
+            const feature = createDocument('feature-1', 'Feature', 'F1', {}, {
+                description: 'feature narrative'
+            });
+            const memo = createDocument('memo-1', 'PenMemo', 'M1', {
+                depicts: ['feature-1']
+            }, {
+                date: getTodayLabel(),
+                penMemoReviewedTranscript: 'north baulk cleanup note'
+            });
+            const component = createComponent({
+                find: jest.fn().mockResolvedValue({
+                    documents: [feature, memo]
+                })
+            });
+            component.document = feature as any;
+            component.fieldDefinitions = [
+                field('featureRecordingStatus'),
+                textField('description', 'Description')
+            ] as any;
+
+            await component.ngOnChanges();
+
+            const entry = component.getNotebookEntries()[0];
+            expect(component.getNotebookEntryCopyActionLabel(entry)).toBe('복사');
+
+            await component.copyNotebookEntry(entry);
+
+            expect(clear).toHaveBeenCalledTimes(1);
+            expect(writeText).toHaveBeenCalledWith(expect.stringContaining('north baulk cleanup note'));
+            expect(writeText).toHaveBeenCalledWith(expect.stringContaining('F1'));
+            expect(write).not.toHaveBeenCalled();
+            expect(component.isNotebookEntryCopied(entry)).toBe(true);
+            expect(component.getNotebookEntryCopyActionLabel(entry)).toBe('복사됨');
+        } finally {
+            testWindow.require = previousRequire;
+        }
+    });
+
+
     it('appends a related tablet field note to the current record narrative once', async () => {
 
         const feature = createDocument('feature-1', 'Feature', 'F1', {}, {

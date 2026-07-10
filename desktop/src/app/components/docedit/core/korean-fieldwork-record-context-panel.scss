@@ -1407,6 +1407,17 @@ korean-fieldwork-record-context-panel {
       color: #2f5f4a;
     }
 
+    &.copy {
+      border-color: #b2ddff;
+      color: #175cd3;
+    }
+
+    &.copied {
+      background: #f6fef9;
+      border-color: #abefc6;
+      color: #027a48;
+    }
+
     &:hover {
       background: #f2f4f7;
     }

@@ -46,7 +46,8 @@ import {
     createDailyJournalSummary,
     KoreanFieldworkDailyJournalSummary,
     getKoreanFieldworkNotebookEntriesForDocument,
-    KoreanFieldworkNotebookEntry
+    KoreanFieldworkNotebookEntry,
+    makeKoreanFieldworkNotebookEntryCopyText
 } from '../../../util/korean-fieldwork-notebook-digest';
 import {
     getPenMemoSketchSummaries,
@@ -800,6 +801,7 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
     public reportHandoffItem: KoreanFieldworkReportHandoffItem|undefined;
     public reportHandoffCopiedId: string|undefined;
     public evidenceInsightCopiedId: string|undefined;
+    public notebookEntryCopiedId: string|undefined;
     public identifierRevisionNextValue: string = '';
     public identifierRevisionReason: string = '';
 
@@ -1252,6 +1254,14 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
     }
 
 
+    public isNotebookEntryCopied = (entry: KoreanFieldworkNotebookEntry) =>
+        this.notebookEntryCopiedId === entry.id;
+
+
+    public getNotebookEntryCopyActionLabel = (entry: KoreanFieldworkNotebookEntry) =>
+        this.isNotebookEntryCopied(entry) ? '복사됨' : '복사';
+
+
     public canApplyNotebookEntry = (entry: KoreanFieldworkNotebookEntry) => {
 
         const targetField = this.getNotebookAppendTargetField(entry);
@@ -1324,6 +1334,13 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
     public async openNotebookEntry(entry: KoreanFieldworkNotebookEntry) {
 
         await this.routing.jumpToResource(entry.sourceDocument);
+    }
+
+
+    public async copyNotebookEntry(entry: KoreanFieldworkNotebookEntry) {
+
+        await writeKoreanFieldworkHwpClipboardText(makeKoreanFieldworkNotebookEntryCopyText(entry));
+        this.markNotebookEntryCopied(entry.id);
     }
 
 
@@ -2086,6 +2103,17 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
         setTimeout(() => {
             if (this.evidenceInsightCopiedId === copiedId) {
                 this.evidenceInsightCopiedId = undefined;
+            }
+        }, 1600);
+    }
+
+
+    private markNotebookEntryCopied(copiedId: string) {
+
+        this.notebookEntryCopiedId = copiedId;
+        setTimeout(() => {
+            if (this.notebookEntryCopiedId === copiedId) {
+                this.notebookEntryCopiedId = undefined;
             }
         }, 1600);
     }

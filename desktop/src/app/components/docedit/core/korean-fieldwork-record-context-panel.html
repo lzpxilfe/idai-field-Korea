@@ -645,6 +645,15 @@
                     {{getNotebookEntryApplyTargetLabel(entry)}}에 반영
                 </button>
                 <button type="button"
+                        class="korean-fieldwork-record-context-notebook-action copy"
+                        [class.copied]="isNotebookEntryCopied(entry)"
+                        (click)="copyNotebookEntry(entry)">
+                    <span class="mdi"
+                          [class.mdi-check]="isNotebookEntryCopied(entry)"
+                          [class.mdi-content-copy]="!isNotebookEntryCopied(entry)"></span>
+                    <span>{{getNotebookEntryCopyActionLabel(entry)}}</span>
+                </button>
+                <button type="button"
                         class="korean-fieldwork-record-context-notebook-action"
                         (click)="openNotebookEntry(entry)">
                     {{getNotebookEntryActionLabel(entry)}}
