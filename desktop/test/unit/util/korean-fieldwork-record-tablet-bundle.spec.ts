@@ -1,4 +1,9 @@
 import {
+    createKoreanFieldworkTabletHandoffReviewUpdate,
+    KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_AT_FIELD,
+    KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_ISSUE_COUNT_FIELD,
+    KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_SOURCE_COUNT_FIELD,
+    KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_SUMMARY_FIELD,
     makeKoreanFieldworkRecordTabletBundle
 } from '../../../src/app/util/korean-fieldwork-record-tablet-bundle';
 
@@ -45,6 +50,12 @@ describe('korean-fieldwork-record-tablet-bundle', () => {
         expect(bundle.title).toContain('F1');
         expect(bundle.sourceCount).toBe(8);
         expect(bundle.summary).toContain('\uc790\ub8cc 8\uac74');
+        expect(bundle.reviewState).toMatchObject({
+            isReviewed: false,
+            isStale: false,
+            label: '\ubbf8\ucc98\ub9ac',
+            tone: 'neutral'
+        });
         expect(bundle.groups.map(group => [group.id, group.count])).toEqual([
             ['photos', 4],
             ['drawings', 1],
@@ -65,6 +76,7 @@ describe('korean-fieldwork-record-tablet-bundle', () => {
         expect(bundle.groups.find(group => group.id === 'photos')?.sources[3].copyText)
             .toContain('\ud655\uc778 \ud544\uc694:');
         expect(bundle.copyText).toContain('[\ud0dc\ube14\ub9bf \uc790\ub8cc \ubb36\uc74c]');
+        expect(bundle.copyText).toContain('\ub370\uc2a4\ud06c\ud1b1 \ucc98\ub9ac: \ubbf8\ucc98\ub9ac');
         expect(bundle.copyText).toContain('\uc0ac\uc9c4 4\uac74: P1, P2, P3 \uc678 1\uac74');
         expect(bundle.copyText).toContain('\r\n');
     });
@@ -110,6 +122,89 @@ describe('korean-fieldwork-record-tablet-bundle', () => {
         expect(penMemoGroup.copyText).toContain('\ud655\uc778: M1');
         expect(penMemoSource.copyText).toContain('[\ud0dc\ube14\ub9bf \uc6d0\ubcf8] M1');
         expect(penMemoSource.copyText).toContain('\ud655\uc778 \ud544\uc694:');
+    });
+
+
+    it('tracks desktop review state for tablet bundle handoff processing', () => {
+
+        const feature = createDoc('feature-1', 'Feature', 'F1', {}, {
+            featureRecordingStatus: 'confirmed',
+            featureInvestigationChecklist: []
+        });
+        const photo = createDoc('photo-1', 'Photo', 'P1', {
+            depicts: ['feature-1']
+        }, {
+            fieldworkPhotoUri: 'file:///tablet/photos/P1.jpg'
+        });
+        const bundle = makeKoreanFieldworkRecordTabletBundle(feature, [feature, photo] as any)!;
+        const reviewedDocument = createKoreanFieldworkTabletHandoffReviewUpdate(
+            feature,
+            bundle,
+            true,
+            '2026-07-11T01:02:03.000Z'
+        );
+        const reviewedBundle = makeKoreanFieldworkRecordTabletBundle(
+            reviewedDocument,
+            [reviewedDocument, photo] as any
+        )!;
+
+        expect(reviewedDocument.resource).toMatchObject({
+            [KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_AT_FIELD]: '2026-07-11T01:02:03.000Z',
+            [KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_SOURCE_COUNT_FIELD]: bundle.sourceCount,
+            [KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_ISSUE_COUNT_FIELD]: bundle.issueCount,
+            [KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_SUMMARY_FIELD]: bundle.summary
+        });
+        expect(reviewedBundle.reviewState).toMatchObject({
+            isReviewed: true,
+            isStale: false,
+            label: '\ucc98\ub9ac\ub428 2026-07-11',
+            tone: 'success'
+        });
+        expect(reviewedBundle.copyText)
+            .toContain('\ub370\uc2a4\ud06c\ud1b1 \ucc98\ub9ac: \ucc98\ub9ac\ub428 2026-07-11');
+
+        const reopenedDocument = createKoreanFieldworkTabletHandoffReviewUpdate(
+            reviewedDocument,
+            reviewedBundle,
+            false
+        );
+
+        expect(reopenedDocument.resource[KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_AT_FIELD])
+            .toBeUndefined();
+        expect(reopenedDocument.resource[KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_SOURCE_COUNT_FIELD])
+            .toBeUndefined();
+    });
+
+
+    it('marks reviewed tablet bundles stale when tablet evidence changes later', () => {
+
+        const feature = createDoc('feature-1', 'Feature', 'F1', {}, {
+            [KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_AT_FIELD]: '2026-07-11T01:02:03.000Z',
+            [KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_SOURCE_COUNT_FIELD]: 1,
+            [KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_ISSUE_COUNT_FIELD]: 0,
+            featureRecordingStatus: 'confirmed',
+            featureInvestigationChecklist: []
+        });
+        const photos = [1, 2].map(index =>
+            createDoc(`photo-${index}`, 'Photo', `P${index}`, {
+                depicts: ['feature-1']
+            }, {
+                fieldworkPhotoUri: `file:///tablet/photos/P${index}.jpg`
+            })
+        );
+        const bundle = makeKoreanFieldworkRecordTabletBundle(
+            feature,
+            [feature, ...photos] as any
+        )!;
+
+        expect(bundle.reviewState).toMatchObject({
+            isReviewed: false,
+            isStale: true,
+            label: '\ub2e4\uc2dc \ud655\uc778',
+            tone: 'warning'
+        });
+        expect(bundle.copyText)
+            .toContain('\ub370\uc2a4\ud06c\ud1b1 \ucc98\ub9ac: \ub2e4\uc2dc \ud655\uc778');
     });
 
 

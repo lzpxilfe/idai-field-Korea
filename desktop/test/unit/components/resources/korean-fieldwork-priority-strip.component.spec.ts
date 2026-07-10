@@ -18,6 +18,10 @@ import {
     getKoreanFieldworkFeatureTypeLabel,
     getKoreanFieldworkRecordFieldValueSummary
 } from 'idai-field-core';
+import {
+    KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_AT_FIELD,
+    KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_SOURCE_COUNT_FIELD
+} from '../../../../src/app/util/korean-fieldwork-record-tablet-bundle';
 
 
 describe('KoreanFieldworkPriorityStripComponent', () => {
@@ -694,6 +698,74 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
         } finally {
             testWindow.require = previousRequire;
         }
+    });
+
+
+    it('stores desktop review state for tablet bundles from the report handoff panel', async () => {
+
+        let documents = [
+            createDocument('project', 'Project'),
+            createDocument('feature-1', 'Feature', {
+                identifier: 'pit-001',
+                shortDescription: 'round pit',
+                featureRecordingStatus: 'confirmed',
+                featureInvestigationChecklist: []
+            }),
+            createDocument('photo-1', 'Photo', {
+                identifier: 'P1',
+                fieldworkPhotoUri: 'file:///tablet/photos/pit-001.jpg',
+                relations: { depicts: ['feature-1'] }
+            })
+        ];
+        const datastore = {
+            find: jest.fn().mockImplementation(() => Promise.resolve({ documents })),
+            get: jest.fn(),
+            bulkUpdate: jest.fn().mockImplementation(async (updatedDocuments: any[]) => {
+                documents = documents.map(document =>
+                    updatedDocuments.find(updatedDocument =>
+                        updatedDocument.resource.id === document.resource.id
+                    ) ?? document
+                );
+
+                return updatedDocuments;
+            })
+        };
+        const component = createComponent(datastore);
+
+        await component.refresh();
+
+        const featureItem = component.getReportHandoffItems()
+            .find(item => item.documentId === 'feature-1')!;
+        expect(featureItem).toBeDefined();
+        expect(component.hasReportHandoffTabletBundle(featureItem)).toBe(true);
+        expect(component.isReportHandoffTabletBundleReviewed(featureItem)).toBe(false);
+        expect(component.getReportHandoffTabletBundleReviewActionLabel(featureItem))
+            .toBe('\ucc98\ub9ac \uc644\ub8cc');
+
+        await component.toggleReportHandoffTabletBundleReviewed(featureItem);
+
+        expect(datastore.bulkUpdate).toHaveBeenCalledWith([
+            expect.objectContaining({
+                resource: expect.objectContaining({
+                    id: 'feature-1',
+                    [KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_AT_FIELD]: expect.any(String),
+                    [KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_SOURCE_COUNT_FIELD]: 1
+                })
+            })
+        ]);
+        expect(component.isReportHandoffTabletBundleReviewed(featureItem)).toBe(true);
+        expect(component.getReportHandoffTabletBundleReviewActionLabel(featureItem))
+            .toBe('\ucc98\ub9ac \ud574\uc81c');
+        expect(component.getReportHandoffTabletBundle(featureItem)!.reviewState.label)
+            .toContain('\ucc98\ub9ac\ub428');
+
+        await component.toggleReportHandoffTabletBundleReviewed(featureItem);
+
+        expect(datastore.bulkUpdate).toHaveBeenCalledTimes(2);
+        expect(documents.find(document =>
+            document.resource.id === 'feature-1'
+        )!.resource[KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_AT_FIELD]).toBeUndefined();
+        expect(component.isReportHandoffTabletBundleReviewed(featureItem)).toBe(false);
     });
 
 

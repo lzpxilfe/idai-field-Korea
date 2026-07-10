@@ -75,6 +75,20 @@
             <span class="korean-fieldwork-record-context-tablet-bundle-summary">
                 {{tabletBundle.summary}}
             </span>
+            <span class="korean-fieldwork-record-context-tablet-bundle-review-status"
+                  [class.success]="tabletBundle.reviewState.tone === 'success'"
+                  [class.warning]="tabletBundle.reviewState.tone === 'warning'">
+                {{tabletBundle.reviewState.label}}
+            </span>
+            <button type="button"
+                    class="korean-fieldwork-record-context-tablet-bundle-review-toggle"
+                    [class.reviewed]="isTabletRecordBundleReviewed()"
+                    (click)="toggleTabletRecordBundleReviewed()">
+                <span class="mdi"
+                      [class.mdi-backup-restore]="isTabletRecordBundleReviewed()"
+                      [class.mdi-check-circle-outline]="!isTabletRecordBundleReviewed()"></span>
+                <span>{{getTabletRecordBundleReviewActionLabel()}}</span>
+            </button>
             <button type="button"
                     class="korean-fieldwork-record-context-tablet-bundle-copy"
                     [class.copied]="isTabletRecordBundleCopied()"
@@ -92,6 +106,10 @@
             </span>
             <span *ngIf="tabletBundle.hwpSectionCount > 0">
                 HWP {{tabletBundle.hwpSectionCount}}
+            </span>
+            <span [class.success]="tabletBundle.reviewState.tone === 'success'"
+                  [class.warning]="tabletBundle.reviewState.tone === 'warning'">
+                {{tabletBundle.reviewState.detail}}
             </span>
         </div>
         <div class="korean-fieldwork-record-context-tablet-bundle-groups">

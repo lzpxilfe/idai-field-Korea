@@ -68,6 +68,7 @@ import {
     makeKoreanFieldworkRecordActions
 } from '../../../util/korean-fieldwork-record-actions';
 import {
+    createKoreanFieldworkTabletHandoffReviewUpdate,
     KoreanFieldworkTabletRecordBundle,
     KoreanFieldworkTabletRecordBundleGroup,
     KoreanFieldworkTabletRecordBundleSource,
@@ -915,6 +916,14 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
     public getTabletRecordBundle = () => this.tabletRecordBundle;
 
 
+    public isTabletRecordBundleReviewed = () =>
+        this.tabletRecordBundle?.reviewState.isReviewed === true;
+
+
+    public getTabletRecordBundleReviewActionLabel = () =>
+        this.isTabletRecordBundleReviewed() ? '\ucc98\ub9ac \ud574\uc81c' : '\ucc98\ub9ac \uc644\ub8cc';
+
+
     public isTabletRecordBundleCopied = () =>
         !!this.tabletRecordBundle && this.tabletRecordBundleCopiedId === this.tabletRecordBundle.documentId;
 
@@ -1570,6 +1579,29 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
         if (!source.documentId) return;
 
         await this.routing.jumpToResource(await this.datastore.get(source.documentId));
+    }
+
+
+    public toggleTabletRecordBundleReviewed() {
+
+        const bundle = this.tabletRecordBundle;
+        if (!bundle || !this.document?.resource) return;
+
+        const updatedDocument = createKoreanFieldworkTabletHandoffReviewUpdate(
+            this.document,
+            bundle,
+            !bundle.reviewState.isReviewed
+        );
+        this.document.resource = updatedDocument.resource;
+        this.projectDocuments = this.projectDocuments.map(document =>
+            document.resource.id === this.document.resource.id ? this.document : document
+        );
+        this.tabletRecordBundle = makeKoreanFieldworkRecordTabletBundle(
+            this.document,
+            this.projectDocuments,
+            this.reportHandoffItem
+        );
+        this.onChanged.emit();
     }
 
 

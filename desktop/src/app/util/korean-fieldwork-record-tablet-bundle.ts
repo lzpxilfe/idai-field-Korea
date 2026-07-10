@@ -16,6 +16,22 @@ import {
 
 
 export type KoreanFieldworkTabletRecordBundleTone = 'neutral'|'info'|'warning';
+export type KoreanFieldworkTabletHandoffReviewTone = 'neutral'|'success'|'warning';
+
+export const KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_AT_FIELD = 'tabletHandoffReviewedAt';
+export const KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_SOURCE_COUNT_FIELD = 'tabletHandoffReviewedSourceCount';
+export const KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_ISSUE_COUNT_FIELD = 'tabletHandoffReviewedIssueCount';
+export const KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_SUMMARY_FIELD = 'tabletHandoffReviewedSummary';
+
+export interface KoreanFieldworkTabletHandoffReviewState {
+    isReviewed: boolean;
+    isStale: boolean;
+    reviewedAt?: string;
+    reviewedAtLabel?: string;
+    label: string;
+    detail: string;
+    tone: KoreanFieldworkTabletHandoffReviewTone;
+}
 
 export interface KoreanFieldworkTabletRecordBundleSource {
     id: string;
@@ -46,6 +62,7 @@ export interface KoreanFieldworkTabletRecordBundle {
     sourceCount: number;
     issueCount: number;
     hwpSectionCount: number;
+    reviewState: KoreanFieldworkTabletHandoffReviewState;
     groups: KoreanFieldworkTabletRecordBundleGroup[];
     issueDetails: string[];
     copyText: string;
@@ -140,13 +157,15 @@ export function makeKoreanFieldworkRecordTabletBundle(
 
     const sourceCount = groups.reduce((sum, group) => sum + group.count, 0);
     const issueDetails = getIssueDetails(review.issues);
+    const issueCount = issueDetails.length;
     const hwpSectionCount = handoffItem?.copySections
         .filter(section => section.copyText.trim().length > 0)
         .length ?? 0;
+    const reviewState = getKoreanFieldworkTabletHandoffReviewState(document, sourceCount, issueCount);
     const summary = [
         `\uc790\ub8cc ${sourceCount}\uac74`,
-        issueDetails.length > 0
-            ? `\ud655\uc778 ${issueDetails.length}\uac74`
+        issueCount > 0
+            ? `\ud655\uc778 ${issueCount}\uac74`
             : '\ud655\uc778 \uc5c6\uc74c',
         hwpSectionCount > 0 ? `HWP \ubcf5\uc0ac ${hwpSectionCount}\uac1c` : ''
     ].filter(label => label.length > 0).join(' \u00b7 ');
@@ -156,12 +175,92 @@ export function makeKoreanFieldworkRecordTabletBundle(
         title,
         summary,
         sourceCount,
-        issueCount: issueDetails.length,
+        issueCount,
         hwpSectionCount,
+        reviewState,
         groups,
         issueDetails,
-        copyText: makeBundleCopyText(title, summary, groups, issueDetails, handoffItem?.bodyPreview)
+        copyText: makeBundleCopyText(title, summary, groups, issueDetails, reviewState, handoffItem?.bodyPreview)
     };
+}
+
+
+export function getKoreanFieldworkTabletHandoffReviewState(
+        document: Document,
+        sourceCount?: number,
+        issueCount?: number
+): KoreanFieldworkTabletHandoffReviewState {
+
+    const resource = document?.resource as Record<string, unknown>|undefined;
+    const reviewedAt = getTextValue(resource?.[KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_AT_FIELD]);
+    const reviewedSourceCount = getNumberValue(resource?.[KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_SOURCE_COUNT_FIELD]);
+    const reviewedIssueCount = getNumberValue(resource?.[KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_ISSUE_COUNT_FIELD]);
+    const isStale = !!reviewedAt && (
+        (sourceCount !== undefined && reviewedSourceCount !== undefined && reviewedSourceCount !== sourceCount)
+        || (issueCount !== undefined && reviewedIssueCount !== undefined && reviewedIssueCount !== issueCount)
+    );
+    const reviewedAtLabel = reviewedAt ? formatReviewDateLabel(reviewedAt) : undefined;
+
+    if (!reviewedAt) {
+        return {
+            isReviewed: false,
+            isStale: false,
+            label: '\ubbf8\ucc98\ub9ac',
+            detail: '\ub370\uc2a4\ud06c\ud1b1\uc5d0\uc11c \uc544\uc9c1 \ucc98\ub9ac\ud558\uc9c0 \uc54a\uc74c',
+            tone: 'neutral'
+        };
+    }
+
+    if (isStale) {
+        return {
+            isReviewed: false,
+            isStale: true,
+            reviewedAt,
+            ...(reviewedAtLabel ? { reviewedAtLabel } : {}),
+            label: '\ub2e4\uc2dc \ud655\uc778',
+            detail: '\ucc98\ub9ac \ud6c4 \ud0dc\ube14\ub9bf \uc790\ub8cc\uac00 \ubc14\ub00c',
+            tone: 'warning'
+        };
+    }
+
+    const checkedSourceCount = sourceCount ?? reviewedSourceCount ?? 0;
+    const checkedIssueCount = issueCount ?? reviewedIssueCount ?? 0;
+
+    return {
+        isReviewed: true,
+        isStale: false,
+        reviewedAt,
+        ...(reviewedAtLabel ? { reviewedAtLabel } : {}),
+        label: reviewedAtLabel ? `\ucc98\ub9ac\ub428 ${reviewedAtLabel}` : '\ucc98\ub9ac\ub428',
+        detail: `\uc790\ub8cc ${checkedSourceCount}\uac74 \u00b7 \ud655\uc778 ${checkedIssueCount}\uac74`,
+        tone: 'success'
+    };
+}
+
+
+export function createKoreanFieldworkTabletHandoffReviewUpdate(
+        document: Document,
+        bundle: KoreanFieldworkTabletRecordBundle,
+        reviewed: boolean,
+        reviewedAt: string = new Date().toISOString()
+): Document {
+
+    const updatedDocument = Document.clone(document);
+    const resource = updatedDocument.resource as Record<string, unknown>;
+
+    if (reviewed) {
+        resource[KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_AT_FIELD] = reviewedAt;
+        resource[KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_SOURCE_COUNT_FIELD] = bundle.sourceCount;
+        resource[KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_ISSUE_COUNT_FIELD] = bundle.issueCount;
+        resource[KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_SUMMARY_FIELD] = bundle.summary;
+    } else {
+        delete resource[KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_AT_FIELD];
+        delete resource[KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_SOURCE_COUNT_FIELD];
+        delete resource[KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_ISSUE_COUNT_FIELD];
+        delete resource[KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_SUMMARY_FIELD];
+    }
+
+    return updatedDocument;
 }
 
 
@@ -277,12 +376,14 @@ function makeBundleCopyText(
         summary: string,
         groups: KoreanFieldworkTabletRecordBundleGroup[],
         issueDetails: string[],
+        reviewState: KoreanFieldworkTabletHandoffReviewState,
         bodyPreview: string|undefined
 ): string {
 
     const lines = [
         `[\ud0dc\ube14\ub9bf \uc790\ub8cc \ubb36\uc74c] ${title}`,
         summary,
+        `\ub370\uc2a4\ud06c\ud1b1 \ucc98\ub9ac: ${reviewState.label}`,
         bodyPreview ? `HWP \ubcf8\ubb38: ${bodyPreview}` : '',
         '',
         ...groups.map(group => `${group.label} ${group.count}\uac74: ${group.detail}`),
@@ -450,6 +551,24 @@ function getTextValue(value: unknown): string|undefined {
     return typeof value === 'string' && value.trim().length > 0
         ? value.trim().replace(/\s+/g, ' ')
         : undefined;
+}
+
+
+function getNumberValue(value: unknown): number|undefined {
+
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value !== 'string' || value.trim().length === 0) return undefined;
+
+    const parsedValue = Number(value);
+    return Number.isFinite(parsedValue) ? parsedValue : undefined;
+}
+
+
+function formatReviewDateLabel(value: string): string {
+
+    const dateMatch = value.match(/^\d{4}-\d{2}-\d{2}/);
+
+    return dateMatch ? dateMatch[0] : value;
 }
 
 

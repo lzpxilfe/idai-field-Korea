@@ -123,6 +123,7 @@ import {
     KoreanFieldworkFeatureGuidancePreset
 } from '../../util/korean-fieldwork-feature-guidance';
 import {
+    createKoreanFieldworkTabletHandoffReviewUpdate,
     KoreanFieldworkTabletRecordBundle,
     makeKoreanFieldworkRecordTabletBundle
 } from '../../util/korean-fieldwork-record-tablet-bundle';
@@ -895,6 +896,12 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
     public isReportHandoffTabletBundleCopied = (item: KoreanFieldworkReportHandoffItem) =>
         this.reportCopiedDocumentId === this.getReportHandoffTabletBundleCopyId(item);
 
+    public isReportHandoffTabletBundleReviewed = (item: KoreanFieldworkReportHandoffItem) =>
+        this.getReportHandoffTabletBundle(item)?.reviewState.isReviewed === true;
+
+    public getReportHandoffTabletBundleReviewActionLabel = (item: KoreanFieldworkReportHandoffItem) =>
+        this.isReportHandoffTabletBundleReviewed(item) ? '\ucc98\ub9ac \ud574\uc81c' : '\ucc98\ub9ac \uc644\ub8cc';
+
     public getReportHandoffSectionCopyActionLabel = (
             item: KoreanFieldworkReportHandoffItem,
             section: KoreanFieldworkReportHandoffCopySection
@@ -960,6 +967,31 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
             this.selectedReportHandoffDocumentId = item.documentId;
             await writeKoreanFieldworkHwpClipboardText(bundle.copyText);
             this.markReportHandoffCopied(this.getReportHandoffTabletBundleCopyId(item));
+        } catch (errWithParams) {
+            this.messages.add(errWithParams);
+        }
+    }
+
+    public async toggleReportHandoffTabletBundleReviewed(item: KoreanFieldworkReportHandoffItem, event?: Event) {
+
+        if (event) event.stopPropagation();
+
+        const bundle = this.getReportHandoffTabletBundle(item);
+        const document = this.projectDocuments.find(candidate => candidate.resource.id === item.documentId);
+        if (!bundle || !document) return;
+
+        try {
+            this.selectedReportHandoffDocumentId = item.documentId;
+            const updatedDocument = createKoreanFieldworkTabletHandoffReviewUpdate(
+                document,
+                bundle,
+                !bundle.reviewState.isReviewed
+            );
+            await this.datastore.bulkUpdate([updatedDocument]);
+            this.projectDocuments = this.projectDocuments.map(candidate =>
+                candidate.resource.id === updatedDocument.resource.id ? updatedDocument : candidate
+            );
+            await this.refresh();
         } catch (errWithParams) {
             this.messages.add(errWithParams);
         }
