@@ -6,6 +6,7 @@ const desktopRoot = path.resolve(__dirname, '..', 'desktop');
 const nodeExecutable = process.execPath;
 const readinessUrl = 'http://localhost:4200/dist/';
 const readinessTimeoutMs = 240000;
+const handoffRunTimeoutMs = 8 * 60 * 1000;
 
 let serverProcess;
 let serverExited = false;
@@ -45,31 +46,57 @@ async function waitForServer(url, timeoutMs) {
   throw new Error(`Timed out waiting for Angular dev server at ${url}`);
 }
 
-function runProcess(command, args) {
+function stopProcessTree(child) {
+  if (!child || child.killed) return;
+
+  if (process.platform === 'win32') {
+    spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' });
+    return;
+  }
+
+  try {
+    process.kill(-child.pid, 'SIGTERM');
+  } catch (_) {
+    child.kill('SIGTERM');
+  }
+}
+
+function runProcess(command, args, timeoutMs) {
   return new Promise(resolve => {
+    let settled = false;
     const child = spawn(command, args, {
       cwd: desktopRoot,
       env: process.env,
-      stdio: 'inherit'
+      stdio: 'inherit',
+      detached: process.platform !== 'win32'
     });
 
+    const timeout = timeoutMs
+      ? setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        console.error(`Timed out after ${timeoutMs}ms: ${command} ${args.join(' ')}`);
+        stopProcessTree(child);
+        resolve(1);
+      }, timeoutMs)
+      : undefined;
+
     child.on('exit', (code, signal) => {
+      if (settled) return;
+      settled = true;
+      if (timeout) clearTimeout(timeout);
       resolve(signal ? 1 : code || 0);
     });
   });
 }
 
 function stopServer() {
-  if (!serverProcess || serverProcess.killed) return;
-
-  if (process.platform === 'win32') {
-    spawnSync('taskkill', ['/pid', String(serverProcess.pid), '/T', '/F'], { stdio: 'ignore' });
-  } else {
-    serverProcess.kill('SIGTERM');
-  }
+  stopProcessTree(serverProcess);
 }
 
 async function main() {
+  let exitCode = 1;
+
   console.log('Starting Angular dev server for Korean fieldwork handoff E2E...');
 
   serverProcess = spawn(nodeExecutable, [
@@ -81,7 +108,8 @@ async function main() {
   ], {
     cwd: desktopRoot,
     env: process.env,
-    stdio: 'inherit'
+    stdio: 'inherit',
+    detached: process.platform !== 'win32'
   });
 
   serverProcess.on('exit', (code, signal) => {
@@ -93,24 +121,28 @@ async function main() {
     await waitForServer(readinessUrl, readinessTimeoutMs);
     console.log('Angular dev server is ready. Running handoff E2E spec...');
 
-    const exitCode = await runProcess(nodeExecutable, [
+    exitCode = await runProcess(nodeExecutable, [
       'node_modules/@playwright/test/cli.js',
       'test',
       'test/e2e/korean-fieldwork/report-handoff.spec.ts',
       '--config=test/e2e/playwright.config.ts',
       '--reporter=list',
       '--timeout=180000',
+      '--global-timeout=420000',
       '--retries=0'
-    ]);
+    ], handoffRunTimeoutMs);
 
-    process.exitCode = exitCode;
   } finally {
     stopServer();
   }
+
+  return exitCode;
 }
 
-main().catch(error => {
+main().then(exitCode => {
+  process.exit(exitCode);
+}).catch(error => {
   console.error(error);
   stopServer();
-  process.exitCode = 1;
+  process.exit(1);
 });
