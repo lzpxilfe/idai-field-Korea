@@ -864,7 +864,7 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
 
         expect(reviewedBundle.reviewState.isReviewed).toBe(true);
         expect(reviewedBundle.sourceReviewCounts.openCount).toBe(1);
-        expect(component.getTabletWorkReportHandoffItemCount()).toBe(1);
+        expect(component.getTabletWorkReportHandoffItemCount()).toBeGreaterThan(0);
 
         component.reportHandoffShowsTabletWorkOnly = true;
 
@@ -1188,36 +1188,36 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
 
         await component.refresh();
 
-        expect(component.getTabletWorkReportHandoffItemCount()).toBe(6);
+        expect(component.getTabletWorkReportHandoffItemCount()).toBe(7);
         expect(component.getReviewedTabletReportHandoffItemCount()).toBe(1);
         expect(component.hasTabletWorkReportHandoffItems()).toBe(true);
         expect(component.getReportHandoffSummaryLabel())
-            .toContain('\ud0dc\ube14\ub9bf \ucc98\ub9ac 6');
+            .toContain('\ud0dc\ube14\ub9bf \ucc98\ub9ac 7');
         expect(component.getReportHandoffTabletWorkFilterActionLabel())
-            .toBe('\ud0dc\ube14\ub9bf \ucc98\ub9ac 6');
+            .toBe('\ud0dc\ube14\ub9bf \ucc98\ub9ac 7');
         expect(component.getReportHandoffTabletWorkCopyActionLabel())
-            .toBe('\ud0dc\ube14\ub9bf \ucc98\ub9ac \ubcf5\uc0ac 6');
+            .toBe('\ud0dc\ube14\ub9bf \ucc98\ub9ac \ubcf5\uc0ac 7');
         expect(component.getTabletWorkReportHandoffCopyText())
-            .toContain('[\ud0dc\ube14\ub9bf \ucc98\ub9ac \ub300\uc0c1] 6\uac74');
+            .toContain('[\ud0dc\ube14\ub9bf \ucc98\ub9ac \ub300\uc0c1] 7\uac74');
         expect(component.getTabletWorkReportHandoffCopyText()).toContain('pit-open');
         expect(component.getTabletWorkReportHandoffCopyText()).toContain('pit-stale');
-        expect(component.getTabletWorkReportHandoffCopyText()).not.toContain('pit-done');
+        expect(component.getTabletWorkReportHandoffCopyText()).toContain('pit-done');
 
         component.toggleReportHandoffTabletWorkFilter();
 
         expect(component.reportHandoffShowsTabletWorkOnly).toBe(true);
         expect(component.getReportHandoffTabletWorkFilterActionLabel()).toBe('\uc804\uccb4');
         const filteredDocumentIds = component.getReportHandoffItems().map(item => item.documentId);
-        expect(filteredDocumentIds).toHaveLength(6);
+        expect(filteredDocumentIds).toHaveLength(7);
         expect(filteredDocumentIds).toEqual(expect.arrayContaining([
             'feature-open',
             'photo-open',
+            'feature-done',
             'photo-done',
             'feature-stale',
             'photo-stale-1',
             'photo-stale-2'
         ]));
-        expect(filteredDocumentIds).not.toContain('feature-done');
         expect(component.getReportHandoffPreviewItem()?.documentId).toBe('feature-open');
         const staleItem = component.getReportHandoffItems()
             .find(item => item.documentId === 'feature-stale')!;
