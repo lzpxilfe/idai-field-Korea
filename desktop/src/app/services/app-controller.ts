@@ -274,12 +274,15 @@ export class AppController {
 
         const rows = (await db.allDocs({ include_docs: true })).rows ?? [];
 
-        return rows
-            .map((row: any) => row.doc)
-            .find((document: Document|undefined) =>
-                document?.resource?.category === 'Feature'
-                && document.resource.identifier === 'testf1'
-            );
+        const documents = rows.map((row: any) => row.doc) as Array<Document|undefined>;
+
+        return documents.find((document: Document|undefined) =>
+            document?.resource?.category === 'Feature'
+            && document.resource.id === 'si0'
+        ) ?? documents.find((document: Document|undefined) =>
+            document?.resource?.category === 'Feature'
+            && document.resource.identifier === 'SE0'
+        );
     }
 
 
