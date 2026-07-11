@@ -23,15 +23,14 @@ async function getReportHandoffCard(identifier: string) {
 
     const card = (await getLocator(selector)).first();
     const deadline = Date.now() + 5000;
-    let overflowClicked = false;
 
     while (Date.now() < deadline) {
         if (await card.count() > 0) return card;
 
         const overflowButton = await getLocator('.korean-fieldwork-report-handoff-overflow');
-        if (!overflowClicked && await overflowButton.count() > 0) {
+        const collapsedOverflowIcon = overflowButton.locator('.mdi-chevron-down');
+        if (await overflowButton.count() > 0 && await collapsedOverflowIcon.count() > 0) {
             await click(overflowButton.first());
-            overflowClicked = true;
         }
 
         await pause(250);
