@@ -1,6 +1,6 @@
 # Example deployment guide
 
-This is a tutorial guide for deploying Field Hub. __This describes a very basic installation, so be aware that depending on your local hosting infrastructure, it may be useful or even be required to make adjustments. Using TLS is not covered in this guide and is highly recommended for security reasons.__
+This is a tutorial guide for deploying Field Hub. __This describes a very basic installation, so be aware that depending on your local hosting infrastructure, it may be useful or even be required to make adjustments. For production, run Field Hub behind a TLS reverse proxy and firewall. Do not expose CouchDB directly to the network.__
 
 ## Prerequisites
 
@@ -24,18 +24,20 @@ Additionally, an [.env](.env) file sets up some environment variables for docker
 
 ```
 COUCHDB_ADMIN_NAME=fieldhub_admin
-COUCHDB_ADMIN_PASSWORD=fieldhub_password
+COUCHDB_ADMIN_PASSWORD=
 COUCHDB_USER_NAME=app_user
-COUCHDB_USER_PASSWORD=app_user_password
+COUCHDB_USER_PASSWORD=
 DB_DATA_DIRECTORY=./couch_data
 
 FIELD_HUB_VERSION=3.5.3
 HOST=localhost
-SECRET_KEY_BASE=put_long_random_string_here_atleast_64_bytes_in_length_123456789
+SECRET_KEY_BASE=
 FILE_DIRECTORY=./files
+FIELD_HUB_BIND_ADDRESS=127.0.0.1
+FIELD_HUB_HOST_PORT=8080
 ```
 
-Having Docker and docker-compose installed, you should be able to run the application with only these two files.
+Fill in unique secret values before starting the application. Empty password or `SECRET_KEY_BASE` values make `docker compose` fail deliberately.
 
 ## Test run the application
 
@@ -53,15 +55,15 @@ Run the application from the directory containing both files with:
 docker compose up
 ```
 
-This should run the application in the foreground and display logs for both services. The services can also be viewed in your webbrowser at port 80 (FieldHub service) and port 5984 (CouchDB service). For CouchDB's webinterface go to (..):5984/_utils/. 
+This should run the application in the foreground and display logs for both services. By default, Field Hub is bound to `127.0.0.1:8080` on the host and CouchDB is available only inside the Docker network.
 
-Assuming you are trying this out on your local PC or Laptop, check [localhost](http://localhost) and [localhost:5984/_utils](http://localhost:5984/_utils).
+Assuming you are trying this out on your local PC or Laptop, check [localhost:8080](http://localhost:8080). Do not publish CouchDB's `5984` port unless you have a separate, authenticated administration network.
 
 ### Creating a project
 
-Open http://localhost and login with the CouchDB admin credentials as defined in your [.env](.env) file. You should be able to create new projects in your browser. Create a project `my_first_project`, you can set a custom password or have Field Hub generate one for you.
+Open http://localhost:8080 and login with the CouchDB admin credentials as defined in your [.env](.env) file. You should be able to create new projects in your browser. Create a project `my_first_project`, you can set a custom password or have Field Hub generate one for you.
 
-After project creation, your `FILE_DIRECTORY` you should now have a directory with the name `my_first_project`, itself containing two directories `original_image` and `thumbnail_image`. In the CouchDB webinterface you should see a new database called `my_first_project`. Both the database and the file directories are empty at this point.
+After project creation, your `FILE_DIRECTORY` you should now have a directory with the name `my_first_project`, itself containing two directories `original_image` and `thumbnail_image`. CouchDB remains private on the Docker network; use Field Hub or an explicitly secured maintenance tunnel for administration.
 
 You can now create a `my_first_project` project in your Field Desktop application and should then be able to sync a Field Client with the server given the correct credentials and the servers domain or IP. Of course, if you already have a Field Desktop project you can instead repeat the steps above but replace `my_first_project` with the project key of your Field Desktop project.
 
@@ -71,10 +73,12 @@ After you have created and setup `my_first_project` in your Field Desktop applic
 
 ## Using the application in production
 
-To run the application in production, you should do (atleast) 3 things:
+To run the application in production, you should do (atleast) 5 things:
 1. Uncomment the restart policy parts in the docker-compose file
 2. Setup docker daemon as a system service on your server (so that it starts after each server restart)
-3. Set the environment, especially `COUCHDB_ADMIN_PASSWORD` `COUCHDB_USER_PASSWORD`, `HOST` and `SECRET_KEY_BASE`. See also the general [Wiki](https://github.com/dainst/idai-field/wiki/Field-Hub).
+3. Set the environment, especially `COUCHDB_ADMIN_PASSWORD` `COUCHDB_USER_PASSWORD`, `HOST` and `SECRET_KEY_BASE`. Generate `SECRET_KEY_BASE` with at least 64 random bytes.
+4. Keep CouchDB un-published to the host. If emergency administration is required, use a temporary SSH tunnel or a firewall-restricted management network.
+5. Put Field Hub behind a TLS reverse proxy, set `FIELD_HUB_BIND_ADDRESS=127.0.0.1`, and expose only the proxy's HTTPS port to field devices. See also the general [Wiki](https://github.com/dainst/idai-field/wiki/Field-Hub).
 
 Afterwards stop and delete all previously created test containers.
 

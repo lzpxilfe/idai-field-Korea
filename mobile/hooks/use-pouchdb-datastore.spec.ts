@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 import usePouchDbDatastore from './use-pouchdb-datastore';
 
 const mockDatastoreInstances: any[] = [];
+const mockSyncServices: any[] = [];
 const mockDbsByName = new Map<string, any>();
 const mockCreateDbDeferreds = new Map<string, {
   promise: Promise<void>;
@@ -61,6 +62,23 @@ jest.mock('idai-field-core', () => {
     }
   }
 
+  class MockSyncService {
+    public startReplication = jest.fn(async () => ({
+      subscribe: jest.fn((
+        _next: () => void,
+        _error: (error: unknown) => void,
+        complete: () => void
+      ) => {
+        complete();
+        return { unsubscribe: jest.fn() };
+      }),
+    }));
+
+    constructor() {
+      mockSyncServices.push(this);
+    }
+  }
+
   return {
     ConfigReader: jest.fn(),
     ConfigurationDocument: {
@@ -77,6 +95,7 @@ jest.mock('idai-field-core', () => {
     SampleDataLoaderBase: jest.fn(() => ({
       go: jest.fn(() => Promise.resolve()),
     })),
+    SyncService: MockSyncService,
   };
 });
 
@@ -142,6 +161,7 @@ describe('usePouchDbDatastore', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockDatastoreInstances.length = 0;
+    mockSyncServices.length = 0;
     mockDbsByName.clear();
     mockCreateDbDeferreds.clear();
     mockLoadProjectSetupDefaults.mockResolvedValue({});
@@ -205,9 +225,63 @@ describe('usePouchDbDatastore', () => {
       ],
       ''
     );
-    expect(mockDatastoreInstances[0].createDb.mock.calls[0][3]).toBe(true);
+    expect(mockDatastoreInstances[0].createDb.mock.calls[0][3]).toBe(false);
     expect(mockRemoveProjectBoundaryDraft)
       .toHaveBeenCalledWith('fieldwork-boundary');
+  });
+
+  it('uses a saved display name for the project document identifier', async () => {
+    mockLoadProjectSetupDefaults.mockResolvedValueOnce({
+      displayName: 'Seoul Area 1',
+    });
+
+    const { result } = renderHook(() => usePouchDbDatastore('seoul-area-1'));
+
+    await waitFor(() => {
+      expect(result.current).toBeDefined();
+    });
+
+    expect(mockDatastoreInstances[0].createDb.mock.calls[0][1])
+      .toEqual(expect.objectContaining({
+        resource: expect.objectContaining({
+          identifier: 'Seoul Area 1',
+        }),
+      }));
+  });
+
+  it('pulls an imported server project before creating local seed documents', async () => {
+    const handleInitialPullComplete = jest.fn();
+    const projectSettings = {
+      connected: true,
+      initialPullPending: true,
+      mapSettings: { pointRadius: 6 },
+      password: 'secret',
+      url: 'https://field.example',
+    };
+
+    const { result } = renderHook(() =>
+      usePouchDbDatastore(
+        'server-project',
+        projectSettings,
+        handleInitialPullComplete
+      )
+    );
+
+    await waitFor(() => {
+      expect(result.current).toBeDefined();
+    });
+
+    expect(mockSyncServices[0].startReplication).toHaveBeenCalledWith(
+      'https://field.example',
+      'secret',
+      'server-project',
+      0,
+      false
+    );
+    expect(mockDatastoreInstances[0].createDb).toHaveBeenCalledWith('server-project');
+    expect(mockLoadProjectSetupDefaults).not.toHaveBeenCalled();
+    expect(mockLoadProjectBoundaryDraft).not.toHaveBeenCalled();
+    expect(handleInitialPullComplete).toHaveBeenCalledTimes(1);
   });
 
   it('clears the active datastore while a new project database is opening', async () => {

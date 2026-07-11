@@ -84,17 +84,97 @@ export class BackupService {
 
     private async loadBackupFile(filePath: string, project: string): Promise<any> {
 
-        let database: any = new PouchDB(project);
-        
-        // to prevent pouchdb-load's incremental loading and force a true overwrite of the old db
-        await database.destroy();
-
-        database = new PouchDB(project);
         PouchDB.plugin(pouchDBLoad);
 
-        await (database as any).load('file://' + filePath);
+        const stagingDatabase: any = new PouchDB(this.createTemporaryDatabaseName(project, 'restore-staging'));
+        const rollbackDatabase: any = new PouchDB(this.createTemporaryDatabaseName(project, 'restore-rollback'));
+        let hasRollback: boolean = false;
 
-        return database;
+        try {
+            await stagingDatabase.load('file://' + filePath);
+            await this.assertRestoredDatabaseIsUsable(stagingDatabase);
+
+            const existingDatabase: any = new PouchDB(project);
+            hasRollback = await this.copyExistingDatabaseToRollback(existingDatabase, rollbackDatabase);
+
+            await existingDatabase.destroy();
+
+            const restoredDatabase: any = new PouchDB(project);
+            try {
+                await BackupService.replicate(stagingDatabase, restoredDatabase);
+            } catch (err) {
+                await this.restoreRollback(project, rollbackDatabase, hasRollback, err);
+                throw err;
+            }
+
+            return restoredDatabase;
+        } finally {
+            await this.destroyTemporaryDatabase(stagingDatabase);
+            await this.destroyTemporaryDatabase(rollbackDatabase);
+        }
+    }
+
+
+    private async assertRestoredDatabaseIsUsable(database: any): Promise<void> {
+
+        await database.get('project');
+    }
+
+
+    private async copyExistingDatabaseToRollback(existingDatabase: any, rollbackDatabase: any): Promise<boolean> {
+
+        const info = await existingDatabase.info();
+        const hasExistingDocuments = info.doc_count > 0;
+        if (hasExistingDocuments) await BackupService.replicate(existingDatabase, rollbackDatabase);
+
+        return hasExistingDocuments;
+    }
+
+
+    private async restoreRollback(project: string, rollbackDatabase: any, hasRollback: boolean,
+                                  originalError: any): Promise<void> {
+
+        if (!hasRollback) return;
+
+        try {
+            let database: any = new PouchDB(project);
+            await database.destroy();
+            database = new PouchDB(project);
+            await BackupService.replicate(rollbackDatabase, database);
+        } catch (rollbackError) {
+            console.error('Failed to roll back database after restore error', {
+                originalError,
+                rollbackError
+            });
+        }
+    }
+
+
+    private async destroyTemporaryDatabase(database: any): Promise<void> {
+
+        try {
+            await database.destroy();
+        } catch (err) {
+            console.warn('Failed to remove temporary restore database', err);
+        }
+    }
+
+
+    private createTemporaryDatabaseName(project: string, purpose: string): string {
+
+        return `${project}-${purpose}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    }
+
+
+    private static async replicate(source: any, target: any): Promise<void> {
+
+        if (typeof (PouchDB as any).replicate === 'function') {
+            await (PouchDB as any).replicate(source, target);
+        } else if (typeof source?.replicate?.to === 'function') {
+            await source.replicate.to(target);
+        } else {
+            throw new Error('PouchDB replication is not available');
+        }
     }
 
 

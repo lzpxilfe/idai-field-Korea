@@ -20,6 +20,7 @@ import {
   importBoundaryFileFromPath,
 } from '@/components/Project/Map/boundary-file-import';
 import CreateProjectModal from './CreateProjectModal';
+import { createServerCompatibleProjectId } from './project-name-validation';
 
 const mockImportBoundaryFileFromPath =
   importBoundaryFileFromPath as jest.MockedFunction<typeof importBoundaryFileFromPath>;
@@ -442,18 +443,20 @@ describe('CreateProjectModal', () => {
     );
 
     fireEvent.changeText(getByTestId('project-input'), `  ${projectName}  `);
+    const projectId = createServerCompatibleProjectId(projectName);
     fireEvent.press(getByTestId('project-investigation-mode_excavation'));
     await drawBoundary(getByTestId);
     fireEvent.press(getByTestId('create-project-submit'));
 
     await waitFor(() => {
       expect(handleProjectCreated).toHaveBeenCalledWith(
-        projectName,
-        KOREAN_FIELDWORK_PROJECT_LANGUAGES
+        projectId,
+        KOREAN_FIELDWORK_PROJECT_LANGUAGES,
+        projectName
       );
     });
     await expect(AsyncStorage.getItem(
-      createKoreanFieldworkBoundarySummaryStorageKey(projectName)
+      createKoreanFieldworkBoundarySummaryStorageKey(projectId)
     )).resolves.toBe('지도에서 그린 조사 경계 (3점)');
   });
 

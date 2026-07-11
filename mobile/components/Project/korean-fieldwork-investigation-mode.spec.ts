@@ -5,11 +5,13 @@ import {
   createKoreanFieldworkDefaultInstitutionNameStorageKey,
   createKoreanFieldworkInvestigationModeStorageKey,
   createKoreanFieldworkProjectBoundaryDraftStorageKey,
+  createKoreanFieldworkProjectDisplayNameStorageKey,
   getKoreanFieldworkInvestigationMode,
   getKoreanFieldworkProjectSetupDefaultsFromDocument,
   loadKoreanFieldworkDefaultInstitutionName,
   loadKoreanFieldworkBoundarySummary,
   loadKoreanFieldworkProjectBoundaryDraft,
+  loadKoreanFieldworkProjectDisplayName,
   loadKoreanFieldworkProjectSetupDefaults,
   loadKoreanFieldworkInvestigationModeId,
   removeKoreanFieldworkProjectBoundaryDraft,
@@ -17,6 +19,7 @@ import {
   saveKoreanFieldworkBoundarySummary,
   saveKoreanFieldworkInvestigationModeId,
   saveKoreanFieldworkProjectBoundaryDraft,
+  saveKoreanFieldworkProjectDisplayName,
 } from './korean-fieldwork-investigation-mode';
 
 describe('Korean fieldwork investigation mode', () => {
@@ -120,6 +123,26 @@ describe('Korean fieldwork investigation mode', () => {
       .resolves.toBeUndefined();
   });
 
+  it('persists a project display name separately from the server project id', async () => {
+    await saveKoreanFieldworkProjectDisplayName(
+      'seoul-area-1',
+      '  Seoul Area 1  '
+    );
+
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+      createKoreanFieldworkProjectDisplayNameStorageKey('seoul-area-1'),
+      'Seoul Area 1'
+    );
+    await expect(loadKoreanFieldworkProjectDisplayName('seoul-area-1'))
+      .resolves.toBe('Seoul Area 1');
+
+    await saveKoreanFieldworkProjectDisplayName('seoul-area-1', 'seoul-area-1');
+
+    expect(AsyncStorage.removeItem).toHaveBeenCalledWith(
+      createKoreanFieldworkProjectDisplayNameStorageKey('seoul-area-1')
+    );
+  });
+
   it('persists the default institution name separately from worker name', async () => {
     await saveKoreanFieldworkDefaultInstitutionName(
       '  한빛문화재연구원  '
@@ -155,6 +178,19 @@ describe('Korean fieldwork investigation mode', () => {
       boundarySummary: '1구역 북쪽 능선부터 남쪽 농로까지',
       institutionName: '한빛문화재연구원',
       investigationModeId: 'trialTrench',
+    });
+  });
+
+  it('loads a display name from the project document identifier', async () => {
+    await expect(loadKoreanFieldworkProjectSetupDefaults(
+      'seoul-area-1',
+      {
+        resource: {
+          identifier: 'Seoul Area 1',
+        },
+      } as any
+    )).resolves.toEqual({
+      displayName: 'Seoul Area 1',
     });
   });
 

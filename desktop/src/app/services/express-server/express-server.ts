@@ -150,6 +150,8 @@ export class ExpressServer {
             } catch (e) {
                 if (e.code === 'ENOENT') {
                     res.status(404).send({ reason: 'Unknown project.' });
+                } else if (e.code === 'EINVAL') {
+                    res.status(400).send({ reason: e.message });
                 } else {
                     console.log(e);
                     res.status(500).send({ reason: 'Whoops?' });
@@ -173,6 +175,8 @@ export class ExpressServer {
             } catch (e) {
                 if (e.code === 'ENOENT') {
                     res.status(404).send({ reason: 'Image file not found.' });
+                } else if (e.code === 'EINVAL') {
+                    res.status(400).send({ reason: e.message });
                 } else {
                     console.log(e);
                     res.status(500).send({ reason: 'Whoops?' });
@@ -199,6 +203,8 @@ export class ExpressServer {
             } catch (e) {
                 if (e.code === 'ENOENT') {
                     res.status(404).send({ reason: 'Unknown project.' });
+                } else if (e.code === 'EINVAL') {
+                    res.status(400).send({ reason: e.message });
                 } else {
                     console.log(e);
                     res.status(500).send({ reason: 'Whoops?' });
@@ -214,6 +220,8 @@ export class ExpressServer {
             } catch (e) {
                 if (e.code === 'ENOENT') {
                     res.status(404).send({ reason: 'Unknown project.' });
+                } else if (e.code === 'EINVAL') {
+                    res.status(400).send({ reason: e.message });
                 } else {
                     console.log(e);
                     res.status(500).send({ reason: 'Whoops?' });

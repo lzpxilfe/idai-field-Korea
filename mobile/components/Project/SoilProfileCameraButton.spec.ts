@@ -1,5 +1,6 @@
 import * as FileSystem from 'expo-file-system';
 import {
+  clearFieldworkImageUploadAudit,
   createFieldworkPhotoCaptureData,
   createSoilProfileCaptureData,
   persistFieldworkCaptureFile,
@@ -127,11 +128,59 @@ describe('fieldwork camera capture data', () => {
 
     expect(FileSystem.copyAsync).toHaveBeenCalledWith({
       from: 'file:///cache/Camera/IMG_0001.JPG',
-      to: 'file:///app/documents/fieldwork-captures/1호-수혈-사진-1.jpg',
+      to: 'file:///app/documents/fieldwork-captures/fieldwork-photo-2026-06-23T01-02-03-000Z-1호-수혈-사진-1.jpg',
     });
     expect(persistedUri).toBe(
-      'file:///app/documents/fieldwork-captures/1호-수혈-사진-1.jpg'
+      'file:///app/documents/fieldwork-captures/fieldwork-photo-2026-06-23T01-02-03-000Z-1호-수혈-사진-1.jpg'
     );
+  });
+
+  it('does not reuse a previous capture filename when retaking the same record photo', async () => {
+    const firstUri = await persistFieldworkCaptureFile(
+      'file:///cache/Camera/IMG_0001.JPG',
+      new Date('2026-06-23T01:02:03.000Z'),
+      '1호 수혈 사진 1'
+    );
+    const secondUri = await persistFieldworkCaptureFile(
+      'file:///cache/Camera/IMG_0002.JPG',
+      new Date('2026-06-23T01:03:04.000Z'),
+      '1호 수혈 사진 1'
+    );
+
+    expect(firstUri).not.toBe(secondUri);
+    expect(secondUri).toBe(
+      'file:///app/documents/fieldwork-captures/fieldwork-photo-2026-06-23T01-03-04-000Z-1호-수혈-사진-1.jpg'
+    );
+  });
+
+  it('clears previous upload audit fields before storing a replacement capture', () => {
+    expect(clearFieldworkImageUploadAudit({
+      id: 'photo-1',
+      category: 'Photo',
+      fieldworkImageUploadStatus: 'uploaded',
+      fieldworkImageUploadedAt: '2026-06-23T01:02:03.000Z',
+      fieldworkImageUploadedUri: 'file:///tablet/old.jpg',
+      fieldworkImageUploadTarget: 'https://field.example/files/project/photo-1?type=original_image',
+      fieldworkImageUploadedProject: 'project',
+      fieldworkImageUploadedSizeBytes: 10,
+      fieldworkImageUploadedMd5: 'old-md5',
+      fieldworkImageStoredSizeBytes: 10,
+      fieldworkImageStoredMd5: 'old-md5',
+      fieldworkImageStoredSha256: 'old-sha256',
+      digitalSourcePreservation: [
+        'originalPhoto',
+        'originalImage',
+        'webOrServerBackup',
+        'backupVerified',
+      ],
+    })).toEqual({
+      id: 'photo-1',
+      category: 'Photo',
+      digitalSourcePreservation: [
+        'originalPhoto',
+        'originalImage',
+      ],
+    });
   });
 });
 

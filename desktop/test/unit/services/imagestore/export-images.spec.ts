@@ -3,7 +3,8 @@ const mockElectronFs = {
     statSync: jest.fn(),
     readFileSync: jest.fn(),
     copyFileSync: jest.fn(),
-    writeFileSync: jest.fn()
+    writeFileSync: jest.fn(),
+    constants: { COPYFILE_EXCL: 1 }
 };
 
 jest.mock('src/app/electron/electron', () => ({
@@ -154,7 +155,8 @@ describe('exportImages', () => {
             expect(imageStore.getDirectoryPath).toHaveBeenCalledWith('fieldwork', ImageVariant.ORIGINAL);
             expect(mockElectronFs.copyFileSync).toHaveBeenCalledWith(
                 'C:/field/images/original/photo-1',
-                'C:/export/P-001.jpg'
+                'C:/export/P-001.jpg',
+                1
             );
             expect(mockElectronFs.writeFileSync).toHaveBeenCalledWith(
                 `C:/export/${FIELDWORK_IMAGE_EXPORT_MANIFEST_FILENAME}`,
@@ -402,7 +404,8 @@ describe('exportImages', () => {
 
         expect(mockElectronFs.copyFileSync).toHaveBeenCalledWith(
             'C:/field/images/original/feature-1',
-            'C:/export/F-001.jpg'
+            'C:/export/F-001.jpg',
+            1
         );
         expect(manifest.images[0]).toMatchObject({
             id: 'feature-1',
@@ -502,7 +505,8 @@ describe('exportImages', () => {
 
         expect(mockElectronFs.copyFileSync).toHaveBeenCalledWith(
             'C:/field/images/original/drawing-1',
-            'C:/export/tablet_drawing_1_.png'
+            'C:/export/tablet_drawing_1_.png',
+            1
         );
         expect(manifest.images[0].exportedFilename).toBe('tablet_drawing_1_.png');
         expect(manifest.images[0].originalFilename).toBe('tablet/drawing:1?.png');
@@ -552,7 +556,8 @@ describe('exportImages', () => {
 
         expect(mockElectronFs.copyFileSync).toHaveBeenCalledWith(
             'C:/field/images/original/photo-1',
-            'C:/export/photo-1'
+            'C:/export/photo-1',
+            1
         );
         expect(manifest.images[0].exportedFilename).toBe('photo-1');
         expect(manifest.images[0].identifier).toBe('photo-1');
@@ -625,16 +630,54 @@ describe('exportImages', () => {
 
         expect(mockElectronFs.copyFileSync).toHaveBeenCalledWith(
             'C:/field/images/original/photo-1',
-            'C:/export/Feature_01_Photo_.jpg'
+            'C:/export/Feature_01_Photo_.jpg',
+            1
         );
         expect(mockElectronFs.copyFileSync).toHaveBeenCalledWith(
             'C:/field/images/original/photo-2',
-            'C:/export/Feature_01_Photo__2.jpg'
+            'C:/export/Feature_01_Photo__2.jpg',
+            1
         );
         expect(manifest.images.map(image => image.exportedFilename)).toEqual([
             'Feature_01_Photo_.jpg',
             'Feature_01_Photo__2.jpg'
         ]);
+    });
+
+
+    it('fails instead of overwriting an existing export target file', () => {
+
+        const imageStore = {
+            getDirectoryPath: jest.fn().mockReturnValue('C:/field/images/original/')
+        };
+        const imageDocument = {
+            resource: {
+                id: 'photo-1',
+                identifier: 'P-001',
+                category: 'Photo',
+                originalFilename: 'photo.jpg',
+                relations: {}
+            }
+        } as any;
+        const error: NodeJS.ErrnoException = new Error('target already exists');
+        error.code = 'EEXIST';
+        mockElectronFs.copyFileSync.mockImplementationOnce(() => {
+            throw error;
+        });
+
+        expect(() => exportImages(
+            imageStore as any,
+            [imageDocument],
+            'C:/export',
+            'fieldwork',
+            false
+        )).toThrow('target already exists');
+        expect(mockElectronFs.copyFileSync).toHaveBeenCalledWith(
+            'C:/field/images/original/photo-1',
+            'C:/export/P-001.jpg',
+            1
+        );
+        expect(mockElectronFs.writeFileSync).not.toHaveBeenCalled();
     });
 
 

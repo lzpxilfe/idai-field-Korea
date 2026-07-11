@@ -339,7 +339,16 @@ export class PouchdbDatastore {
 
         const cleanedUpDocuments = documents.map(PouchdbDatastore.cleanUp);
 
-        await this.db.bulkDocs(cleanedUpDocuments);
+        const results = await this.db.bulkDocs(cleanedUpDocuments);
+        const failedResults = Array.isArray(results)
+            ? results.filter(PouchdbDatastore.isBulkDocsError)
+            : [];
+        if (failedResults.length > 0) {
+            throw [DatastoreErrors.GENERIC_ERROR, {
+                message: 'PouchDB bulkDocs failed for one or more documents',
+                results: failedResults
+            }];
+        }
         return this.bulkFetch(cleanedUpDocuments.map(document => document.resource.id));
     }
 
@@ -420,5 +429,11 @@ export class PouchdbDatastore {
 
         if (document.resource.id === 'project') document.resource.category = 'Project';
         if (document.resource.id === 'configuration') document.resource.category = 'Configuration';
+    }
+
+
+    private static isBulkDocsError(result: any): boolean {
+
+        return !!result && (result.error === true || result.ok === false);
     }
 }

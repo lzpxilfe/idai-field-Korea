@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, {
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -71,8 +72,20 @@ const SettingsScreen: React.FC = () => {
   const [, setIsLoadingProjectSettings] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const repositoryUsername = preferences.preferences.username.trim();
+  const currentProjectSettings =
+    preferences.preferences.projects[currentProject];
+  const clearInitialPullPending = useCallback(() => {
+    if (!currentProject || !currentProjectSettings?.initialPullPending) return;
+
+    preferences.setProjectSettings(currentProject, {
+      ...currentProjectSettings,
+      initialPullPending: false,
+    });
+  }, [currentProject, currentProjectSettings, preferences]);
   const projectDatastore = usePouchDbDatastore(
-    hasCurrentProject ? currentProject : ''
+    hasCurrentProject ? currentProject : '',
+    currentProjectSettings,
+    clearInitialPullPending
   );
   const projectConfiguration = useConfiguration(
     hasCurrentProject ? currentProject : '',

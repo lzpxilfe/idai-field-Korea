@@ -184,6 +184,31 @@ describe('ExpressServer', () => {
     });
 
 
+    test('/files/:project/:uuid rejects encoded path traversal image ids', async () => {
+
+        await request(expressMainApp)
+            .put('/files/test_tmp_project/%252e%252e%255cescape?type=original_image')
+            .send(mockImage)
+            .set('Content-Type', 'image/x-www-form-urlencoded')
+            .set('Authorization', `Basic ${base64Encode(testProjectIdentifier + ':' + password)}`)
+            .expect(400);
+
+        await request(expressMainApp)
+            .get('/files/test_tmp_project/%252e%252e%252fescape?type=original_image')
+            .set('Authorization', `Basic ${base64Encode(testProjectIdentifier + ':' + password)}`)
+            .expect(400);
+    });
+
+
+    test('/files/:project rejects encoded path traversal project names', async () => {
+
+        await request(expressMainApp)
+            .get('/files/%252e%252e%255cescape')
+            .set('Authorization', `Basic ${base64Encode(testProjectIdentifier + ':' + password)}`)
+            .expect(400);
+    });
+
+
     test('/files/:project/:uuid is able to block original images (large files)', async () => {
 
         try {

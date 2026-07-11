@@ -7,7 +7,7 @@ import {
   getKoreanFieldworkReportHandoffSaveMessage,
   validateKoreanFieldworkReportHandoffCandidate,
 } from 'idai-field-core';
-import React, { useCallback, useContext, useEffect, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { Keyboard, StyleSheet, Text, View } from 'react-native';
 import { ConfigurationContext } from '@/contexts/configuration-context';
 import LabelsContext from '@/contexts/labels/labels-context';
@@ -19,6 +19,7 @@ import SoilProfileCameraButton, {
   FieldworkPhotoCaptureData,
   PhotoCameraButton,
   SoilProfileCaptureData,
+  clearFieldworkImageUploadAudit,
 } from '@/components/Project/SoilProfileCameraButton';
 import KoreanFieldworkDraftContextPanel from '@/components/Project/KoreanFieldworkDraftContextPanel';
 import KoreanFieldworkDrawingSurveyPanel
@@ -92,6 +93,11 @@ const DocumentAdd: React.FC = () => {
   const [soilProfileSampleRequest, setSoilProfileSampleRequest] =
     useState<SoilProfileLayerSampleRequest>();
   const projectId = preferencesContext.preferences.currentProject;
+  const documentsRef = useRef(documents);
+
+  useEffect(() => {
+    documentsRef.current = documents;
+  }, [documents]);
 
   const setResourceToDefault = useCallback(
     () => {
@@ -102,7 +108,7 @@ const DocumentAdd: React.FC = () => {
 
       setNewResource(
         createKoreanFieldworkDraftResource(parentDoc, categoryName, config, {
-          existingDocuments: documents ?? [],
+          existingDocuments: documentsRef.current ?? [],
           featureGeometryRevisionNote,
           featureGeometry,
           featureLocationSketch,
@@ -116,7 +122,6 @@ const DocumentAdd: React.FC = () => {
     },
     [
       parentDoc,
-      documents,
       categoryName,
       config,
       featureGeometryRevisionNote,
@@ -177,10 +182,16 @@ const DocumentAdd: React.FC = () => {
   };
 
   const updateSoilProfileCapture = (data: SoilProfileCaptureData) => {
-    setNewResource((oldResource) => oldResource && { ...oldResource, ...data });
+    setNewResource((oldResource) => oldResource && {
+      ...clearFieldworkImageUploadAudit(oldResource),
+      ...data,
+    });
   };
   const updatePhotoCapture = (data: FieldworkPhotoCaptureData) => {
-    setNewResource((oldResource) => oldResource && { ...oldResource, ...data });
+    setNewResource((oldResource) => oldResource && {
+      ...clearFieldworkImageUploadAudit(oldResource),
+      ...data,
+    });
   };
 
   const saveButtonHandler = () => {

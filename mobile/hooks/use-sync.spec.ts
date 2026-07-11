@@ -128,6 +128,25 @@ describe('useSync', () => {
     expect(mockSyncServices[0].startSync).not.toHaveBeenCalled();
   });
 
+  it('does not start live sync while the initial server pull is pending', async () => {
+    const pouchdbDatastore = {} as any;
+
+    renderHook(() => useSync({
+      project: 'fieldwork-1',
+      projectSettings: createProjectSettings({
+        connected: true,
+        initialPullPending: true,
+      }),
+      pouchdbDatastore,
+    }));
+
+    await waitFor(() => {
+      expect(mockSyncServices[0]?.init).toHaveBeenCalled();
+    });
+
+    expect(mockSyncServices[0].startSync).not.toHaveBeenCalled();
+  });
+
   it('logs sync failures without leaking credentials', async () => {
     const error = new Error(
       'sync failed password=secret Authorization: Basic abc123'
@@ -143,14 +162,17 @@ describe('useSync', () => {
 
 const createProjectSettings = ({
   connected,
+  initialPullPending,
   password = '',
   url = 'https://field.example',
 }: {
   connected: boolean;
+  initialPullPending?: boolean;
   password?: string;
   url?: string;
 }) => ({
   connected,
+  ...(initialPullPending ? { initialPullPending } : {}),
   mapSettings: { pointRadius: 6 },
   password,
   url,

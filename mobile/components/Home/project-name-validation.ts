@@ -2,6 +2,7 @@ import { SAMPLE_PROJECT_ID } from '@/constants/sample-project';
 
 export interface ProjectNameValidation {
   alreadyExists: boolean;
+  displayName: string;
   hasUnsafeCharacters: boolean;
   isAvailable: boolean;
   isPresent: boolean;
@@ -23,28 +24,33 @@ export const validateProjectName = (
   options: ProjectNameValidationOptions = {}
 ): ProjectNameValidation => {
   const validationMode = options.mode ?? 'server';
-  const projectId = normalizeProjectId(projectName);
+  const displayName = normalizeProjectId(projectName);
+  const projectId = validationMode === 'local'
+    ? createServerCompatibleProjectId(displayName)
+    : displayName;
   const projectLookupKey = createProjectLookupKey(projectId);
-  const isPresent = projectId.length > 0;
-  const alreadyExists = isPresent && existingProjects.some(
-    (existingProject) =>
-      createProjectLookupKey(normalizeProjectId(existingProject)) === projectLookupKey
+  const displayNameLookupKey = createProjectLookupKey(displayName);
+  const isPresent = displayName.length > 0;
+  const alreadyExists = isPresent && existingProjects.some((existingProject) =>
+    hasMatchingExistingProjectName(existingProject, projectLookupKey, displayNameLookupKey)
   );
   const isReserved =
-    projectLookupKey === createProjectLookupKey(SAMPLE_PROJECT_ID);
+    projectLookupKey === createProjectLookupKey(SAMPLE_PROJECT_ID)
+    || displayNameLookupKey === createProjectLookupKey(SAMPLE_PROJECT_ID);
   const maxLength = validationMode === 'local'
     ? LOCAL_PROJECT_NAME_MAX_LENGTH
     : PROJECT_IDENTIFIER_MAX_LENGTH;
-  const isTooLong = projectId.length > maxLength;
+  const isTooLong = (validationMode === 'local' ? displayName : projectId).length > maxLength;
   const hasUnsafeCharacters =
     isPresent
     && !isReserved
     && (validationMode === 'local'
-      ? !hasLocalProjectName(projectId)
+      ? !hasLocalProjectName(displayName)
       : !hasServerCompatibleProjectName(projectId));
 
   return {
     alreadyExists,
+    displayName,
     hasUnsafeCharacters,
     isAvailable:
       isPresent && !alreadyExists && !isReserved && !isTooLong && !hasUnsafeCharacters,
@@ -53,6 +59,35 @@ export const validateProjectName = (
     isTooLong,
     projectId,
   };
+};
+
+export const createServerCompatibleProjectId = (projectName: string): string => {
+  const displayName = normalizeProjectId(projectName);
+  if (!displayName) return '';
+
+  if (
+    displayName.length <= PROJECT_IDENTIFIER_MAX_LENGTH
+    && hasServerCompatibleProjectName(displayName)
+  ) {
+    return displayName;
+  }
+
+  const hash = createProjectNameHash(displayName);
+  const asciiSlug = displayName
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^[^a-z]+/, '')
+    .replace(/[-_]+$/g, '');
+  const fallbackSlug = 'fieldwork';
+  const maxBaseLength = PROJECT_IDENTIFIER_MAX_LENGTH - hash.length - 1;
+  const base = (asciiSlug || fallbackSlug)
+    .slice(0, maxBaseLength)
+    .replace(/[-_]+$/g, '') || fallbackSlug.slice(0, maxBaseLength);
+
+  return `${base}-${hash}`;
 };
 
 export const getProjectNameInvalidText = (
@@ -84,8 +119,34 @@ const normalizeProjectId = (projectName: string): string => projectName.trim();
 const createProjectLookupKey = (projectId: string): string =>
   projectId.toLocaleLowerCase();
 
+const hasMatchingExistingProjectName = (
+  existingProject: string,
+  projectLookupKey: string,
+  displayNameLookupKey: string
+): boolean => {
+  const normalizedExistingProject = normalizeProjectId(existingProject);
+  const existingLookupKey = createProjectLookupKey(normalizedExistingProject);
+
+  return existingLookupKey === projectLookupKey
+    || existingLookupKey === displayNameLookupKey
+    || createProjectLookupKey(
+      createServerCompatibleProjectId(normalizedExistingProject)
+    ) === projectLookupKey;
+};
+
 const hasServerCompatibleProjectName = (projectId: string): boolean =>
   /^[a-z][0-9a-z_-]*$/.test(projectId);
 
 const hasLocalProjectName = (projectId: string): boolean =>
   !/[\u0000-\u001f\u007f/\\:*?"<>|]/.test(projectId);
+
+const createProjectNameHash = (value: string): string => {
+  let hash = 2166136261;
+
+  for (const character of value) {
+    hash ^= character.codePointAt(0) ?? 0;
+    hash = Math.imul(hash, 16777619) >>> 0;
+  }
+
+  return hash.toString(36).padStart(6, '0').slice(0, 6);
+};

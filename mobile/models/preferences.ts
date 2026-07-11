@@ -16,6 +16,8 @@ export interface Preferences {
 }
 
 export interface ProjectSettings {
+    displayName?: string;
+    initialPullPending?: boolean;
     url: string;
     password: string;
     connected: boolean;

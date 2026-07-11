@@ -6,6 +6,7 @@ import {
   KOREAN_FIELDWORK_CONFIGURATION_NAME,
   PouchdbDatastore,
   SampleDataLoaderBase,
+  SyncService,
 } from 'idai-field-core';
 import { useEffect, useState } from 'react';
 import PouchDB from 'pouchdb-core'
@@ -45,10 +46,15 @@ import {
   isSampleProject,
   SAMPLE_PROJECT_LABEL,
 } from '@/constants/sample-project';
+import type { ProjectSettings } from '@/models/preferences';
 
 PouchDB.plugin(require('@neighbourhoodie/pouchdb-asyncstorage-adapter').default)
 
-const usePouchDbDatastore = (project: string): PouchdbDatastore | undefined => {
+const usePouchDbDatastore = (
+  project: string,
+  projectSettings?: ProjectSettings,
+  onInitialPullComplete?: () => void
+): PouchdbDatastore | undefined => {
   const [pouchdbDatastore, setpouchdbDatastore] = useState<PouchdbDatastore>();
 
   useEffect(() => {
@@ -60,7 +66,7 @@ const usePouchDbDatastore = (project: string): PouchdbDatastore | undefined => {
 
     let isCancelled = false;
     let activeManager: PouchdbDatastore | undefined;
-    const managerPromise = buildpouchdbDatastore(project)
+    const managerPromise = buildpouchdbDatastore(project, projectSettings)
       .then((manager) => {
         if (isCancelled) {
           manager.close();
@@ -69,6 +75,9 @@ const usePouchDbDatastore = (project: string): PouchdbDatastore | undefined => {
 
         activeManager = manager;
         setpouchdbDatastore(manager);
+        if (shouldPullFromServerBeforeLocalSeed(project, projectSettings)) {
+          onInitialPullComplete?.();
+        }
         return manager;
       })
       .catch((error) => {
@@ -83,7 +92,14 @@ const usePouchDbDatastore = (project: string): PouchdbDatastore | undefined => {
         if (manager !== undefined && activeManager === manager) manager.close();
       }).catch(() => undefined);
     };
-  }, [project]);
+  }, [
+    project,
+    projectSettings?.connected,
+    projectSettings?.initialPullPending,
+    projectSettings?.password,
+    projectSettings?.url,
+    onInitialPullComplete,
+  ]);
 
   return pouchdbDatastore;
 };
@@ -103,12 +119,29 @@ export const destroyPouchDbDatastore = async (project: string): Promise<void> =>
 };
 
 const buildpouchdbDatastore = async (
-  project: string
+  project: string,
+  projectSettings?: ProjectSettings
 ): Promise<PouchdbDatastore> => {
   const datastore = new PouchdbDatastore(
     (name: string) => new PouchDB(name),
     new IdGenerator()
   );
+
+  if (shouldPullFromServerBeforeLocalSeed(project, projectSettings)) {
+    try {
+      await replicateInitialProjectFromServer(datastore, project, projectSettings);
+    } catch (error) {
+      if (!isDbNotEmptyError(error)) throw error;
+
+      console.warn(
+        `Initial server pull for '${project}' skipped because the local database already contains data.`
+      );
+    }
+    await datastore.createDb(project);
+    datastore.setupChangesEmitter();
+    return datastore;
+  }
+
   const projectSetupDefaults = isSampleProject(project)
     ? {}
     : await loadKoreanFieldworkProjectSetupDefaults(project)
@@ -117,14 +150,12 @@ const buildpouchdbDatastore = async (
     ? undefined
     : await loadKoreanFieldworkProjectBoundaryDraft(project)
         .catch(() => undefined);
-  const shouldResetExistingProjectDb =
-    !isSampleProject(project) && !!boundaryDraft;
 
   await datastore.createDb(
     project,
     await createProjectDocument(project, projectSetupDefaults),
     await createConfigurationDocument(project),
-    isSampleProject(project) || shouldResetExistingProjectDb
+    isSampleProject(project)
   );
 
   if (!isSampleProject(project)) {
@@ -147,6 +178,52 @@ const buildpouchdbDatastore = async (
   return datastore;
 };
 
+const shouldPullFromServerBeforeLocalSeed = (
+  project: string,
+  projectSettings?: ProjectSettings
+): projectSettings is ProjectSettings =>
+  !isSampleProject(project)
+  && !!projectSettings?.connected
+  && !!projectSettings.initialPullPending
+  && !!projectSettings.url?.trim();
+
+const replicateInitialProjectFromServer = async (
+  datastore: PouchdbDatastore,
+  project: string,
+  projectSettings: ProjectSettings
+): Promise<void> => {
+  const syncService = new SyncService(datastore);
+  const replication = await syncService.startReplication(
+    projectSettings.url,
+    projectSettings.password ?? '',
+    project,
+    0,
+    false
+  );
+
+  await new Promise<void>((resolve, reject) => {
+    let subscription: { unsubscribe: () => void } | undefined;
+    subscription = replication.subscribe(
+      () => undefined,
+      (error: unknown) => {
+        subscription?.unsubscribe();
+        reject(error);
+      },
+      () => {
+        subscription?.unsubscribe();
+        resolve();
+      }
+    );
+  });
+};
+
+const isDbNotEmptyError = (error: unknown): boolean =>
+  error === 'DB not empty'
+  || (
+    error instanceof Error
+    && error.message === 'DB not empty'
+  );
+
 const createProjectDocument = async (
   project: string,
   projectSetupDefaults: KoreanFieldworkProjectSetupDefaults = {}
@@ -155,7 +232,9 @@ const createProjectDocument = async (
     _id: 'project',
     resource: {
       id: 'project',
-      identifier: isSampleProject(project) ? SAMPLE_PROJECT_LABEL : project,
+      identifier: isSampleProject(project)
+        ? SAMPLE_PROJECT_LABEL
+        : (projectSetupDefaults.displayName?.trim() || project),
       category: 'Project',
       ...(!isSampleProject(project) && {
         projectBoundarySetupState: 'notStarted',

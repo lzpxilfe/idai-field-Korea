@@ -82,7 +82,54 @@ describe('boundary-file-import', () => {
     expect(result.geometry.coordinates).toHaveLength(4);
     expect(result.geometry.coordinates[0][0]).not.toBeCloseTo(127.12);
   });
+
+  it('rejects Korean projected coordinates without an explicit CRS', () => {
+    expect(() => parseDxfBoundaryText(createDxfPolyline([
+      [200000, 600000],
+      [200100, 600000],
+      [200100, 600100],
+      [200000, 600000],
+    ]))).toThrow(/Korean projected coordinates/);
+  });
+
+  it('uses an explicit Korean projected CRS instead of guessing the belt', () => {
+    const result = parseDxfBoundaryText(
+      createDxfPolyline([
+        [200000, 600000],
+        [200100, 600000],
+        [200100, 600100],
+        [200000, 600000],
+      ]),
+      'EPSG:5186'
+    );
+
+    expect(result.coordinateSystem).toBe('EPSG:5186');
+    expect(result.geometry.coordinates).toHaveLength(4);
+    expect(result.geometry.coordinates[0][0]).not.toBeCloseTo(200000);
+  });
 });
+
+const createDxfPolyline = (coordinates: number[][]): string =>
+  [
+    '0',
+    'SECTION',
+    '2',
+    'ENTITIES',
+    '0',
+    'LWPOLYLINE',
+    '90',
+    String(coordinates.length),
+    ...coordinates.flatMap(([x, y]) => [
+      '10',
+      String(x),
+      '20',
+      String(y),
+    ]),
+    '0',
+    'ENDSEC',
+    '0',
+    'EOF',
+  ].join('\n');
 
 const createPolygonShpBytes = (points: number[][]): Uint8Array => {
   const contentLength = 4 + 32 + 4 + 4 + 4 + points.length * 16;

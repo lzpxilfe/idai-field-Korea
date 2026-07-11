@@ -67,7 +67,7 @@ jobs:
         working-directory: mobile
 
   build-android-apk:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/') }}
+    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/') }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -103,7 +103,29 @@ jobs:
         run: npm ci --legacy-peer-deps
         working-directory: mobile
 
+      - name: Prepare release keystore
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.IDAI_FIELD_ANDROID_RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_STORE_PASSWORD: ${{ secrets.IDAI_FIELD_ANDROID_RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.IDAI_FIELD_ANDROID_RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.IDAI_FIELD_ANDROID_RELEASE_KEY_PASSWORD }}
+          RELEASE_CERT_SHA256: ${{ secrets.IDAI_FIELD_ANDROID_RELEASE_CERT_SHA256 }}
+        run: |
+          set -euo pipefail
+          test -n "$RELEASE_KEYSTORE_BASE64"
+          test -n "$RELEASE_STORE_PASSWORD"
+          test -n "$RELEASE_KEY_ALIAS"
+          test -n "$RELEASE_KEY_PASSWORD"
+          test -n "$RELEASE_CERT_SHA256"
+          printf '%s' "$RELEASE_KEYSTORE_BASE64" | base64 --decode > mobile/android/app/release-upload.keystore
+
       - name: Build release APK
+        env:
+          IDAI_FIELD_ANDROID_RELEASE_STORE_FILE: release-upload.keystore
+          IDAI_FIELD_ANDROID_RELEASE_STORE_PASSWORD: ${{ secrets.IDAI_FIELD_ANDROID_RELEASE_STORE_PASSWORD }}
+          IDAI_FIELD_ANDROID_RELEASE_KEY_ALIAS: ${{ secrets.IDAI_FIELD_ANDROID_RELEASE_KEY_ALIAS }}
+          IDAI_FIELD_ANDROID_RELEASE_KEY_PASSWORD: ${{ secrets.IDAI_FIELD_ANDROID_RELEASE_KEY_PASSWORD }}
+          IDAI_FIELD_ANDROID_VERSION_CODE: ${{ github.run_number }}
         run: ./gradlew --no-daemon app:assembleRelease
         working-directory: mobile/android
 
@@ -112,11 +134,21 @@ jobs:
           mkdir -p dist/android
           cp mobile/android/app/build/outputs/apk/release/app-release.apk dist/android/idai-field-mobile-release.apk
 
+      - name: Verify release signing certificate
+        env:
+          RELEASE_CERT_SHA256: ${{ secrets.IDAI_FIELD_ANDROID_RELEASE_CERT_SHA256 }}
+        run: |
+          set -euo pipefail
+          apksigner verify --print-certs dist/android/idai-field-mobile-release.apk | tee dist/android/apk-certificates.txt
+          grep -F "Signer #1 certificate SHA-256 digest: $RELEASE_CERT_SHA256" dist/android/apk-certificates.txt
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: idai-field-mobile-android-apk
-          path: dist/android/idai-field-mobile-release.apk
+          path: |
+            dist/android/idai-field-mobile-release.apk
+            dist/android/apk-certificates.txt
 
       - name: Attach APK to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')

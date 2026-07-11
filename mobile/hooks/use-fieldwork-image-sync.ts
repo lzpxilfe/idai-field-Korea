@@ -149,17 +149,44 @@ const useFieldworkImageSync = ({
             projectSettings.url,
             target
           );
+          let currentUploadMetadata: FieldworkImageUploadResult | undefined;
+          if (target.uri.startsWith('file://')) {
+            try {
+              currentUploadMetadata = await getFieldworkImageUploadMetadata(target);
+            } catch (error) {
+              console.error(
+                `Failed to inspect fieldwork image ${target.resourceId}:`,
+                getFieldworkImageUploadErrorMessage(error, projectSettings.password)
+              );
+              continue;
+            }
+          }
           const uploadAuditRecorded = isFieldworkImageUploadAuditRecorded(
             target.document,
             project,
             target
           );
-          if (isFieldworkImageUploadRecordComplete(target.document, project, target)) {
+          const uploadAuditMetadataMismatched = isLocalUploadMetadataMismatched(
+            target.document,
+            currentUploadMetadata
+          );
+          if (uploadAuditMetadataMismatched) uploadedResults.current.delete(key);
+
+          if (isFieldworkImageUploadRecordComplete(
+            target.document,
+            project,
+            target,
+            currentUploadMetadata
+          )) {
             continue;
           }
 
           if (
-            (!uploadAuditRecorded || isServerUploadMetadataMissing(target.document))
+            (
+              !uploadAuditRecorded
+              || uploadAuditMetadataMismatched
+              || isServerUploadMetadataMissing(target.document, target)
+            )
             && !uploadedResults.current.has(key)
           ) {
             pendingUploads += 1;
@@ -307,14 +334,25 @@ export const getFieldworkImageUploadRecordUpdates = (
   uploadedAt: string
 ): Record<string, unknown> => {
   const resource = document.resource as Record<string, unknown>;
+  const hasFreshServerStoredResult = typeof target.storedSizeBytes === 'number'
+    || !!target.storedMd5
+    || !!target.storedSha256;
   const existingUploadedAt = isFieldworkImageUploadAuditRecorded(document, project, target)
+    && !hasFreshServerStoredResult
     ? getStringValue(resource.fieldworkImageUploadedAt)
     : undefined;
+  const uploadResult: FieldworkImageUploadResult = {
+    uploadedSizeBytes: target.uploadedSizeBytes ?? getNumberValue(resource.fieldworkImageUploadedSizeBytes),
+    uploadedMd5: target.uploadedMd5 ?? getStringValue(resource.fieldworkImageUploadedMd5),
+    storedSizeBytes: target.storedSizeBytes ?? getNumberValue(resource.fieldworkImageStoredSizeBytes),
+    storedMd5: target.storedMd5 ?? getStringValue(resource.fieldworkImageStoredMd5),
+    storedSha256: target.storedSha256 ?? getStringValue(resource.fieldworkImageStoredSha256),
+  };
 
   return {
     digitalSourcePreservation: mergeUniqueStringValues(
       resource.digitalSourcePreservation,
-      getDigitalSourcePreservationUploadValues(target.category)
+      getDigitalSourcePreservationUploadValues(target.category, uploadResult)
     ),
     fieldworkImageUploadStatus: FIELDWORK_IMAGE_UPLOAD_STATUS_UPLOADED,
     fieldworkImageUploadedAt: existingUploadedAt ?? uploadedAt,
@@ -481,14 +519,19 @@ const collectFieldworkImageSyncItems = (
 const isFieldworkImageUploadRecordComplete = (
   document: Document,
   project: string,
-  target: Pick<FieldworkImageSyncItem, 'category'|'uri'|'uploadUrl'>
+  target: Pick<FieldworkImageSyncItem, 'category'|'uri'|'uploadUrl'>,
+  currentUploadMetadata?: FieldworkImageUploadResult
 ): boolean =>
   isFieldworkImageUploadAuditRecorded(document, project, target)
     && hasUploadTimestamp(document)
-    && hasCompleteUploadChecksumMetadata(document, target)
-    && hasCompleteUploadSizeMetadata(document, target)
-    && hasCompleteServerStoredMetadata(document)
-    && hasDigitalSourcePreservationUploadValues(document, target.category);
+    && hasCompleteUploadChecksumMetadata(document, target, currentUploadMetadata)
+    && hasCompleteUploadSizeMetadata(document, target, currentUploadMetadata)
+    && hasCompleteServerStoredMetadata(document, target)
+    && hasDigitalSourcePreservationUploadValues(
+      document,
+      target.category,
+      getDocumentUploadResult(document)
+    );
 
 const isFieldworkImageUploadAuditRecorded = (
   document: Document,
@@ -519,15 +562,23 @@ const hasUploadTimestamp = (document: Document): boolean =>
 
 const hasCompleteUploadChecksumMetadata = (
   document: Document,
-  target: Pick<FieldworkImageSyncItem, 'uri'>
+  target: Pick<FieldworkImageSyncItem, 'uri'>,
+  currentUploadMetadata?: FieldworkImageUploadResult
 ): boolean => !target.uri.startsWith('file://')
-  || !!getStringValue((document.resource as Record<string, unknown>).fieldworkImageUploadedMd5);
+  || (
+    !!getStringValue((document.resource as Record<string, unknown>).fieldworkImageUploadedMd5)
+    && (!currentUploadMetadata?.uploadedMd5 || !isLocalUploadMetadataMismatched(document, currentUploadMetadata))
+  );
 
 const hasCompleteUploadSizeMetadata = (
   document: Document,
-  target: Pick<FieldworkImageSyncItem, 'uri'>
+  target: Pick<FieldworkImageSyncItem, 'uri'>,
+  currentUploadMetadata?: FieldworkImageUploadResult
 ): boolean => !target.uri.startsWith('file://')
-  || getNumberValue((document.resource as Record<string, unknown>).fieldworkImageUploadedSizeBytes) !== undefined;
+  || (
+    getNumberValue((document.resource as Record<string, unknown>).fieldworkImageUploadedSizeBytes) !== undefined
+    && (!currentUploadMetadata || !isLocalUploadMetadataMismatched(document, currentUploadMetadata))
+  );
 
 const isFileUploadMetadataMissing = (
   document: Document,
@@ -539,18 +590,22 @@ const isFileUploadMetadataMissing = (
   );
 
 const hasCompleteServerStoredMetadata = (
-  document: Document
+  document: Document,
+  target?: Pick<FieldworkImageSyncItem, 'uri'>
 ): boolean => {
   const resource = document.resource as Record<string, unknown>;
 
   return getNumberValue(resource.fieldworkImageStoredSizeBytes) !== undefined
     && !!getStringValue(resource.fieldworkImageStoredMd5)
-    && !!getStringValue(resource.fieldworkImageStoredSha256);
+    && !!getStringValue(resource.fieldworkImageStoredSha256)
+    && (!target?.uri.startsWith('file://')
+      || isFieldworkImageBackupVerified(getDocumentUploadResult(document)));
 };
 
 const isServerUploadMetadataMissing = (
-  document: Document
-): boolean => !hasCompleteServerStoredMetadata(document);
+  document: Document,
+  target?: Pick<FieldworkImageSyncItem, 'uri'>
+): boolean => !hasCompleteServerStoredMetadata(document, target);
 
 const getFieldworkImageSyncKey = (
   project: string,
@@ -604,22 +659,80 @@ const getParsedFieldworkImageUploadResponseBody = (
   }
 };
 
-const getDigitalSourcePreservationUploadValues = (category: string): string[] => {
-  if (category === 'Drawing') {
-    return ['originalDrawing', 'webOrServerBackup', 'backupVerified'];
+const getDigitalSourcePreservationUploadValues = (
+  category: string,
+  target?: FieldworkImageUploadResult
+): string[] => {
+  const values = category === 'Drawing'
+    ? ['originalDrawing', 'webOrServerBackup']
+    : ['originalPhoto', 'originalImage', 'webOrServerBackup'];
+
+  return isFieldworkImageBackupVerified(target)
+    ? [...values, 'backupVerified']
+    : values;
+};
+
+const isFieldworkImageBackupVerified = (
+  target?: FieldworkImageUploadResult
+): boolean => {
+  const uploadedMd5 = target?.uploadedMd5?.toLowerCase();
+  const storedMd5 = target?.storedMd5?.toLowerCase();
+
+  if (
+    !uploadedMd5
+    || !storedMd5
+    || uploadedMd5 !== storedMd5
+    || typeof target?.uploadedSizeBytes !== 'number'
+    || typeof target?.storedSizeBytes !== 'number'
+  ) {
+    return false;
   }
 
-  return ['originalPhoto', 'originalImage', 'webOrServerBackup', 'backupVerified'];
+  return target.uploadedSizeBytes === target.storedSizeBytes;
+};
+
+const getDocumentUploadResult = (document: Document): FieldworkImageUploadResult => {
+  const resource = document.resource as Record<string, unknown>;
+
+  return {
+    uploadedSizeBytes: getNumberValue(resource.fieldworkImageUploadedSizeBytes),
+    uploadedMd5: getStringValue(resource.fieldworkImageUploadedMd5),
+    storedSizeBytes: getNumberValue(resource.fieldworkImageStoredSizeBytes),
+    storedMd5: getStringValue(resource.fieldworkImageStoredMd5),
+    storedSha256: getStringValue(resource.fieldworkImageStoredSha256),
+  };
+};
+
+const isLocalUploadMetadataMismatched = (
+  document: Document,
+  currentUploadMetadata: FieldworkImageUploadResult | undefined
+): boolean => {
+  if (!currentUploadMetadata) return false;
+
+  const resource = document.resource as Record<string, unknown>;
+  const recordedMd5 = getStringValue(resource.fieldworkImageUploadedMd5);
+  const recordedSize = getNumberValue(resource.fieldworkImageUploadedSizeBytes);
+
+  return (
+    !!currentUploadMetadata.uploadedMd5
+    && !!recordedMd5
+    && currentUploadMetadata.uploadedMd5.toLowerCase() !== recordedMd5.toLowerCase()
+  ) || (
+    typeof currentUploadMetadata.uploadedSizeBytes === 'number'
+    && recordedSize !== undefined
+    && currentUploadMetadata.uploadedSizeBytes !== recordedSize
+  );
 };
 
 const hasDigitalSourcePreservationUploadValues = (
   document: Document,
-  category: string
+  category: string,
+  target?: FieldworkImageUploadResult
 ): boolean => {
   const value = (document.resource as Record<string, unknown>).digitalSourcePreservation;
   if (!Array.isArray(value)) return false;
 
-  return getDigitalSourcePreservationUploadValues(category)
+  return getDigitalSourcePreservationUploadValues(category, target)
     .every((requiredValue) => value.includes(requiredValue));
 };
 

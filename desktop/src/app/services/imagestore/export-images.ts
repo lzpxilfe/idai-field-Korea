@@ -309,7 +309,8 @@ function copyImageFile(sourceFilePath: string, exportedFilePath: string) {
 
     fs.copyFileSync(
         sourceFilePath,
-        exportedFilePath
+        exportedFilePath,
+        fs.constants?.COPYFILE_EXCL ?? 1
     );
 }
 

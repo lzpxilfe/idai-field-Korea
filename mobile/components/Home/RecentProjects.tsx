@@ -3,10 +3,12 @@ import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Button from '@/components/common/Button';
 import { colors } from '@/utils/colors';
-import { getProjectDisplayName } from '@/constants/sample-project';
+import { getProjectDisplayName as getSampleProjectDisplayName } from '@/constants/sample-project';
+import type { ProjectSettings } from '@/models/preferences';
 
 interface RecentProjectsProps {
   setSelectedProject: (project: string) => void;
+  projectSettings?: Record<string, ProjectSettings>;
   recentProjects: string[];
   openProject: (project: string) => void;
   setIsDeleteModalOpen: (open: boolean) => void;
@@ -16,11 +18,14 @@ const MAX_VISIBLE_RECENT_PROJECTS = 5;
 
 const RecentProjects: React.FC<RecentProjectsProps> = ({
   setSelectedProject,
+  projectSettings = {},
   recentProjects,
   openProject,
   setIsDeleteModalOpen,
 }) => {
   const visibleRecentProjects = recentProjects.slice(0, MAX_VISIBLE_RECENT_PROJECTS);
+  const getProjectDisplayName = (project: string): string =>
+    projectSettings[project]?.displayName ?? getSampleProjectDisplayName(project);
 
   const confirmDeleteProject = (project: string) => {
     setSelectedProject(project);

@@ -216,14 +216,23 @@ const readPrjCoordinateSystem = async (
   const prjUri = replaceFileExtension(uri, '.prj');
   if (!prjUri || prjUri === uri) return undefined;
 
+  let prjText: string;
   try {
-    const prjText = await FileSystem.readAsStringAsync(prjUri, {
+    prjText = await FileSystem.readAsStringAsync(prjUri, {
       encoding: FileSystem.EncodingType.UTF8,
     });
-    return detectCoordinateSystemFromPrj(prjText);
   } catch {
     return undefined;
   }
+
+  const coordinateSystem = detectCoordinateSystemFromPrj(prjText);
+  if (!coordinateSystem) {
+    throw new Error(
+      'The .prj file does not declare a supported coordinate system.'
+    );
+  }
+
+  return coordinateSystem;
 };
 
 const replaceFileExtension = (
@@ -512,8 +521,12 @@ const detectCoordinateSystem = (
   coordinates: Coordinate[],
   coordinateSystemHint?: string
 ): string => {
-  if (coordinateSystemHint && SUPPORTED_CRS.has(coordinateSystemHint)) {
-    return coordinateSystemHint;
+  if (coordinateSystemHint) {
+    if (SUPPORTED_CRS.has(coordinateSystemHint)) return coordinateSystemHint;
+
+    throw new Error(
+      `Unsupported boundary coordinate system: ${coordinateSystemHint}.`
+    );
   }
   if (coordinates.every(([x, y]) =>
     Math.abs(x) <= 180 && Math.abs(y) <= 90)) {
@@ -521,25 +534,28 @@ const detectCoordinateSystem = (
   }
 
   const center = getCoordinateCenter(coordinates);
-  if (
-    center.x >= 700000
-    && center.x <= 1300000
-    && center.y >= 1200000
-    && center.y <= 2800000
-  ) {
-    return KOREA_UNIFIED;
-  }
-  if (
-    center.x >= 100000
-    && center.x <= 400000
-    && center.y >= 300000
-    && center.y <= 900000
-  ) {
-    return KOREA_CENTRAL_2010;
+  if (isKoreanProjectedCoordinateCenter(center)) {
+    throw new Error(
+      'The boundary file uses Korean projected coordinates but no supported .prj coordinate system was found. Provide a .prj file with EPSG:5179, EPSG:5181, EPSG:5185, EPSG:5186, or EPSG:5187.'
+    );
   }
 
   return WEB_MERCATOR;
 };
+
+const isKoreanProjectedCoordinateCenter = (center: MapLocation): boolean =>
+  (
+    center.x >= 700000
+    && center.x <= 1300000
+    && center.y >= 1200000
+    && center.y <= 2800000
+  )
+  || (
+    center.x >= 100000
+    && center.x <= 400000
+    && center.y >= 300000
+    && center.y <= 900000
+  );
 
 const detectCoordinateSystemFromPrj = (prjText: string): string | undefined => {
   const epsgCode = /AUTHORITY\s*\[\s*"EPSG"\s*,\s*"(\d+)"/i.exec(prjText)?.[1]

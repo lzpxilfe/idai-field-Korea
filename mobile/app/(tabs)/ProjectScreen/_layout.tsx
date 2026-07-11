@@ -1,10 +1,10 @@
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { router, Stack } from 'expo-router';
-import { useContext, useEffect, useState } from 'react';
+import { useCallback, useContext, useEffect, useState } from 'react';
 import { PreferencesContext } from '@/contexts/preferences-context';
 import usePouchDbDatastore from '@/hooks/use-pouchdb-datastore';
 import useConfiguration from '@/hooks/use-configuration';
-import { type Preferences } from '@/models/preferences';
+import type { UsePreferences } from '@/hooks/use-preferences';
 
 import { ConfigurationContext } from '@/contexts/configuration-context';
 import {
@@ -21,7 +21,8 @@ import {
 } from '@/components/Project/korean-fieldwork-navigation';
 
 export default function Layout() {
-  const { preferences } = useContext(PreferencesContext);
+  const preferencesContext = useContext(PreferencesContext);
+  const { preferences } = preferencesContext;
   const canOpenProject = canOpenKoreanFieldworkProject(preferences);
 
   useEffect(() => {
@@ -34,13 +35,31 @@ export default function Layout() {
     return <ProjectRequiredState />;
   }
 
-  return <ProjectLayout preferences={preferences} />;
+  return <ProjectLayout preferencesContext={preferencesContext} />;
 }
 
-const ProjectLayout = ({ preferences }: { preferences: Preferences }) => {
+const ProjectLayout = ({
+  preferencesContext,
+}: {
+  preferencesContext: UsePreferences;
+}) => {
+  const { preferences } = preferencesContext;
   const [isTakingLong, setIsTakingLong] = useState(false);
+  const projectSettings = preferences.projects[preferences.currentProject];
+  const clearInitialPullPending = useCallback(() => {
+    if (!preferences.currentProject || !projectSettings?.initialPullPending) return;
 
-  const pouchdbDatastore = usePouchDbDatastore(preferences.currentProject);
+    preferencesContext.setProjectSettings(preferences.currentProject, {
+      ...projectSettings,
+      initialPullPending: false,
+    });
+  }, [preferences.currentProject, preferencesContext, projectSettings]);
+
+  const pouchdbDatastore = usePouchDbDatastore(
+    preferences.currentProject,
+    projectSettings,
+    clearInitialPullPending
+  );
 
   const config = useConfiguration(
     preferences.currentProject,

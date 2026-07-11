@@ -229,6 +229,38 @@ describe('DocumentAdd', () => {
     } as NewDocument);
   });
 
+  it('keeps entered draft values when live documents change', async () => {
+    cleanup();
+    renderAPI = renderDocumentAddScreen(preferences, config, repository, [t2]);
+
+    await waitFor(() => renderAPI.getByTestId('documentForm'));
+    fireEvent.changeText(
+      renderAPI.getByTestId('quickRecordInput_description'),
+      observationDescription
+    );
+
+    renderAPI.rerender(getDocumentAddScreen(
+      preferences,
+      config,
+      repository,
+      [
+        t2,
+        {
+          ...t2,
+          resource: {
+            ...t2.resource,
+            id: 'remote-change',
+            identifier: 'remote-change',
+          },
+        },
+      ]
+    ));
+
+    expect(renderAPI.getByTestId('quickRecordInput_description').props.value)
+      .toBe(observationDescription);
+    expect(repository.create).not.toHaveBeenCalled();
+  });
+
   it('should navigate back to DocumentsMap after object hast been created', async () => {
     const { getByTestId } = renderAPI;
     const highlightedDocId = 'id'; //see mock of DocumentRepository class
@@ -321,8 +353,16 @@ describe('DocumentAdd', () => {
 const renderDocumentAddScreen = (
   preferences: Preferences,
   config: ProjectConfiguration,
-  repository: DocumentRepository
-): RenderAPI => render(
+  repository: DocumentRepository,
+  documents?: any[]
+): RenderAPI => render(getDocumentAddScreen(preferences, config, repository, documents));
+
+const getDocumentAddScreen = (
+  preferences: Preferences,
+  config: ProjectConfiguration,
+  repository: DocumentRepository,
+  documents?: any[]
+) => (
   <ToastProvider>
     <PreferencesContext.Provider
       value={{
@@ -339,7 +379,7 @@ const renderDocumentAddScreen = (
     >
       <LabelsContext.Provider value={{ labels: new Labels(() => ['en']) }}>
         <ConfigurationContext.Provider value={config}>
-          <ProjectContext.Provider value={{ repository } as any}>
+          <ProjectContext.Provider value={{ repository, documents } as any}>
             <DocumentAdd />
           </ProjectContext.Provider>
         </ConfigurationContext.Provider>

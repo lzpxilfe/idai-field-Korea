@@ -20,6 +20,7 @@ import { isSampleProject } from '@/constants/sample-project';
 import { destroyPouchDbDatastore } from './use-pouchdb-datastore';
 
 type SetCurrentProjectOptions = {
+  displayName?: string;
   includeInRecentProjects?: boolean;
 };
 
@@ -78,6 +79,7 @@ const usePreferences = (): UsePreferences => {
         {
           ...(previousProjectSettings ?? {}),
           ...(languages ? { languages } : {}),
+          ...(options.displayName ? { displayName: options.displayName } : {}),
         },
         previousProjectSettings
       );
@@ -422,8 +424,17 @@ const normalizeProjectSettings = (
   const defaultSettings = getDefaultProjectSettings(project);
   const previousMapSettings = normalizeStoredMapSettings(safePreviousProjectSettings.mapSettings);
   const mapSettings = normalizeStoredMapSettings(safeProjectSettings.mapSettings);
+  const displayName =
+    getNonEmptyStringValue(safeProjectSettings.displayName)
+    ?? getNonEmptyStringValue(safePreviousProjectSettings.displayName);
+  const initialPullPending =
+    getBooleanValue(safeProjectSettings.initialPullPending)
+    ?? getBooleanValue(safePreviousProjectSettings.initialPullPending)
+    ?? false;
 
   return {
+    ...(displayName && displayName !== project ? { displayName } : {}),
+    ...(initialPullPending ? { initialPullPending } : {}),
     url: getStringValue(safeProjectSettings.url)
       ?? getStringValue(safePreviousProjectSettings.url)
       ?? defaultSettings.url,
@@ -440,6 +451,12 @@ const normalizeProjectSettings = (
 
 const getStringValue = (value: unknown): string|undefined =>
   typeof value === 'string' ? value : undefined;
+
+const getNonEmptyStringValue = (value: unknown): string|undefined => {
+  const stringValue = getStringValue(value)?.trim();
+
+  return stringValue ? stringValue : undefined;
+};
 
 const getBooleanValue = (value: unknown): boolean|undefined =>
   typeof value === 'boolean' ? value : undefined;

@@ -4,9 +4,7 @@ services:
     container_name: field-hub-db
     environment:
       - COUCHDB_USER=${COUCHDB_ADMIN_NAME}
-      - COUCHDB_PASSWORD=${COUCHDB_ADMIN_PASSWORD}
-    ports:
-      - 5984:5984
+      - COUCHDB_PASSWORD=${COUCHDB_ADMIN_PASSWORD:?Set a strong CouchDB admin password in .env}
     volumes:
       - ${DB_DATA_DIRECTORY}:/opt/couchdb/data
 #    restart: always # uncomment when running on server
@@ -16,14 +14,14 @@ services:
     container_name: field-hub-app
     environment:
       - HOST
-      - SECRET_KEY_BASE
+      - SECRET_KEY_BASE=${SECRET_KEY_BASE:?Generate a unique SECRET_KEY_BASE before starting Field Hub}
       - COUCHDB_URL=http://couchdb:5984
       - COUCHDB_ADMIN_NAME=${COUCHDB_ADMIN_NAME}
-      - COUCHDB_ADMIN_PASSWORD=${COUCHDB_ADMIN_PASSWORD}
+      - COUCHDB_ADMIN_PASSWORD=${COUCHDB_ADMIN_PASSWORD:?Set a strong CouchDB admin password in .env}
       - COUCHDB_USER_NAME=${COUCHDB_USER_NAME}
-      - COUCHDB_USER_PASSWORD=${COUCHDB_USER_PASSWORD}
+      - COUCHDB_USER_PASSWORD=${COUCHDB_USER_PASSWORD:?Set a strong CouchDB app-user password in .env}
     ports:
-      - 80:4000
+      - ${FIELD_HUB_BIND_ADDRESS:-127.0.0.1}:${FIELD_HUB_HOST_PORT:-8080}:4000
     volumes:
       - ${FILE_DIRECTORY}:/files
 #    restart: always # uncomment when running on server

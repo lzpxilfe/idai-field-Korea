@@ -195,14 +195,16 @@ export class ImageStore {
 
     public getDirectoryPath(project: string, type?: ImageVariant): string {
 
+        const safeProject = ImageStore.assertSafePathSegment(project, 'project');
+
         switch (type) {
             case ImageVariant.ORIGINAL:
             case undefined:
-                return this.absolutePath + project + '/';
+                return this.absolutePath + safeProject + '/';
             case ImageVariant.THUMBNAIL:
-                return this.absolutePath + project + '/' + thumbnailDirectory;
+                return this.absolutePath + safeProject + '/' + thumbnailDirectory;
             case ImageVariant.DISPLAY:
-                return this.absolutePath + project + '/' + displayDirectory;
+                return this.absolutePath + safeProject + '/' + displayDirectory;
         }
     }
 
@@ -298,7 +300,7 @@ export class ImageStore {
 
     private getFilePath(project: string, type: ImageVariant, uuid: string): string {
 
-        return this.getDirectoryPath(project, type) + uuid;
+        return this.getDirectoryPath(project, type) + ImageStore.assertSafePathSegment(uuid, 'image id');
     }
 
     
@@ -317,5 +319,53 @@ export class ImageStore {
         }
 
         return sums;
+    }
+
+
+    private static assertSafePathSegment(segment: string|undefined, label: string): string {
+
+        if (typeof segment !== 'string' || segment.trim().length === 0) {
+            throw ImageStore.getInvalidPathSegmentError(label);
+        }
+
+        const decodedSegment = ImageStore.decodeRepeatedly(segment);
+        if (
+            decodedSegment === '.'
+            || decodedSegment === '..'
+            || decodedSegment.includes('/')
+            || decodedSegment.includes('\\')
+            || decodedSegment.includes('\0')
+            || /[\u0000-\u001f]/.test(decodedSegment)
+            || /^[a-zA-Z]:/.test(decodedSegment)
+        ) {
+            throw ImageStore.getInvalidPathSegmentError(label);
+        }
+
+        return segment;
+    }
+
+
+    private static decodeRepeatedly(value: string): string {
+
+        let result = value;
+        for (let i = 0; i < 3; i++) {
+            try {
+                const decoded = decodeURIComponent(result);
+                if (decoded === result) return decoded;
+                result = decoded;
+            } catch (_) {
+                throw ImageStore.getInvalidPathSegmentError('path segment');
+            }
+        }
+
+        return result;
+    }
+
+
+    private static getInvalidPathSegmentError(label: string): Error & { code: string } {
+
+        const error = new Error(`Unsafe ${label} path segment.`);
+        (error as Error & { code: string }).code = 'EINVAL';
+        return error as Error & { code: string };
     }
 }

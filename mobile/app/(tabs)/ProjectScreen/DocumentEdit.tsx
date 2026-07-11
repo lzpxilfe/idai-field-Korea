@@ -35,6 +35,7 @@ import SoilProfileCameraButton, {
   FieldworkPhotoCaptureData,
   PhotoCameraButton,
   SoilProfileCaptureData,
+  clearFieldworkImageUploadAudit,
 } from '@/components/Project/SoilProfileCameraButton';
 import KoreanFieldworkRecordActionPanel from '@/components/Project/KoreanFieldworkRecordActionPanel';
 import KoreanFieldworkRecordContextPanel from '@/components/Project/KoreanFieldworkRecordContextPanel';
@@ -169,10 +170,16 @@ const DocumentEdit: React.FC = () => {
   };
 
   const updateSoilProfileCapture = (data: SoilProfileCaptureData) => {
-    setResource((oldResource) => oldResource && { ...oldResource, ...data });
+    setResource((oldResource) => oldResource && {
+      ...clearFieldworkImageUploadAudit(oldResource),
+      ...data,
+    });
   };
   const updatePhotoCapture = (data: FieldworkPhotoCaptureData) => {
-    setResource((oldResource) => oldResource && { ...oldResource, ...data });
+    setResource((oldResource) => oldResource && {
+      ...clearFieldworkImageUploadAudit(oldResource),
+      ...data,
+    });
   };
   const allowedAddCategoryNames = useMemo(
     () => document

@@ -10,7 +10,7 @@ import {
   shouldUseKoreanFieldworkTrenchWorkflow,
   type KoreanFieldworkInvestigationMode,
   type KoreanFieldworkInvestigationModeId,
-  type KoreanFieldworkProjectSetupDefaults,
+  type KoreanFieldworkProjectSetupDefaults as CoreKoreanFieldworkProjectSetupDefaults,
 } from 'idai-field-core';
 
 export {
@@ -26,8 +26,12 @@ export {
 export type {
   KoreanFieldworkInvestigationMode,
   KoreanFieldworkInvestigationModeId,
-  KoreanFieldworkProjectSetupDefaults,
 };
+
+export type KoreanFieldworkProjectSetupDefaults =
+  CoreKoreanFieldworkProjectSetupDefaults & {
+    displayName?: string;
+  };
 
 export type KoreanFieldworkBoundaryMapTypeId =
   'ROADMAP'
@@ -51,6 +55,8 @@ const BOUNDARY_SUMMARY_STORAGE_KEY_PREFIX =
   'koreanFieldwork.boundarySummary.v1';
 const PROJECT_BOUNDARY_DRAFT_STORAGE_KEY_PREFIX =
   'koreanFieldwork.projectBoundaryDraft.v1';
+const PROJECT_DISPLAY_NAME_STORAGE_KEY_PREFIX =
+  'koreanFieldwork.projectDisplayName.v1';
 const DEFAULT_INSTITUTION_NAME_STORAGE_KEY =
   'koreanFieldwork.defaultInstitutionName.v1';
 
@@ -65,6 +71,10 @@ export const createKoreanFieldworkBoundarySummaryStorageKey = (
 export const createKoreanFieldworkProjectBoundaryDraftStorageKey = (
   projectId: string
 ): string => `${PROJECT_BOUNDARY_DRAFT_STORAGE_KEY_PREFIX}.${projectId}`;
+
+export const createKoreanFieldworkProjectDisplayNameStorageKey = (
+  projectId: string
+): string => `${PROJECT_DISPLAY_NAME_STORAGE_KEY_PREFIX}.${projectId}`;
 
 export const createKoreanFieldworkDefaultInstitutionNameStorageKey =
   (): string => DEFAULT_INSTITUTION_NAME_STORAGE_KEY;
@@ -86,10 +96,12 @@ export const loadKoreanFieldworkProjectSetupDefaults = async (
   const [
     storedInvestigationModeId,
     storedBoundarySummary,
+    storedDisplayName,
     storedInstitutionName,
   ] = await Promise.all([
     loadKoreanFieldworkInvestigationModeId(projectId),
     loadKoreanFieldworkBoundarySummary(projectId),
+    loadKoreanFieldworkProjectDisplayName(projectId),
     loadKoreanFieldworkDefaultInstitutionName(),
   ]);
   const documentDefaults =
@@ -100,6 +112,12 @@ export const loadKoreanFieldworkProjectSetupDefaults = async (
     boundarySummary:
       storedBoundarySummary ?? documentDefaults.boundarySummary,
   };
+  const documentDisplayName = getKoreanFieldworkProjectDisplayNameFromDocument(
+    projectId,
+    projectDocument
+  );
+  const displayName = storedDisplayName ?? documentDisplayName;
+  if (displayName) setupDefaults.displayName = displayName;
   const institutionName = storedInstitutionName ?? documentDefaults.institutionName;
   if (institutionName) setupDefaults.institutionName = institutionName;
 
@@ -113,6 +131,12 @@ export const loadKoreanFieldworkProjectSetupDefaults = async (
     await saveKoreanFieldworkBoundarySummary(
       projectId,
       setupDefaults.boundarySummary
+    ).catch(() => undefined);
+  }
+  if (!storedDisplayName && setupDefaults.displayName) {
+    await saveKoreanFieldworkProjectDisplayName(
+      projectId,
+      setupDefaults.displayName
     ).catch(() => undefined);
   }
   if (!storedInstitutionName && setupDefaults.institutionName) {
@@ -158,6 +182,32 @@ export const saveKoreanFieldworkBoundarySummary = async (
   }
 
   await AsyncStorage.setItem(storageKey, normalizedSummary);
+};
+
+export const loadKoreanFieldworkProjectDisplayName = async (
+  projectId: string
+): Promise<string | undefined> => {
+  const storedValue = await AsyncStorage.getItem(
+    createKoreanFieldworkProjectDisplayNameStorageKey(projectId)
+  );
+  const displayName = storedValue?.trim();
+
+  return displayName && displayName !== projectId ? displayName : undefined;
+};
+
+export const saveKoreanFieldworkProjectDisplayName = async (
+  projectId: string,
+  displayName: string
+) => {
+  const normalizedDisplayName = displayName.trim();
+  const storageKey = createKoreanFieldworkProjectDisplayNameStorageKey(projectId);
+
+  if (normalizedDisplayName.length === 0 || normalizedDisplayName === projectId) {
+    await AsyncStorage.removeItem(storageKey);
+    return;
+  }
+
+  await AsyncStorage.setItem(storageKey, normalizedDisplayName);
 };
 
 export const loadKoreanFieldworkProjectBoundaryDraft = async (
@@ -215,6 +265,9 @@ export const removeKoreanFieldworkProjectSetupDefaults = async (
     ),
     AsyncStorage.removeItem(
       createKoreanFieldworkProjectBoundaryDraftStorageKey(projectId)
+    ),
+    AsyncStorage.removeItem(
+      createKoreanFieldworkProjectDisplayNameStorageKey(projectId)
     ),
   ]);
 };
@@ -289,3 +342,15 @@ const isKoreanFieldworkBoundaryMapTypeId = (
   value: unknown
 ): value is KoreanFieldworkBoundaryMapTypeId =>
   value === 'ROADMAP' || value === 'SKYVIEW' || value === 'HYBRID' || value === 'BLANK';
+
+const getKoreanFieldworkProjectDisplayNameFromDocument = (
+  projectId: string,
+  projectDocument?: Document
+): string | undefined => {
+  const identifier = (projectDocument?.resource as any)?.identifier;
+  const displayName = typeof identifier === 'string'
+    ? identifier.trim()
+    : undefined;
+
+  return displayName && displayName !== projectId ? displayName : undefined;
+};
