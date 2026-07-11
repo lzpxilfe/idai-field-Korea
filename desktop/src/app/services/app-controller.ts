@@ -245,8 +245,9 @@ export class AppController {
 
         const featureFields = this.getKoreanFieldworkReportHandoffFeatureFields();
 
-        try {
-            const featureDocument = await db.get('testf1');
+        const existingFeatureDocument = await this.findKoreanFieldworkReportHandoffSeedFeature(db);
+        if (existingFeatureDocument) {
+            const featureDocument = existingFeatureDocument;
             featureDocument.resource = {
                 ...featureDocument.resource,
                 ...featureFields,
@@ -256,16 +257,29 @@ export class AppController {
 
             await db.put(featureDocument);
             return featureDocument.resource.id;
-        } catch (_) {
-            const featureDocument = this.createSeedDocument(
-                'fieldwork-feature-pit-001',
-                'Feature',
-                featureFields
-            );
-
-            await db.put(featureDocument);
-            return featureDocument.resource.id;
         }
+
+        const featureDocument = this.createSeedDocument(
+            'fieldwork-feature-pit-001',
+            'Feature',
+            featureFields
+        );
+
+        await db.put(featureDocument);
+        return featureDocument.resource.id;
+    }
+
+
+    private async findKoreanFieldworkReportHandoffSeedFeature(db: any): Promise<Document|undefined> {
+
+        const rows = (await db.allDocs({ include_docs: true })).rows ?? [];
+
+        return rows
+            .map((row: any) => row.doc)
+            .find((document: Document|undefined) =>
+                document?.resource?.category === 'Feature'
+                && document.resource.identifier === 'testf1'
+            );
     }
 
 
