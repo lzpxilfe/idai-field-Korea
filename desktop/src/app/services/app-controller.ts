@@ -273,42 +273,16 @@ export class AppController {
         return {
             reportIdentifier: 'pit-001',
             shortDescription: '원형 수혈, 암갈색 매몰토',
-            featureType: 'pit',
-            featureInterpretationType: ['pitFeature'],
-            period: 'bronzeAge',
-            geometrySource: 'gpsApproximate',
-            geometryConfidence: 'rough',
-            featureGeometryEditStatus: 'roughSketch',
-            featureLocationSketch: '{"shape":"oval","center":{"x":75,"y":50},"scale":80}',
-            featureFreeDrawingStrokes:
-                '{"version":1,"strokes":[{"points":[{"x":10,"y":20},{"x":40,"y":50}]}]}',
-            surveyBoundaryAccuracy: 'importedReference',
-            surveyBoundarySource: 'shpImport',
-            fieldNote: [
-                '[관찰 내용] 바닥면에서 원형 윤곽 확인.',
-                '[해석] 주공 가능성.',
-                '[다음 작업] 단면 사진 보강.',
-                '[근거 번호] 사진 12, 도면 3'
-            ].join('\n'),
-            featureRecordingStatus: 'confirmed',
-            recordCreationTiming: 'sameDayFieldRecord',
-            fieldRecordQuality: ['immediateRecording'],
-            verificationState: 'observedInField',
-            fieldOnlyMissingCheck: [
-                'stratigraphicBoundary',
-                'photoAngleAndScale'
-            ],
-            firstExposureRecord: [
-                'firstExposurePhoto',
-                'featureLineVisible',
-                'confirmedBeforeInternalExcavation'
-            ],
-            featureInvestigationChecklist: [
-                'findsRecovered',
-                'preInvestigationPhotoTaken',
-                'soilProfilePhotoLinked'
-            ],
-            relations: { isRecordedIn: ['fieldwork-operation-1'] }
+            geometry: {
+                type: 'Polygon',
+                coordinates: [[
+                    [27.189332902431488, 39.1412228345871],
+                    [27.18933594226837, 39.14123010635376],
+                    [27.18933880329132, 39.141228795051575],
+                    [27.189336717128754, 39.1412219107151],
+                    [27.189332902431488, 39.1412228345871]
+                ]]
+            }
         };
     }
 
