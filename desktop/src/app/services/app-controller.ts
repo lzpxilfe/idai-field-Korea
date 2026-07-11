@@ -248,9 +248,13 @@ export class AppController {
         const existingFeatureDocument = await this.findKoreanFieldworkReportHandoffSeedFeature(db);
         if (existingFeatureDocument) {
             const featureDocument = existingFeatureDocument;
+            const relations = this.mergeKoreanFieldworkReportHandoffFeatureRelations(
+                featureDocument.resource.relations
+            );
             featureDocument.resource = {
                 ...featureDocument.resource,
                 ...featureFields,
+                relations,
                 id: featureDocument.resource.id,
                 category: 'Feature'
             };
@@ -267,6 +271,20 @@ export class AppController {
 
         await db.put(featureDocument);
         return featureDocument.resource.id;
+    }
+
+
+    private mergeKoreanFieldworkReportHandoffFeatureRelations(relations: any): any {
+
+        const existingRelations = relations ?? {};
+        const recordedIn = Array.isArray(existingRelations.isRecordedIn)
+            ? existingRelations.isRecordedIn
+            : [];
+
+        return {
+            ...existingRelations,
+            isRecordedIn: Array.from(new Set(recordedIn.concat('fieldwork-operation-1')))
+        };
     }
 
 
