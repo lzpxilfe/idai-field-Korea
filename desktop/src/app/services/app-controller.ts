@@ -289,7 +289,7 @@ export class AppController {
     private getKoreanFieldworkReportHandoffFeatureFields() {
 
         return {
-            identifier: 'pit-001',
+            reportIdentifier: 'pit-001',
             shortDescription: '원형 수혈, 암갈색 매몰토',
             featureType: 'pit',
             featureInterpretationType: ['pitFeature'],
