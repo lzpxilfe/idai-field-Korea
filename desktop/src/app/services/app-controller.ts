@@ -208,7 +208,9 @@ export class AppController {
             '하남 교산 3구역 북쪽 경계, 기준점 HN-03에서 시작';
         await db.put(projectDocument);
 
-        for (const document of this.createKoreanFieldworkReportHandoffDocuments()) {
+        const featureTargetId = await this.seedKoreanFieldworkReportHandoffFeature(db);
+
+        for (const document of this.createKoreanFieldworkReportHandoffDocuments(featureTargetId)) {
             await db.put(document);
         }
 
@@ -239,52 +241,85 @@ export class AppController {
     }
 
 
-    private createKoreanFieldworkReportHandoffDocuments(): Document[] {
+    private async seedKoreanFieldworkReportHandoffFeature(db: any): Promise<string> {
+
+        const featureFields = this.getKoreanFieldworkReportHandoffFeatureFields();
+
+        try {
+            const featureDocument = await db.get('testf1');
+            featureDocument.resource = {
+                ...featureDocument.resource,
+                ...featureFields,
+                id: featureDocument.resource.id,
+                category: 'Feature'
+            };
+
+            await db.put(featureDocument);
+            return featureDocument.resource.id;
+        } catch (_) {
+            const featureDocument = this.createSeedDocument(
+                'fieldwork-feature-pit-001',
+                'Feature',
+                featureFields
+            );
+
+            await db.put(featureDocument);
+            return featureDocument.resource.id;
+        }
+    }
+
+
+    private getKoreanFieldworkReportHandoffFeatureFields() {
+
+        return {
+            identifier: 'pit-001',
+            shortDescription: '원형 수혈, 암갈색 매몰토',
+            featureType: 'pit',
+            featureInterpretationType: ['pitFeature'],
+            period: 'bronzeAge',
+            geometrySource: 'gpsApproximate',
+            geometryConfidence: 'rough',
+            featureGeometryEditStatus: 'roughSketch',
+            featureLocationSketch: '{"shape":"oval","center":{"x":75,"y":50},"scale":80}',
+            featureFreeDrawingStrokes:
+                '{"version":1,"strokes":[{"points":[{"x":10,"y":20},{"x":40,"y":50}]}]}',
+            surveyBoundaryAccuracy: 'importedReference',
+            surveyBoundarySource: 'shpImport',
+            fieldNote: [
+                '[관찰 내용] 바닥면에서 원형 윤곽 확인.',
+                '[해석] 주공 가능성.',
+                '[다음 작업] 단면 사진 보강.',
+                '[근거 번호] 사진 12, 도면 3'
+            ].join('\n'),
+            featureRecordingStatus: 'confirmed',
+            recordCreationTiming: 'sameDayFieldRecord',
+            fieldRecordQuality: ['immediateRecording'],
+            verificationState: 'observedInField',
+            fieldOnlyMissingCheck: [
+                'stratigraphicBoundary',
+                'photoAngleAndScale'
+            ],
+            firstExposureRecord: [
+                'firstExposurePhoto',
+                'featureLineVisible',
+                'confirmedBeforeInternalExcavation'
+            ],
+            featureInvestigationChecklist: [
+                'findsRecovered',
+                'preInvestigationPhotoTaken',
+                'soilProfilePhotoLinked'
+            ],
+            relations: { isRecordedIn: ['fieldwork-operation-1'] }
+        };
+    }
+
+
+    private createKoreanFieldworkReportHandoffDocuments(featureTargetId: string): Document[] {
 
         return [
             this.createSeedDocument('fieldwork-operation-1', 'Operation', {
                 identifier: '3구역',
                 shortDescription: '하남 교산 3구역 발굴조사'
-            }),
-            this.createSeedDocument('fieldwork-feature-pit-001', 'Feature', {
-                identifier: 'pit-001',
-                shortDescription: '원형 수혈, 암갈색 매몰토',
-                featureType: 'pit',
-                featureInterpretationType: ['pitFeature'],
-                period: 'bronzeAge',
-                geometrySource: 'gpsApproximate',
-                geometryConfidence: 'rough',
-                featureGeometryEditStatus: 'roughSketch',
-                featureLocationSketch: '{"shape":"oval","center":{"x":75,"y":50},"scale":80}',
-                featureFreeDrawingStrokes:
-                    '{"version":1,"strokes":[{"points":[{"x":10,"y":20},{"x":40,"y":50}]}]}',
-                surveyBoundaryAccuracy: 'importedReference',
-                surveyBoundarySource: 'shpImport',
-                fieldNote: [
-                    '[관찰 내용] 바닥면에서 원형 윤곽 확인.',
-                    '[해석] 주공 가능성.',
-                    '[다음 작업] 단면 사진 보강.',
-                    '[근거 번호] 사진 12, 도면 3'
-                ].join('\n'),
-                featureRecordingStatus: 'confirmed',
-                recordCreationTiming: 'sameDayFieldRecord',
-                fieldRecordQuality: ['immediateRecording'],
-                verificationState: 'observedInField',
-                fieldOnlyMissingCheck: [
-                    'stratigraphicBoundary',
-                    'photoAngleAndScale'
-                ],
-                firstExposureRecord: [
-                    'firstExposurePhoto',
-                    'featureLineVisible',
-                    'confirmedBeforeInternalExcavation'
-                ],
-                featureInvestigationChecklist: [
-                    'findsRecovered',
-                    'preInvestigationPhotoTaken',
-                    'soilProfilePhotoLinked'
-                ],
-                relations: { isRecordedIn: ['fieldwork-operation-1'] }
             }),
             this.createSeedDocument('fieldwork-photo-12', 'Photo', {
                 identifier: '사진 12',
@@ -295,7 +330,7 @@ export class AppController {
                 height: 3024,
                 fieldworkPhotoAnnotationStrokes:
                     '{"version":1,"strokes":[{"points":[{"x":10,"y":20},{"x":30,"y":40}]}]}',
-                relations: { depicts: ['fieldwork-feature-pit-001'] }
+                relations: { depicts: [featureTargetId] }
             }),
             this.createSeedDocument('fieldwork-soil-photo-12', 'SoilProfilePhoto', {
                 identifier: '토층사진 12',
@@ -314,19 +349,19 @@ export class AppController {
                     '사진 선택 지점 20%/50% 평균 RGB 111/87/61',
                     '1: 10YR 4/3 (보통, 차이 0.0)'
                 ].join('\n'),
-                relations: { depicts: ['fieldwork-feature-pit-001'] }
+                relations: { depicts: [featureTargetId] }
             }),
             this.createSeedDocument('fieldwork-drawing-3', 'Drawing', {
                 identifier: '도면 3',
                 drawingSketchStrokes:
                     '{"version":1,"strokes":[{"points":[{"x":10,"y":20},{"x":50,"y":60}]}]}',
-                relations: { depicts: ['fieldwork-feature-pit-001'] }
+                relations: { depicts: [featureTargetId] }
             }),
             this.createSeedDocument('fieldwork-memo-handwritten', 'PenMemo', {
                 identifier: '야장 메모',
                 penMemoStrokes: '{"version":1,"strokes":[{"points":[{"x":10,"y":20},{"x":30,"y":40}]}]}',
                 penMemoTranscriptionStatus: 'pending',
-                relations: { depicts: ['fieldwork-feature-pit-001'] }
+                relations: { depicts: [featureTargetId] }
             })
         ];
     }
