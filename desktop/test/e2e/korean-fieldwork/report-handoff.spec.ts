@@ -33,7 +33,12 @@ async function getReportHandoffCard(identifier: string) {
         await pause(250);
     }
 
-    return card;
+    const visibleIdentifiers = await (await getLocator('.korean-fieldwork-report-handoff-identifier'))
+        .allTextContents();
+    throw new Error(
+        `Report handoff card "${identifier}" not found.`
+        + ` Visible cards: ${visibleIdentifiers.join(' | ') || '(none)'}`
+    );
 }
 
 
