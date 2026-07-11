@@ -70,6 +70,7 @@ import {
 import {
     createKoreanFieldworkTabletHandoffReviewUpdate,
     createKoreanFieldworkTabletHandoffSourceReviewUpdate,
+    getKoreanFieldworkTabletSourceReviewSummaryLabel,
     getKoreanFieldworkTabletRecordBundleGroupSourcesForReview,
     KoreanFieldworkTabletRecordBundle,
     KoreanFieldworkTabletRecordBundleGroup,
@@ -917,6 +918,10 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
 
 
     public getTabletRecordBundle = () => this.tabletRecordBundle;
+
+
+    public getTabletRecordBundleSourceReviewLabel = (bundle: KoreanFieldworkTabletRecordBundle) =>
+        getKoreanFieldworkTabletSourceReviewSummaryLabel(bundle.sourceReviewCounts);
 
 
     public isTabletRecordBundleReviewed = () =>

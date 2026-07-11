@@ -107,6 +107,10 @@
             <span *ngIf="tabletBundle.hwpSectionCount > 0">
                 HWP {{tabletBundle.hwpSectionCount}}
             </span>
+            <span [class.success]="tabletBundle.sourceReviewCounts.openCount === 0"
+                  [class.warning]="tabletBundle.sourceReviewCounts.openCount > 0">
+                {{getTabletRecordBundleSourceReviewLabel(tabletBundle)}}
+            </span>
             <span [class.success]="tabletBundle.reviewState.tone === 'success'"
                   [class.warning]="tabletBundle.reviewState.tone === 'warning'">
                 {{tabletBundle.reviewState.detail}}

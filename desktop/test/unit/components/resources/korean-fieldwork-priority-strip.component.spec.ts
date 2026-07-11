@@ -20,6 +20,8 @@ import {
 } from 'idai-field-core';
 import {
     KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_AT_FIELD,
+    KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_FINGERPRINT_FIELD,
+    KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_ISSUE_COUNT_FIELD,
     KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_SOURCE_COUNT_FIELD,
     KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_AT_FIELD,
     KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_FINGERPRINT_FIELD
@@ -41,6 +43,8 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
         const legacyWorkbenchLabel = ['선택 기록', '작업대'].join(' ');
 
         expect(template).toContain('선택한 기록');
+        expect(template).toContain('getReportHandoffTabletBundleSourceReviewLabel(tabletBundle)');
+        expect(template).toContain('tabletBundle.sourceReviewCounts.openCount');
         expect(template).not.toContain(legacyWorkbenchLabel);
     });
 
@@ -807,6 +811,66 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
             document.resource.id === 'photo-1'
         )!.resource[KOREAN_FIELDWORK_TABLET_HANDOFF_SOURCE_REVIEWED_AT_FIELD]).toBeUndefined();
         expect(component.isReportHandoffTabletBundleReviewed(featureItem)).toBe(false);
+    });
+
+
+    it('keeps reviewed tablet bundles in the work filter while source rows remain open', async () => {
+
+        let documents = [
+            createDocument('project', 'Project'),
+            createDocument('feature-1', 'Feature', {
+                identifier: 'pit-001',
+                shortDescription: 'round pit',
+                featureRecordingStatus: 'confirmed',
+                featureInvestigationChecklist: []
+            }),
+            createDocument('photo-1', 'Photo', {
+                identifier: 'P1',
+                fieldworkPhotoUri: 'file:///tablet/photos/pit-001.jpg',
+                relations: { depicts: ['feature-1'] }
+            })
+        ];
+        const datastore = {
+            find: jest.fn().mockImplementation(() => Promise.resolve({ documents })),
+            get: jest.fn()
+        };
+        const component = createComponent(datastore);
+
+        await component.refresh();
+
+        const featureItem = component.getReportHandoffItems()
+            .find(item => item.documentId === 'feature-1')!;
+        const bundle = component.getReportHandoffTabletBundle(featureItem)!;
+
+        documents = documents.map(document => document.resource.id === 'feature-1'
+            ? createDocument('feature-1', 'Feature', {
+                identifier: 'pit-001',
+                shortDescription: 'round pit',
+                featureRecordingStatus: 'confirmed',
+                featureInvestigationChecklist: [],
+                [KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_AT_FIELD]: '2026-07-11T00:00:00.000Z',
+                [KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_SOURCE_COUNT_FIELD]: bundle.sourceCount,
+                [KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_ISSUE_COUNT_FIELD]: bundle.issueCount,
+                [KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_FINGERPRINT_FIELD]: bundle.fingerprint
+            })
+            : document
+        );
+
+        await component.refresh();
+
+        const reviewedItem = component.getReportHandoffItems()
+            .find(item => item.documentId === 'feature-1')!;
+        const reviewedBundle = component.getReportHandoffTabletBundle(reviewedItem)!;
+
+        expect(reviewedBundle.reviewState.isReviewed).toBe(true);
+        expect(reviewedBundle.sourceReviewCounts.openCount).toBe(1);
+        expect(component.getTabletWorkReportHandoffItemCount()).toBe(1);
+
+        component.reportHandoffShowsTabletWorkOnly = true;
+
+        expect(component.getReportHandoffItems().map(item => item.documentId)).toContain('feature-1');
+        expect(component.getTabletWorkReportHandoffCopyText())
+            .toContain('    \ucc98\ub9ac: \ubbf8\ucc98\ub9ac');
     });
 
 

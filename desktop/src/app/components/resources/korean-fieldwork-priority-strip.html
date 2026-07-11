@@ -270,9 +270,12 @@
                         <span>{{item.evidenceLabel}}</span>
                         <span [class.warning]="item.issueCount > 0">{{item.issueLabel}}</span>
                         <span *ngIf="getReportHandoffTabletBundle(item) as tabletBundle"
-                              [class.warning]="tabletBundle.issueCount > 0 || tabletBundle.reviewState.tone === 'warning'">
+                              [class.warning]="tabletBundle.issueCount > 0
+                                  || tabletBundle.reviewState.tone === 'warning'
+                                  || tabletBundle.sourceReviewCounts.openCount > 0">
                             &#53468;&#48660;&#47551; {{tabletBundle.sourceCount}} &#183;
                             &#54869;&#51064; {{tabletBundle.issueCount}} &#183;
+                            {{getReportHandoffTabletBundleSourceReviewLabel(tabletBundle)}} &#183;
                             {{tabletBundle.reviewState.label}}
                         </span>
                     </span>
@@ -340,9 +343,12 @@
                     <span>{{previewItem.evidenceLabel}}</span>
                     <span [class.warning]="previewItem.issueCount > 0">{{previewItem.issueLabel}}</span>
                     <span *ngIf="getReportHandoffTabletBundle(previewItem) as tabletBundle"
-                          [class.warning]="tabletBundle.issueCount > 0 || tabletBundle.reviewState.tone === 'warning'">
+                          [class.warning]="tabletBundle.issueCount > 0
+                              || tabletBundle.reviewState.tone === 'warning'
+                              || tabletBundle.sourceReviewCounts.openCount > 0">
                         &#53468;&#48660;&#47551; {{tabletBundle.sourceCount}} &#183;
                         &#54869;&#51064; {{tabletBundle.issueCount}} &#183;
+                        {{getReportHandoffTabletBundleSourceReviewLabel(tabletBundle)}} &#183;
                         {{tabletBundle.reviewState.label}}
                     </span>
                 </span>

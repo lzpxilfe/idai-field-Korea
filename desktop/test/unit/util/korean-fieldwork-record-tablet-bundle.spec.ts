@@ -3,6 +3,7 @@ import {
     createKoreanFieldworkTabletHandoffSourceReviewUpdate,
     containsKoreanFieldworkTabletRecordBundleSource,
     getKoreanFieldworkTabletRecordBundleGroupSourcesForReview,
+    getKoreanFieldworkTabletSourceReviewSummaryLabel,
     KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_AT_FIELD,
     KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_FINGERPRINT_FIELD,
     KOREAN_FIELDWORK_TABLET_HANDOFF_REVIEWED_ISSUE_COUNT_FIELD,
@@ -70,6 +71,8 @@ describe('korean-fieldwork-record-tablet-bundle', () => {
             reviewedCount: 0,
             staleCount: 0
         });
+        expect(getKoreanFieldworkTabletSourceReviewSummaryLabel(bundle.sourceReviewCounts))
+            .toBe('\ucc98\ub9ac\ub300\uc0c1 8\uac74 (\ubbf8\ucc98\ub9ac 8\uac74)');
         expect(bundle.fingerprint).toMatch(/^v1:[0-9a-f]{8}:\d+$/);
         expect(bundle.fingerprint.length).toBeLessThan(24);
         expect(bundle.reviewState).toMatchObject({
@@ -604,6 +607,8 @@ describe('korean-fieldwork-record-tablet-bundle', () => {
             reviewedCount: 1,
             staleCount: 0
         });
+        expect(getKoreanFieldworkTabletSourceReviewSummaryLabel(reviewedBundle.sourceReviewCounts))
+            .toBe('\uc6d0\uc790\ub8cc \ucc98\ub9ac\uc644\ub8cc');
         expect(reviewedBundle.copyText)
             .toContain('\uc6d0\uc790\ub8cc \ucc98\ub9ac: \ucc98\ub9ac\ub300\uc0c1 \uc5c6\uc74c \u00b7 \ucc98\ub9ac\ub428 1\uac74');
         expect(reviewedBundle.groups.find(group => group.id === 'photos')!.copyText)
@@ -642,6 +647,8 @@ describe('korean-fieldwork-record-tablet-bundle', () => {
             reviewedCount: 0,
             staleCount: 1
         });
+        expect(getKoreanFieldworkTabletSourceReviewSummaryLabel(staleBundle.sourceReviewCounts))
+            .toBe('\ucc98\ub9ac\ub300\uc0c1 1\uac74 (\ub2e4\uc2dc \ud655\uc778 1\uac74)');
         expect(staleBundle.groups.find(group => group.id === 'photos')!.copyText)
             .toContain('\ucc98\ub9ac: \ub2e4\uc2dc \ud655\uc778 - ');
 

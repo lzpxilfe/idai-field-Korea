@@ -127,6 +127,7 @@ import {
     containsKoreanFieldworkTabletRecordBundleSource,
     createKoreanFieldworkTabletHandoffReviewUpdate,
     createKoreanFieldworkTabletHandoffSourceReviewUpdate,
+    getKoreanFieldworkTabletSourceReviewSummaryLabel,
     getKoreanFieldworkTabletRecordBundleGroupSourcesForReview,
     KoreanFieldworkTabletRecordBundle,
     KoreanFieldworkTabletRecordBundleGroup,
@@ -919,6 +920,11 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
 
     public getReportHandoffTabletBundle = (item: KoreanFieldworkReportHandoffItem) =>
         this.reportHandoffTabletBundlesByDocumentId.get(item.documentId);
+
+
+    public getReportHandoffTabletBundleSourceReviewLabel = (bundle: KoreanFieldworkTabletRecordBundle) =>
+        getKoreanFieldworkTabletSourceReviewSummaryLabel(bundle.sourceReviewCounts);
+
 
     public hasReportHandoffTabletBundle = (item: KoreanFieldworkReportHandoffItem) =>
         this.getReportHandoffTabletBundle(item) !== undefined;
@@ -2503,7 +2509,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
 
         const bundle = this.getReportHandoffTabletBundle(item);
 
-        return !!bundle && !bundle.reviewState.isReviewed;
+        return !!bundle && (!bundle.reviewState.isReviewed || bundle.sourceReviewCounts.openCount > 0);
     }
 
 
@@ -2556,6 +2562,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
                 this.makeTabletWorkReportHandoffSourceGroupLine(group, sources),
                 ...sources.flatMap(source => [
                     `  - ${source.label}`,
+                    `    \ucc98\ub9ac: ${source.reviewState.label}`,
                     ...(source.detail ? [`    ${source.detail}`] : []),
                     ...source.issueDetails.map(issueDetail => `    \ud655\uc778: ${issueDetail}`)
                 ])

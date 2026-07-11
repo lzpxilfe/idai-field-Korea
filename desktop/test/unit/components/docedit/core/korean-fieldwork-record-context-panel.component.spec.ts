@@ -511,6 +511,8 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
         expect(template).toContain('copyTabletRecordBundleSource(group, source)');
         expect(template).toContain('toggleTabletRecordBundleSourceReviewed(source)');
         expect(template).toContain('toggleTabletRecordBundleReviewed()');
+        expect(template).toContain('getTabletRecordBundleSourceReviewLabel(tabletBundle)');
+        expect(template).toContain('tabletBundle.sourceReviewCounts.openCount');
         expect(template).toContain('tabletBundle.reviewState.label');
         expect(template).toContain('source.reviewState.label');
         expect(template).toContain('isTabletRecordBundleSourceCopied(group, source)');

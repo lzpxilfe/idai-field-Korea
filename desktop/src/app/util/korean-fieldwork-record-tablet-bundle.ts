@@ -307,6 +307,14 @@ export function getKoreanFieldworkTabletHandoffReviewState(
 }
 
 
+export function getKoreanFieldworkTabletSourceReviewSummaryLabel(
+        counts: KoreanFieldworkTabletSourceReviewCounts
+): string {
+
+    return getSourceReviewSummaryLabel(counts);
+}
+
+
 export function createKoreanFieldworkTabletHandoffReviewUpdate(
         document: Document,
         bundle: KoreanFieldworkTabletRecordBundle,
