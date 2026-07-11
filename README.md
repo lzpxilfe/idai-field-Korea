@@ -176,6 +176,8 @@ npm run check:korean-fieldwork:full
 npm --prefix mobile run test:ci -- --silent
 ```
 
+태블릿에서 작성한 원자료가 Field Desktop의 `보고서/HWP 복사` 패널과 Electron 클립보드까지 이어지는지 확인하려면 커밋 메시지에 `[handoff-e2e]`를 포함해 푸시합니다. Desktop workflow가 `npm run e2e:korean-fieldwork-handoff`를 실행해 유구의 태블릿 자료 묶음 복사, 처리대상/미처리 상태, 원본 파일명, 토층사진 스포이드 색상값이 HWP로 옮길 수 있는 텍스트로 보존되는지 확인합니다.
+
 ## 문서
 
 - [Field Desktop 설치와 실행 안내](docs/korean-fieldwork/field-desktop-install.ko.md)
