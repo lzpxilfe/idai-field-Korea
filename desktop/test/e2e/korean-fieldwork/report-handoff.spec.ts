@@ -3,6 +3,7 @@ import {
     getLocator,
     getText,
     navigateTo,
+    pause,
     readClipboardText,
     resetApp,
     sendMessageToAppController,
@@ -13,6 +14,27 @@ import {
 import { NavbarPage } from '../navbar.page';
 
 const { test, expect } = require('@playwright/test');
+
+
+async function getReportHandoffCard(identifier: string) {
+
+    const selector = '.korean-fieldwork-report-handoff-card'
+        + `:has(.korean-fieldwork-report-handoff-identifier:text-is("${identifier}"))`;
+
+    const card = (await getLocator(selector)).first();
+    const deadline = Date.now() + 5000;
+
+    while (Date.now() < deadline) {
+        if (await card.count() > 0) return card;
+
+        const overflowButton = await getLocator('.korean-fieldwork-report-handoff-overflow');
+        if (await overflowButton.count() > 0) await click(overflowButton.first());
+
+        await pause(250);
+    }
+
+    return card;
+}
 
 
 test.describe('Korean fieldwork report handoff', () => {
@@ -47,13 +69,7 @@ test.describe('Korean fieldwork report handoff', () => {
         const reportPanel = await getLocator('.korean-fieldwork-report-handoff-strip');
         await waitForExist(reportPanel);
 
-        const overflowButton = await getLocator('.korean-fieldwork-report-handoff-overflow');
-        if (await overflowButton.count() > 0) await click(overflowButton);
-
-        const soilPhotoCard = (await getLocator(
-            '.korean-fieldwork-report-handoff-card'
-                + ':has(.korean-fieldwork-report-handoff-identifier:text-is("토층사진 12"))'
-        )).first();
+        const soilPhotoCard = await getReportHandoffCard('토층사진 12');
         await waitForExist(soilPhotoCard);
         await click(await soilPhotoCard.locator('.korean-fieldwork-report-handoff-open'));
 
@@ -88,10 +104,7 @@ test.describe('Korean fieldwork report handoff', () => {
         expect(fullClipboardText).not.toContain('soilProfilePhotoAnnotationStrokes');
         expect(fullClipboardText).not.toContain('"strokes"');
 
-        const featureCard = (await getLocator(
-            '.korean-fieldwork-report-handoff-card'
-                + ':has(.korean-fieldwork-report-handoff-identifier:text-is("pit-001"))'
-        )).first();
+        const featureCard = await getReportHandoffCard('pit-001');
         await waitForExist(featureCard);
         await click(await featureCard.locator('.korean-fieldwork-report-handoff-open'));
 
