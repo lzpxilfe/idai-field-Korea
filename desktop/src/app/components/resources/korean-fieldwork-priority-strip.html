@@ -253,9 +253,10 @@
                 <button type="button"
                         class="korean-fieldwork-report-handoff-open"
                         [ngbTooltip]="item.copyText"
+                        #reportHandoffTooltip="ngbTooltip"
                         container="body"
                         placement="bottom"
-                        (click)="selectReportHandoffItem(item, $event)">
+                        (click)="reportHandoffTooltip.close(); selectReportHandoffItem(item, $event)">
                     <span class="korean-fieldwork-report-handoff-topline">
                         <span class="korean-fieldwork-report-handoff-category">{{item.categoryLabel}}</span>
                         <span class="korean-fieldwork-report-handoff-identifier">{{item.identifier}}</span>
