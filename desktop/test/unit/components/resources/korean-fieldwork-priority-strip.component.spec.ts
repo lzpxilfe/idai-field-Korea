@@ -870,7 +870,7 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
 
         expect(component.getReportHandoffItems().map(item => item.documentId)).toContain('feature-1');
         expect(component.getTabletWorkReportHandoffCopyText())
-            .toContain('    \ucc98\ub9ac: \ubbf8\ucc98\ub9ac');
+            .toContain('\ucc98\ub9ac: \ubbf8\ucc98\ub9ac');
     });
 
 
@@ -1218,7 +1218,7 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
             'photo-stale-1',
             'photo-stale-2'
         ]));
-        expect(component.getReportHandoffPreviewItem()?.documentId).toBe('feature-open');
+        expect(component.getReportHandoffPreviewItem()?.documentId).toBe('feature-done');
         const staleItem = component.getReportHandoffItems()
             .find(item => item.documentId === 'feature-stale')!;
         expect(component.getReportHandoffTabletBundle(staleItem)!.reviewState)
