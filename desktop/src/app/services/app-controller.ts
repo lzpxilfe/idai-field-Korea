@@ -243,6 +243,13 @@ export class AppController {
 
     private async seedKoreanFieldworkReportHandoffFeature(db: any): Promise<string> {
 
+        const sampleFeatureDocument = await this.getKoreanFieldworkReportHandoffSampleFeature(db);
+        if (sampleFeatureDocument) {
+            sampleFeatureDocument.resource.reportIdentifier = 'pit-001';
+            await db.put(sampleFeatureDocument);
+            return sampleFeatureDocument.resource.id;
+        }
+
         const featureFields = this.getKoreanFieldworkReportHandoffFeatureFields();
         const featureDocument = this.createSeedDocument(
             'fieldwork-feature-pit-001',
@@ -265,6 +272,19 @@ export class AppController {
 
         await db.put(featureDocument);
         return featureDocument.resource.id;
+    }
+
+
+    private async getKoreanFieldworkReportHandoffSampleFeature(db: any): Promise<Document|undefined> {
+
+        try {
+            const document = await db.get('si0');
+            return document?.resource?.category === 'Feature'
+                ? document
+                : undefined;
+        } catch (_) {
+            return undefined;
+        }
     }
 
 
