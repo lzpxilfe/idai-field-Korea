@@ -2509,7 +2509,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
 
         const bundle = this.getReportHandoffTabletBundle(item);
 
-        return !!bundle && (!bundle.reviewState.isReviewed || bundle.sourceReviewCounts.openCount > 0);
+        return this.needsTabletBundleDesktopProcessing(bundle);
     }
 
 
@@ -2697,9 +2697,15 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
             .filter(item => {
                 const bundle = tabletBundlesByDocumentId.get(item.documentId);
 
-                return !!bundle && !bundle.reviewState.isReviewed;
+                return this.needsTabletBundleDesktopProcessing(bundle);
             })
             .map(item => item.documentId));
+    }
+
+
+    private needsTabletBundleDesktopProcessing(bundle: KoreanFieldworkTabletRecordBundle|undefined): boolean {
+
+        return !!bundle && (!bundle.reviewState.isReviewed || bundle.sourceReviewCounts.openCount > 0);
     }
 
 

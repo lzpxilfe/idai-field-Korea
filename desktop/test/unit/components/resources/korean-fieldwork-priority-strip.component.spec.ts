@@ -1188,6 +1188,7 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
 
         await component.refresh();
 
+        expect(component.tabletProcessingRecordIds.has('feature-done')).toBe(true);
         expect(component.getTabletWorkReportHandoffItemCount()).toBe(7);
         expect(component.getReviewedTabletReportHandoffItemCount()).toBe(1);
         expect(component.hasTabletWorkReportHandoffItems()).toBe(true);
