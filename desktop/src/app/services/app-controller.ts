@@ -244,63 +244,27 @@ export class AppController {
     private async seedKoreanFieldworkReportHandoffFeature(db: any): Promise<string> {
 
         const featureFields = this.getKoreanFieldworkReportHandoffFeatureFields();
-
-        const existingFeatureDocument = await this.findKoreanFieldworkReportHandoffSeedFeature(db);
-        if (existingFeatureDocument) {
-            const featureDocument = existingFeatureDocument;
-            const relations = this.mergeKoreanFieldworkReportHandoffFeatureRelations(
-                featureDocument.resource.relations
-            );
-            featureDocument.resource = {
-                ...featureDocument.resource,
-                ...featureFields,
-                relations,
-                id: featureDocument.resource.id,
-                category: 'Feature'
-            };
-
-            await db.put(featureDocument);
-            return featureDocument.resource.id;
-        }
-
         const featureDocument = this.createSeedDocument(
             'fieldwork-feature-pit-001',
             'Feature',
-            featureFields
+            {
+                ...featureFields,
+                identifier: 'SE7',
+                relations: { isRecordedIn: ['t1', 'fieldwork-operation-1'] }
+            }
         );
+
+        try {
+            const existingFeatureDocument = await db.get(featureDocument._id);
+            featureDocument._rev = existingFeatureDocument._rev;
+            featureDocument.created = existingFeatureDocument.created ?? featureDocument.created;
+            featureDocument.modified = existingFeatureDocument.modified ?? featureDocument.modified;
+        } catch (_) {
+            // The seed feature is created on first run.
+        }
 
         await db.put(featureDocument);
         return featureDocument.resource.id;
-    }
-
-
-    private mergeKoreanFieldworkReportHandoffFeatureRelations(relations: any): any {
-
-        const existingRelations = relations ?? {};
-        const recordedIn = Array.isArray(existingRelations.isRecordedIn)
-            ? existingRelations.isRecordedIn
-            : [];
-
-        return {
-            ...existingRelations,
-            isRecordedIn: Array.from(new Set(recordedIn.concat('fieldwork-operation-1')))
-        };
-    }
-
-
-    private async findKoreanFieldworkReportHandoffSeedFeature(db: any): Promise<Document|undefined> {
-
-        const rows = (await db.allDocs({ include_docs: true })).rows ?? [];
-
-        const documents = rows.map((row: any) => row.doc) as Array<Document|undefined>;
-
-        return documents.find((document: Document|undefined) =>
-            document?.resource?.category === 'Feature'
-            && document.resource.id === 'si0'
-        ) ?? documents.find((document: Document|undefined) =>
-            document?.resource?.category === 'Feature'
-            && document.resource.identifier === 'SE0'
-        );
     }
 
 
