@@ -87,5 +87,32 @@ test.describe('Korean fieldwork report handoff', () => {
         expect(fullClipboardText).toContain('원본 파일: soil-photo-12.jpg');
         expect(fullClipboardText).not.toContain('soilProfilePhotoAnnotationStrokes');
         expect(fullClipboardText).not.toContain('"strokes"');
+
+        const featureCard = (await getLocator(
+            '.korean-fieldwork-report-handoff-card'
+                + ':has(.korean-fieldwork-report-handoff-identifier:text-is("pit-001"))'
+        )).first();
+        await waitForExist(featureCard);
+        await click(await featureCard.locator('.korean-fieldwork-report-handoff-open'));
+
+        const featureReportText = await getText(reportPanel, false);
+        expect(featureReportText).toContain('\ud0dc\ube14\ub9bf');
+        expect(featureReportText).toContain('\ucc98\ub9ac\ub300\uc0c1');
+        expect(featureReportText).toContain('\ubbf8\ucc98\ub9ac');
+        expect(featureReportText).toContain('pit-001.jpg');
+        expect(featureReportText).toContain('soil-photo-12.jpg');
+        expect(featureReportText).toContain('RGB 111/87/61 @ 20%/50%');
+
+        await click(await reportPanel.locator('.korean-fieldwork-report-handoff-preview-action.tablet'));
+
+        const tabletClipboardText = await readClipboardText();
+        expect(tabletClipboardText).toContain('[\ud0dc\ube14\ub9bf \uc790\ub8cc \ubb36\uc74c]');
+        expect(tabletClipboardText).toContain('\uc6d0\uc790\ub8cc \ucc98\ub9ac: \ucc98\ub9ac\ub300\uc0c1');
+        expect(tabletClipboardText).toContain('\ucc98\ub9ac: \ubbf8\ucc98\ub9ac');
+        expect(tabletClipboardText).toContain('pit-001.jpg');
+        expect(tabletClipboardText).toContain('soil-photo-12.jpg');
+        expect(tabletClipboardText).toContain('RGB 111/87/61 @ 20%/50%');
+        expect(tabletClipboardText).not.toContain('soilProfilePhotoAnnotationStrokes');
+        expect(tabletClipboardText).not.toContain('"strokes"');
     });
 });
