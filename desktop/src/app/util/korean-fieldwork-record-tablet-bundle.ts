@@ -50,6 +50,13 @@ export interface KoreanFieldworkTabletHandoffReviewState {
     tone: KoreanFieldworkTabletHandoffReviewTone;
 }
 
+export interface KoreanFieldworkTabletSourceReviewCounts {
+    openCount: number;
+    pendingCount: number;
+    reviewedCount: number;
+    staleCount: number;
+}
+
 export interface KoreanFieldworkTabletRecordBundleSource {
     id: string;
     label: string;
@@ -81,6 +88,7 @@ export interface KoreanFieldworkTabletRecordBundle {
     sourceCount: number;
     issueCount: number;
     hwpSectionCount: number;
+    sourceReviewCounts: KoreanFieldworkTabletSourceReviewCounts;
     fingerprint: string;
     reviewState: KoreanFieldworkTabletHandoffReviewState;
     groups: KoreanFieldworkTabletRecordBundleGroup[];
@@ -184,6 +192,7 @@ export function makeKoreanFieldworkRecordTabletBundle(
     if (groups.length === 0) return undefined;
 
     const sourceCount = groups.reduce((sum, group) => sum + group.count, 0);
+    const sourceReviewCounts = getSourceReviewCounts(groups);
     const issueDetails = getIssueDetails(review.issues);
     const issueCount = issueDetails.length;
     const hwpSectionCount = handoffItem?.copySections
@@ -204,6 +213,7 @@ export function makeKoreanFieldworkRecordTabletBundle(
     );
     const summary = [
         `\uc790\ub8cc ${sourceCount}\uac74`,
+        getSourceReviewSummaryLabel(sourceReviewCounts),
         issueCount > 0
             ? `\ud655\uc778 ${issueCount}\uac74`
             : '\ud655\uc778 \uc5c6\uc74c',
@@ -217,11 +227,20 @@ export function makeKoreanFieldworkRecordTabletBundle(
         sourceCount,
         issueCount,
         hwpSectionCount,
+        sourceReviewCounts,
         fingerprint,
         reviewState,
         groups,
         issueDetails,
-        copyText: makeBundleCopyText(title, summary, groups, issueDetails, reviewState, handoffItem?.bodyPreview)
+        copyText: makeBundleCopyText(
+            title,
+            summary,
+            groups,
+            issueDetails,
+            reviewState,
+            sourceReviewCounts,
+            handoffItem?.bodyPreview
+        )
     };
 }
 
@@ -669,6 +688,7 @@ function makeBundleCopyText(
         groups: KoreanFieldworkTabletRecordBundleGroup[],
         issueDetails: string[],
         reviewState: KoreanFieldworkTabletHandoffReviewState,
+        sourceReviewCounts: KoreanFieldworkTabletSourceReviewCounts,
         bodyPreview: string|undefined
 ): string {
 
@@ -677,6 +697,7 @@ function makeBundleCopyText(
         summary,
         `\ub370\uc2a4\ud06c\ud1b1 \ucc98\ub9ac: ${reviewState.label}`,
         `\ucc98\ub9ac \uc0c1\uc138: ${reviewState.detail}`,
+        `\uc6d0\uc790\ub8cc \ucc98\ub9ac: ${getSourceReviewCopyLabel(sourceReviewCounts)}`,
         bodyPreview ? `HWP \ubcf8\ubb38: ${bodyPreview}` : '',
         '',
         ...makeBundleGroupCopyLines(groups),
@@ -688,6 +709,51 @@ function makeBundleCopyText(
     ];
 
     return normalizeKoreanFieldworkHwpPlainText(lines.filter(line => line.length > 0).join('\n'));
+}
+
+
+function getSourceReviewCounts(groups: KoreanFieldworkTabletRecordBundleGroup[])
+        : KoreanFieldworkTabletSourceReviewCounts {
+
+    const sources = groups.flatMap(group => group.sources);
+    const staleCount = sources.filter(source => source.reviewState.isStale).length;
+    const reviewedCount = sources.filter(source => source.reviewState.isReviewed).length;
+    const pendingCount = sources.length - staleCount - reviewedCount;
+
+    return {
+        openCount: pendingCount + staleCount,
+        pendingCount,
+        reviewedCount,
+        staleCount
+    };
+}
+
+
+function getSourceReviewSummaryLabel(counts: KoreanFieldworkTabletSourceReviewCounts): string {
+
+    if (counts.openCount === 0) return '\uc6d0\uc790\ub8cc \ucc98\ub9ac\uc644\ub8cc';
+
+    const detailLabels = [
+        counts.staleCount > 0 ? `\ub2e4\uc2dc \ud655\uc778 ${counts.staleCount}\uac74` : '',
+        counts.pendingCount > 0 ? `\ubbf8\ucc98\ub9ac ${counts.pendingCount}\uac74` : ''
+    ].filter(label => label.length > 0);
+
+    return detailLabels.length > 0
+        ? `\ucc98\ub9ac\ub300\uc0c1 ${counts.openCount}\uac74 (${detailLabels.join(' \u00b7 ')})`
+        : `\ucc98\ub9ac\ub300\uc0c1 ${counts.openCount}\uac74`;
+}
+
+
+function getSourceReviewCopyLabel(counts: KoreanFieldworkTabletSourceReviewCounts): string {
+
+    return [
+        counts.openCount > 0
+            ? `\ucc98\ub9ac\ub300\uc0c1 ${counts.openCount}\uac74`
+            : '\ucc98\ub9ac\ub300\uc0c1 \uc5c6\uc74c',
+        counts.staleCount > 0 ? `\ub2e4\uc2dc \ud655\uc778 ${counts.staleCount}\uac74` : '',
+        counts.pendingCount > 0 ? `\ubbf8\ucc98\ub9ac ${counts.pendingCount}\uac74` : '',
+        counts.reviewedCount > 0 ? `\ucc98\ub9ac\ub428 ${counts.reviewedCount}\uac74` : ''
+    ].filter(label => label.length > 0).join(' \u00b7 ');
 }
 
 

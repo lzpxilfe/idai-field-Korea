@@ -63,6 +63,13 @@ describe('korean-fieldwork-record-tablet-bundle', () => {
         expect(bundle.title).toContain('F1');
         expect(bundle.sourceCount).toBe(8);
         expect(bundle.summary).toContain('\uc790\ub8cc 8\uac74');
+        expect(bundle.summary).toContain('\ucc98\ub9ac\ub300\uc0c1 8\uac74');
+        expect(bundle.sourceReviewCounts).toEqual({
+            openCount: 8,
+            pendingCount: 8,
+            reviewedCount: 0,
+            staleCount: 0
+        });
         expect(bundle.fingerprint).toMatch(/^v1:[0-9a-f]{8}:\d+$/);
         expect(bundle.fingerprint.length).toBeLessThan(24);
         expect(bundle.reviewState).toMatchObject({
@@ -92,6 +99,7 @@ describe('korean-fieldwork-record-tablet-bundle', () => {
             .toContain('\ud655\uc778 \ud544\uc694:');
         expect(bundle.copyText).toContain('[\ud0dc\ube14\ub9bf \uc790\ub8cc \ubb36\uc74c]');
         expect(bundle.copyText).toContain('\ub370\uc2a4\ud06c\ud1b1 \ucc98\ub9ac: \ubbf8\ucc98\ub9ac');
+        expect(bundle.copyText).toContain('\uc6d0\uc790\ub8cc \ucc98\ub9ac: \ucc98\ub9ac\ub300\uc0c1 8\uac74 \u00b7 \ubbf8\ucc98\ub9ac 8\uac74');
         expect(bundle.copyText).toContain('\uc0ac\uc9c4 4\uac74: P1, P2, P3 \uc678 1\uac74');
         expect(bundle.copyText).toContain('\r\n');
     });
@@ -526,8 +534,11 @@ describe('korean-fieldwork-record-tablet-bundle', () => {
             label: '\ucc98\ub9ac\ub428 2026-07-11',
             tone: 'success'
         });
+        expect(reviewedBundle.summary).toContain('\ucc98\ub9ac\ub300\uc0c1 1\uac74');
         expect(reviewedBundle.copyText)
             .toContain('\ub370\uc2a4\ud06c\ud1b1 \ucc98\ub9ac: \ucc98\ub9ac\ub428 2026-07-11');
+        expect(reviewedBundle.copyText)
+            .toContain('\uc6d0\uc790\ub8cc \ucc98\ub9ac: \ucc98\ub9ac\ub300\uc0c1 1\uac74 \u00b7 \ubbf8\ucc98\ub9ac 1\uac74');
         expect(reviewedBundle.copyText)
             .toContain(
                 `\ucc98\ub9ac \uc0c1\uc138: \uc790\ub8cc ${bundle.sourceCount}\uac74`
@@ -586,6 +597,15 @@ describe('korean-fieldwork-record-tablet-bundle', () => {
             label: '\ucc98\ub9ac\ub428 2026-07-11',
             tone: 'success'
         });
+        expect(reviewedBundle.summary).toContain('\uc6d0\uc790\ub8cc \ucc98\ub9ac\uc644\ub8cc');
+        expect(reviewedBundle.sourceReviewCounts).toEqual({
+            openCount: 0,
+            pendingCount: 0,
+            reviewedCount: 1,
+            staleCount: 0
+        });
+        expect(reviewedBundle.copyText)
+            .toContain('\uc6d0\uc790\ub8cc \ucc98\ub9ac: \ucc98\ub9ac\ub300\uc0c1 \uc5c6\uc74c \u00b7 \ucc98\ub9ac\ub428 1\uac74');
         expect(reviewedBundle.groups.find(group => group.id === 'photos')!.copyText)
             .toContain('\ucc98\ub9ac: \ucc98\ub9ac\ub428 2026-07-11 - \ud655\uc778 1\uac74');
         expect(reviewedBundle.copyText)
@@ -613,6 +633,14 @@ describe('korean-fieldwork-record-tablet-bundle', () => {
             label: '\ub2e4\uc2dc \ud655\uc778',
             detail: expect.stringContaining('\uc6d0\ubcf8/\ubcf8\ubb38 \ub0b4\uc6a9 \ubcc0\uacbd'),
             tone: 'warning'
+        });
+        expect(staleBundle.summary)
+            .toContain('\ucc98\ub9ac\ub300\uc0c1 1\uac74 (\ub2e4\uc2dc \ud655\uc778 1\uac74)');
+        expect(staleBundle.sourceReviewCounts).toEqual({
+            openCount: 1,
+            pendingCount: 0,
+            reviewedCount: 0,
+            staleCount: 1
         });
         expect(staleBundle.groups.find(group => group.id === 'photos')!.copyText)
             .toContain('\ucc98\ub9ac: \ub2e4\uc2dc \ud655\uc778 - ');
