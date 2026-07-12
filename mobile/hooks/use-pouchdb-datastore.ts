@@ -8,7 +8,7 @@ import {
   SampleDataLoaderBase,
   SyncService,
 } from 'idai-field-core';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import PouchDB from 'pouchdb-core'
 import {
   KOREAN_FIELDWORK_PROJECT_IDENTIFIER,
@@ -56,6 +56,10 @@ const usePouchDbDatastore = (
   onInitialPullComplete?: () => void
 ): PouchdbDatastore | undefined => {
   const [pouchdbDatastore, setpouchdbDatastore] = useState<PouchdbDatastore>();
+  const onInitialPullCompleteRef = useRef(onInitialPullComplete);
+  const projectSettingsRef = useRef(projectSettings);
+  onInitialPullCompleteRef.current = onInitialPullComplete;
+  projectSettingsRef.current = projectSettings;
 
   useEffect(() => {
     setpouchdbDatastore(undefined);
@@ -66,7 +70,8 @@ const usePouchDbDatastore = (
 
     let isCancelled = false;
     let activeManager: PouchdbDatastore | undefined;
-    const managerPromise = buildpouchdbDatastore(project, projectSettings)
+    const activeProjectSettings = projectSettingsRef.current;
+    const managerPromise = buildpouchdbDatastore(project, activeProjectSettings)
       .then((manager) => {
         if (isCancelled) {
           manager.close();
@@ -75,8 +80,8 @@ const usePouchDbDatastore = (
 
         activeManager = manager;
         setpouchdbDatastore(manager);
-        if (shouldPullFromServerBeforeLocalSeed(project, projectSettings)) {
-          onInitialPullComplete?.();
+        if (shouldPullFromServerBeforeLocalSeed(project, activeProjectSettings)) {
+          onInitialPullCompleteRef.current?.();
         }
         return manager;
       })
@@ -98,7 +103,6 @@ const usePouchDbDatastore = (
     projectSettings?.initialPullPending,
     projectSettings?.password,
     projectSettings?.url,
-    onInitialPullComplete,
   ]);
 
   return pouchdbDatastore;

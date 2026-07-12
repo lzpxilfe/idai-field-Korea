@@ -312,6 +312,35 @@ describe('usePouchDbDatastore', () => {
       expect(result.current).toBeDefined();
     });
   });
+
+  it('does not restart a database open when the completion callback changes', async () => {
+    const deferred = createDeferred();
+    mockCreateDbDeferreds.set('fieldwork-stable', deferred);
+
+    const { result, rerender } = renderHook(
+      ({ onComplete }) =>
+        usePouchDbDatastore('fieldwork-stable', undefined, onComplete),
+      { initialProps: { onComplete: jest.fn() } }
+    );
+
+    await waitFor(() => {
+      expect(mockDatastoreInstances[0]?.createDb).toHaveBeenCalledTimes(1);
+    });
+
+    rerender({ onComplete: jest.fn() });
+
+    expect(mockDatastoreInstances).toHaveLength(1);
+
+    await act(async () => {
+      deferred.resolve();
+      await deferred.promise;
+    });
+
+    await waitFor(() => {
+      expect(result.current).toBeDefined();
+    });
+    expect(mockDatastoreInstances[0].createDb).toHaveBeenCalledTimes(1);
+  });
 });
 
 const createDeferred = () => {
