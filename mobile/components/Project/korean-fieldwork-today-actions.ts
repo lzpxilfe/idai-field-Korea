@@ -538,7 +538,7 @@ const getFeatureCandidateQuickActionDetail = (
   investigationModeId?: KoreanFieldworkInvestigationModeId
 ): string => {
   if (summary.featureCandidates.length > 0) {
-    return `${summary.featureCandidates.length}건 기록`;
+    return `${summary.featureCandidates.length}건 기록 · 새 유구 추가`;
   }
   if (investigationModeId === 'trialTrench') {
     if (targets.featureDraftParent) return '트렌치 안에 유구 기록';
@@ -555,8 +555,8 @@ const getFeatureQuickAction = (
   targets: KoreanFieldworkTodayActionTargets,
   investigationModeId?: KoreanFieldworkInvestigationModeId
 ): KoreanFieldworkPriorityTaskAction | undefined => {
-  if (targets.featureCandidate) {
-    return toOpenDocumentAction(targets.featureCandidate);
+  if (targets.featureDraftParent) {
+    return toCreateDocumentAction(targets.featureDraftParent, C.FEATURE);
   }
 
   if (investigationModeId === 'trialTrench' && !targets.featureDraftParent) {
@@ -565,8 +565,8 @@ const getFeatureQuickAction = (
       : undefined;
   }
 
-  return targets.featureDraftParent
-    ? toCreateDocumentAction(targets.featureDraftParent, C.FEATURE)
+  return targets.featureCandidate
+    ? toOpenDocumentAction(targets.featureCandidate)
     : undefined;
 };
 
@@ -575,7 +575,7 @@ const getFeatureQuickActionLabel = (
   investigationModeId?: KoreanFieldworkInvestigationModeId
 ): string => {
   if (investigationModeId !== 'trialTrench') return '유구 추가';
-  if (targets.featureCandidate) return '유구 기록';
+  if (targets.featureCandidate && targets.featureDraftParent) return '유구 추가';
   if (targets.featureDraftParent) return '유구 확인';
   return '트렌치 추가';
 };

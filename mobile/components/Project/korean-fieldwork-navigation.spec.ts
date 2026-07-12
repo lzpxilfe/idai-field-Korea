@@ -9,18 +9,24 @@ import {
   KOREAN_FIELDWORK_MAP_VIEWS,
   KOREAN_FIELDWORK_RETURN_TARGETS,
   navigateToKoreanFieldworkReturnTarget,
+  pushKoreanFieldworkDocumentAdd,
 } from './korean-fieldwork-navigation';
 
 const mockNavigate = jest.fn();
+const mockPush = jest.fn();
 
 jest.mock('expo-router', () => ({
   router: {
     navigate: (...args: unknown[]) => mockNavigate(...args),
+    push: (...args: unknown[]) => mockPush(...args),
   },
 }));
 
 describe('Korean fieldwork navigation helpers', () => {
-  afterEach(() => mockNavigate.mockClear());
+  afterEach(() => {
+    mockNavigate.mockClear();
+    mockPush.mockClear();
+  });
 
   it('normalizes field-board return targets', () => {
     expect(getKoreanFieldworkReturnTarget('fieldBoard'))
@@ -55,6 +61,25 @@ describe('Korean fieldwork navigation helpers', () => {
       params: {
         [KOREAN_FIELDWORK_MAP_VIEW_PARAM]:
           KOREAN_FIELDWORK_MAP_VIEWS.SITE_OVERVIEW,
+      },
+    });
+  });
+
+  it('pushes a fresh add route for every new field record draft', () => {
+    pushKoreanFieldworkDocumentAdd({
+      categoryName: 'Sample',
+      draftParams: { shortDescription: 'charcoal' },
+      parentDocId: 'feature-1',
+      returnTarget: KOREAN_FIELDWORK_RETURN_TARGETS.FIELD_BOARD,
+    });
+
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: '/ProjectScreen/DocumentAdd',
+      params: {
+        parentDocId: 'feature-1',
+        categoryName: 'Sample',
+        shortDescription: 'charcoal',
+        returnTo: 'fieldBoard',
       },
     });
   });

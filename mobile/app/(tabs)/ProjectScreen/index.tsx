@@ -29,6 +29,7 @@ import DocumentAddModal from '@/components/Project/DocumentAddModal';
 import KoreanFieldworkDailyNotebookDigest from '@/components/Project/KoreanFieldworkDailyNotebookDigest';
 import KoreanFieldworkDailyJournalCalendar from '@/components/Project/KoreanFieldworkDailyJournalCalendar';
 import KoreanFieldworkFieldNotePanel from '@/components/Project/KoreanFieldworkFieldNotePanel';
+import KoreanFieldworkFeaturePitLinePanel from '@/components/Project/KoreanFieldworkFeaturePitLinePanel';
 import KoreanFieldworkInvestigationModePanel from '@/components/Project/KoreanFieldworkInvestigationModePanel';
 import KoreanFieldworkNotebookLedger from '@/components/Project/KoreanFieldworkNotebookLedger';
 import KoreanFieldworkOverviewChart from '@/components/Project/KoreanFieldworkOverviewChart';
@@ -86,6 +87,7 @@ import {
   getKoreanFieldworkReturnParam,
   KOREAN_FIELDWORK_FIELD_BOARD_RESET_PARAM,
   KOREAN_FIELDWORK_RETURN_TARGETS,
+  pushKoreanFieldworkDocumentAdd,
 } from '@/components/Project/korean-fieldwork-navigation';
 import {
   loadKoreanFieldworkProjectBoundaryDraft,
@@ -827,16 +829,11 @@ const DocumentsList: React.FC = () => {
 
     closeAddChildModal();
 
-    router.navigate({
-      pathname: '/ProjectScreen/DocumentAdd',
-      params: {
-        parentDocId: parentDoc.resource.id,
-        categoryName,
-        ...draftParams,
-        ...getKoreanFieldworkReturnParam(
-          KOREAN_FIELDWORK_RETURN_TARGETS.FIELD_BOARD
-        ),
-      },
+    pushKoreanFieldworkDocumentAdd({
+      categoryName,
+      draftParams,
+      parentDocId: parentDoc.resource.id,
+      returnTarget: KOREAN_FIELDWORK_RETURN_TARGETS.FIELD_BOARD,
     });
   };
   const updateWorkbenchResourceFields = (
@@ -1312,6 +1309,7 @@ const DocumentsList: React.FC = () => {
                 navigateAddCategory(categoryName, parentDoc)}
               onEditDocument={editDocument}
               onDeleteDocument={confirmRemoveDocument}
+              onUpdateResourceFields={updateWorkbenchResourceFields}
             />
           ))}
 
@@ -1336,6 +1334,7 @@ const DocumentsList: React.FC = () => {
                 navigateAddCategory(categoryName, parentDoc)}
               onEditDocument={editDocument}
               onDeleteDocument={confirmRemoveDocument}
+              onUpdateResourceFields={updateWorkbenchResourceFields}
             />
           )}
         </View>
@@ -1653,6 +1652,10 @@ const RecordSection: React.FC<{
   onAddDocumentOfCategory: (parentDoc: Document, categoryName: string) => void;
   onEditDocument: (document: Document) => void;
   onDeleteDocument: (document: Document) => void;
+  onUpdateResourceFields: (
+    document: Document,
+    updates: Record<string, unknown>
+  ) => Promise<boolean> | void;
 }> = ({
   title,
   subtitle,
@@ -1669,6 +1672,7 @@ const RecordSection: React.FC<{
   onAddDocumentOfCategory,
   onEditDocument,
   onDeleteDocument,
+  onUpdateResourceFields,
 }) => {
   const allDocuments = Array.from(documentsById.values());
 
@@ -1700,13 +1704,15 @@ const RecordSection: React.FC<{
           onAddEvidence={onAddDocumentOfCategory}
           onEdit={() => onEditDocument(document)}
           onDelete={() => onDeleteDocument(document)}
+          onUpdateResourceFields={(updates) =>
+            onUpdateResourceFields(document, updates)}
         />
       ))}
     </View>
   );
 };
 
-const RecordRow: React.FC<{
+export const RecordRow: React.FC<{
   document: Document;
   documents: Document[];
   contextPath: string | undefined;
@@ -1721,6 +1727,7 @@ const RecordRow: React.FC<{
   onAddEvidence: (parentDoc: Document, categoryName: string) => void;
   onEdit: () => void;
   onDelete: () => void;
+  onUpdateResourceFields: (updates: Record<string, unknown>) => void;
 }> = ({
   document,
   documents,
@@ -1736,6 +1743,7 @@ const RecordRow: React.FC<{
   onAddEvidence,
   onEdit,
   onDelete,
+  onUpdateResourceFields,
 }) => {
   const config = useContext(ConfigurationContext);
   const lastPressTimeRef = useRef<number>();
@@ -1763,10 +1771,13 @@ const RecordRow: React.FC<{
     [allowedAddCategoryNames, document, documents, investigationModeId]
   );
   const visibleActions = actionSummary.actions.slice(0, 2);
+  const isFeatureRecord =
+    document.resource.category === KOREAN_FIELDWORK_CATEGORIES.FEATURE;
   const hasExpandedBody = selected && (
     evidenceChips.length > 0
     || !!description
     || actionSummary.isTracked
+    || isFeatureRecord
   );
   const handleOpenOrEdit = () => {
     const nowMs = Date.now();
@@ -1924,6 +1935,15 @@ const RecordRow: React.FC<{
                     onAddEvidence(document, action.categoryName);
                   }
                 }}
+              />
+            )}
+            {isFeatureRecord && (
+              <KoreanFieldworkFeaturePitLinePanel
+                allowedAddCategoryNames={allowedAddCategoryNames}
+                document={document}
+                documents={documents}
+                onAddSoilProfilePhoto={onAddEvidence}
+                onUpdateResourceFields={onUpdateResourceFields}
               />
             )}
           </View>

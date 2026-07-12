@@ -47,6 +47,7 @@ import {
   getKoreanFieldworkReturnParam,
   getKoreanFieldworkReturnTarget,
   navigateToKoreanFieldworkReturnTarget,
+  pushKoreanFieldworkDocumentAdd,
 } from '@/components/Project/korean-fieldwork-navigation';
 import { ToastType } from '@/components/common/Toast/ToastProvider';
 import { router, useGlobalSearchParams } from 'expo-router';
@@ -198,13 +199,10 @@ const DocumentEdit: React.FC = () => {
     });
   };
   const addRelatedDocument = (parentDoc: Document, childCategoryName: string) => {
-    router.navigate({
-      pathname: '/ProjectScreen/DocumentAdd',
-      params: {
-        parentDocId: parentDoc.resource.id,
-        categoryName: childCategoryName,
-        ...getKoreanFieldworkReturnParam(returnTarget),
-      },
+    pushKoreanFieldworkDocumentAdd({
+      categoryName: childCategoryName,
+      parentDocId: parentDoc.resource.id,
+      returnTarget,
     });
   };
 

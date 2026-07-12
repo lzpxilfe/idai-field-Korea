@@ -53,7 +53,7 @@ describe('KoreanFieldworkTodayBoard', () => {
     );
   });
 
-  it('opens existing records from the map today board instead of creating duplicates', () => {
+  it('opens the daily log but keeps 유구 추가 creating another feature', () => {
     const operation = createDoc('operation-1', C.OPERATION, 'A구역');
     const dailyLog = createDoc('daily-log-1', C.DAILY_LOG, 'DL-1');
     const feature = createDoc('feature-1', C.FEATURE, '수혈 1', {
@@ -78,8 +78,11 @@ describe('KoreanFieldworkTodayBoard', () => {
     fireEvent.press(getByText('유구 추가'));
 
     expect(handleOpenDocument).toHaveBeenCalledWith(dailyLog);
-    expect(handleOpenDocument).toHaveBeenCalledWith(feature);
-    expect(handleAddDocumentOfCategory).not.toHaveBeenCalled();
+    expect(handleOpenDocument).not.toHaveBeenCalledWith(feature);
+    expect(handleAddDocumentOfCategory).toHaveBeenCalledWith(
+      operation,
+      C.FEATURE
+    );
   });
 });
 

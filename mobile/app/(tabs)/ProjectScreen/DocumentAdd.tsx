@@ -2,6 +2,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system';
 import {
   CategoryForm,
+  Document,
   NewDocument,
   NewResource,
   getKoreanFieldworkReportHandoffSaveMessage,
@@ -87,6 +88,7 @@ const DocumentAdd: React.FC = () => {
   const [category, setCategory] = useState<CategoryForm>();
   const [newResource, setNewResource] = useState<NewResource>();
   const [saveBtnEnabled, setSaveBtnEnabled] = useState<boolean>(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [investigationModeId, setInvestigationModeId] =
     useState<KoreanFieldworkInvestigationModeId>();
   const [isFreeDrawingActive, setIsFreeDrawingActive] = useState(false);
@@ -94,6 +96,7 @@ const DocumentAdd: React.FC = () => {
     useState<SoilProfileLayerSampleRequest>();
   const projectId = preferencesContext.preferences.currentProject;
   const documentsRef = useRef(documents);
+  const saveInFlightRef = useRef(false);
 
   useEffect(() => {
     documentsRef.current = documents;
@@ -194,34 +197,46 @@ const DocumentAdd: React.FC = () => {
     });
   };
 
-  const saveButtonHandler = () => {
-    if (newResource) {
-      const reportHandoffValidation = validateKoreanFieldworkReportHandoffCandidate(
+  const saveButtonHandler = async () => {
+    if (!newResource || !repository || saveInFlightRef.current) return;
+
+    saveInFlightRef.current = true;
+    setIsSaving(true);
+
+    let doc: Document;
+    let reportHandoffValidation: ReturnType<
+      typeof validateKoreanFieldworkReportHandoffCandidate
+    >;
+
+    try {
+      reportHandoffValidation = validateKoreanFieldworkReportHandoffCandidate(
         newResource,
         documents ?? []
       );
-      const newDocument: NewDocument = {
-        resource: newResource,
-      };
-      repository
-        ?.create(newDocument)
-        .then((doc) => {
-          showToast(
-            ToastType.Success,
-            getKoreanFieldworkReportHandoffSaveMessage(
-              `${doc.resource.identifier} 기록을 만들었습니다.`,
-              reportHandoffValidation
-            ),
-            reportHandoffValidation.status === 'review' ? 5000 : 3000
-          );
-          setResourceToDefault();
-          navigateToKoreanFieldworkReturnTarget(returnTarget, doc.resource.id);
-        })
-        .catch(() => {
-          Keyboard.dismiss();
-          showToast(ToastType.Error, '기록을 만들지 못했습니다.');
-        });
+      const newDocument: NewDocument = { resource: newResource };
+      doc = await repository.create(newDocument);
+    } catch (error) {
+      Keyboard.dismiss();
+      showToast(
+        ToastType.Error,
+        `기록을 만들지 못했습니다${formatSaveErrorDetail(error)}.`
+      );
+      saveInFlightRef.current = false;
+      setIsSaving(false);
+      return;
     }
+
+    saveInFlightRef.current = false;
+    setIsSaving(false);
+    showToast(
+      ToastType.Success,
+      getKoreanFieldworkReportHandoffSaveMessage(
+        `${doc.resource.identifier} 기록을 만들었습니다.`,
+        reportHandoffValidation
+      ),
+      reportHandoffValidation.status === 'review' ? 5000 : 3000
+    );
+    navigateToKoreanFieldworkReturnTarget(returnTarget, doc.resource.id);
   };
 
   const onReturn = () => {
@@ -252,8 +267,8 @@ const DocumentAdd: React.FC = () => {
         <Button
           variant="success"
           onPress={() => saveButtonHandler()}
-          title="저장"
-          isDisabled={!saveBtnEnabled}
+          title={isSaving ? '저장 중' : '저장'}
+          isDisabled={!saveBtnEnabled || isSaving}
           icon={
             <MaterialIcons
               name="save"
@@ -346,6 +361,26 @@ export default DocumentAdd;
 
 const getParam = (param: string | string[] | undefined): string | undefined =>
   Array.isArray(param) ? param[0] : param;
+
+const formatSaveErrorDetail = (error: unknown): string => {
+  const detail = getSaveErrorMessage(error);
+  return detail ? `: ${detail}` : '';
+};
+
+const getSaveErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) return error.message.trim();
+  if (Array.isArray(error)) {
+    return error
+      .map(getSaveErrorMessage)
+      .filter(Boolean)
+      .join(' / ');
+  }
+  if (typeof error === 'string') return error.trim();
+  if (error && typeof error === 'object' && 'message' in error) {
+    return getSaveErrorMessage((error as { message?: unknown }).message);
+  }
+  return '';
+};
 
 const renderPhotoResourceActions = (
   categoryName: string,
