@@ -1,5 +1,6 @@
 import {
   Document,
+  getKoreanFieldworkFeaturePhotoProgress,
   KoreanFieldworkReadinessIssue,
   KoreanFieldworkTodaySummary,
 } from 'idai-field-core';
@@ -59,6 +60,8 @@ export interface KoreanFieldworkProgressMetrics {
   issueCount: number;
   checklistDone: number;
   checklistTotal: number;
+  photoProgressDone?: number;
+  photoProgressTotal?: number;
 }
 
 export interface KoreanFieldworkProgressItem {
@@ -234,21 +237,36 @@ const getProgressStage = (
   }
 
   if (isWorkflowChecklistDocument(document, investigationModeId)) {
-    const recordingStatus = resource.featureRecordingStatus;
-    const isOpenFeatureStatus = recordingStatus === 'candidate'
-      || recordingStatus === 'investigating';
-    const checklistIsOpen = metrics.checklistTotal > 0
-      && metrics.checklistDone < metrics.checklistTotal;
-
-    if (isOpenFeatureStatus || checklistIsOpen) {
-      return toStage(
-        'investigation',
-        recordingStatus === 'candidate' ? 'warning' : 'info',
-        metrics.checklistTotal > 0
-          ? `조사 과정 ${metrics.checklistDone}/${metrics.checklistTotal}을 현장에서 확인하세요.`
-          : '유구의 경계와 충전토를 이어서 기록하세요.',
-        '조사 과정 열기'
+    if (isFeaturePhotoProgressDocument(document, investigationModeId)) {
+      const photoProgress = getKoreanFieldworkFeaturePhotoProgress(
+        resource.featureInvestigationChecklist
       );
+
+      if (photoProgress.stage !== 'completed') {
+        return toStage(
+          'investigation',
+          photoProgress.stage === 'investigating' ? 'info' : 'warning',
+          getFeaturePhotoProgressDetail(photoProgress),
+          '조사 사진 열기'
+        );
+      }
+    } else {
+      const recordingStatus = resource.featureRecordingStatus;
+      const isOpenFeatureStatus = recordingStatus === 'candidate'
+        || recordingStatus === 'investigating';
+      const checklistIsOpen = metrics.checklistTotal > 0
+        && metrics.checklistDone < metrics.checklistTotal;
+
+      if (isOpenFeatureStatus || checklistIsOpen) {
+        return toStage(
+          'investigation',
+          recordingStatus === 'candidate' ? 'warning' : 'info',
+          metrics.checklistTotal > 0
+            ? `조사 과정 ${metrics.checklistDone}/${metrics.checklistTotal}을 현장에서 확인하세요.`
+            : '유구의 경계와 충전토를 이어서 기록하세요.',
+          '조사 과정 열기'
+        );
+      }
     }
   }
 
@@ -336,7 +354,7 @@ const getProgressAction = (
     const usesFeatureFirstWorkflow = investigationModeId === 'excavation'
       || !shouldUseKoreanFieldworkTrenchWorkflow(investigationModeId);
 
-    if (actionLabel === '조사 과정 열기') {
+    if (actionLabel === '조사 과정 열기' || actionLabel === '조사 사진 열기') {
       return { type: 'openDocument', documentId: document.resource.id };
     }
 
@@ -394,6 +412,14 @@ const getProgressMetrics = (
   const checklistTotal = featureWorkflowDocuments.length * checklistStepValues.length;
   const checklistDone = featureWorkflowDocuments.reduce((count, featureDocument) =>
     count + getChecklistDoneCount(featureDocument, checklistStepValues), 0);
+  const photoProgress = isFeaturePhotoProgressDocument(
+    document,
+    investigationModeId
+  )
+    ? getKoreanFieldworkFeaturePhotoProgress(
+      getResource(document).featureInvestigationChecklist
+    )
+    : undefined;
 
   return {
     hierarchyCount: scopedDocuments
@@ -405,8 +431,34 @@ const getProgressMetrics = (
     issueCount: issues.length,
     checklistDone,
     checklistTotal,
+    photoProgressDone: photoProgress?.checkedCount,
+    photoProgressTotal: photoProgress?.totalCount,
   };
 };
+
+const getFeaturePhotoProgressDetail = (
+  progress: ReturnType<typeof getKoreanFieldworkFeaturePhotoProgress>
+): string => {
+  const coverage = `사진 ${progress.checkedCount}/${progress.totalCount}`;
+
+  switch (progress.stage) {
+    case 'preInvestigation':
+      return `조사 전 · ${coverage}. 다음은 조사 중 사진입니다.`;
+    case 'investigating':
+      return `조사 중 · ${coverage}. 다음은 완료 사진입니다.`;
+    default:
+      return `조사 전 사진 미확인 · ${coverage}.`;
+  }
+};
+
+const isFeaturePhotoProgressDocument = (
+  document: Document,
+  investigationModeId?: KoreanFieldworkInvestigationModeId
+): boolean => investigationModeId !== 'trialTrench'
+  && (
+    document.resource.category === C.FEATURE
+    || document.resource.category === C.FEATURE_SEGMENT
+  );
 
 const getEvidenceCount = (
   document: Document,

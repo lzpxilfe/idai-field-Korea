@@ -39,7 +39,8 @@ describe('KoreanFieldworkWorkbenchPanel', () => {
     expect(getByText('조사 경계')).toBeTruthy();
     expect(getAllByText('유구').length).toBeGreaterThan(0);
     expect(getByText('수혈 1')).toBeTruthy();
-    expect(getAllByText('조사 전').length).toBeGreaterThan(0);
+    expect(getAllByText('사진 미확인').length).toBeGreaterThan(0);
+    expect(getByText('사진 0/3')).toBeTruthy();
 
     fireEvent.press(getByTestId('workbenchItem_feature-1'));
 

@@ -49,7 +49,7 @@ describe('Korean fieldwork workbench', () => {
         id: 'feature-1',
         categoryLabel: '유구',
         parentPath: '조사구역 1 > T1',
-        reasons: ['확인 1', '조사 전', '과정 1/9', '추가 확인'],
+        reasons: ['확인 1', '조사 전', '사진 1/3', '추가 확인'],
         tone: 'warning',
       },
       {
@@ -87,7 +87,7 @@ describe('Korean fieldwork workbench', () => {
     )).toEqual([]);
   });
 
-  it('counts pen memo review as a tablet workflow step', () => {
+  it('does not let detailed checks replace the completion photo milestone', () => {
     const feature = createDoc('feature-1', C.FEATURE, '유구 1', {}, {
       featureRecordingStatus: 'confirmed',
       featureInvestigationChecklist: [
@@ -111,7 +111,7 @@ describe('Korean fieldwork workbench', () => {
     )).toEqual([
       expect.objectContaining({
         id: 'feature-1',
-        reasons: ['과정 8/9'],
+        reasons: ['조사 중', '사진 2/3'],
         tone: 'info',
       }),
     ]);

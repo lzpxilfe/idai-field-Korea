@@ -107,6 +107,32 @@ describe('Korean fieldwork record actions', () => {
     ]);
   });
 
+  it('uses the latest photo milestone instead of evidence volume for progress', () => {
+    const feature = createDoc('feature-1', C.FEATURE, '수혈 1', {}, {
+      featureInvestigationChecklist: ['inProgressPhotoTaken'],
+      fieldRecordQuality: ['immediateRecording'],
+      recordCreationTiming: 'duringFieldwork',
+    });
+    const photos = Array.from({ length: 5 }, (_, index) =>
+      createDoc(`photo-${index}`, C.PHOTO, `사진 ${index + 1}`, {
+        depicts: ['feature-1'],
+      })
+    );
+
+    const summary = getKoreanFieldworkRecordActionSummary(
+      feature,
+      [feature, ...photos],
+      [C.PHOTO]
+    );
+
+    expect(summary).toMatchObject({
+      evidenceCount: 5,
+      completionPercent: 67,
+      photoProgressDone: 1,
+      photoProgressTotal: 3,
+    });
+  });
+
   it('offers another soil profile photo when pit records outnumber profile photos', () => {
     const feature = createDoc('feature-1', C.FEATURE, '유구 1', {}, {
       fieldRecordQuality: ['immediateRecording'],

@@ -128,13 +128,13 @@ export const FEATURE_WORKFLOW_QUICK_PRESETS: readonly KoreanFieldworkQuickPreset
   {
     id: 'startFeatureInvestigation',
     label: '조사 시작',
-    detail: '조사 중 전환, 조사 전·중 사진, 현장 기록',
+    detail: '조사 중 전환과 현장 기록 시점 설정',
     icon: 'play-circle-outline',
   },
   {
     id: 'closeFeatureInvestigation',
     label: '조사 완료',
-    detail: '완료 전환, 완료 사진, 실측, 해석 메모',
+    detail: '완료 전환과 기록 구분 정리',
     icon: 'task-alt',
   },
 ];
@@ -424,11 +424,12 @@ const getStartFeatureInvestigationUpdates = (
     updates[FIELDWORK_QUICK_FIELDS.featureStatus] = 'investigating';
   }
 
-  if (availability.checklist) {
+  const checklistValues = getStartChecklistValues(investigationModeId);
+  if (availability.checklist && checklistValues.length > 0) {
     updates[FIELDWORK_QUICK_FIELDS.checklist] = mergeStringArrayFieldValues(
       resource,
       FIELDWORK_QUICK_FIELDS.checklist,
-      getStartChecklistValues(investigationModeId)
+      checklistValues
     );
   }
 
@@ -460,11 +461,12 @@ const getCloseFeatureInvestigationUpdates = (
     updates[FIELDWORK_QUICK_FIELDS.featureStatus] = 'confirmed';
   }
 
-  if (availability.checklist) {
+  const checklistValues = getCloseChecklistValues(investigationModeId);
+  if (availability.checklist && checklistValues.length > 0) {
     updates[FIELDWORK_QUICK_FIELDS.checklist] = mergeStringArrayFieldValues(
       resource,
       FIELDWORK_QUICK_FIELDS.checklist,
-      getCloseChecklistValues(investigationModeId)
+      checklistValues
     );
   }
 
@@ -495,10 +497,7 @@ const getStartChecklistValues = (
         'trenchFeatureChecked',
       ];
     default:
-      return [
-        'preInvestigationPhotoTaken',
-        'inProgressPhotoTaken',
-      ];
+      return [];
   }
 };
 
@@ -516,10 +515,7 @@ const getCloseChecklistValues = (
         'inProgressPhotoTaken',
       ];
     default:
-      return [
-        'completionPhotoTaken',
-        'measuredDrawingCompleted',
-      ];
+      return [];
   }
 };
 

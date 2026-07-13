@@ -8,7 +8,7 @@ import { getKoreanFieldworkDraftPresets } from './korean-fieldwork-draft-presets
 const C = KOREAN_FIELDWORK_CATEGORIES;
 
 describe('Korean fieldwork draft presets', () => {
-  it('offers feature-specific presets with only fields present on the form', () => {
+  it('keeps feature status presets from claiming photo evidence', () => {
     const presets = getKoreanFieldworkDraftPresets(
       createCategoryForm([
         'featureRecordingStatus',
@@ -23,12 +23,13 @@ describe('Korean fieldwork draft presets', () => {
 
     expect(candidatePreset?.updates).toEqual({
       featureRecordingStatus: 'candidate',
-      featureInvestigationChecklist: ['preInvestigationPhotoTaken'],
     });
     expect(candidatePreset?.fieldNames).toEqual([
       'featureRecordingStatus',
-      'featureInvestigationChecklist',
     ]);
+    expect(presets.every((preset) =>
+      preset.updates.featureInvestigationChecklist === undefined
+    )).toBe(true);
   });
 
   it('keeps feature presets away from operation records', () => {

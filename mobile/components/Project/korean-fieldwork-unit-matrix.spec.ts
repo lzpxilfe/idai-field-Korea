@@ -160,6 +160,12 @@ describe('Korean fieldwork unit matrix', () => {
     });
     const feature = createDoc('feature-1', C.FEATURE, '수혈 1', {
       liesWithin: ['trench-1'],
+    }, {
+      featureRecordingStatus: 'confirmed',
+      featureInvestigationChecklist: [
+        'preInvestigationPhotoTaken',
+        'inProgressPhotoTaken',
+      ],
     });
     const photo = createDoc('photo-1', C.PHOTO, '사진 1', {
       depicts: ['feature-1'],
@@ -174,7 +180,10 @@ describe('Korean fieldwork unit matrix', () => {
     expect(items[0]).toMatchObject({
       statusLabel: '조사 중',
       evidenceLabel: '사진 1',
-      nextActionLabel: '조사 과정 0/9',
+      nextActionLabel: '완료 사진 확인',
+      completionPercent: 67,
+      photoProgressDone: 2,
+      photoProgressTotal: 3,
     });
   });
 });

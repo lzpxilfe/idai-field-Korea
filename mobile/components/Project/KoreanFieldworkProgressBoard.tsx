@@ -163,7 +163,12 @@ const ProgressCard: React.FC<{
         value={item.metrics.issueCount}
         warning={item.metrics.issueCount > 0}
       />
-      {item.metrics.checklistTotal > 0 && (
+      {item.metrics.photoProgressTotal !== undefined ? (
+        <Metric
+          label="사진"
+          value={`${item.metrics.photoProgressDone}/${item.metrics.photoProgressTotal}`}
+        />
+      ) : item.metrics.checklistTotal > 0 && (
         <Metric
           label="과정"
           value={`${item.metrics.checklistDone}/${item.metrics.checklistTotal}`}

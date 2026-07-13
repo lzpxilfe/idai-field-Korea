@@ -77,7 +77,13 @@ const KoreanFieldworkRecordActionPanel: React.FC<KoreanFieldworkRecordActionPane
         <Metric label="이어진 기록" value={summary.structureCount} />
         <Metric label="자료" value={summary.evidenceCount} />
         <Metric label="확인" value={summary.issueCount} warning={summary.issueCount > 0} />
-        {summary.checklistTotal > 0 && (
+        {summary.photoProgressTotal !== undefined ? (
+          <Metric
+            label="사진"
+            value={`${summary.photoProgressDone}/${summary.photoProgressTotal}`}
+            warning={(summary.photoProgressDone ?? 0) < summary.photoProgressTotal}
+          />
+        ) : summary.checklistTotal > 0 && (
           <Metric
             label="과정"
             value={`${summary.checklistDone}/${summary.checklistTotal}`}

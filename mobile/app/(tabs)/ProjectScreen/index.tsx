@@ -83,6 +83,10 @@ import {
   getKoreanFieldworkRecordListEmptyState,
 } from '@/components/Project/korean-fieldwork-record-list-empty-state';
 import {
+  getKoreanFieldworkRecordBoardCategories,
+  getKoreanFieldworkRecordBoardDocuments,
+} from '@/components/Project/korean-fieldwork-record-board';
+import {
   hasKoreanFieldworkProjectStartContext,
 } from '@/components/Project/korean-fieldwork-project-start';
 import {
@@ -121,7 +125,7 @@ import useKoreanFieldworkProjectSetupDefaults from '@/hooks/use-korean-fieldwork
 import useToast from '@/hooks/use-toast';
 import { colors } from '@/utils/colors';
 
-type FilterId = 'all'|'operation'|'feature'|'find'|'media'|'review';
+type FilterId = 'all'|'operation'|'feature';
 type FieldworkWorkspaceTabId = 'records'|'journal';
 
 const RECORD_ROW_DOUBLE_TAP_DURATION_MS = 350;
@@ -144,7 +148,7 @@ const getRecordFilters = (
   {
     id: 'all',
     label: '주요 기록',
-    categories: getOverviewRecordCategories(investigationModeId),
+    categories: getKoreanFieldworkRecordBoardCategories(investigationModeId),
   },
   {
     id: 'operation',
@@ -160,47 +164,6 @@ const getRecordFilters = (
     label: getPrimaryFieldRecordLabel(investigationModeId),
     categories: getPrimaryFieldRecordCategories(investigationModeId),
   },
-  {
-    id: 'find',
-    label: '유물·시료',
-    categories: [
-      KOREAN_FIELDWORK_CATEGORIES.FIND,
-      KOREAN_FIELDWORK_CATEGORIES.FIND_COLLECTION,
-      KOREAN_FIELDWORK_CATEGORIES.SAMPLE,
-    ],
-  },
-  {
-    id: 'media',
-    label: '사진·도면·메모',
-    categories: [
-      KOREAN_FIELDWORK_CATEGORIES.PHOTO,
-      KOREAN_FIELDWORK_CATEGORIES.SOIL_PROFILE_PHOTO,
-      KOREAN_FIELDWORK_CATEGORIES.DRAWING,
-      KOREAN_FIELDWORK_CATEGORIES.PEN_MEMO,
-      KOREAN_FIELDWORK_CATEGORIES.AERIAL_MAP_LAYER,
-    ],
-  },
-  {
-    id: 'review',
-    label: '점검',
-    categories: [
-      KOREAN_FIELDWORK_CATEGORIES.FIELD_RECORD_QUALITY_REVIEW,
-      KOREAN_FIELDWORK_CATEGORIES.SOURCE_EVIDENCE_INDEX,
-    ],
-  },
-];
-
-const getOverviewRecordCategories = (
-  investigationModeId?: KoreanFieldworkInvestigationModeId
-): string[] => [
-  KOREAN_FIELDWORK_CATEGORIES.OPERATION,
-  KOREAN_FIELDWORK_CATEGORIES.SURVEY,
-  KOREAN_FIELDWORK_CATEGORIES.SURVEY_BOUNDARY,
-  ...(shouldUseKoreanFieldworkTrenchWorkflow(investigationModeId)
-    ? [KOREAN_FIELDWORK_CATEGORIES.TRENCH]
-    : []),
-  KOREAN_FIELDWORK_CATEGORIES.FEATURE_GROUP,
-  KOREAN_FIELDWORK_CATEGORIES.FEATURE,
 ];
 
 const getRecordGroups = (
@@ -221,34 +184,6 @@ const getRecordGroups = (
     title: getPrimaryFieldRecordLabel(investigationModeId),
     subtitle: getPrimaryFieldRecordSubtitle(investigationModeId),
     categories: getPrimaryFieldRecordCategories(investigationModeId),
-  },
-  {
-    title: '유물과 시료',
-    subtitle: '수습, 라벨, 분석 목적까지 이어지는 기록',
-    categories: [
-      KOREAN_FIELDWORK_CATEGORIES.FIND,
-      KOREAN_FIELDWORK_CATEGORIES.FIND_COLLECTION,
-      KOREAN_FIELDWORK_CATEGORIES.SAMPLE,
-    ],
-  },
-  {
-    title: '사진·도면·메모',
-    subtitle: '현장 사진, 도면, 메모 기록',
-    categories: [
-      KOREAN_FIELDWORK_CATEGORIES.PHOTO,
-      KOREAN_FIELDWORK_CATEGORIES.SOIL_PROFILE_PHOTO,
-      KOREAN_FIELDWORK_CATEGORIES.DRAWING,
-      KOREAN_FIELDWORK_CATEGORIES.PEN_MEMO,
-      KOREAN_FIELDWORK_CATEGORIES.AERIAL_MAP_LAYER,
-    ],
-  },
-  {
-    title: '점검과 색인',
-    subtitle: '마감 전 확인과 근거 색인',
-    categories: [
-      KOREAN_FIELDWORK_CATEGORIES.FIELD_RECORD_QUALITY_REVIEW,
-      KOREAN_FIELDWORK_CATEGORIES.SOURCE_EVIDENCE_INDEX,
-    ],
   },
 ];
 
@@ -394,10 +329,11 @@ const DocumentsList: React.FC = () => {
     [documents]
   );
   const recordBoardDocuments = useMemo(
-    () => userVisibleDocuments.filter((document) =>
-      document.resource.category !== KOREAN_FIELDWORK_CATEGORIES.DAILY_LOG
+    () => getKoreanFieldworkRecordBoardDocuments(
+      userVisibleDocuments,
+      investigationModeId
     ),
-    [userVisibleDocuments]
+    [investigationModeId, userVisibleDocuments]
   );
   const currentScopeParent = hierarchyPath[hierarchyPath.length - 1];
   const todaySummary = useMemo(
@@ -502,12 +438,6 @@ const DocumentsList: React.FC = () => {
     recordGroups,
   ]);
 
-  const groupedDocumentIds = useMemo(() => new Set(groupedDocuments
-    .flatMap((group) => group.documents.map((document) => document.resource.id))
-  ), [groupedDocuments]);
-  const otherDocuments = filteredDocuments.filter((document) =>
-    !groupedDocumentIds.has(document.resource.id)
-  );
   const actionTargets = useMemo(
     () => getKoreanFieldworkTodayActionTargets(
       actionSummary,
@@ -1433,30 +1363,6 @@ const DocumentsList: React.FC = () => {
             />
           ))}
 
-          {otherDocuments.length > 0 && (
-            <RecordSection
-              title="기타 기록"
-              subtitle="설정에는 남아 있지만 현장 기록 목록에는 따로 분류되지 않은 기록"
-              documents={otherDocuments}
-              documentsById={documentsById}
-              getCategoryLabel={getCategoryLabel}
-              issueCountByDocumentId={
-                userVisibleTodaySummary.issueCountByDocumentId
-              }
-              investigationModeId={investigationModeId}
-              removingDocumentIds={removingDocumentIds}
-              expandedDocumentIds={expandedRecordDocumentIds}
-              onOpenDocument={(document) =>
-                selectWorkbenchDocument(document, { toggle: true })}
-              onOpenRelatedDocument={editDocument}
-              onAddChild={openAddChildModal}
-              onAddDocumentOfCategory={(parentDoc, categoryName) =>
-                openDocumentAddCategory(categoryName, parentDoc)}
-              onEditDocument={editDocument}
-              onDeleteDocument={confirmRemoveDocument}
-              onUpdateResourceFields={updateWorkbenchResourceFields}
-            />
-          )}
         </View>
         </>
         )}

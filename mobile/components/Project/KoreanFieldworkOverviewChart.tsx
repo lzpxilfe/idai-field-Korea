@@ -86,11 +86,15 @@ const KoreanFieldworkOverviewChart: React.FC<KoreanFieldworkOverviewChartProps> 
 
       <View style={styles.footerRow}>
         <FooterStat
-          label="과정"
-          value={data.checklistTotal > 0
-            ? `${data.checklistDone}/${data.checklistTotal}`
-            : '0/0'}
-          tone={data.checklistPercent >= 100 ? 'success' : 'info'}
+          label={data.photoProgressTotal !== undefined ? '사진 징표' : '세부 기록'}
+          value={data.photoProgressTotal !== undefined
+            ? `${data.photoProgressDone}/${data.photoProgressTotal}`
+            : data.checklistTotal > 0
+              ? `${data.checklistDone}/${data.checklistTotal}`
+              : '0/0'}
+          tone={(data.photoProgressTotal !== undefined
+            ? data.photoProgressDone === data.photoProgressTotal
+            : data.checklistPercent >= 100) ? 'success' : 'info'}
         />
         <FooterStat
           label="확인 필요"

@@ -38,6 +38,7 @@ describe('Korean fieldwork overview chart data', () => {
         featureInvestigationChecklist: [
           'preInvestigationPhotoTaken',
           'inProgressPhotoTaken',
+          'completionPhotoTaken',
         ],
       }),
       createDoc('segment-1', C.FEATURE_SEGMENT, '피트 1', {
@@ -65,8 +66,10 @@ describe('Korean fieldwork overview chart data', () => {
     expect(data.trenchCount).toBe(1);
     expect(data.featureCount).toBe(2);
     expect(data.featureSegmentCount).toBe(1);
-    expect(data.checklistDone).toBe(4);
+    expect(data.checklistDone).toBe(5);
     expect(data.checklistTotal).toBe(27);
+    expect(data.photoProgressDone).toBe(5);
+    expect(data.photoProgressTotal).toBe(9);
     expect(data.openIssueCount).toBe(2);
     expect(data.criticalIssueCount).toBe(1);
     expect(data.investigationSegments.find((segment) =>
@@ -81,6 +84,12 @@ describe('Korean fieldwork overview chart data', () => {
     expect(data.metrics.find((metric) => metric.id === 'feature')).toMatchObject({
       value: 2,
       detail: '피트 1',
+    });
+    expect(data.metrics.find((metric) => metric.id === 'process')).toMatchObject({
+      label: '사진 진척',
+      value: '67%',
+      detail: '사진 징표 5/9',
+      tone: 'info',
     });
     expect(data.featureTypeSegments.map((segment) => [
       segment.id,

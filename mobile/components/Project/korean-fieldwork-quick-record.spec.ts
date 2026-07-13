@@ -284,7 +284,7 @@ describe('Korean fieldwork quick record helpers', () => {
     });
   });
 
-  it('builds safe start and closeout preset updates from available fields', () => {
+  it('does not claim photo or drawing evidence from status presets', () => {
     const resource = createResource(C.FEATURE, {
       featureInvestigationChecklist: ['preInvestigationPhotoTaken'],
       fieldRecordQuality: ['immediateRecording'],
@@ -308,10 +308,6 @@ describe('Korean fieldwork quick record helpers', () => {
       'startFeatureInvestigation'
     )).toEqual({
       featureRecordingStatus: 'investigating',
-      featureInvestigationChecklist: [
-        'preInvestigationPhotoTaken',
-        'inProgressPhotoTaken',
-      ],
       fieldRecordQuality: ['immediateRecording'],
       recordCreationTiming: 'duringFieldwork',
     });
@@ -326,11 +322,6 @@ describe('Korean fieldwork quick record helpers', () => {
       'closeFeatureInvestigation'
     )).toEqual({
       featureRecordingStatus: 'confirmed',
-      featureInvestigationChecklist: [
-        'preInvestigationPhotoTaken',
-        'completionPhotoTaken',
-        'measuredDrawingCompleted',
-      ],
       fieldRecordQuality: [
         'immediateRecording',
         'observationInterpretationSeparated',
