@@ -33,6 +33,10 @@ FIELD_HUB_VERSION=3.5.3
 HOST=localhost
 SECRET_KEY_BASE=
 FILE_DIRECTORY=./files
+FILE_UPLOAD_MAX_BYTES=536870912
+FILE_PROJECT_QUOTA_BYTES=107374182400
+FILE_STORAGE_QUOTA_BYTES=1099511627776
+FILE_RESERVED_FREE_BYTES=5368709120
 FIELD_HUB_BIND_ADDRESS=127.0.0.1
 FIELD_HUB_HOST_PORT=8080
 ```
@@ -48,6 +52,11 @@ mkdir files && chown nobody files/
 ```
 
 _Note: if you want the files to be put somewhere else, you can do that by updating the `FILE_DIRECTORY` environment variable in the [.env](.env) file._
+
+The four byte-valued file limits above cap one upload (512 MiB), one project's stored files
+(100 GiB), all Field Hub files (1 TiB), and the disk space that must remain free (5 GiB).
+Set them to values appropriate for the server volume before field deployment. Uploads are
+rejected when any configured limit would be exceeded or free disk space cannot be verified.
 
 Run the application from the directory containing both files with:
 

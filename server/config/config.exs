@@ -32,6 +32,11 @@ config :field_hub,
   couchdb_user_password: "app_user_password",
   valid_file_variants: [:thumbnail_image, :original_image],
   file_index_cache_name: :file_info,
+  file_disk_space_provider: FieldHub.DiskSpace,
+  file_upload_max_bytes: 512 * 1024 * 1024,
+  file_project_quota_bytes: 100 * 1024 * 1024 * 1024,
+  file_storage_quota_bytes: 1024 * 1024 * 1024 * 1024,
+  file_reserved_free_bytes: 5 * 1024 * 1024 * 1024,
   user_tokens_cache_name: :user_tokens,
   max_project_identifier_length: 30
 

@@ -24,6 +24,13 @@ defmodule FieldHubWeb.Api.Rest.FileTest do
           |> ExJsonSchema.Schema.resolve()
 
   @basic_auth "Basic #{Base.encode64("#{@user_name}:#{@user_password}")}"
+  @quota_keys [
+    :file_upload_max_bytes,
+    :file_project_quota_bytes,
+    :file_storage_quota_bytes,
+    :file_reserved_free_bytes,
+    :test_disk_available_bytes
+  ]
 
   setup_all %{} do
     TestHelper.create_test_db_and_user(@project, @user_name, @user_password)
@@ -37,9 +44,14 @@ defmodule FieldHubWeb.Api.Rest.FileTest do
   end
 
   setup %{} do
+    previous_config = Map.new(@quota_keys, &{&1, Application.fetch_env!(:field_hub, &1)})
     FileStore.create_directories(@project)
 
     on_exit(fn ->
+      Enum.each(previous_config, fn {key, value} ->
+        Application.put_env(:field_hub, key, value)
+      end)
+
       FileStore.remove_directories(@project)
       Cachex.clear!(@cache_name)
     end)
@@ -155,6 +167,72 @@ defmodule FieldHubWeb.Api.Rest.FileTest do
       |> put("/files/#{@project}/1234?type=original_image", @example_file)
 
     assert conn.status == 417
+  end
+
+  test "PUT /files/:project/:uuid rejects declared files above the upload limit", %{conn: conn} do
+    Application.put_env(:field_hub, :file_upload_max_bytes, @example_file_stats.size - 1)
+
+    conn =
+      conn
+      |> set_valid_put_headers(Base.encode64("#{@user_name}:#{@user_password}"))
+      |> put("/files/#{@project}/too-large?type=original_image", @example_file)
+
+    assert conn.status == 413
+    assert no_temporary_uploads?()
+  end
+
+  test "PUT /files/:project/:uuid enforces the actual streamed byte limit", %{conn: conn} do
+    Application.put_env(:field_hub, :file_upload_max_bytes, 10_000)
+    credentials = Base.encode64("#{@user_name}:#{@user_password}")
+
+    conn =
+      conn
+      |> put_req_header("authorization", "Basic #{credentials}")
+      |> put_req_header("content-type", "image/png")
+      |> put_req_header("content-length", "9000")
+      |> put("/files/#{@project}/stream-too-large?type=original_image", @example_file)
+
+    assert conn.status == 413
+    assert no_temporary_uploads?()
+    assert {:error, :enoent} =
+             FileStore.get_file_path("stream-too-large", @project, :original_image)
+  end
+
+  test "PUT /files/:project/:uuid rejects uploads above the project quota", %{conn: conn} do
+    Application.put_env(:field_hub, :file_project_quota_bytes, @example_file_stats.size - 1)
+
+    conn =
+      conn
+      |> set_valid_put_headers(Base.encode64("#{@user_name}:#{@user_password}"))
+      |> put("/files/#{@project}/project-full?type=original_image", @example_file)
+
+    assert conn.status == 413
+    assert Jason.decode!(conn.resp_body)["reason"] == "Project file storage quota exceeded."
+  end
+
+  test "PUT /files/:project/:uuid rejects uploads above the total storage quota", %{conn: conn} do
+    Application.put_env(:field_hub, :file_storage_quota_bytes, @example_file_stats.size - 1)
+
+    conn =
+      conn
+      |> set_valid_put_headers(Base.encode64("#{@user_name}:#{@user_password}"))
+      |> put("/files/#{@project}/storage-full?type=original_image", @example_file)
+
+    assert conn.status == 413
+    assert Jason.decode!(conn.resp_body)["reason"] == "Field Hub file storage quota exceeded."
+  end
+
+  test "PUT /files/:project/:uuid preserves reserved free disk space", %{conn: conn} do
+    reserved = Application.fetch_env!(:field_hub, :file_reserved_free_bytes)
+    Application.put_env(:field_hub, :test_disk_available_bytes, reserved + @example_file_stats.size - 1)
+
+    conn =
+      conn
+      |> set_valid_put_headers(Base.encode64("#{@user_name}:#{@user_password}"))
+      |> put("/files/#{@project}/disk-full?type=original_image", @example_file)
+
+    assert conn.status == 413
+    assert no_temporary_uploads?()
   end
 
   test "GET /files/:project/:uuid returns 404 for non-existent file", %{conn: conn} do
@@ -494,5 +572,12 @@ defmodule FieldHubWeb.Api.Rest.FileTest do
     |> put_req_header("authorization", "Basic #{credentials}")
     |> put_req_header("content-type", "image/png")
     |> put_req_header("content-length", "#{@example_file_stats.size}")
+  end
+
+  defp no_temporary_uploads? do
+    Application.fetch_env!(:field_hub, :file_directory_root)
+    |> Path.join("#{@project}/**/*.writing")
+    |> Path.wildcard()
+    |> Enum.empty?()
   end
 end

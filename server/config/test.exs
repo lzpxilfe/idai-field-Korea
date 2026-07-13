@@ -24,4 +24,10 @@ config :phoenix, :plug_init_mode, :runtime
 
 config :field_hub,
   file_directory_root: "test/tmp",
-  file_read_chunk_size_bytes: 8000
+  file_read_chunk_size_bytes: 8000,
+  file_disk_space_provider: FieldHub.TestDiskSpace,
+  file_upload_max_bytes: 1024 * 1024,
+  file_project_quota_bytes: 10 * 1024 * 1024,
+  file_storage_quota_bytes: 100 * 1024 * 1024,
+  file_reserved_free_bytes: 1024 * 1024,
+  test_disk_available_bytes: 1024 * 1024 * 1024

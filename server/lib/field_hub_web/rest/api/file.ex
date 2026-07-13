@@ -2,7 +2,7 @@ defmodule FieldHubWeb.Rest.Api.Rest.File do
   use FieldHubWeb, :controller
 
   alias File.Stat
-  alias FieldHub.FileStore
+  alias FieldHub.{FileStore, FileUploadQuota}
 
   require Logger
 
@@ -97,44 +97,18 @@ defmodule FieldHubWeb.Rest.Api.Rest.File do
            {:parsed_type, parse_type(type)},
          {:parsed_length, {:ok, expected_content_length}} <-
            {:parsed_length, parse_expected_content_length(conn)},
-         {
-           :io_opened,
-           {
-             {:ok, io_device},
-             tmp_file_path
-           }
-         } <-
-           {
-             :io_opened,
-             FileStore.create_write_io_device(sanitized_uuid, sanitized_project, parsed_type)
-           },
-         {
-           :stream,
-           {:ok, %Plug.Conn{} = conn}
-         } <-
-           {
-             :stream,
-             start_body_streaming(
-               conn,
-               io_device,
-               tmp_file_path
-             )
-           },
-         {:size_check, {:ok, :matches}} <-
-           {:size_check, check_sizes(tmp_file_path, expected_content_length)} do
-      case FileStore.store_by_moving(sanitized_uuid, sanitized_project, parsed_type, tmp_file_path) do
-        :ok ->
-          FileStore.clear_cache(sanitized_project)
-          stored_file_metadata = get_stored_file_metadata(sanitized_uuid, sanitized_project, parsed_type)
-          send_resp(conn, 201, Jason.encode!(Map.put(stored_file_metadata, :info, "File created.")))
-
-        {:error, posix} ->
-          Logger.error(
-            "Got `#{posix}` while trying to store file `#{uuid}` (#{type}) for project `#{project}`."
-          )
-
-          File.rm(tmp_file_path)
-          send_resp(conn, 500, Jason.encode!(%{reason: "Unable to store file."}))
+         {:quota, {:ok, reservation}} <-
+           {:quota, FileUploadQuota.reserve(sanitized_project, expected_content_length)} do
+      try do
+        receive_and_store_file(
+          conn,
+          sanitized_project,
+          sanitized_uuid,
+          parsed_type,
+          expected_content_length
+        )
+      after
+        FileUploadQuota.release(reservation)
       end
     else
       {:parsed_type, {:error, type}} ->
@@ -146,37 +120,89 @@ defmodule FieldHubWeb.Rest.Api.Rest.File do
       {:parsed_length, {:error, :invalid_content_length_header}} ->
         send_resp(conn, 400, Jason.encode!(%{reason: "Invalid content length header"}))
 
-      {:io_opened, posix} ->
-        Logger.error(
-          "Got `#{posix}` while trying to open file `#{uuid}` (#{type}) for project `#{project}`."
-        )
+      {:quota, {:error, :upload_too_large}} ->
+        send_resp(conn, 413, Jason.encode!(%{reason: "File exceeds configured upload limit."}))
 
-        send_resp(conn, 500, Jason.encode!(%{reason: "Unable to write file."}))
+      {:quota, {:error, :project_quota_exceeded}} ->
+        send_resp(conn, 413, Jason.encode!(%{reason: "Project file storage quota exceeded."}))
 
-      {:stream, {{:error, term}, path}} ->
-        Logger.warning(
-          "Got `#{term}` error while trying to stream request body for `#{uuid}` (#{type}) for project `#{project}`."
-        )
+      {:quota, {:error, :storage_quota_exceeded}} ->
+        send_resp(conn, 413, Jason.encode!(%{reason: "Field Hub file storage quota exceeded."}))
 
-        File.rm(path)
+      {:quota, {:error, :insufficient_disk_space}} ->
+        send_resp(conn, 413, Jason.encode!(%{reason: "Insufficient file storage space."}))
 
-        send_resp(conn, 500, Jason.encode!(%{reason: "Unable to write file."}))
-
-      {:size_check, {:error, path}} ->
-        Logger.warning(
-          "Temporary file for `#{uuid}` (#{type}) for project `#{project}` does not match expected size of content length header."
-        )
-
-        File.rm(path)
-
-        send_resp(
-          conn,
-          417,
-          Jason.encode!(%{
-            reason: "Received file size does not match expected size of content length header."
-          })
-        )
+      {:quota, {:error, :storage_unavailable}} ->
+        send_resp(conn, 503, Jason.encode!(%{reason: "File storage is unavailable."}))
     end
+  end
+
+  defp receive_and_store_file(conn, project, uuid, type, expected_content_length) do
+    case FileStore.create_write_io_device(uuid, project, type) do
+      {{:ok, io_device}, tmp_file_path} ->
+        try do
+          case start_body_streaming(conn, io_device, tmp_file_path, expected_content_length) do
+            {:ok, streamed_conn, ^expected_content_length} ->
+              store_received_file(streamed_conn, project, uuid, type, tmp_file_path)
+
+            {:ok, streamed_conn, _received_bytes} ->
+              content_length_mismatch_response(streamed_conn)
+
+            {:error, :upload_too_large, streamed_conn} ->
+              send_resp(
+                streamed_conn,
+                413,
+                Jason.encode!(%{reason: "File exceeds configured upload limit."})
+              )
+
+            {:error, :content_length_mismatch, streamed_conn} ->
+              content_length_mismatch_response(streamed_conn)
+
+            {:error, reason, streamed_conn} when reason in [:enospc, :edquot] ->
+              Logger.error("File upload failed because storage is full: #{inspect(reason)}")
+              send_resp(streamed_conn, 413, Jason.encode!(%{reason: "Insufficient file storage space."}))
+
+            {:error, reason, streamed_conn} ->
+              Logger.warning("File upload stream failed: #{inspect(reason)}")
+              send_resp(streamed_conn, 500, Jason.encode!(%{reason: "Unable to write file."}))
+          end
+        after
+          File.rm(tmp_file_path)
+        end
+
+      {{:error, reason}, _tmp_file_path} when reason in [:enospc, :edquot] ->
+        send_resp(conn, 413, Jason.encode!(%{reason: "Insufficient file storage space."}))
+
+      {{:error, reason}, _tmp_file_path} ->
+        Logger.error("Unable to open temporary upload file: #{inspect(reason)}")
+        send_resp(conn, 500, Jason.encode!(%{reason: "Unable to write file."}))
+    end
+  end
+
+  defp store_received_file(conn, project, uuid, type, tmp_file_path) do
+    case FileStore.store_by_moving(uuid, project, type, tmp_file_path) do
+      :ok ->
+        FileStore.clear_cache(project)
+        stored_file_metadata = get_stored_file_metadata(uuid, project, type)
+        send_resp(conn, 201, Jason.encode!(Map.put(stored_file_metadata, :info, "File created.")))
+
+      {:error, reason} when reason in [:enospc, :edquot] ->
+        send_resp(conn, 413, Jason.encode!(%{reason: "Insufficient file storage space."}))
+
+      {:error, reason} ->
+        Logger.error("Unable to move temporary upload file into place: #{inspect(reason)}")
+        send_resp(conn, 500, Jason.encode!(%{reason: "Unable to store file."}))
+    end
+  end
+
+  defp content_length_mismatch_response(conn) do
+    send_resp(
+      conn,
+      417,
+      Jason.encode!(%{
+        reason: "Received file size does not match expected size of content length header."
+      })
+    )
   end
 
   defp parse_expected_content_length(conn) do
@@ -200,7 +226,7 @@ defmodule FieldHubWeb.Rest.Api.Rest.File do
     end
   end
 
-  defp start_body_streaming(conn, io_device, target_path) do
+  defp start_body_streaming(conn, io_device, target_path, expected_content_length) do
     parent = self()
 
     monitor_pid =
@@ -208,7 +234,7 @@ defmodule FieldHubWeb.Rest.Api.Rest.File do
         Process.monitor(parent)
 
         receive do
-          {:DOWN, _ref, :process, _pid, {:shutdown, :local_closed}} ->
+          {:DOWN, _ref, :process, _pid, _reason} ->
             Logger.warning(
               "File upload got interrupted for `#{target_path}`, deleting data received so far."
             )
@@ -218,7 +244,13 @@ defmodule FieldHubWeb.Rest.Api.Rest.File do
       end)
 
     try do
-      stream_body(conn, io_device, target_path)
+      stream_body(
+        conn,
+        io_device,
+        0,
+        expected_content_length,
+        Application.fetch_env!(:field_hub, :file_upload_max_bytes)
+      )
     after
       File.close(io_device)
       Process.exit(monitor_pid, :shutdown)
@@ -256,34 +288,71 @@ defmodule FieldHubWeb.Rest.Api.Rest.File do
     _ -> {:error, :hash_failed}
   end
 
-  defp stream_body(conn, io_device, path) do
+  defp stream_body(conn, io_device, received_bytes, expected_content_length, max_upload_bytes) do
     read_body(conn, length: @read_length)
     |> case do
       {:ok, data, conn} ->
-        IO.binwrite(io_device, data)
-        {:ok, conn}
+        write_upload_chunk(
+          data,
+          conn,
+          io_device,
+          received_bytes,
+          expected_content_length,
+          max_upload_bytes,
+          false
+        )
 
       {:more, data, conn} ->
-        IO.binwrite(io_device, data)
-        stream_body(conn, io_device, path)
+        write_upload_chunk(
+          data,
+          conn,
+          io_device,
+          received_bytes,
+          expected_content_length,
+          max_upload_bytes,
+          true
+        )
 
-      error ->
-        {error, path}
+      {:error, reason} ->
+        {:error, reason, conn}
     end
   end
 
-  defp check_sizes(file_path, expected_value) do
-    File.stat(file_path)
-    |> case do
-      {:ok, %Stat{size: size}} ->
-        if expected_value == size do
-          {:ok, :matches}
-        else
-          {:error, file_path}
-        end
+  defp write_upload_chunk(
+         data,
+         conn,
+         io_device,
+         received_bytes,
+         expected_content_length,
+         max_upload_bytes,
+         more?
+       ) do
+    new_received_bytes = received_bytes + byte_size(data)
 
-      _ ->
-        {:error, file_path}
+    cond do
+      new_received_bytes > max_upload_bytes ->
+        {:error, :upload_too_large, conn}
+
+      new_received_bytes > expected_content_length ->
+        {:error, :content_length_mismatch, conn}
+
+      true ->
+        case IO.binwrite(io_device, data) do
+          :ok when more? ->
+            stream_body(
+              conn,
+              io_device,
+              new_received_bytes,
+              expected_content_length,
+              max_upload_bytes
+            )
+
+          :ok ->
+            {:ok, conn, new_received_bytes}
+
+          {:error, reason} ->
+            {:error, reason, conn}
+        end
     end
   end
 

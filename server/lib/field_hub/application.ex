@@ -12,6 +12,7 @@ defmodule FieldHub.Application do
       FieldHubWeb.Telemetry,
       # Start the PubSub system
       {Phoenix.PubSub, name: FieldHub.PubSub},
+      FieldHub.FileUploadQuota,
       # Start the Endpoint (http/https)
       FieldHubWeb.Endpoint,
       # Start a worker by calling: FieldHub.Worker.start_link(arg)
