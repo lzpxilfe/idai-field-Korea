@@ -154,7 +154,7 @@ describe('PouchdbDatastore', () => {
 
         pouchdbProxy.bulkDocs.and.returnValue(Promise.resolve([
             { ok: true, id: '1', rev: '1-ok' },
-            { error: true, id: '2', name: 'conflict', message: 'Document update conflict' }
+            { error: 'conflict', id: '2', name: 'conflict', status: 409, message: 'Document update conflict' }
         ]));
 
         try {
@@ -163,7 +163,7 @@ describe('PouchdbDatastore', () => {
         } catch (expected) {
             expect(expected[0]).toEqual(DatastoreErrors.GENERIC_ERROR);
             expect(expected[1].results).toEqual([
-                { error: true, id: '2', name: 'conflict', message: 'Document update conflict' }
+                { error: 'conflict', id: '2', name: 'conflict', status: 409, message: 'Document update conflict' }
             ]);
             expect(pouchdbProxy.allDocs).not.toHaveBeenCalled();
         }

@@ -434,6 +434,9 @@ export class PouchdbDatastore {
 
     private static isBulkDocsError(result: any): boolean {
 
-        return !!result && (result.error === true || result.ok === false);
+        return !!result && (
+            (result.error !== undefined && result.error !== null && result.error !== false)
+            || result.ok === false
+        );
     }
 }
