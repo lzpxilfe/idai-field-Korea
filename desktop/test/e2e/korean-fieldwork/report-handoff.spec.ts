@@ -124,7 +124,12 @@ test.describe('Korean fieldwork report handoff', () => {
         await waitForExist(reportPanel);
 
         const recordSearch = reportPanel.locator('.korean-fieldwork-report-handoff-search input');
-        await recordSearch.fill('SE6');
+        await recordSearch.click();
+        await recordSearch.press('S');
+        await expect(recordSearch).toHaveValue('S');
+        await recordSearch.press('E');
+        await expect(recordSearch).toHaveValue('SE');
+        await recordSearch.press('6');
         await expect(recordSearch).toHaveValue('SE6');
         const searchResultIdentifiers = reportPanel.locator(
             '.korean-fieldwork-report-handoff-list .korean-fieldwork-report-handoff-identifier'
