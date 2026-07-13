@@ -126,10 +126,11 @@ test.describe('Korean fieldwork report handoff', () => {
         const recordSearch = reportPanel.locator('.korean-fieldwork-report-handoff-search input');
         await recordSearch.fill('SE6');
         await expect(recordSearch).toHaveValue('SE6');
-        expect(await reportPanel.locator(
+        const searchResultIdentifiers = reportPanel.locator(
             '.korean-fieldwork-report-handoff-list .korean-fieldwork-report-handoff-identifier'
-        ).allTextContents())
-            .toEqual(['SE6']);
+        );
+        await expect(searchResultIdentifiers).toHaveCount(1);
+        await expect(searchResultIdentifiers.first()).toHaveText('SE6');
         await recordSearch.fill('');
 
         const soilPhotoCard = await getReportHandoffCard('1호 주거지 토층사진 12');
