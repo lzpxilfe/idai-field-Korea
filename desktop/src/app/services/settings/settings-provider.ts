@@ -94,6 +94,7 @@ export class SettingsProvider {
         if (!settings.dbs || settings.dbs.length === 0) settings.dbs = ['test'];
         if (!settings.isSyncActive) settings.isSyncActive = false;
         if (settings.hostPassword === undefined) settings.hostPassword = SettingsProvider.generatePassword();
+        if (settings.allowLanSync === undefined) settings.allowLanSync = false;
         settings.mapProviderSettings = normalizeKoreanFieldworkMapProviderSettings(settings.mapProviderSettings);
 
         if (settings.imagestorePath) {
@@ -121,15 +122,12 @@ export class SettingsProvider {
 
     private static generatePassword(): string {
 
-        const length: number = 8;
-        const charset: string = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        const randomValues = new Uint8Array(24);
+        globalThis.crypto.getRandomValues(randomValues);
 
-        let password: string = '';
-        for (let i = 0, n = charset.length; i < length; ++i) {
-            password += charset.charAt(Math.floor(Math.random() * n));
-        }
-
-        return password;
+        return Array.from(randomValues)
+            .map(value => value.toString(16).padStart(2, '0'))
+            .join('');
     }
 
 

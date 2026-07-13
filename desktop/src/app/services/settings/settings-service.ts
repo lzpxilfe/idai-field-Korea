@@ -112,6 +112,22 @@ export class SettingsService {
 
         this.expressServer.setPassword(settings.hostPassword);
         this.expressServer.setAllowLargeFileUploads(settings.allowLargeFileUploads);
+        const previousLanSyncSetting = this.expressServer.getAllowLanSync();
+        const lanBindingChanged = previousLanSyncSetting !== !!settings.allowLanSync;
+
+        if (lanBindingChanged) {
+            this.expressServer.setAllowLanSync(!!settings.allowLanSync);
+
+            try {
+                await this.expressServer.rebindMainListener();
+            } catch (error) {
+                this.expressServer.setAllowLanSync(previousLanSyncSetting);
+                await this.expressServer.rebindMainListener();
+                settings.allowLanSync = previousLanSyncSetting;
+                this.settingsProvider.setSettings(settings);
+                throw error;
+            }
+        }
 
         await this.settingsProvider.setSettingsAndSerialize(settings);
 

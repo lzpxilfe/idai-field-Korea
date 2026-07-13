@@ -133,7 +133,50 @@ describe('ExpressServer', () => {
             .expect(401)
             .end((err: Error, res: any) => {
                 if (err) fail(err);
-            });
+        });
+    });
+
+
+    it('binds the synchronization API and Fauxton to loopback by default', () => {
+
+        expect(expressMainApp.address().address).toBe('127.0.0.1');
+        expect(expressFauxtonApp.address().address).toBe('127.0.0.1');
+    });
+
+
+    it('rejects valid passwords paired with an unknown project username', async () => {
+
+        await request(expressMainApp)
+            .get('/info/')
+            .set('Authorization', `Basic ${base64Encode('unknown-project:' + password)}`)
+            .expect(401);
+    });
+
+
+    it('does not let one configured project credential access another project path', async () => {
+
+        allowedProjects = [testProjectIdentifier, 'other-project'];
+
+        await request(expressMainApp)
+            .get(`/files/${testProjectIdentifier}`)
+            .set('Authorization', `Basic ${base64Encode('other-project:' + password)}`)
+            .expect(403);
+    });
+
+
+    it('binds the synchronization API to the LAN only after explicit opt-in', async () => {
+
+        try {
+            expressServer.setAllowLanSync(true);
+            expressMainApp = await expressServer.rebindMainListener();
+
+            expect(expressMainApp.address().address).toBe('0.0.0.0');
+        } finally {
+            expressServer.setAllowLanSync(false);
+            expressMainApp = await expressServer.rebindMainListener();
+        }
+
+        expect(expressMainApp.address().address).toBe('127.0.0.1');
     });
 
 
@@ -261,19 +304,19 @@ describe('ExpressServer', () => {
         try {
             await request(expressMainApp)
                 .get(`/files/${linkedProject}/secret?type=original_image`)
-                .set('Authorization', `Basic ${base64Encode(testProjectIdentifier + ':' + password)}`)
+                .set('Authorization', `Basic ${base64Encode(linkedProject + ':' + password)}`)
                 .expect(400);
 
             await request(expressMainApp)
                 .put(`/files/${linkedProject}/uploaded?type=original_image`)
                 .send(mockImage)
                 .set('Content-Type', 'image/x-www-form-urlencoded')
-                .set('Authorization', `Basic ${base64Encode(testProjectIdentifier + ':' + password)}`)
+                .set('Authorization', `Basic ${base64Encode(linkedProject + ':' + password)}`)
                 .expect(400);
 
             await request(expressMainApp)
                 .delete(`/files/${linkedProject}/delete-me`)
-                .set('Authorization', `Basic ${base64Encode(testProjectIdentifier + ':' + password)}`)
+                .set('Authorization', `Basic ${base64Encode(linkedProject + ':' + password)}`)
                 .expect(400);
 
             expect(fs.readFileSync(outsideSecretPath)).toEqual(mockImage);

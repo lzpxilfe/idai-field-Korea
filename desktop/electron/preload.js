@@ -119,7 +119,10 @@ const filesystem = {
 };
 
 const fsFacade = {
-    copyFileSync: (source, target) => fs.copyFileSync(source, target),
+    constants: {
+        COPYFILE_EXCL: fs.constants.COPYFILE_EXCL
+    },
+    copyFileSync: (source, target, mode) => fs.copyFileSync(source, target, mode),
     existsSync: filePath => fs.existsSync(filePath),
     lstatSync: filePath => {
         const stat = fs.lstatSync(filePath);

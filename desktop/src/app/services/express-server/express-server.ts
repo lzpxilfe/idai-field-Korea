@@ -19,6 +19,10 @@ import { electronCrypto as crypto, electronFs as fs, electronPath as path,
 import * as PouchDBBaseModule from 'pouchdb-browser';
 
 const PouchDBBase = getCommonJsDefaultExport<any>(PouchDBBaseModule);
+const MAIN_SERVER_PORT = 3000;
+const FAUXTON_SERVER_PORT = 3001;
+const LOOPBACK_HOST = '127.0.0.1';
+const LAN_HOST = '0.0.0.0';
 
 let PouchDB = PouchDBBase;
 
@@ -61,6 +65,7 @@ export class ExpressServer {
 
     private password: string;
     private allowLargeFileUploads: boolean;
+    private allowLanSync: boolean = false;
     private datastore: Datastore;
     private relationsManager: RelationsManager;
     private projectConfiguration: ProjectConfiguration;
@@ -69,6 +74,8 @@ export class ExpressServer {
     private apiObservers: Array<Observer<ApiState>> = [];
     private preparedImportDocuments: Map<Map<Array<Document>>> = { csv: {}, native: {}, geojson: {} };
     private notificationTimeout: any;
+    private mainApp: any;
+    private mainAppHandle: any;
 
 
     constructor(private imagestore: ImageStore,
@@ -86,6 +93,12 @@ export class ExpressServer {
     public getAllowLargeFileUploads = () => this.allowLargeFileUploads;
 
     public setAllowLargeFileUploads = (allow: boolean) => this.allowLargeFileUploads = allow;
+
+    public getAllowLanSync = () => this.allowLanSync;
+
+    public setAllowLanSync = (allow: boolean) => this.allowLanSync = allow;
+
+    public getMainServerHost = () => this.allowLanSync ? LAN_HOST : LOOPBACK_HOST;
 
     public getPouchDB = () => PouchDB;
 
@@ -119,10 +132,13 @@ export class ExpressServer {
 
         app.use(expressBasicAuth({
             challenge: true,
-            authorizer: (_: string, password: string) =>
-                expressBasicAuth.safeCompare(password, this.password),
+            authorizer: (username: string, password: string) =>
+                this.isConfiguredProject(username)
+                && expressBasicAuth.safeCompare(password, this.password),
             unauthorizedResponse: () => ({ status: 401, reason: 'Name or password is incorrect.' })
         }));
+        app.use('/files/:project', this.requireMatchingProject('project'));
+        app.use('/configuration/:project', this.requireMatchingProject('project'));
 
         app.get('/files/:project', async (req: any, res: any) => {
 
@@ -304,6 +320,7 @@ export class ExpressServer {
 
 
         // prevent the creation of new databases when syncing
+        app.use('/db/:db', this.requireMatchingProject('db'));
         app.put('/db/:db', (_: any, res: any) =>
             res.status(401).send( { status: 401 }));
 
@@ -322,13 +339,8 @@ export class ExpressServer {
             }
         }));
 
-        let mainAppHandle: any;
-        await new Promise<void>((resolve, reject) => {
-            mainAppHandle = app.listen(3000, () => {
-                console.log('PouchDB Server is listening on port 3000');
-                resolve();
-            }).on('error', err => reject(err))
-        });
+        this.mainApp = app;
+        this.mainAppHandle = await this.startMainListener();
 
         const fauxtonApp = express();
 
@@ -361,13 +373,74 @@ export class ExpressServer {
 
         let fauxtonAppHandle: any;
         await new Promise<void>((resolve) => {
-            fauxtonAppHandle = fauxtonApp.listen(3001, () => {
-                console.log('Fauxton is listening on port 3001');
+            fauxtonAppHandle = fauxtonApp.listen(FAUXTON_SERVER_PORT, LOOPBACK_HOST, () => {
+                console.log(`Fauxton is listening on ${LOOPBACK_HOST}:${FAUXTON_SERVER_PORT}`);
                 resolve();
             });
         });
 
-        return [mainAppHandle, fauxtonAppHandle];
+        return [this.mainAppHandle, fauxtonAppHandle];
+    }
+
+
+    public async rebindMainListener(): Promise<any> {
+
+        if (!this.mainApp) return undefined;
+
+        await this.closeListener(this.mainAppHandle);
+        this.mainAppHandle = await this.startMainListener();
+
+        return this.mainAppHandle;
+    }
+
+
+    private async startMainListener(): Promise<any> {
+
+        const host = this.getMainServerHost();
+
+        return await new Promise<any>((resolve, reject) => {
+            const handle = this.mainApp.listen(MAIN_SERVER_PORT, host, () => {
+                console.log(`PouchDB Server is listening on ${host}:${MAIN_SERVER_PORT}`);
+                resolve(handle);
+            }).on('error', err => reject(err));
+        });
+    }
+
+
+    private async closeListener(handle: any): Promise<void> {
+
+        if (!handle?.listening) return;
+
+        await new Promise<void>((resolve, reject) => {
+            handle.close((err?: Error) => err ? reject(err) : resolve());
+        });
+    }
+
+
+    private isConfiguredProject(username: string): boolean {
+
+        try {
+            const projects = this.settingsProvider?.getSettings?.()?.dbs;
+
+            return Array.isArray(projects) && projects.includes(username);
+        } catch (_) {
+            return false;
+        }
+    }
+
+
+    private requireMatchingProject(parameterName: string): (request: any, response: any, next: any) => void {
+
+        return (request: any, response: any, next: any) => {
+            const requestedProject = request.params[parameterName];
+
+            if (!this.isConfiguredProject(requestedProject)
+                || request.auth?.user === requestedProject) {
+                next();
+            } else {
+                response.status(403).send({ reason: 'Authenticated project does not match requested project.' });
+            }
+        };
     }
 
 

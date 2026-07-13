@@ -4458,6 +4458,30 @@
           <context context-type="linenumber">73</context>
         </context-group>
       </trans-unit>
+      <trans-unit id="settings.synchronization.allowLanSync" datatype="html">
+        <source>Synchronisation im LAN freigeben</source>
+        <target state="translated">Allow LAN synchronization</target>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/components/settings/settings.html</context>
+          <context context-type="linenumber">205</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="settings.synchronization.allowLanSync.info" datatype="html">
+        <source> Standardmäßig ist der Server nur auf diesem Computer erreichbar. Die LAN-Freigabe verwendet unverschlüsseltes HTTP und darf nur in einem vertrauenswürdigen, isolierten Netzwerk aktiviert werden. </source>
+        <target state="translated">By default, the server is reachable only from this computer. LAN sharing uses unencrypted HTTP and must be enabled only on a trusted, isolated network.</target>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/components/settings/settings.html</context>
+          <context context-type="linenumber">217</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="settings.synchronization.lanDisabled" datatype="html">
+        <source> LAN-Synchronisation ist deaktiviert </source>
+        <target state="translated">LAN synchronization is disabled</target>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/components/settings/settings.html</context>
+          <context context-type="linenumber">124</context>
+        </context-group>
+      </trans-unit>
       <trans-unit id="settings.synchronization.hostPassword" datatype="html">
         <source>Eigenes Passwort</source>
         <target state="translated">Your password</target>

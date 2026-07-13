@@ -29,6 +29,7 @@ export class SettingsSerializer {
         configToWrite['languages'] = settings.languages;
         configToWrite['isAutoUpdateActive'] = settings.isAutoUpdateActive;
         configToWrite['hostPassword'] = settings.hostPassword;
+        configToWrite['allowLanSync'] = settings.allowLanSync;
         configToWrite['allowLargeFileUploads'] = settings.allowLargeFileUploads;
         configToWrite['hideHiddenFieldsInConfigurationEditor'] = settings.hideHiddenFieldsInConfigurationEditor;
         configToWrite['highlightCustomElements'] = settings.highlightCustomElements;
