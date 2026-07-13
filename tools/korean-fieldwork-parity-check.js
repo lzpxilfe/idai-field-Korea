@@ -541,11 +541,14 @@ const classifiedSupportSourceGroups = [
       'mobile/components/Project/KoreanFieldworkDraftContinuationPanel.tsx',
       'mobile/components/Project/KoreanFieldworkDraftPresetPanel.tsx',
       'mobile/components/Project/KoreanFieldworkDrawingSurveyPanel.tsx',
+      'mobile/components/Project/KoreanFieldworkEvidenceModal.tsx',
+      'mobile/components/Project/KoreanFieldworkFeatureMeasurementFields.tsx',
       'mobile/components/Project/KoreanFieldworkFeaturePitLinePanel.tsx',
       'mobile/components/Project/KoreanFieldworkFindSpotPanel.tsx',
       'mobile/components/Project/KoreanFieldworkFullscreenDrawingModal.tsx',
       'mobile/components/Project/KoreanFieldworkHierarchyBoard.tsx',
       'mobile/components/Project/KoreanFieldworkNarrativeAssistPanel.tsx',
+      'mobile/components/Project/KoreanFieldworkQuickFindSpotModal.tsx',
       'mobile/components/Project/KoreanFieldworkRecordActionPanel.tsx',
       'mobile/components/Project/KoreanFieldworkRecordContextPanel.tsx',
       'mobile/components/Project/KoreanFieldworkSiteOverviewMap.tsx',
@@ -563,6 +566,7 @@ const classifiedSupportSourceGroups = [
       'mobile/components/Project/korean-fieldwork-document-drafts.ts',
       'mobile/components/Project/korean-fieldwork-draft-continuation.ts',
       'mobile/components/Project/korean-fieldwork-draft-presets.ts',
+      'mobile/components/Project/korean-fieldwork-feature-measurement-draft.ts',
       'mobile/components/Project/korean-fieldwork-feature-types.ts',
       'mobile/components/Project/korean-fieldwork-hierarchy.ts',
       'mobile/components/Project/korean-fieldwork-issue-resolution.ts',
@@ -572,6 +576,7 @@ const classifiedSupportSourceGroups = [
       'mobile/components/Project/korean-fieldwork-progress.ts',
       'mobile/components/Project/korean-fieldwork-project-setup-sync.ts',
       'mobile/components/Project/korean-fieldwork-record-actions.ts',
+      'mobile/components/Project/korean-fieldwork-record-board.ts',
       'mobile/components/Project/korean-fieldwork-record-list-empty-state.ts',
       'mobile/components/Project/korean-fieldwork-record-selection.ts',
       'mobile/components/Project/korean-fieldwork-record-summary.ts',
@@ -3970,8 +3975,8 @@ function validateReportHandoffPreSaveValidation() {
       || !desktopReportHandoffE2eText.includes('featureReportText')
       || !desktopReportHandoffE2eText.includes('tabletClipboardText')
       || !desktopReportHandoffE2eText.includes('korean-fieldwork-report-handoff-preview-action.tablet')
-      || !desktopReportHandoffE2eText.includes('pit-001.jpg')
-      || !desktopReportHandoffE2eText.includes('soil-photo-12.jpg')
+      || !desktopReportHandoffE2eText.includes('1호-주거지-전경.jpg')
+      || !desktopReportHandoffE2eText.includes('1호-주거지-토층.jpg')
       || !desktopReportHandoffE2eText.includes('\\ucc98\\ub9ac\\ub300\\uc0c1')
       || !desktopReportHandoffE2eText.includes('\\ucc98\\ub9ac: \\ubbf8\\ucc98\\ub9ac')
       || !desktopReportHandoffE2eText.includes('.nth(1)')

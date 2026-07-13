@@ -1096,14 +1096,14 @@ function checkFieldHubServerContract() {
   );
   requireIncludes(
     controller,
-    'FileStore.create_write_io_device(sanitized_uuid, sanitized_project, parsed_type)',
+    'FileStore.create_write_io_device(uuid, project, type)',
     'Field Hub uploads must stream to a temporary write device'
   );
   requireIncludes(controller, 'start_body_streaming', 'Field Hub uploads must stream request bodies');
   requireIncludes(controller, 'FileStore.store_by_moving', 'Field Hub uploads must move completed temporary files into storage');
   requireIncludes(
     controller,
-    'get_stored_file_metadata(sanitized_uuid, sanitized_project, parsed_type)',
+    'get_stored_file_metadata(uuid, project, type)',
     'Field Hub uploads must return stored-file metadata after moving files into storage'
   );
   requireIncludes(controller, 'size_bytes: size', 'Field Hub upload responses must include stored file sizes');
@@ -1116,7 +1116,12 @@ function checkFieldHubServerContract() {
 
   const fileStore = files.serverFileStore;
   requireIncludes(fileStore, 'def store_by_moving', 'Field Hub file store must expose atomic move storage');
-  requireIncludes(fileStore, '#{uuid}.writing', 'Field Hub file store must write uploads to .writing temporary files');
+  requireIncludes(
+    fileStore,
+    ':crypto.strong_rand_bytes(12)',
+    'Field Hub file store must isolate concurrent temporary uploads with random tokens'
+  );
+  requireIncludes(fileStore, '#{uuid}.#{token}.writing', 'Field Hub file store must write uploads to .writing temporary files');
   requireIncludes(fileStore, 'defp get_variant_directory(project, :original_image)', 'Field Hub must store original_image variants');
   requireIncludes(fileStore, 'defp get_variant_directory(project, :thumbnail_image)', 'Field Hub must store thumbnail_image variants');
 

@@ -195,6 +195,51 @@ describe('Korean fieldwork workbench', () => {
       }),
     ]);
   });
+
+  it('counts pen memo review as a tablet workflow step', () => {
+    const completedExceptPenMemo = [
+      'trenchSoilCleaned',
+      'trenchFeatureChecked',
+      'trenchPitOpened',
+      'trenchPitProfileDrawn',
+      'trenchOverviewPhotoTaken',
+      'trenchObliquePhotoTaken',
+      'soilProfilePhotoLinked',
+      'inProgressPhotoTaken',
+    ];
+    const createTrench = (featureInvestigationChecklist: string[]) => createDoc(
+      'trench-1',
+      C.TRENCH,
+      'T1',
+      {},
+      {
+        featureInvestigationChecklist,
+        fieldRecordQuality: ['immediateRecording'],
+        recordCreationTiming: 'duringFieldwork',
+        verificationState: 'observedInField',
+      }
+    );
+
+    expect(getKoreanFieldworkWorkbenchItems(
+      createSummary([]),
+      [createTrench(completedExceptPenMemo)] as any,
+      8,
+      'trialTrench'
+    )).toEqual([
+      expect.objectContaining({
+        id: 'trench-1',
+        reasons: ['과정 8/9'],
+        tone: 'info',
+      }),
+    ]);
+
+    expect(getKoreanFieldworkWorkbenchItems(
+      createSummary([]),
+      [createTrench([...completedExceptPenMemo, 'penMemoReviewed'])] as any,
+      8,
+      'trialTrench'
+    )).toEqual([]);
+  });
 });
 
 const createDoc = <T extends Record<string, unknown> = Record<string, never>>(

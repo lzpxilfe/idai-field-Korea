@@ -66,7 +66,7 @@ PowerShell에서 직접 실행할 때는 아래처럼 쓸 수 있습니다.
 
 자세한 안내는 [Android 태블릿 설치 안내](docs/korean-fieldwork/android-tablet-install.ko.md)에 있습니다.
 
-## 태블릿과 데스크톱 흐름
+## 태블릿 자료를 데스크톱으로 받기
 
 이 저장소의 목표는 태블릿과 데스크톱을 따로 노는 프로그램으로 만들지 않는 것입니다. 태블릿에서 적은 현장 정보가 최종적으로 Field Desktop에서 검수되고, HWP 보고서 작성에 도움이 되는 형태로 도착해야 합니다.
 
@@ -106,6 +106,8 @@ PowerShell에서 직접 실행할 때는 아래처럼 쓸 수 있습니다.
 | 지도 API 키, 연결 비밀번호 같은 기기 설정 | 동기화하지 않음 | 각 기기에서 별도 관리 |
 
 문서 기록 동기화와 원본 파일 전송은 별도입니다. `기록 전송 완료`는 PouchDB 문서가 일치한다는 뜻이며, 원본 사진까지 장기 보존됐다는 뜻은 아닙니다. Field Desktop의 `원본 사진 받기`, 이미지 파일 수, 백업 위치를 따로 확인해야 합니다.
+
+직접 연결과 Field Hub 동기화는 원본 업로드 상태를 문서에도 남깁니다. `fieldworkImageUploadStatus`는 전송 완료 여부, `fieldworkImageUploadedAt`은 전송 시각, `fieldworkImageUploadTarget`은 전송 대상을 뜻합니다. 이 값은 원본 인계 내역을 대조하기 위한 감사 정보이며, 실제 파일 보존 여부는 Field Desktop의 원본 파일과 백업에서 다시 확인합니다.
 
 ### 2026-07-13 실기기 인계 확인
 
