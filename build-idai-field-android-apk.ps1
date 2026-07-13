@@ -174,8 +174,16 @@ function Invoke-CheckedCommand {
 
     Push-Location -LiteralPath $WorkingDirectory
     try {
-        & $Command @Arguments
-        if ($LASTEXITCODE -ne 0) {
+        $previousErrorActionPreference = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
+        try {
+            & $Command @Arguments
+            $exitCode = $LASTEXITCODE
+        } finally {
+            $ErrorActionPreference = $previousErrorActionPreference
+        }
+
+        if ($exitCode -ne 0) {
             throw "$Command $($Arguments -join ' ') failed"
         }
     } finally {
