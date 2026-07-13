@@ -5,8 +5,6 @@ import {
   Document,
   NewDocument,
   NewResource,
-  getKoreanFieldworkReportHandoffSaveMessage,
-  validateKoreanFieldworkReportHandoffCandidate,
 } from 'idai-field-core';
 import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { Keyboard, StyleSheet, Text, View } from 'react-native';
@@ -206,15 +204,7 @@ const DocumentAdd: React.FC = () => {
     setIsSaving(true);
 
     let doc: Document;
-    let reportHandoffValidation: ReturnType<
-      typeof validateKoreanFieldworkReportHandoffCandidate
-    >;
-
     try {
-      reportHandoffValidation = validateKoreanFieldworkReportHandoffCandidate(
-        newResource,
-        documents ?? []
-      );
       const newDocument: NewDocument = { resource: newResource };
       doc = await repository.create(newDocument);
     } catch (error) {
@@ -230,16 +220,6 @@ const DocumentAdd: React.FC = () => {
 
     saveInFlightRef.current = false;
     setIsSaving(false);
-    if (reportHandoffValidation.status === 'review') {
-      showToast(
-        ToastType.Info,
-        getKoreanFieldworkReportHandoffSaveMessage(
-          `${doc.resource.identifier} 기록을 만들었습니다.`,
-          reportHandoffValidation
-        ),
-        5000
-      );
-    }
     navigateToKoreanFieldworkReturnTarget(returnTarget, doc.resource.id);
   };
 

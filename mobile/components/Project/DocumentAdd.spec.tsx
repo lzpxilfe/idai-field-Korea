@@ -25,7 +25,7 @@ import { ProjectContext } from '@/contexts/project-context';
 import { Preferences } from '@/models/preferences';
 import { DocumentRepository } from '@/repositories/document-repository';
 import loadConfiguration from '@/services/config/load-configuration';
-import { ToastProvider, ToastType } from '@/components/common/Toast/ToastProvider';
+import { ToastProvider } from '@/components/common/Toast/ToastProvider';
 import DocumentAdd from '@/app/(tabs)/ProjectScreen/DocumentAdd';
 import { defaultMapSettings } from '@/components/Project/Map/map-settings';
 
@@ -260,7 +260,7 @@ describe('DocumentAdd', () => {
       }),
     } as NewDocument);
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/ProjectScreen'));
-    expect(mockShowToast.mock.calls.some(([type]) => type === ToastType.Success)).toBe(false);
+    expect(mockShowToast).not.toHaveBeenCalled();
   });
 
   it('does not run two creates when the tablet save button is tapped twice', async () => {
@@ -388,7 +388,7 @@ describe('DocumentAdd', () => {
     } as NewDocument);
   });
 
-  it('shows desktop HWP handoff details after saving a tablet draft that needs review', async () => {
+  it('does not show a completion popup after saving a tablet draft', async () => {
     cleanup();
     mockUseGlobalSearchParams.mockReturnValue({
       parentDocId: t2.resource.id,
@@ -399,13 +399,8 @@ describe('DocumentAdd', () => {
     await waitFor(() => renderAPI.getByTestId('documentForm'));
     fireEvent.press(renderAPI.getByTestId('saveDocBtn'));
 
-    await waitFor(() => expect(mockShowToast).toHaveBeenCalled());
-
-    const toastMessage = mockShowToast.mock.calls[0][1];
-    expect(toastMessage).toContain('HWP');
-    expect(toastMessage).toContain('보완 항목');
-    expect(toastMessage).toContain('HWP 본문 미리보기');
-    expect(toastMessage).toContain('사진/도면');
+    await waitFor(() => expect(repository.create).toHaveBeenCalledTimes(1));
+    expect(mockShowToast).not.toHaveBeenCalled();
   });
 });
 
