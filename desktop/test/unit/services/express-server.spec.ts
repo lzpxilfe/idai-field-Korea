@@ -332,15 +332,16 @@ describe('ExpressServer', () => {
     test('/files/:project/:uuid rejects a symlinked image variant directory', async () => {
 
         const thumbnailPath = imageStore.getDirectoryPath(testProjectIdentifier, ImageVariant.THUMBNAIL);
+        const thumbnailLinkPath = thumbnailPath.replace(/[\\/]+$/, '');
         const outsidePath = path.join(testFilePath, 'outside-thumbnails');
         const outsideUploadPath = path.join(outsidePath, 'uploaded');
 
-        fs.rmSync(thumbnailPath, { recursive: true, force: true });
-        fs.mkdirSync(path.dirname(thumbnailPath), { recursive: true });
+        fs.rmSync(thumbnailLinkPath, { recursive: true, force: true });
+        fs.mkdirSync(path.dirname(thumbnailLinkPath), { recursive: true });
         fs.mkdirSync(outsidePath, { recursive: true });
         fs.symlinkSync(
             outsidePath,
-            thumbnailPath,
+            thumbnailLinkPath,
             process.platform === 'win32' ? 'junction' : 'dir'
         );
 
@@ -354,7 +355,7 @@ describe('ExpressServer', () => {
 
             expect(fs.existsSync(outsideUploadPath)).toBe(false);
         } finally {
-            fs.rmSync(thumbnailPath, { recursive: true, force: true });
+            fs.rmSync(thumbnailLinkPath, { recursive: true, force: true });
             fs.rmSync(outsidePath, { recursive: true, force: true });
             await imageStore.init(`${testFilePath}imagestore/`, testProjectIdentifier);
         }

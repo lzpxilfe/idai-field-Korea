@@ -1,4 +1,6 @@
 name: Desktop
+permissions:
+  contents: read
 on:
   push:
     paths:
@@ -87,7 +89,8 @@ jobs:
         working-directory: desktop
   Build:
     name: Build (${{ matrix.os.name }})
-    if: ${{ github.event_name == 'push' && (contains(github.event.head_commit.message, '[build]') || contains(github.event.head_commit.message, '[full-ci]')) }}
+    if: ${{ github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/') || contains(github.event.head_commit.message, '[build]') || contains(github.event.head_commit.message, '[full-ci]')) }}
+    environment: desktop-release-signing
     strategy:
       matrix:
         os:
@@ -126,13 +129,51 @@ jobs:
         MAC_NOTARIZE_PW: ${{ secrets.MAC_NOTARIZE_PW }}
         MAC_NOTARIZE_TEAM_ID: ${{ secrets.MAC_NOTARIZE_TEAM_ID }}
       working-directory: desktop
+    - name: Require Windows signing identity
+      if: runner.os == 'Windows'
+      shell: pwsh
+      env:
+        CSC_LINK: ${{ secrets.IDAI_FIELD_WINDOWS_CERTIFICATE }}
+        CSC_KEY_PASSWORD: ${{ secrets.IDAI_FIELD_WINDOWS_CERTIFICATE_PASSWORD }}
+        EXPECTED_PUBLISHER: ${{ secrets.IDAI_FIELD_WINDOWS_CERTIFICATE_PUBLISHER }}
+        EXPECTED_CERT_SHA256: ${{ secrets.IDAI_FIELD_WINDOWS_CERTIFICATE_SHA256 }}
+      run: |
+        foreach ($name in 'CSC_LINK', 'CSC_KEY_PASSWORD', 'EXPECTED_PUBLISHER', 'EXPECTED_CERT_SHA256') {
+          if ([string]::IsNullOrWhiteSpace((Get-Item "env:$name").Value)) {
+            throw "Required Windows signing secret '$name' is missing."
+          }
+        }
     - name: Create Windows package
       run: npm run package:win
       if: runner.os == 'Windows'
-#      env:
-#        CSC_LINK: ${{ secrets.WIN_CERT }}
-#        CSC_KEY_PASSWORD: ${{ secrets.WIN_CERT_PW }}
+      env:
+        CSC_LINK: ${{ secrets.IDAI_FIELD_WINDOWS_CERTIFICATE }}
+        CSC_KEY_PASSWORD: ${{ secrets.IDAI_FIELD_WINDOWS_CERTIFICATE_PASSWORD }}
       working-directory: desktop
+    - name: Verify Windows Authenticode signature
+      if: runner.os == 'Windows'
+      shell: pwsh
+      env:
+        EXPECTED_PUBLISHER: ${{ secrets.IDAI_FIELD_WINDOWS_CERTIFICATE_PUBLISHER }}
+        EXPECTED_CERT_SHA256: ${{ secrets.IDAI_FIELD_WINDOWS_CERTIFICATE_SHA256 }}
+      run: |
+        $installers = @(Get-ChildItem desktop/release -File -Filter 'Field-Desktop-*-Windows.exe')
+        if ($installers.Count -eq 0) {
+          throw 'No Windows installer was produced.'
+        }
+        foreach ($installer in $installers) {
+          ./tools/windows/verify_authenticode.ps1 `
+            -Path $installer.FullName `
+            -ExpectedPublisher $env:EXPECTED_PUBLISHER `
+            -ExpectedCertificateSha256 $env:EXPECTED_CERT_SHA256
+        }
+    - name: Upload verified Windows package
+      if: runner.os == 'Windows'
+      uses: actions/upload-artifact@v4
+      with:
+        name: field-desktop-windows-signed
+        path: desktop/release/Field-Desktop-*-Windows.exe
+        if-no-files-found: error
     - name: Create Linux package
       run: npm run package:lnx
       if: runner.os == 'Linux'

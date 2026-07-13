@@ -74,6 +74,19 @@ $ npm run package:[mac|win|lnx]
 
 Only packages for the selected target platform are created. When the command has finished execution, you find packages of the application in the `release` directory.
 
+Windows release packages must be Authenticode-signed. Configure the protected GitHub
+environment `desktop-release-signing` with these secrets before running a commit marked
+`[build]` or `[full-ci]`:
+
+- `IDAI_FIELD_WINDOWS_CERTIFICATE`: the electron-builder `CSC_LINK` value
+- `IDAI_FIELD_WINDOWS_CERTIFICATE_PASSWORD`: the certificate password
+- `IDAI_FIELD_WINDOWS_CERTIFICATE_PUBLISHER`: the exact certificate common name
+- `IDAI_FIELD_WINDOWS_CERTIFICATE_SHA256`: the signing certificate SHA-256 fingerprint
+
+The Windows job fails when any value is absent, then verifies the installer with `signtool
+verify /pa` and checks its publisher, certificate fingerprint, and trusted timestamp before
+uploading the artifact.
+
 Please note that when using **Windows**, due to nested node_modules and the 
 windows default maximum path length you might be running into errors while attempting
 to extract the package. In that case, please use a different archiver, for example [7-Zip](http://www.7-zip.org/download.html).
