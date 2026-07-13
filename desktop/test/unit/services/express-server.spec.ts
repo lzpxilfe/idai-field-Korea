@@ -336,6 +336,7 @@ describe('ExpressServer', () => {
         const outsideUploadPath = path.join(outsidePath, 'uploaded');
 
         fs.rmSync(thumbnailPath, { recursive: true, force: true });
+        fs.mkdirSync(path.dirname(thumbnailPath), { recursive: true });
         fs.mkdirSync(outsidePath, { recursive: true });
         fs.symlinkSync(
             outsidePath,
