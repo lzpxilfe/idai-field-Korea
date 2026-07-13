@@ -2756,12 +2756,14 @@ korean-fieldwork-priority-strip {
   }
 
   .korean-fieldwork-report-handoff-strip {
+    align-items: start;
     background: #ffffff;
     border: 1px solid #d0d5dd;
     border-radius: 6px;
     display: grid;
-    gap: 8px;
+    gap: 10px;
     grid-column: 1 / -1;
+    grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
     min-width: 0;
     padding: 8px;
   }
@@ -2771,11 +2773,23 @@ korean-fieldwork-priority-strip {
     color: #1d2939;
     display: flex;
     gap: 7px;
+    grid-column: 1 / -1;
     min-width: 0;
 
     > .mdi {
       color: #175cd3;
       font-size: 17px;
+    }
+
+    .korean-fieldwork-report-handoff-copy-all {
+      min-width: 32px;
+      padding-left: 7px;
+      padding-right: 7px;
+      width: 32px;
+
+      > span:last-child {
+        display: none;
+      }
     }
   }
 
@@ -2875,8 +2889,13 @@ korean-fieldwork-priority-strip {
   .korean-fieldwork-report-handoff-list {
     display: grid;
     gap: 6px;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-column: 1;
+    grid-row: 2;
+    grid-template-columns: minmax(0, 1fr);
+    max-height: 68vh;
     min-width: 0;
+    overflow-y: auto;
+    padding-right: 3px;
   }
 
   .korean-fieldwork-report-handoff-empty {
@@ -2889,6 +2908,8 @@ korean-fieldwork-priority-strip {
     font-size: 12px;
     font-weight: 900;
     gap: 6px;
+    grid-column: 1;
+    grid-row: 2;
     justify-content: center;
     min-height: 34px;
     padding: 7px 9px;
@@ -2899,17 +2920,24 @@ korean-fieldwork-priority-strip {
     border-left: 4px solid #2e90fa;
     border-radius: 5px;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-rows: auto auto;
+    grid-template-columns: minmax(0, 1fr) 34px 34px;
+    grid-template-rows: auto;
     min-width: 0;
     overflow: hidden;
 
     .korean-fieldwork-report-handoff-open {
-      grid-row: 1 / span 2;
+      grid-column: 1;
+      grid-row: 1;
     }
 
     .korean-fieldwork-report-handoff-copy {
-      min-width: 82px;
+      min-width: 34px;
+      padding: 4px;
+      width: 34px;
+
+      > span:last-child {
+        display: none;
+      }
     }
 
     &.review {
@@ -3081,6 +3109,8 @@ korean-fieldwork-priority-strip {
     border-radius: 4px;
     display: inline-flex;
     gap: 4px;
+    grid-column: 1;
+    grid-row: 3;
     justify-content: center;
     justify-self: start;
     min-height: 28px;
@@ -3099,7 +3129,11 @@ korean-fieldwork-priority-strip {
     border-radius: 5px;
     display: grid;
     gap: 8px;
+    grid-column: 2;
+    grid-row: 2 / span 2;
+    max-height: 72vh;
     min-width: 0;
+    overflow-y: auto;
     padding: 9px;
   }
 
@@ -3189,6 +3223,13 @@ korean-fieldwork-priority-strip {
         background: #ecfdf3;
         border-color: #75e0a7;
       }
+    }
+  }
+
+  .korean-fieldwork-report-handoff-card {
+    .korean-fieldwork-report-handoff-body-preview,
+    .korean-fieldwork-report-handoff-details {
+      display: none;
     }
   }
 
@@ -3330,31 +3371,50 @@ korean-fieldwork-priority-strip {
   .korean-fieldwork-report-handoff-tablet-bundle-source-groups {
     display: grid;
     gap: 6px;
-    max-height: 360px;
     min-width: 0;
-    overflow: auto;
   }
 
   .korean-fieldwork-report-handoff-tablet-bundle-source-group {
     background: #ffffff;
     border: 1px solid #d1e9ff;
     border-radius: 5px;
-    display: grid;
-    gap: 5px;
+    display: block;
     min-width: 0;
-    padding: 6px 7px;
+    overflow: hidden;
 
     &.warning {
       background: #fffbeb;
       border-color: #fedf89;
     }
+
+    &[open] .korean-fieldwork-report-handoff-tablet-bundle-source-group-toggle {
+      transform: rotate(90deg);
+    }
   }
 
   .korean-fieldwork-report-handoff-tablet-bundle-source-group-header {
-    align-items: flex-start;
+    align-items: center;
+    cursor: pointer;
     display: flex;
     gap: 6px;
+    list-style: none;
     min-width: 0;
+    padding: 7px;
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+
+    &:hover {
+      background: rgba(248, 250, 252, 0.84);
+    }
+  }
+
+  .korean-fieldwork-report-handoff-tablet-bundle-source-group-toggle {
+    color: #667085;
+    flex: 0 0 auto;
+    font-size: 16px;
+    transition: transform 120ms ease;
   }
 
   .korean-fieldwork-report-handoff-tablet-bundle-source-group-main {
@@ -3466,7 +3526,7 @@ korean-fieldwork-priority-strip {
     display: grid;
     gap: 4px;
     min-width: 0;
-    padding-top: 5px;
+    padding: 6px 7px 7px;
   }
 
   .korean-fieldwork-report-handoff-tablet-bundle-source {
@@ -3636,6 +3696,50 @@ korean-fieldwork-priority-strip {
     word-break: break-word;
   }
 
+  .korean-fieldwork-report-handoff-raw-preview {
+    border: 1px solid #eaecf0;
+    border-radius: 4px;
+    min-width: 0;
+    overflow: hidden;
+
+    > summary {
+      align-items: center;
+      background: #f9fafb;
+      color: #475467;
+      cursor: pointer;
+      display: grid;
+      font-size: 11px;
+      font-weight: 900;
+      gap: 6px;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      list-style: none;
+      min-height: 32px;
+      padding: 6px 8px;
+
+      &::-webkit-details-marker {
+        display: none;
+      }
+
+      &:hover {
+        background: #f2f4f7;
+      }
+    }
+
+    &[open] > summary > .mdi-chevron-down {
+      transform: rotate(180deg);
+    }
+
+    .mdi-chevron-down {
+      transition: transform 120ms ease;
+    }
+
+    .korean-fieldwork-report-handoff-copy-preview {
+      border: 0;
+      border-radius: 0;
+      border-top: 1px solid #eaecf0;
+    }
+  }
+
 }
 
 @media (max-width: 900px) {
@@ -3684,8 +3788,27 @@ korean-fieldwork-priority-strip {
       flex-wrap: wrap;
     }
 
+    .korean-fieldwork-report-handoff-strip {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
     .korean-fieldwork-report-handoff-list {
+      grid-column: 1;
+      grid-row: auto;
       grid-template-columns: 1fr;
+      max-height: 320px;
+    }
+
+    .korean-fieldwork-report-handoff-empty,
+    .korean-fieldwork-report-handoff-overflow,
+    .korean-fieldwork-report-handoff-preview {
+      grid-column: 1;
+      grid-row: auto;
+    }
+
+    .korean-fieldwork-report-handoff-preview {
+      max-height: none;
+      overflow-y: visible;
     }
 
     .korean-fieldwork-report-handoff-preview-header {

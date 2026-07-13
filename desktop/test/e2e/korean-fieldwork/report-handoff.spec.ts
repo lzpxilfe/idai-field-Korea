@@ -23,6 +23,7 @@ const path = require('path');
 
 const shouldCaptureReadmeScreenshots = process.env.IDAI_FIELD_CAPTURE_README_SCREENSHOTS === '1';
 const readmeImageDirectory = path.resolve(process.cwd(), '..', 'docs', 'korean-fieldwork', 'images');
+const uiAuditImageDirectory = path.resolve(process.cwd(), '..', '.runtime');
 
 
 async function getReportHandoffCard(identifier: string) {
@@ -51,6 +52,32 @@ async function getReportHandoffCard(identifier: string) {
         `Report handoff card "${identifier}" not found.`
         + ` Visible cards: ${visibleIdentifiers.join(' | ') || '(none)'}`
     );
+}
+
+
+async function expectReportHandoffWorkspaceLayout(reportPanel: any, stacked: boolean) {
+
+    const list = reportPanel.locator('.korean-fieldwork-report-handoff-list');
+    const preview = reportPanel.locator('.korean-fieldwork-report-handoff-preview');
+    const [listBox, previewBox, panelSize] = await Promise.all([
+        list.boundingBox(),
+        preview.boundingBox(),
+        reportPanel.evaluate((element: HTMLElement) => ({
+            clientWidth: element.clientWidth,
+            scrollWidth: element.scrollWidth
+        }))
+    ]);
+
+    expect(listBox).not.toBeNull();
+    expect(previewBox).not.toBeNull();
+    expect(panelSize.scrollWidth).toBeLessThanOrEqual(panelSize.clientWidth + 1);
+
+    if (stacked) {
+        expect(previewBox!.y).toBeGreaterThan(listBox!.y);
+    } else {
+        expect(listBox!.x + listBox!.width).toBeLessThanOrEqual(previewBox!.x + 1);
+        expect(Math.abs(previewBox!.y - listBox!.y)).toBeLessThanOrEqual(2);
+    }
 }
 
 
@@ -150,6 +177,26 @@ test.describe('Korean fieldwork report handoff', () => {
         expect(featureReportText).toContain('시료 1');
         expect(featureReportText).toContain('1번 35%/42% 청동편');
         expect(featureReportText).toContain('1번 52%/67% 바닥면');
+
+        await setViewportSize(1024, 840);
+        await pause(200);
+        await expectReportHandoffWorkspaceLayout(reportPanel, false);
+        if (shouldCaptureReadmeScreenshots) {
+            await scrollTo(reportPanel);
+            await takeScreenshot(path.join(uiAuditImageDirectory, 'desktop-handoff-1024.png'));
+        }
+
+        await setViewportSize(860, 900);
+        await pause(200);
+        await expectReportHandoffWorkspaceLayout(reportPanel, true);
+        if (shouldCaptureReadmeScreenshots) {
+            await scrollTo(reportPanel);
+            await takeScreenshot(path.join(uiAuditImageDirectory, 'desktop-handoff-860.png'));
+        }
+
+        await setViewportSize(1440, 960);
+        await pause(200);
+        await expectReportHandoffWorkspaceLayout(reportPanel, false);
 
         if (shouldCaptureReadmeScreenshots) {
             await scrollTo(reportPanel);

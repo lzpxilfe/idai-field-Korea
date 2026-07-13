@@ -49,6 +49,33 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
     });
 
 
+    it('keeps report handoff records in a compact master-detail workspace', () => {
+
+        const template = fs.readFileSync(
+            path.resolve(
+                __dirname,
+                '../../../../src/app/components/resources/korean-fieldwork-priority-strip.html'
+            ),
+            'utf8'
+        );
+        const styles = fs.readFileSync(
+            path.resolve(
+                __dirname,
+                '../../../../src/app/components/resources/korean-fieldwork-priority-strip.scss'
+            ),
+            'utf8'
+        );
+
+        expect(template).toContain('korean-fieldwork-report-handoff-tablet-bundle-source-group');
+        expect(template).toContain('<details *ngFor="let group of tabletBundle.groups"');
+        expect(template).toContain('korean-fieldwork-report-handoff-raw-preview');
+        expect(template).toContain('전체 복사 내용 미리보기');
+        expect(styles).toContain('grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);');
+        expect(styles).toContain('max-height: 68vh;');
+        expect(styles).toContain('.korean-fieldwork-report-handoff-raw-preview');
+    });
+
+
     it('shows priority issues for Korean fieldwork projects', async () => {
 
         const component = createComponent({
