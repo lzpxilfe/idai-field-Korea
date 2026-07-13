@@ -10,7 +10,8 @@ import {
 } from 'react-native';
 import { KOREAN_FIELDWORK_CATEGORIES } from './korean-fieldwork-categories';
 
-type FeatureLocationSketchShape = 'point' | 'polygon' | 'rectangle' | 'oval';
+type FeatureLocationSketchShape =
+  'point' | 'polygon' | 'rectangle' | 'circle' | 'oval';
 
 interface SketchPoint {
   x: number;
@@ -61,6 +62,7 @@ const VALID_SHAPES = new Set<FeatureLocationSketchShape>([
   'point',
   'polygon',
   'rectangle',
+  'circle',
   'oval',
 ]);
 const FEATURE_SKETCH_SHAPE_MIN_SCALE = 8;
@@ -225,14 +227,19 @@ const renderFeatureSketch = (
   compact: boolean,
   viewport?: SketchViewport
 ) => {
-  if (sketch.shape === 'rectangle' || sketch.shape === 'oval') {
+  if (
+    sketch.shape === 'rectangle'
+    || sketch.shape === 'circle'
+    || sketch.shape === 'oval'
+  ) {
     return (
       <View
         pointerEvents="none"
         style={[
           styles.featureShape,
           compact && styles.featureShapeCompact,
-          sketch.shape === 'oval' && styles.featureShapeOval,
+          (sketch.shape === 'oval' || sketch.shape === 'circle')
+            && styles.featureShapeOval,
           getFeatureShapeFrame(sketch, canvasSize, compact, viewport),
         ]}
         testID={testID}
@@ -496,12 +503,19 @@ const getFeatureShapeFrame = (
     96
   );
 
+  const normalizedWidth = sketch.shape === 'circle'
+    ? Math.min(width, height)
+    : width;
+  const normalizedHeight = sketch.shape === 'circle'
+    ? normalizedWidth
+    : height;
+
   return {
-    height,
-    left: center.x - (width / 2),
-    top: center.y - (height / 2),
+    height: normalizedHeight,
+    left: center.x - (normalizedWidth / 2),
+    top: center.y - (normalizedHeight / 2),
     transform: [{ rotateZ: `${sketch.rotation}deg` }],
-    width,
+    width: normalizedWidth,
   };
 };
 
@@ -518,21 +532,24 @@ const getFittedFeatureShapeFrame = (
     canvasSize.height - SHAPE_PREVIEW_TOP_PADDING - SHAPE_PREVIEW_BOTTOM_PADDING
   );
   const rotation = normalizeRotation(sketch.rotation);
+  const baseHeight = sketch.shape === 'circle'
+    ? FEATURE_SKETCH_SHAPE_BASE_WIDTH
+    : FEATURE_SKETCH_SHAPE_BASE_HEIGHT;
   const radians = (rotation * Math.PI) / 180;
   const cos = Math.abs(Math.cos(radians));
   const sin = Math.abs(Math.sin(radians));
   const rotatedBaseWidth =
     (FEATURE_SKETCH_SHAPE_BASE_WIDTH * cos)
-    + (FEATURE_SKETCH_SHAPE_BASE_HEIGHT * sin);
+    + (baseHeight * sin);
   const rotatedBaseHeight =
     (FEATURE_SKETCH_SHAPE_BASE_WIDTH * sin)
-    + (FEATURE_SKETCH_SHAPE_BASE_HEIGHT * cos);
+    + (baseHeight * cos);
   const scale = Math.min(
     availableWidth / Math.max(rotatedBaseWidth, 0.000001),
     availableHeight / Math.max(rotatedBaseHeight, 0.000001)
   );
   const width = FEATURE_SKETCH_SHAPE_BASE_WIDTH * scale;
-  const height = FEATURE_SKETCH_SHAPE_BASE_HEIGHT * scale;
+  const height = baseHeight * scale;
   const center = {
     x: canvasSize.width / 2,
     y: SHAPE_PREVIEW_TOP_PADDING + (availableHeight / 2),

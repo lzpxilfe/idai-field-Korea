@@ -1,5 +1,6 @@
 import {
   parseDxfBoundaryText,
+  parseDxfReferenceText,
   parseGeoJsonBoundaryText,
   parseShpBoundaryBytes,
 } from './boundary-file-import';
@@ -41,6 +42,38 @@ describe('boundary-file-import', () => {
     expect(result.geometry.type).toBe('LineString');
     expect(result.geometry.coordinates).toHaveLength(4);
     expect(result.geometry.coordinates[0][0]).not.toBeCloseTo(127.12);
+    expect(result.referenceVectorGeometry?.type).toBe('MultiLineString');
+    expect(result.referenceVectorLineCount).toBe(1);
+  });
+
+  it('keeps DXF polylines, lines, circles, and arcs as survey background', () => {
+    const result = parseDxfReferenceText([
+      '0', 'SECTION', '2', 'ENTITIES',
+      '0', 'LWPOLYLINE',
+      '90', '3', '70', '1',
+      '10', '127.12', '20', '36.45',
+      '10', '127.13', '20', '36.45',
+      '10', '127.13', '20', '36.46',
+      '0', 'LINE',
+      '10', '127.12', '20', '36.455',
+      '11', '127.13', '21', '36.455',
+      '0', 'CIRCLE',
+      '10', '127.125', '20', '36.455', '40', '0.001',
+      '0', 'ARC',
+      '10', '127.125', '20', '36.455', '40', '0.002',
+      '50', '0', '51', '180',
+      '0', 'ENDSEC', '0', 'EOF',
+    ].join('\n'));
+
+    expect(result.coordinateSystem).toBe('EPSG:4326');
+    expect(result.geometry.type).toBe('MultiLineString');
+    expect(result.lineCount).toBe(4);
+    expect(result.coordinateCount).toBeGreaterThan(50);
+    expect(result.geometry.coordinates).toHaveLength(4);
+    expect(result.geometry.coordinates[0][0][0]).not.toBeCloseTo(127.12);
+    expect(result.geometry.coordinates[0][0]).toEqual(
+      result.geometry.coordinates[0][result.geometry.coordinates[0].length - 1]
+    );
   });
 
   it('parses polygon SHP records without requiring a DBF sidecar', () => {

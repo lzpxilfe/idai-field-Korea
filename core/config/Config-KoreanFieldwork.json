@@ -1801,7 +1801,13 @@
     "SurveyBoundary": {
       "parent": "Operation",
       "color": "#2d6cdf",
-      "hidden": [],
+      "hidden": [
+        "referenceVectorGeometry",
+        "referenceVectorFileName",
+        "referenceVectorCoordinateSystem",
+        "referenceVectorLineCount",
+        "referenceVectorCoordinateCount"
+      ],
       "fields": {
         "isRecordedIn": {
           "inputType": "relation",
@@ -1837,6 +1843,25 @@
         },
         "referenceBasemapNote": {
           "inputType": "text",
+          "constraintIndexed": true
+        },
+        "referenceVectorGeometry": {
+          "inputType": "text"
+        },
+        "referenceVectorFileName": {
+          "inputType": "input",
+          "constraintIndexed": true
+        },
+        "referenceVectorCoordinateSystem": {
+          "inputType": "input",
+          "constraintIndexed": true
+        },
+        "referenceVectorLineCount": {
+          "inputType": "unsignedInt",
+          "constraintIndexed": true
+        },
+        "referenceVectorCoordinateCount": {
+          "inputType": "unsignedInt",
           "constraintIndexed": true
         },
         "fieldRecordQuality": {

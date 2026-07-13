@@ -20,8 +20,13 @@ import {
 import type {
   KoreanFieldworkProjectBoundaryDraft,
 } from './korean-fieldwork-investigation-mode';
+import {
+  projectMapCoordinateToWgs84,
+  REFERENCE_VECTOR_FIELDS,
+} from './Map/korean-fieldwork-drafts';
 
-type FeatureLocationSketchShape = 'point' | 'polygon' | 'rectangle' | 'oval';
+type FeatureLocationSketchShape =
+  'point' | 'polygon' | 'rectangle' | 'circle' | 'oval';
 
 interface SketchPoint {
   x: number;
@@ -46,8 +51,17 @@ interface SketchFrame {
 }
 
 interface BoundaryProjection {
+  coordinateBounds?: CoordinateBounds;
   frame?: SketchFrame;
   points: SketchPoint[];
+  usesWgs84Coordinates?: boolean;
+}
+
+interface CoordinateBounds {
+  maxX: number;
+  maxY: number;
+  minX: number;
+  minY: number;
 }
 
 interface SiteOverviewViewport {
@@ -86,6 +100,7 @@ interface SiteOverviewFeature {
 interface Props {
   boundaryDraft?: KoreanFieldworkProjectBoundaryDraft;
   documents: readonly Document[];
+  onImportDxfReference?: () => void;
   onOpenFeature?: (document: Document) => void;
 }
 
@@ -101,6 +116,9 @@ const FEATURE_SHAPE_MAX_SCALE = 240;
 const FEATURE_MIN_SIZE = 8;
 const FEATURE_LABEL_WIDTH = 118;
 const FEATURE_LABEL_HEIGHT = 38;
+const FEATURE_HIT_TARGET_MIN_SIZE = 48;
+const EARTH_RADIUS_METERS = 6371008.8;
+const MAX_REFERENCE_SEGMENTS = 1600;
 const SITE_OVERVIEW_MIN_SCALE = 1;
 const SITE_OVERVIEW_MAX_SCALE = 5;
 const SITE_OVERVIEW_DEFAULT_VIEWPORT: SiteOverviewViewport = {
@@ -112,15 +130,20 @@ const VALID_FEATURE_SHAPES = new Set<FeatureLocationSketchShape>([
   'point',
   'polygon',
   'rectangle',
+  'circle',
   'oval',
 ]);
 
 const KoreanFieldworkSiteOverviewMap: React.FC<Props> = ({
   boundaryDraft,
   documents,
+  onImportDxfReference,
   onOpenFeature,
 }) => {
   const [canvasSize, setCanvasSize] = useState(CANVAS_DEFAULT_SIZE);
+  const [distanceFeatureIds, setDistanceFeatureIds] = useState<string[]>([]);
+  const [isDistanceMeasurementActive, setIsDistanceMeasurementActive] =
+    useState(false);
   const [viewport, setViewport] = useState(SITE_OVERVIEW_DEFAULT_VIEWPORT);
   const pinchGestureRef = useRef<SiteOverviewPinchGesture>();
   const panGestureRef = useRef<SiteOverviewPanGesture>();
@@ -133,6 +156,25 @@ const KoreanFieldworkSiteOverviewMap: React.FC<Props> = ({
     () => getSiteOverviewFeatures(documents, boundaryProjection.frame),
     [boundaryProjection.frame, documents]
   );
+  const referenceLines = useMemo(
+    () => getSiteOverviewReferenceLines(documents, boundaryProjection),
+    [boundaryProjection, documents]
+  );
+  const distanceStartFeature = features.find((feature) =>
+    feature.document.resource.id === distanceFeatureIds[0]);
+  const distanceEndFeature = features.find((feature) =>
+    feature.document.resource.id === distanceFeatureIds[1]);
+  const distanceMeters = useMemo(
+    () => getApproximateFeatureDistanceMeters(
+      distanceStartFeature,
+      distanceEndFeature,
+      boundaryProjection
+    ),
+    [boundaryProjection, distanceEndFeature, distanceStartFeature]
+  );
+  const canMeasureDistances = features.length >= 2
+    && !!boundaryProjection.coordinateBounds
+    && !!boundaryProjection.frame;
   const normalizedViewport = useMemo(
     () => normalizeSiteOverviewViewport(viewport, canvasSize),
     [canvasSize, viewport]
@@ -229,6 +271,24 @@ const KoreanFieldworkSiteOverviewMap: React.FC<Props> = ({
     panGestureRef.current = undefined;
     setViewport(SITE_OVERVIEW_DEFAULT_VIEWPORT);
   };
+  const toggleDistanceMeasurement = () => {
+    setDistanceFeatureIds([]);
+    setIsDistanceMeasurementActive((current) => !current);
+  };
+  const clearDistanceMeasurement = () => setDistanceFeatureIds([]);
+  const handleFeaturePress = (feature: SiteOverviewFeature) => {
+    if (!isDistanceMeasurementActive) {
+      onOpenFeature?.(feature.document);
+      return;
+    }
+
+    const featureId = feature.document.resource.id;
+    setDistanceFeatureIds((currentIds) => {
+      if (currentIds.length >= 2) return [featureId];
+      if (currentIds[0] === featureId) return [];
+      return currentIds.concat(featureId);
+    });
+  };
 
   return (
     <View style={styles.screen} testID="siteOverviewMap">
@@ -237,9 +297,43 @@ const KoreanFieldworkSiteOverviewMap: React.FC<Props> = ({
           <MaterialIcons name="map" size={22} color="#f8fafc" />
           <Text style={styles.headerTitle}>현장 전체 현황</Text>
         </View>
-        <Text style={styles.headerMeta}>
-          조사 경계 {boundaryPoints.length >= 3 ? 1 : 0} · 유구 {features.length}
-        </Text>
+        <View style={styles.headerActions}>
+          <Text style={styles.headerMeta}>
+            조사 경계 {boundaryPoints.length >= 3 ? 1 : 0} · 유구 {features.length}
+          </Text>
+          <TouchableOpacity
+            accessibilityLabel="유구 중심 간 거리 측정"
+            accessibilityState={{
+              disabled: !canMeasureDistances,
+              selected: isDistanceMeasurementActive,
+            }}
+            activeOpacity={0.84}
+            disabled={!canMeasureDistances}
+            onPress={toggleDistanceMeasurement}
+            style={[
+              styles.distanceMeasureButton,
+              isDistanceMeasurementActive
+                && styles.distanceMeasureButtonActive,
+              !canMeasureDistances && styles.headerButtonDisabled,
+            ]}
+            testID="siteOverviewDistanceMeasure"
+          >
+            <MaterialIcons name="straighten" size={17} color="#f8fafc" />
+            <Text style={styles.distanceMeasureButtonText}>거리</Text>
+          </TouchableOpacity>
+          {!!onImportDxfReference && (
+            <TouchableOpacity
+              accessibilityLabel="DXF 측량 배경 가져오기"
+              activeOpacity={0.84}
+              onPress={onImportDxfReference}
+              style={styles.referenceImportButton}
+              testID="siteOverviewImportDxfReference"
+            >
+              <MaterialIcons name="layers" size={16} color="#f8fafc" />
+              <Text style={styles.referenceImportButtonText}>DXF 배경</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
       <View style={styles.mapWrap}>
         <View
@@ -272,6 +366,16 @@ const KoreanFieldworkSiteOverviewMap: React.FC<Props> = ({
           >
             <View style={styles.gridVertical} />
             <View style={styles.gridHorizontal} />
+            {referenceLines.flatMap((line, index) => toLineSegments({
+              canvasSize,
+              closePath: false,
+              color: '#64748b',
+              keyPrefix: `reference-${index}`,
+              opacity: 0.48,
+              points: line,
+              testID: 'siteOverviewReferenceLine',
+              width: 1,
+            }))}
             {boundaryPoints.length >= 3 ? (
               <>
                 {toLineSegments({
@@ -295,19 +399,51 @@ const KoreanFieldworkSiteOverviewMap: React.FC<Props> = ({
             ) : (
               <EmptyOverlay text="조사 경계 없음" />
             )}
+            {isDistanceMeasurementActive
+              && distanceStartFeature
+              && distanceEndFeature
+              && toLineSegments({
+                canvasSize,
+                closePath: false,
+                color: '#0f766e',
+                keyPrefix: 'feature-distance',
+                opacity: 0.9,
+                points: [
+                  distanceStartFeature.sketch.center,
+                  distanceEndFeature.sketch.center,
+                ],
+                testID: 'siteOverviewDistanceLine',
+                width: 3,
+              })}
             {features.map((feature, index) => (
               <FeatureOverlay
                 canvasSize={canvasSize}
                 feature={feature}
                 index={index}
+                isDistanceMeasurementActive={isDistanceMeasurementActive}
                 key={feature.document.resource.id}
-                onOpenFeature={onOpenFeature}
+                measurementOrder={getMeasurementOrder(
+                  feature,
+                  distanceStartFeature,
+                  distanceEndFeature
+                )}
+                onPressFeature={isDistanceMeasurementActive || onOpenFeature
+                  ? handleFeaturePress
+                  : undefined}
               />
             ))}
             {features.length === 0 && boundaryPoints.length >= 3 && (
               <EmptyOverlay text="추가된 유구 없음" />
             )}
           </View>
+          {isDistanceMeasurementActive && (
+            <DistanceMeasurementPanel
+              distanceMeters={distanceMeters}
+              endFeature={distanceEndFeature}
+              onClear={clearDistanceMeasurement}
+              startFeature={distanceStartFeature}
+            />
+          )}
           {normalizedViewport.scale > SITE_OVERVIEW_MIN_SCALE && (
             <TouchableOpacity
               activeOpacity={0.86}
@@ -331,23 +467,39 @@ const FeatureOverlay: React.FC<{
   canvasSize: CanvasSize;
   feature: SiteOverviewFeature;
   index: number;
-  onOpenFeature?: (document: Document) => void;
+  isDistanceMeasurementActive: boolean;
+  measurementOrder?: 1 | 2;
+  onPressFeature?: (feature: SiteOverviewFeature) => void;
 }> = ({
   canvasSize,
   feature,
   index,
-  onOpenFeature,
+  isDistanceMeasurementActive,
+  measurementOrder,
+  onPressFeature,
 }) => {
   const { sketch } = feature;
   const labelCenter = getFeatureLabelCenter(sketch);
 
   return (
     <>
+      <TouchableOpacity
+        accessibilityLabel={isDistanceMeasurementActive
+          ? (measurementOrder
+            ? `${feature.label} 거리 측정 ${measurementOrder}번 유구`
+            : `${feature.label} 거리 측정 선택`)
+          : `${feature.label} 유구 정보 열기`}
+        activeOpacity={0.84}
+        disabled={!onPressFeature}
+        onPress={() => onPressFeature?.(feature)}
+        style={getFeatureHitTargetStyle(sketch, canvasSize)}
+        testID={`siteOverviewFeatureHitTarget_${feature.document.resource.id}`}
+      />
       {renderFeatureSketchShape(feature, canvasSize)}
       <TouchableOpacity
         activeOpacity={0.86}
-        disabled={!onOpenFeature}
-        onPress={() => onOpenFeature?.(feature.document)}
+        disabled={!onPressFeature}
+        onPress={() => onPressFeature?.(feature)}
         style={[styles.featureLabel, getLabelStyle(labelCenter)]}
         testID={`siteOverviewFeatureLabel_${feature.document.resource.id}`}
       >
@@ -363,8 +515,84 @@ const FeatureOverlay: React.FC<{
           )}
         </View>
       </TouchableOpacity>
+      {!!measurementOrder && (
+        <View
+          pointerEvents="none"
+          style={[
+            styles.distanceFeatureMarker,
+            getPointPercentStyle(sketch.center),
+          ]}
+          testID={`siteOverviewDistanceMarker_${measurementOrder}`}
+        >
+          <Text style={styles.distanceFeatureMarkerText}>
+            {measurementOrder}
+          </Text>
+        </View>
+      )}
     </>
   );
+};
+
+const DistanceMeasurementPanel: React.FC<{
+  distanceMeters?: number;
+  endFeature?: SiteOverviewFeature;
+  onClear: () => void;
+  startFeature?: SiteOverviewFeature;
+}> = ({
+  distanceMeters,
+  endFeature,
+  onClear,
+  startFeature,
+}) => {
+  const isComplete = !!startFeature
+    && !!endFeature
+    && distanceMeters !== undefined;
+  const text = !startFeature
+    ? '거리 측정 · 첫 유구 선택'
+    : !endFeature
+      ? `${startFeature.label} · 두 번째 유구 선택`
+      : distanceMeters === undefined
+        ? '거리 계산 불가'
+        : `${startFeature.label} ↔ ${endFeature.label} · 중심 간 약 ${formatDistanceMeters(distanceMeters)} m`;
+
+  return (
+    <View
+      style={styles.distanceStatus}
+      testID={isComplete
+        ? 'siteOverviewDistanceResult'
+        : 'siteOverviewDistanceStatus'}
+    >
+      <MaterialIcons name="straighten" size={18} color="#0f766e" />
+      <Text numberOfLines={2} style={styles.distanceStatusText}>
+        {text}
+      </Text>
+      {!!startFeature && (
+        <TouchableOpacity
+          accessibilityLabel="거리 측정 선택 초기화"
+          onPress={onClear}
+          style={styles.distanceClearButton}
+          testID="siteOverviewDistanceClear"
+        >
+          <MaterialIcons name="close" size={18} color="#475467" />
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+};
+
+const getMeasurementOrder = (
+  feature: SiteOverviewFeature,
+  startFeature?: SiteOverviewFeature,
+  endFeature?: SiteOverviewFeature
+): 1 | 2 | undefined => {
+  if (feature.document.resource.id === startFeature?.document.resource.id) {
+    return 1;
+  }
+  if (feature.document.resource.id === endFeature?.document.resource.id) {
+    return 2;
+  }
+
+  return undefined;
 };
 
 const renderFeatureSketchShape = (
@@ -374,13 +602,18 @@ const renderFeatureSketchShape = (
   const { document, sketch } = feature;
   const testID = `siteOverviewFeatureShape_${document.resource.id}`;
 
-  if (sketch.shape === 'rectangle' || sketch.shape === 'oval') {
+  if (
+    sketch.shape === 'rectangle'
+    || sketch.shape === 'circle'
+    || sketch.shape === 'oval'
+  ) {
     return (
       <View
         pointerEvents="none"
         style={[
           styles.featureShape,
-          sketch.shape === 'oval' && styles.featureShapeOval,
+          (sketch.shape === 'oval' || sketch.shape === 'circle')
+            && styles.featureShapeOval,
           getFeatureShapeFrame(sketch, canvasSize),
         ]}
         testID={testID}
@@ -568,6 +801,159 @@ const getSiteOverviewFeatures = (
     })
     .filter((feature): feature is SiteOverviewFeature => !!feature);
 
+const getApproximateFeatureDistanceMeters = (
+  startFeature: SiteOverviewFeature | undefined,
+  endFeature: SiteOverviewFeature | undefined,
+  boundaryProjection: BoundaryProjection
+): number | undefined => {
+  if (!startFeature || !endFeature) return undefined;
+
+  const startCoordinate = getCoordinateForSketchPoint(
+    startFeature.sketch.center,
+    boundaryProjection
+  );
+  const endCoordinate = getCoordinateForSketchPoint(
+    endFeature.sketch.center,
+    boundaryProjection
+  );
+  if (!startCoordinate || !endCoordinate) return undefined;
+
+  const startWgs84 = boundaryProjection.usesWgs84Coordinates
+    ? { latitude: startCoordinate[1], longitude: startCoordinate[0] }
+    : projectMapCoordinateToWgs84(startCoordinate);
+  const endWgs84 = boundaryProjection.usesWgs84Coordinates
+    ? { latitude: endCoordinate[1], longitude: endCoordinate[0] }
+    : projectMapCoordinateToWgs84(endCoordinate);
+  if (!startWgs84 || !endWgs84) return undefined;
+
+  return getHaversineDistanceMeters(startWgs84, endWgs84);
+};
+
+const getCoordinateForSketchPoint = (
+  point: SketchPoint,
+  boundaryProjection: BoundaryProjection
+): number[] | undefined => {
+  const { coordinateBounds, frame } = boundaryProjection;
+  if (!coordinateBounds || !frame || frame.width <= 0 || frame.height <= 0) {
+    return undefined;
+  }
+
+  const normalizedX = clamp((point.x - frame.minX) / frame.width, 0, 1);
+  const normalizedY = clamp((point.y - frame.minY) / frame.height, 0, 1);
+
+  return [
+    coordinateBounds.minX
+      + (normalizedX * (coordinateBounds.maxX - coordinateBounds.minX)),
+    coordinateBounds.maxY
+      - (normalizedY * (coordinateBounds.maxY - coordinateBounds.minY)),
+  ];
+};
+
+const getHaversineDistanceMeters = (
+  start: { latitude: number; longitude: number },
+  end: { latitude: number; longitude: number }
+): number => {
+  const latitudeDelta = toRadians(end.latitude - start.latitude);
+  const longitudeDelta = toRadians(end.longitude - start.longitude);
+  const startLatitude = toRadians(start.latitude);
+  const endLatitude = toRadians(end.latitude);
+  const haversine = (Math.sin(latitudeDelta / 2) ** 2)
+    + (Math.cos(startLatitude) * Math.cos(endLatitude)
+      * (Math.sin(longitudeDelta / 2) ** 2));
+  const normalizedHaversine = clamp(haversine, 0, 1);
+
+  return EARTH_RADIUS_METERS
+    * 2
+    * Math.atan2(
+      Math.sqrt(normalizedHaversine),
+      Math.sqrt(1 - normalizedHaversine)
+    );
+};
+
+const formatDistanceMeters = (distanceMeters: number): string =>
+  distanceMeters < 10
+    ? distanceMeters.toFixed(1)
+    : Math.round(distanceMeters).toLocaleString('ko-KR');
+
+const toRadians = (degrees: number): number => (degrees * Math.PI) / 180;
+
+const getSiteOverviewReferenceLines = (
+  documents: readonly Document[],
+  boundaryProjection: BoundaryProjection
+): SketchPoint[][] => {
+  const { coordinateBounds, frame } = boundaryProjection;
+  if (!coordinateBounds || !frame) return [];
+
+  const projectedLines = documents
+    .filter((document) =>
+      document.resource.category === KOREAN_FIELDWORK_CATEGORIES.SURVEY_BOUNDARY)
+    .flatMap((document) => getReferenceVectorCoordinateLines(
+      (document.resource as Record<string, unknown>)[REFERENCE_VECTOR_FIELDS.geometry]
+    ))
+    .map((line) => line.map((coordinate) =>
+      projectCoordinateToBoundaryFrame(coordinate, coordinateBounds, frame)))
+    .filter((line) => line.length >= 2);
+
+  return limitReferenceSegments(projectedLines);
+};
+
+const getReferenceVectorCoordinateLines = (value: unknown): number[][][] => {
+  const rawGeometry = typeof value === 'string' ? parseJsonObject(value) : value;
+  if (!isRecord(rawGeometry)) return [];
+
+  if (rawGeometry.type === 'LineString') {
+    const line = getNumericCoordinatePairs(rawGeometry.coordinates);
+    return line.length >= 2 ? [line] : [];
+  }
+  if (
+    rawGeometry.type !== 'MultiLineString'
+    || !Array.isArray(rawGeometry.coordinates)
+  ) {
+    return [];
+  }
+
+  return rawGeometry.coordinates
+    .map(getNumericCoordinatePairs)
+    .filter((line) => line.length >= 2);
+};
+
+const projectCoordinateToBoundaryFrame = (
+  coordinate: number[],
+  bounds: CoordinateBounds,
+  frame: SketchFrame
+): SketchPoint => ({
+  x: frame.minX + (
+    ((coordinate[0] - bounds.minX) / Math.max(bounds.maxX - bounds.minX, 0.000001))
+    * frame.width
+  ),
+  y: frame.minY + (
+    ((bounds.maxY - coordinate[1]) / Math.max(bounds.maxY - bounds.minY, 0.000001))
+    * frame.height
+  ),
+});
+
+const limitReferenceSegments = (lines: SketchPoint[][]): SketchPoint[][] => {
+  const segmentCount = lines.reduce(
+    (sum, line) => sum + Math.max(0, line.length - 1),
+    0
+  );
+  if (segmentCount <= MAX_REFERENCE_SEGMENTS) return lines;
+
+  const stride = Math.ceil(segmentCount / MAX_REFERENCE_SEGMENTS);
+  const sampledSegments: SketchPoint[][] = [];
+  let segmentIndex = 0;
+  lines.forEach((line) => {
+    for (let index = 1; index < line.length; index += 1) {
+      if (segmentIndex % stride === 0) {
+        sampledSegments.push([line[index - 1], line[index]]);
+      }
+      segmentIndex += 1;
+    }
+  });
+
+  return sampledSegments;
+};
+
 const normalizeFeatureLocationSketch = (
   value: unknown,
   boundaryFrame?: SketchFrame
@@ -689,11 +1075,13 @@ const projectCoordinatePairsToBoundaryFrame = (
   );
 
   return {
+    coordinateBounds: { maxX, maxY, minX, minY },
     frame,
     points: openPairs.map((coordinate) => ({
       x: frame.minX + (((coordinate[0] - minX) / xRange) * frame.width),
       y: frame.minY + (((maxY - coordinate[1]) / yRange) * frame.height),
     })),
+    usesWgs84Coordinates: areWgs84CoordinatePairs(openPairs),
   };
 };
 
@@ -791,6 +1179,7 @@ const toLineSegments = ({
   closePath,
   color,
   keyPrefix,
+  opacity = 0.94,
   points,
   testID,
   width,
@@ -799,6 +1188,7 @@ const toLineSegments = ({
   closePath: boolean;
   color: string;
   keyPrefix: string;
+  opacity?: number;
   points: SketchPoint[];
   testID: string;
   width: number;
@@ -812,6 +1202,7 @@ const toLineSegments = ({
       color={color}
       end={denormalizePoint(points[(index + 1) % points.length], canvasSize)}
       key={`${keyPrefix}-${index}`}
+      opacity={opacity}
       start={denormalizePoint(point, canvasSize)}
       testID={testID}
       width={width}
@@ -822,12 +1213,14 @@ const toLineSegments = ({
 const SketchLineSegment: React.FC<{
   color: string;
   end: PixelPoint;
+  opacity: number;
   start: PixelPoint;
   testID: string;
   width: number;
 }> = ({
   color,
   end,
+  opacity,
   start,
   testID,
   width,
@@ -843,7 +1236,7 @@ const SketchLineSegment: React.FC<{
         borderRadius: width,
         height: width,
         left: ((start.x + end.x) / 2) - (distance / 2),
-        opacity: 0.94,
+        opacity,
         position: 'absolute',
         top: ((start.y + end.y) / 2) - (width / 2),
         transform: [{ rotateZ: `${angle}rad` }],
@@ -859,16 +1252,7 @@ const getFeatureShapeFrame = (
   canvasSize: CanvasSize
 ): ViewStyle => {
   const center = denormalizePoint(sketch.center, canvasSize);
-  const width = clamp(
-    ((FEATURE_SHAPE_BASE_WIDTH * sketch.scale) / 100 / 100) * canvasSize.width,
-    FEATURE_MIN_SIZE,
-    canvasSize.width * 0.72
-  );
-  const height = clamp(
-    ((FEATURE_SHAPE_BASE_HEIGHT * sketch.scale) / 100 / 100) * canvasSize.height,
-    FEATURE_MIN_SIZE,
-    canvasSize.height * 0.72
-  );
+  const { height, width } = getFeatureShapeDimensions(sketch, canvasSize);
 
   return {
     height,
@@ -876,6 +1260,81 @@ const getFeatureShapeFrame = (
     top: center.y - (height / 2),
     transform: [{ rotateZ: `${normalizeRotation(sketch.rotation)}deg` }],
     width,
+  };
+};
+
+const getFeatureShapeDimensions = (
+  sketch: FeatureLocationSketch,
+  canvasSize: CanvasSize
+): { height: number; width: number } => {
+  if (sketch.shape === 'circle') {
+    const diameter = clamp(
+      ((FEATURE_SHAPE_BASE_WIDTH * sketch.scale) / 100 / 100)
+        * Math.min(canvasSize.width, canvasSize.height),
+      FEATURE_MIN_SIZE,
+      Math.min(canvasSize.width, canvasSize.height) * 0.72
+    );
+
+    return { height: diameter, width: diameter };
+  }
+
+  return {
+    width: clamp(
+      ((FEATURE_SHAPE_BASE_WIDTH * sketch.scale) / 100 / 100)
+        * canvasSize.width,
+      FEATURE_MIN_SIZE,
+      canvasSize.width * 0.72
+    ),
+    height: clamp(
+      ((FEATURE_SHAPE_BASE_HEIGHT * sketch.scale) / 100 / 100)
+        * canvasSize.height,
+      FEATURE_MIN_SIZE,
+      canvasSize.height * 0.72
+    ),
+  };
+};
+
+const getFeatureHitTargetStyle = (
+  sketch: FeatureLocationSketch,
+  canvasSize: CanvasSize
+): ViewStyle => {
+  const points = getVisibleFeatureSketchPoints(sketch)
+    .map((point) => denormalizePoint(point, canvasSize));
+  const center = denormalizePoint(sketch.center, canvasSize);
+  let targetCenter = center;
+  let contentWidth = 0;
+  let contentHeight = 0;
+
+  if (
+    sketch.shape === 'rectangle'
+    || sketch.shape === 'circle'
+    || sketch.shape === 'oval'
+  ) {
+    const dimensions = getFeatureShapeDimensions(sketch, canvasSize);
+    contentWidth = dimensions.width;
+    contentHeight = dimensions.height;
+  } else if (points.length > 1) {
+    const xs = points.map((point) => point.x);
+    const ys = points.map((point) => point.y);
+    const minX = Math.min(...xs);
+    const maxX = Math.max(...xs);
+    const minY = Math.min(...ys);
+    const maxY = Math.max(...ys);
+    targetCenter = { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
+    contentWidth = maxX - minX;
+    contentHeight = maxY - minY;
+  }
+
+  const width = Math.max(FEATURE_HIT_TARGET_MIN_SIZE, contentWidth + 16);
+  const height = Math.max(FEATURE_HIT_TARGET_MIN_SIZE, contentHeight + 16);
+
+  return {
+    height,
+    left: targetCenter.x - (width / 2),
+    position: 'absolute',
+    top: targetCenter.y - (height / 2),
+    width,
+    zIndex: 12,
   };
 };
 
@@ -968,12 +1427,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#27343b',
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
     justifyContent: 'space-between',
     paddingHorizontal: 18,
     paddingVertical: 14,
   },
+  headerActions: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    marginLeft: 'auto',
+  },
   headerTitleRow: {
     alignItems: 'center',
+    flexShrink: 1,
     flexDirection: 'row',
   },
   headerTitle: {
@@ -986,6 +1454,7 @@ const styles = StyleSheet.create({
     color: '#c7d7d2',
     fontSize: 13,
     fontWeight: '800',
+    marginRight: 2,
   },
   mapWrap: {
     flex: 1,
@@ -1024,6 +1493,43 @@ const styles = StyleSheet.create({
     color: '#175cd3',
     fontSize: 12,
     fontWeight: '900',
+  },
+  distanceMeasureButton: {
+    alignItems: 'center',
+    borderColor: '#8ca8a2',
+    borderRadius: 6,
+    borderWidth: 1,
+    flexDirection: 'row',
+    minHeight: 34,
+    paddingHorizontal: 9,
+  },
+  distanceMeasureButtonActive: {
+    backgroundColor: '#0f766e',
+    borderColor: '#5eead4',
+  },
+  distanceMeasureButtonText: {
+    color: '#f8fafc',
+    fontSize: 12,
+    fontWeight: '900',
+    marginLeft: 5,
+  },
+  headerButtonDisabled: {
+    opacity: 0.42,
+  },
+  referenceImportButton: {
+    alignItems: 'center',
+    borderColor: '#8ca8a2',
+    borderRadius: 6,
+    borderWidth: 1,
+    flexDirection: 'row',
+    minHeight: 34,
+    paddingHorizontal: 9,
+  },
+  referenceImportButtonText: {
+    color: '#f8fafc',
+    fontSize: 12,
+    fontWeight: '900',
+    marginLeft: 5,
   },
   gridVertical: {
     backgroundColor: '#eef2f6',
@@ -1130,6 +1636,58 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     marginTop: 1,
+  },
+  distanceFeatureMarker: {
+    alignItems: 'center',
+    backgroundColor: '#0f766e',
+    borderColor: '#ffffff',
+    borderRadius: 12,
+    borderWidth: 2,
+    height: 24,
+    justifyContent: 'center',
+    marginLeft: -12,
+    marginTop: -12,
+    position: 'absolute',
+    width: 24,
+    zIndex: 24,
+  },
+  distanceFeatureMarkerText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '900',
+  },
+  distanceStatus: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.96)',
+    borderColor: '#5ba89e',
+    borderRadius: 6,
+    borderWidth: 1,
+    bottom: 10,
+    flexDirection: 'row',
+    left: 10,
+    maxWidth: '78%',
+    minHeight: 38,
+    paddingLeft: 10,
+    position: 'absolute',
+    shadowColor: '#101828',
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    zIndex: 40,
+  },
+  distanceStatusText: {
+    color: '#134e4a',
+    flexShrink: 1,
+    fontSize: 12,
+    fontWeight: '900',
+    marginLeft: 6,
+    paddingVertical: 7,
+  },
+  distanceClearButton: {
+    alignItems: 'center',
+    height: 36,
+    justifyContent: 'center',
+    marginLeft: 4,
+    width: 36,
   },
   emptyOverlay: {
     alignItems: 'center',

@@ -52,6 +52,9 @@ import { router, useGlobalSearchParams } from 'expo-router';
 import { ProjectContext } from '@/contexts/project-context';
 import { getKoreanFieldworkAllowedChildCategoryNames } from '@/components/Project/korean-fieldwork-child-records';
 import { KOREAN_FIELDWORK_CATEGORIES } from '@/components/Project/korean-fieldwork-categories';
+import {
+  getKoreanFieldworkRecordDisplayIdentifier,
+} from '@/components/Project/korean-fieldwork-record-evidence';
 import { PreferencesContext } from '@/contexts/preferences-context';
 import {
   KoreanFieldworkInvestigationModeId,
@@ -132,7 +135,10 @@ const DocumentEdit: React.FC = () => {
           Keyboard.dismiss();
           showToast(
             ToastType.Error,
-            `${document.resource.identifier} 기록을 저장하지 못했습니다: ${err}`
+            `${getKoreanFieldworkRecordDisplayIdentifier(
+              document,
+              documents ?? []
+            )} 기록을 저장하지 못했습니다: ${err}`
           );
         });
     }
@@ -211,6 +217,10 @@ const DocumentEdit: React.FC = () => {
   }
 
   const effectiveDocument = { ...document, resource };
+  const displayIdentifier = getKoreanFieldworkRecordDisplayIdentifier(
+    effectiveDocument,
+    documents ?? []
+  );
   const isFeatureRecord = resource.category === KOREAN_FIELDWORK_CATEGORIES.FEATURE;
   const freeDrawingConfig = getKoreanFieldworkFreeDrawingConfig(resource.category);
 
@@ -229,7 +239,7 @@ const DocumentEdit: React.FC = () => {
       category={category}
       collapseFormFieldsByDefault={true}
       headerText={`${labels.get(category)} 편집: ${
-        document.resource.identifier
+        displayIdentifier
       }`}
       returnBtnHandler={onReturn}
       formHeader={
@@ -324,7 +334,8 @@ const DocumentEdit: React.FC = () => {
         applyResourceUpdates,
         soilProfileSampleRequest,
         () => setSoilProfileSampleRequest(undefined),
-        preferencesContext.preferences.username
+        preferencesContext.preferences.username,
+        displayIdentifier
       )}
     />
   );
@@ -340,7 +351,8 @@ const renderPhotoResourceActions = (
   updateResourceFields: (updates: Record<string, unknown>) => void,
   soilProfileSampleRequest?: SoilProfileLayerSampleRequest,
   onSoilProfileSampleComplete?: () => void,
-  username?: string
+  username?: string,
+  captureFilenameBase?: string
 ) => {
   if (resource.category === 'Photo') {
     const imageUri = getStringValue(resource.imageUri ?? resource.fieldworkPhotoUri);
@@ -349,7 +361,9 @@ const renderPhotoResourceActions = (
       <View>
         <PhotoCameraButton
           capturedUri={imageUri}
-          captureFilenameBase={getStringValue(resource.identifier)}
+          captureFilenameBase={getStringValue(
+            captureFilenameBase ?? resource.identifier
+          )}
           onCapture={updatePhotoCapture}
           username={username}
         />
@@ -372,7 +386,9 @@ const renderPhotoResourceActions = (
       <View>
         <SoilProfileCameraButton
           capturedUri={imageUri}
-          captureFilenameBase={getStringValue(resource.identifier)}
+          captureFilenameBase={getStringValue(
+            captureFilenameBase ?? resource.identifier
+          )}
           onCapture={updateSoilProfileCapture}
           username={username}
         />

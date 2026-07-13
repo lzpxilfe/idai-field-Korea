@@ -20,6 +20,14 @@ import DocumentAddModal from './DocumentAddModal';
 import DocumentRemoveModal from './DocumentRemoveModal';
 import KoreanFieldworkTodayBoard from './KoreanFieldworkTodayBoard';
 import KoreanFieldworkSiteOverviewMap from './KoreanFieldworkSiteOverviewMap';
+import BoundaryFileImportModal from './Map/BoundaryFileImportModal';
+import {
+  importDxfReferenceFileFromPath,
+} from './Map/boundary-file-import';
+import {
+  REFERENCE_BASEMAP_PROVIDER_IMPORTED_VECTOR_LAYER,
+  REFERENCE_VECTOR_FIELDS,
+} from './Map/korean-fieldwork-drafts';
 
 import Map from './Map/Map';
 import { router, useGlobalSearchParams } from 'expo-router';
@@ -71,6 +79,8 @@ const DocumentsMap: React.FC<DocumentsMapProps> = ({
   const [satellitePickerRequestId, setSatellitePickerRequestId] = useState(0);
   const [boundaryFileImportRequestId, setBoundaryFileImportRequestId] =
     useState(0);
+  const [isDxfReferenceImportOpen, setIsDxfReferenceImportOpen] =
+    useState(false);
   // TODO: configure expo router to load params
   const params = useGlobalSearchParams();
 
@@ -102,6 +112,9 @@ const DocumentsMap: React.FC<DocumentsMapProps> = ({
   const highlightedDocId = isSiteOverviewMap
     ? undefined
     : getStringParam(params?.highlightedDocId);
+  const overviewDocuments = allDocuments.length > 0
+    ? allDocuments
+    : documents;
 
   const onQrCodeScanned = useCallback(
     (data: string) => {
@@ -170,18 +183,58 @@ const DocumentsMap: React.FC<DocumentsMapProps> = ({
     setBoundaryFileImportRequestId((value) => value + 1);
   }, []);
 
-  if (isSiteOverviewMap) {
-    const overviewDocuments = allDocuments.length > 0
-      ? allDocuments
-      : documents;
+  const importDxfReference = async (
+    filePath: string,
+    coordinateSystemFilePath?: string
+  ) => {
+    const surveyBoundary = overviewDocuments.find((document) =>
+      document.resource.category === KOREAN_FIELDWORK_CATEGORIES.SURVEY_BOUNDARY
+    );
+    if (!surveyBoundary) {
+      throw new Error('조사 경계를 먼저 저장한 뒤 DXF 배경을 추가하세요.');
+    }
 
+    const importedReference = await importDxfReferenceFileFromPath(
+      filePath,
+      coordinateSystemFilePath
+    );
+    await repository.update({
+      ...surveyBoundary,
+      resource: {
+        ...surveyBoundary.resource,
+        [REFERENCE_VECTOR_FIELDS.coordinateCount]:
+          importedReference.coordinateCount,
+        [REFERENCE_VECTOR_FIELDS.coordinateSystem]:
+          importedReference.coordinateSystem,
+        [REFERENCE_VECTOR_FIELDS.fileName]: importedReference.fileName,
+        [REFERENCE_VECTOR_FIELDS.geometry]: JSON.stringify(
+          importedReference.geometry
+        ),
+        [REFERENCE_VECTOR_FIELDS.lineCount]: importedReference.lineCount,
+        referenceBasemapProvider:
+          REFERENCE_BASEMAP_PROVIDER_IMPORTED_VECTOR_LAYER,
+      },
+    });
+    setIsDxfReferenceImportOpen(false);
+  };
+
+  if (isSiteOverviewMap) {
     return (
-      <KoreanFieldworkSiteOverviewMap
-        boundaryDraft={boundaryDraft}
-        documents={overviewDocuments}
-        onOpenFeature={(document) =>
-          handleEditDocument(document.resource.id, document.resource.category)}
-      />
+      <>
+        <BoundaryFileImportModal
+          mode="dxfReference"
+          onClose={() => setIsDxfReferenceImportOpen(false)}
+          onImport={importDxfReference}
+          visible={isDxfReferenceImportOpen}
+        />
+        <KoreanFieldworkSiteOverviewMap
+          boundaryDraft={boundaryDraft}
+          documents={overviewDocuments}
+          onImportDxfReference={() => setIsDxfReferenceImportOpen(true)}
+          onOpenFeature={(document) =>
+            handleEditDocument(document.resource.id, document.resource.category)}
+        />
+      </>
     );
   }
 

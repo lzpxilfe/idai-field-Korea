@@ -949,6 +949,63 @@ describe('DocumentAddModal', () => {
     expect(onAddCategory.mock.calls[0][2]).not.toHaveProperty('shortDescription');
   });
 
+  it('stores a circle sketch as a closed feature polygon', () => {
+    const onAddCategory = jest.fn();
+    const parentDoc = {
+      resource: {
+        id: 'operation-1',
+        identifier: 'Operation 1',
+        category: C.TRENCH,
+        relations: {},
+      },
+    } as any;
+
+    const { getByTestId } = render(
+      <LabelsContext.Provider value={{ labels: new Labels(() => ['ko']) }}>
+        <ConfigurationContext.Provider value={createConfig([
+          createCategory(C.TRENCH),
+          createCategory(C.FEATURE),
+        ])}
+        >
+          <DocumentAddModal
+            boundaryDraft={createBoundaryDraft()}
+            initialCategoryName={C.FEATURE}
+            onAddCategory={onAddCategory}
+            onClose={jest.fn()}
+            parentDoc={parentDoc}
+          />
+        </ConfigurationContext.Provider>
+      </LabelsContext.Provider>
+    );
+
+    const canvas = getByTestId('featureLocationSketchCanvas');
+    const touchLayer = getByTestId('featureLocationSketchTouchLayer');
+    fireEvent(canvas, 'layout', {
+      nativeEvent: { layout: { height: 200, width: 200 } },
+    });
+    fireEvent.press(getByTestId('featureSketchMode_circle'));
+    fireEvent(touchLayer, 'responderGrant', {
+      nativeEvent: { locationX: 100, locationY: 100 },
+    });
+    fireEvent(touchLayer, 'responderRelease', {
+      nativeEvent: { locationX: 100, locationY: 100 },
+    });
+    fireEvent.changeText(getByTestId('featureIdentifierInput'), '2호 수혈');
+    selectFeatureTypeAndSubmit(getByTestId, 'featureType_pit');
+
+    const draftParams = onAddCategory.mock.calls[0][2];
+    expect(JSON.parse(draftParams.featureLocationSketch)).toMatchObject({
+      center: { x: 50, y: 50 },
+      shape: 'circle',
+    });
+    expect(JSON.parse(draftParams.featureGeometry)).toMatchObject({
+      type: 'Polygon',
+      coordinates: [expect.any(Array)],
+    });
+    expect(JSON.parse(draftParams.featureGeometry).coordinates[0])
+      .toHaveLength(17);
+  });
+
   it('closes when the backdrop is pressed', () => {
     const onClose = jest.fn();
     const parentDoc = {

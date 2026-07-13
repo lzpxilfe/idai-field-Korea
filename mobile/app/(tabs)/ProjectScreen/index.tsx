@@ -1843,6 +1843,7 @@ export const RecordRow: React.FC<{
             setActiveEvidenceChipId(undefined);
             onOpenEvidence(evidenceDocument);
           }}
+          parentDocument={document}
         />
       )}
       <SwipeableActionRow

@@ -31,6 +31,7 @@ import {
   REFERENCE_BASEMAP_PROVIDER_KAKAO_ROADMAP,
   REFERENCE_BASEMAP_PROVIDER_KAKAO_SKYVIEW,
   REFERENCE_BASEMAP_PROVIDER_PLAIN_CANVAS,
+  ReferenceVectorGeometry,
   SurveyBoundaryGeometry,
   SURVEY_BOUNDARY_ACCURACY_DEFAULT,
   SURVEY_BOUNDARY_ACCURACY_IMPORTED_REFERENCE,
@@ -437,6 +438,11 @@ const Map: React.FC<MapProps> = (props) => {
       boundarySource?: string;
       geometry?: SurveyBoundaryGeometry;
       referenceBasemapProvider?: string;
+      referenceVectorCoordinateCount?: number;
+      referenceVectorCoordinateSystem?: string;
+      referenceVectorFileName?: string;
+      referenceVectorGeometry?: ReferenceVectorGeometry;
+      referenceVectorLineCount?: number;
     },
     boundarySummary: string | undefined = props.boundarySummary,
     options: { openEditor?: boolean; focusOnMap?: boolean } = {}
@@ -481,6 +487,12 @@ const Map: React.FC<MapProps> = (props) => {
         boundarySource: importedBoundary.boundarySource,
         geometry: importedBoundary.geometry,
         referenceBasemapProvider: importedBoundary.referenceBasemapProvider,
+        referenceVectorCoordinateCount:
+          importedBoundary.referenceVectorCoordinateCount,
+        referenceVectorCoordinateSystem: importedBoundary.coordinateSystem,
+        referenceVectorFileName: importedBoundary.fileName,
+        referenceVectorGeometry: importedBoundary.referenceVectorGeometry,
+        referenceVectorLineCount: importedBoundary.referenceVectorLineCount,
       },
       importSummary
     );

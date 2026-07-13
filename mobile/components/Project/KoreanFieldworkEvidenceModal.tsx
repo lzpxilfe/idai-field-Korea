@@ -10,8 +10,13 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { getKoreanFieldworkCategoryLabel } from './korean-fieldwork-categories';
-import { KoreanFieldworkEvidenceChip } from './korean-fieldwork-record-evidence';
+import {
+  getKoreanFieldworkCategoryLabel,
+} from './korean-fieldwork-categories';
+import {
+  getKoreanFieldworkEvidenceRecordIdentifier,
+  KoreanFieldworkEvidenceChip,
+} from './korean-fieldwork-record-evidence';
 
 interface Props {
   canCreate: boolean;
@@ -19,6 +24,7 @@ interface Props {
   onClose: () => void;
   onCreate: () => void;
   onOpenDocument: (document: Document) => void;
+  parentDocument: Document;
 }
 
 const KoreanFieldworkEvidenceModal: React.FC<Props> = ({
@@ -27,6 +33,7 @@ const KoreanFieldworkEvidenceModal: React.FC<Props> = ({
   onClose,
   onCreate,
   onOpenDocument,
+  parentDocument,
 }) => (
   <Modal
     animationType="slide"
@@ -82,26 +89,35 @@ const KoreanFieldworkEvidenceModal: React.FC<Props> = ({
             <Text style={styles.emptyText}>아직 추가된 기록이 없습니다.</Text>
           </View>
         )}
-        renderItem={({ item, index }) => (
-          <TouchableOpacity
-            accessibilityLabel={`${item.resource.identifier} 열기`}
-            activeOpacity={0.84}
-            onPress={() => onOpenDocument(item)}
-            style={styles.recordRow}
-            testID={`evidenceManagerRecord_${item.resource.id}`}
-          >
-            <Text style={styles.recordNumber}>{index + 1}</Text>
-            <View style={styles.recordText}>
-              <Text style={styles.recordIdentifier} numberOfLines={1}>
-                {item.resource.identifier || item.resource.id}
-              </Text>
-              <Text style={styles.recordCategory} numberOfLines={1}>
-                {getKoreanFieldworkCategoryLabel(item.resource.category)}
-              </Text>
-            </View>
-            <MaterialIcons name="chevron-right" size={21} color="#667085" />
-          </TouchableOpacity>
-        )}
+        renderItem={({ item, index }) => {
+          const identifier = getKoreanFieldworkEvidenceRecordIdentifier(
+            parentDocument,
+            item,
+            chip.label,
+            index + 1
+          );
+
+          return (
+            <TouchableOpacity
+              accessibilityLabel={`${identifier} 열기`}
+              activeOpacity={0.84}
+              onPress={() => onOpenDocument(item)}
+              style={styles.recordRow}
+              testID={`evidenceManagerRecord_${item.resource.id}`}
+            >
+              <Text style={styles.recordNumber}>{index + 1}</Text>
+              <View style={styles.recordText}>
+                <Text style={styles.recordIdentifier} numberOfLines={1}>
+                  {identifier}
+                </Text>
+                <Text style={styles.recordCategory} numberOfLines={1}>
+                  {getKoreanFieldworkCategoryLabel(item.resource.category)}
+                </Text>
+              </View>
+              <MaterialIcons name="chevron-right" size={21} color="#667085" />
+            </TouchableOpacity>
+          );
+        }}
       />
     </SafeAreaView>
   </Modal>

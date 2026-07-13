@@ -27,6 +27,9 @@ import {
   KoreanFieldworkStatusTone,
 } from './korean-fieldwork-record-summary';
 import { KoreanFieldworkInvestigationModeId } from './korean-fieldwork-investigation-mode';
+import {
+  getKoreanFieldworkRecordDisplayIdentifier,
+} from './korean-fieldwork-record-evidence';
 
 interface KoreanFieldworkSelectedRecordWorkbenchProps {
   document: Document;
@@ -75,7 +78,7 @@ const KoreanFieldworkSelectedRecordWorkbench: React.FC<
   );
   const parentPath = formatKoreanFieldworkParentPath(document, documentsById);
   const statusChips = getKoreanFieldworkRecordStatusChips(document);
-  const title = document.resource.identifier || document.resource.id;
+  const title = getKoreanFieldworkRecordDisplayIdentifier(document, documents);
   const canReviseIdentifier = canReviseKoreanFieldworkIdentifier(document);
   const canAddPhoto = allowedAddCategoryNames.includes(
     KOREAN_FIELDWORK_CATEGORIES.PHOTO
@@ -183,7 +186,7 @@ const KoreanFieldworkSelectedRecordWorkbench: React.FC<
         testID="selectedRecordToggleDetails"
       >
         <Text style={styles.expandToggleText}>
-          {isExpanded ? '관련 자료·메모 접기' : '관련 자료·메모 펼치기'}
+          {isExpanded ? '기록 세부 점검 접기' : '기록 세부 점검 펼치기'}
         </Text>
         <MaterialIcons
           name={isExpanded ? 'expand-less' : 'expand-more'}

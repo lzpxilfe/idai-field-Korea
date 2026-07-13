@@ -94,6 +94,7 @@ const FEATURE_LOCATION_SKETCH_SHAPES = [
   { id: 'point', label: '점', icon: 'location-outline' },
   { id: 'polygon', label: '점 연결', icon: 'git-merge-outline' },
   { id: 'rectangle', label: '사각형', icon: 'square-outline' },
+  { id: 'circle', label: '원', icon: 'ellipse-outline' },
   { id: 'oval', label: '타원', icon: 'ellipse-outline' },
 ] as const;
 const FEATURE_SKETCH_BACKGROUND_OPTIONS = [
@@ -876,13 +877,18 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
   };
 
   const renderFeatureSketchPreview = () => {
-    if (featureLocationShape === 'rectangle' || featureLocationShape === 'oval') {
+    if (
+      featureLocationShape === 'rectangle'
+      || featureLocationShape === 'circle'
+      || featureLocationShape === 'oval'
+    ) {
       return (
         <View
           pointerEvents="none"
           style={[
             styles.featureSketchShapePreview,
             featureLocationShape === 'oval' && styles.featureSketchOvalPreview,
+            featureLocationShape === 'circle' && styles.featureSketchCirclePreview,
             getFeatureSketchShapeStyle(
               featureSketchCenter,
               featureSketchScale,
@@ -1795,6 +1801,9 @@ const getFeatureSketchGeometryPoints = ({
   if (shape === 'oval') {
     return getOvalSketchPoints(center, scale, rotation);
   }
+  if (shape === 'circle') {
+    return getCircleSketchPoints(center, scale);
+  }
 
   return [];
 };
@@ -1832,6 +1841,22 @@ const getOvalSketchPoints = (
       Math.sin(angle) * radiusY,
       rotation
     );
+  });
+};
+
+const getCircleSketchPoints = (
+  center: FeatureSketchPoint,
+  scale: number
+): FeatureSketchPoint[] => {
+  const radius = (FEATURE_SKETCH_SHAPE_BASE_WIDTH * scale) / 200;
+
+  return Array.from({ length: FEATURE_SKETCH_OVAL_SEGMENTS }, (_, index) => {
+    const angle = (Math.PI * 2 * index) / FEATURE_SKETCH_OVAL_SEGMENTS;
+
+    return {
+      x: clamp(center.x + (Math.cos(angle) * radius), 0, 100),
+      y: clamp(center.y + (Math.sin(angle) * radius), 0, 100),
+    };
   });
 };
 
@@ -2721,7 +2746,7 @@ const getFeatureSketchShapeStyle = (
 
 const isFeatureShapeTransformVisible = (
   shape: FeatureLocationSketchShape
-): boolean => shape === 'rectangle' || shape === 'oval';
+): boolean => shape === 'rectangle' || shape === 'circle' || shape === 'oval';
 
 const roundSketchPoint = (point: FeatureSketchPoint): FeatureSketchPoint => ({
   x: roundSketchCoordinate(point.x),
@@ -3269,6 +3294,11 @@ const styles = StyleSheet.create({
   },
   featureSketchOvalPreview: {
     borderRadius: 32,
+  },
+  featureSketchCirclePreview: {
+    borderRadius: 50,
+    height: 100,
+    marginTop: -50,
   },
   featureSketchShapeCenter: {
     backgroundColor: '#c2410c',

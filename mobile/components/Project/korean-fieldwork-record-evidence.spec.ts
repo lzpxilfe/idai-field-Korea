@@ -1,4 +1,7 @@
-import { getKoreanFieldworkEvidenceChips } from './korean-fieldwork-record-evidence';
+import {
+  getKoreanFieldworkEvidenceChips,
+  getKoreanFieldworkRecordDisplayIdentifier,
+} from './korean-fieldwork-record-evidence';
 import { Document } from 'idai-field-core';
 import { KOREAN_FIELDWORK_CATEGORIES } from './korean-fieldwork-categories';
 
@@ -186,6 +189,30 @@ describe('Korean fieldwork record evidence', () => {
       count: 1,
       documents: [sample],
     });
+  });
+
+  it('replaces legacy machine names with feature-based evidence names', () => {
+    const feature = createDoc('feature-1', C.FEATURE, '1호 수혈');
+    const photo = createDoc('photo-1', C.PHOTO, 'photo-1700000000001', {
+      depicts: ['feature-1'],
+    });
+
+    expect(getKoreanFieldworkRecordDisplayIdentifier(
+      photo,
+      [feature, photo]
+    )).toBe('1호 수혈 사진 1');
+  });
+
+  it('keeps an existing feature-based evidence name', () => {
+    const feature = createDoc('feature-1', C.FEATURE, '1호 수혈');
+    const photo = createDoc('photo-1', C.PHOTO, '1호 수혈 북쪽 전경', {
+      depicts: ['feature-1'],
+    });
+
+    expect(getKoreanFieldworkRecordDisplayIdentifier(
+      photo,
+      [feature, photo]
+    )).toBe('1호 수혈 북쪽 전경');
   });
 });
 

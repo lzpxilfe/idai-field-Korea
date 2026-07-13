@@ -484,6 +484,18 @@ describe('KoreanFieldwork project configuration', () => {
         expect(surveyBoundaryForm.fields.surveyBoundaryAccuracy.inputType).toBe('dropdown');
         expect(surveyBoundaryForm.fields.referenceBasemapProvider.inputType).toBe('dropdown');
         expect(surveyBoundaryForm.fields.referenceBasemapAttribution.inputType).toBe('input');
+        expect(surveyBoundaryForm.fields.referenceVectorGeometry.inputType).toBe('text');
+        expect(surveyBoundaryForm.fields.referenceVectorFileName.inputType).toBe('input');
+        expect(surveyBoundaryForm.fields.referenceVectorCoordinateSystem.inputType).toBe('input');
+        expect(surveyBoundaryForm.fields.referenceVectorLineCount.inputType).toBe('unsignedInt');
+        expect(surveyBoundaryForm.fields.referenceVectorCoordinateCount.inputType).toBe('unsignedInt');
+        expect(surveyBoundaryForm.hidden).toEqual(jasmine.arrayContaining([
+            'referenceVectorGeometry',
+            'referenceVectorFileName',
+            'referenceVectorCoordinateSystem',
+            'referenceVectorLineCount',
+            'referenceVectorCoordinateCount'
+        ]));
         expect(surveyBoundaryForm.valuelists.surveyBoundaryType)
             .toBe('KoreanFieldwork-surveyBoundaryType');
         expect(surveyBoundaryForm.valuelists.surveyBoundarySource)
@@ -520,6 +532,8 @@ describe('KoreanFieldwork project configuration', () => {
         expect(valuelists['KoreanFieldwork-referenceBasemapProvider'].values.kakaoRoadmap).toBeDefined();
         expect(valuelists['KoreanFieldwork-referenceBasemapProvider'].values.kakaoSkyview).toBeDefined();
         expect(valuelists['KoreanFieldwork-referenceBasemapProvider'].values.kakaoHybrid).toBeDefined();
+        expect(valuelists['KoreanFieldwork-referenceBasemapProvider'].values.importedVectorLayer)
+            .toBeDefined();
         expect(valuelists['KoreanFieldwork-referenceBasemapProvider']
             .values[KOREAN_FIELDWORK_REFERENCE_BASEMAP_PROVIDER_PLAIN_CANVAS]).toBeDefined();
         expect(valuelistLanguages.projects.ko['KoreanFieldwork-surveyBoundarySource']

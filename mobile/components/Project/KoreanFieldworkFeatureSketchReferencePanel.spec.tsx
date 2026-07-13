@@ -74,7 +74,7 @@ describe('KoreanFieldworkFeatureSketchReferencePanel', () => {
     expect(queryByTestId('featureSketchReferencePanel')).toBeNull();
   });
 
-  it.each(['rectangle', 'oval'])(
+  it.each(['rectangle', 'circle', 'oval'])(
     'fits very small %s sketches into the shape preview',
     (shape) => {
       const feature = createDoc('feature-1', C.FEATURE, {
@@ -100,7 +100,11 @@ describe('KoreanFieldworkFeatureSketchReferencePanel', () => {
       );
 
       expect(shapeStyle.height).toBeGreaterThan(100);
-      expect(shapeStyle.width).toBeGreaterThan(150);
+      if (shape === 'circle') {
+        expect(shapeStyle.width).toBe(shapeStyle.height);
+      } else {
+        expect(shapeStyle.width).toBeGreaterThan(150);
+      }
     }
   );
 

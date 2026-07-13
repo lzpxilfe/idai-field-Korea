@@ -70,12 +70,30 @@ export interface SurveyBoundaryDraftOptions {
   boundarySource?: string;
   geometry?: SurveyBoundaryGeometry;
   referenceBasemapProvider?: string;
+  referenceVectorCoordinateCount?: number;
+  referenceVectorCoordinateSystem?: string;
+  referenceVectorFileName?: string;
+  referenceVectorGeometry?: ReferenceVectorGeometry;
+  referenceVectorLineCount?: number;
 }
 
 export interface SurveyBoundaryGeometry {
   type: 'LineString';
   coordinates: number[][];
 }
+
+export interface ReferenceVectorGeometry {
+  type: 'MultiLineString';
+  coordinates: number[][][];
+}
+
+export const REFERENCE_VECTOR_FIELDS = {
+  coordinateCount: 'referenceVectorCoordinateCount',
+  coordinateSystem: 'referenceVectorCoordinateSystem',
+  fileName: 'referenceVectorFileName',
+  geometry: 'referenceVectorGeometry',
+  lineCount: 'referenceVectorLineCount',
+} as const;
 
 proj4.defs(
   'WGS84',
@@ -306,6 +324,25 @@ export const createSurveyBoundaryDraft = (
       ...(normalizedBoundarySummary ? {
         shortDescription: normalizedBoundarySummary,
         surveyBoundaryNote: normalizedBoundarySummary,
+      } : {}),
+      ...(options.referenceVectorGeometry ? {
+        [REFERENCE_VECTOR_FIELDS.geometry]: JSON.stringify(
+          options.referenceVectorGeometry
+        ),
+      } : {}),
+      ...(options.referenceVectorFileName ? {
+        [REFERENCE_VECTOR_FIELDS.fileName]: options.referenceVectorFileName,
+      } : {}),
+      ...(options.referenceVectorCoordinateSystem ? {
+        [REFERENCE_VECTOR_FIELDS.coordinateSystem]:
+          options.referenceVectorCoordinateSystem,
+      } : {}),
+      ...(options.referenceVectorLineCount !== undefined ? {
+        [REFERENCE_VECTOR_FIELDS.lineCount]: options.referenceVectorLineCount,
+      } : {}),
+      ...(options.referenceVectorCoordinateCount !== undefined ? {
+        [REFERENCE_VECTOR_FIELDS.coordinateCount]:
+          options.referenceVectorCoordinateCount,
       } : {}),
       ...getKoreanFieldworkDraftFieldDefaults(KOREAN_FIELDWORK_CATEGORIES.SURVEY_BOUNDARY, {
         boundaryAccuracy: options.boundaryAccuracy ?? (location

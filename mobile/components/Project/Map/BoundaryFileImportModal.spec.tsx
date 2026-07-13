@@ -126,6 +126,84 @@ describe('BoundaryFileImportModal', () => {
     expect(onImport).not.toHaveBeenCalled();
   });
 
+  it('uses DXF-only copy and submits a reference background file', async () => {
+    const onImport = jest.fn().mockResolvedValue(undefined);
+    const { getByTestId, getByText } = render(
+      <BoundaryFileImportModal
+        mode="dxfReference"
+        onClose={jest.fn()}
+        onImport={onImport}
+        visible
+      />
+    );
+
+    expect(getByText('DXF 측량 배경 가져오기')).toBeTruthy();
+    expect(getByText('배경으로 저장')).toBeTruthy();
+
+    fireEvent.changeText(
+      getByTestId('boundaryFileImportPathInput'),
+      '/storage/emulated/0/Download/site-survey.dxf'
+    );
+    act(() => {
+      fireEvent.press(getByTestId('boundaryFileImportSubmitButton'));
+    });
+
+    await waitFor(() => {
+      expect(onImport).toHaveBeenCalledWith(
+        '/storage/emulated/0/Download/site-survey.dxf'
+      );
+    });
+  });
+
+  it('passes a selected PRJ sidecar with its DXF reference file', async () => {
+    DocumentPicker.getDocumentAsync.mockResolvedValue({
+      canceled: false,
+      assets: [
+        {
+          name: 'site-survey.prj',
+          uri: 'file:///cache/site-survey.prj',
+        },
+        {
+          name: 'site-survey.dxf',
+          uri: 'file:///cache/site-survey.dxf',
+        },
+      ],
+    });
+    const onImport = jest.fn().mockResolvedValue(undefined);
+    const { getByTestId, getByText } = render(
+      <BoundaryFileImportModal
+        mode="dxfReference"
+        onClose={jest.fn()}
+        onImport={onImport}
+        visible
+      />
+    );
+
+    act(() => {
+      fireEvent.press(getByTestId('boundaryFileImportPickButton'));
+    });
+
+    await waitFor(() => {
+      expect(getByTestId('boundaryFileImportPathInput').props.value)
+        .toBe('file:///cache/site-survey.dxf');
+    });
+    expect(getByText('.prj 좌표계: site-survey.prj')).toBeTruthy();
+    expect(DocumentPicker.getDocumentAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ multiple: true })
+    );
+
+    act(() => {
+      fireEvent.press(getByTestId('boundaryFileImportSubmitButton'));
+    });
+
+    await waitFor(() => {
+      expect(onImport).toHaveBeenCalledWith(
+        'file:///cache/site-survey.dxf',
+        'file:///cache/site-survey.prj'
+      );
+    });
+  });
+
   it('clears the typed path and error when the modal is closed', async () => {
     const onImport = jest.fn().mockRejectedValue(
       new Error("Location 'file:///sdcard/Download/boundary.dxf' isn't readable.")

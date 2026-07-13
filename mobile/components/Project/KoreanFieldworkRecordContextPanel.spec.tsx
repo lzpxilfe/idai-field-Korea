@@ -71,21 +71,21 @@ describe('KoreanFieldworkRecordContextPanel', () => {
     expect(handleAddDocumentOfCategory).not.toHaveBeenCalled();
   });
 
-  it('expands busy evidence groups before opening an individual record', () => {
-    const feature = createDoc('feature-1', C.FEATURE, 'feature 1');
-    const firstPhoto = createDoc('photo-1', C.PHOTO, 'photo 1', {
+  it('opens busy evidence in a separate manager with feature-based names', () => {
+    const feature = createDoc('feature-1', C.FEATURE, '1호 수혈');
+    const firstPhoto = createDoc('photo-1', C.PHOTO, '1호 수혈 북쪽 전경', {
       depicts: ['feature-1'],
     }, {
       shortDescription: 'north overview',
     });
-    const secondPhoto = createDoc('photo-2', C.PHOTO, 'photo 2', {
+    const secondPhoto = createDoc('photo-2', C.PHOTO, 'photo-1700000000002', {
       depicts: ['feature-1'],
     }, {
       shortDescription: 'section detail',
     });
     const handleAddDocumentOfCategory = jest.fn();
     const handleOpenDocument = jest.fn();
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText, queryByTestId, queryByText } = render(
       <KoreanFieldworkRecordContextPanel
         document={feature}
         documents={[feature, firstPhoto, secondPhoto]}
@@ -98,15 +98,18 @@ describe('KoreanFieldworkRecordContextPanel', () => {
     fireEvent.press(getByTestId('evidenceMetric_photos'));
 
     expect(handleOpenDocument).not.toHaveBeenCalled();
-    expect(getByTestId('evidenceGroup_photos')).toBeTruthy();
-    expect(getByText('photo 1')).toBeTruthy();
-    expect(getByText('section detail')).toBeTruthy();
+    expect(queryByTestId('evidenceGroup_photos')).toBeNull();
+    expect(getByTestId('evidenceManagerModal')).toBeTruthy();
+    expect(getByText('1호 수혈 북쪽 전경')).toBeTruthy();
+    expect(getByText('1호 수혈 사진 2')).toBeTruthy();
+    expect(queryByText('photo-1700000000002')).toBeNull();
 
-    fireEvent.press(getByTestId('evidenceGroupItem_photos_photo-2'));
+    fireEvent.press(getByTestId('evidenceManagerRecord_photo-2'));
 
     expect(handleOpenDocument).toHaveBeenCalledWith(secondPhoto);
 
-    fireEvent.press(getByTestId('evidenceGroupAdd_photos'));
+    fireEvent.press(getByTestId('evidenceMetric_photos'));
+    fireEvent.press(getByTestId('evidenceManagerAdd'));
 
     expect(handleAddDocumentOfCategory).toHaveBeenCalledWith(feature, C.PHOTO);
   });
@@ -134,7 +137,7 @@ describe('KoreanFieldworkRecordContextPanel', () => {
     expect(handleAddDocumentOfCategory).not.toHaveBeenCalled();
   });
 
-  it('opens linked tablet media records whose original preservation is not confirmed', () => {
+  it('does not enumerate linked media issues below the feature record', () => {
     const feature = createDoc('feature-1', C.FEATURE, '?섑삁 1', {}, {
       featureRecordingStatus: 'confirmed',
       featureInvestigationChecklist: ['completionPhotoTaken'],
@@ -145,7 +148,7 @@ describe('KoreanFieldworkRecordContextPanel', () => {
       fieldworkPhotoUri: 'file:///tablet/photos/photo-1.jpg',
     });
     const handleOpenDocument = jest.fn();
-    const { getByTestId } = render(
+    const { getByTestId, queryByTestId, queryByText } = render(
       <KoreanFieldworkRecordContextPanel
         document={feature}
         documents={[feature, photo]}
@@ -153,9 +156,12 @@ describe('KoreanFieldworkRecordContextPanel', () => {
       />
     );
 
-    fireEvent.press(getByTestId(
+    expect(queryByTestId(
       'issueOpen_fieldwork-photo-upload-missing_photo-1'
-    ));
+    )).toBeNull();
+    expect(queryByText(photo.resource.identifier)).toBeNull();
+
+    fireEvent.press(getByTestId('evidenceMetric_photos'));
 
     expect(handleOpenDocument).toHaveBeenCalledWith(photo);
   });

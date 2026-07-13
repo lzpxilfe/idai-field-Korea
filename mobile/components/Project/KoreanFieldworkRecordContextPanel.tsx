@@ -13,6 +13,10 @@ import {
   View,
 } from 'react-native';
 import { colors } from '@/utils/colors';
+import KoreanFieldworkEvidenceModal from './KoreanFieldworkEvidenceModal';
+import {
+  getKoreanFieldworkRecordDisplayIdentifier,
+} from './korean-fieldwork-record-evidence';
 import {
   formatKoreanFieldworkParentPath,
   getKoreanFieldworkRecordStatusChips,
@@ -20,7 +24,6 @@ import {
   KoreanFieldworkStatusTone,
 } from './korean-fieldwork-record-summary';
 import {
-  getKoreanFieldworkDisplayIdentifier,
   getKoreanFieldworkCategoryLabel,
   KOREAN_FIELDWORK_CATEGORIES,
 } from './korean-fieldwork-categories';
@@ -65,18 +68,51 @@ const KoreanFieldworkRecordContextPanel: React.FC<KoreanFieldworkRecordContextPa
     [document, documents]
   );
   const metrics = getEvidenceMetrics(evidenceBundle);
-  const [expandedMetricId, setExpandedMetricId] = useState<string>();
+  const displayIdentifier = getKoreanFieldworkRecordDisplayIdentifier(
+    document,
+    documents
+  );
+  const [activeMetricId, setActiveMetricId] = useState<string>();
   const allowedAddCategorySet = useMemo(
     () => new Set(allowedAddCategoryNames),
     [allowedAddCategoryNames]
   );
-  const visibleIssues = evidenceBundle.issues.slice(0, 3);
-  const expandedMetric = metrics.find((metric) =>
-    metric.id === expandedMetricId && metric.documents.length > 1
+  const visibleIssues = evidenceBundle.issues
+    .filter((issue) => issue.documentId === document.resource.id)
+    .slice(0, 3);
+  const activeMetric = metrics.find((metric) =>
+    metric.id === activeMetricId && metric.documents.length > 1
   );
 
   return (
-    <View style={styles.container} testID="koreanFieldworkRecordContextPanel">
+    <>
+      {!!activeMetric && (
+        <KoreanFieldworkEvidenceModal
+          canCreate={!!activeMetric.createCategoryName
+            && allowedAddCategorySet.has(activeMetric.createCategoryName)
+            && !!onAddDocumentOfCategory}
+          chip={{
+            count: activeMetric.documents.length,
+            createCategoryName: activeMetric.createCategoryName,
+            documents: activeMetric.documents,
+            id: activeMetric.id,
+            label: activeMetric.label,
+            tone: 'filled',
+          }}
+          onClose={() => setActiveMetricId(undefined)}
+          onCreate={() => {
+            const categoryName = activeMetric.createCategoryName;
+            setActiveMetricId(undefined);
+            if (categoryName) onAddDocumentOfCategory?.(document, categoryName);
+          }}
+          onOpenDocument={(evidenceDocument) => {
+            setActiveMetricId(undefined);
+            onOpenDocument(evidenceDocument);
+          }}
+          parentDocument={document}
+        />
+      )}
+      <View style={styles.container} testID="koreanFieldworkRecordContextPanel">
       <View style={styles.headerRow}>
         <View style={styles.headerText}>
           <Text style={styles.kicker}>현장 맥락</Text>
@@ -111,25 +147,13 @@ const KoreanFieldworkRecordContextPanel: React.FC<KoreanFieldworkRecordContextPa
             key={metric.id}
             rootDocument={document}
             metric={metric}
-            isExpanded={expandedMetricId === metric.id}
             allowedAddCategoryNames={allowedAddCategorySet}
             onAddDocumentOfCategory={onAddDocumentOfCategory}
             onOpenDocument={onOpenDocument}
-            onToggleMetric={() => setExpandedMetricId((currentMetricId) =>
-              currentMetricId === metric.id ? undefined : metric.id)}
+            onOpenMetric={() => setActiveMetricId(metric.id)}
           />
         ))}
       </View>
-
-      {!!expandedMetric && (
-        <EvidenceGroupPanel
-          metric={expandedMetric}
-          rootDocument={document}
-          allowedAddCategoryNames={allowedAddCategorySet}
-          onAddDocumentOfCategory={onAddDocumentOfCategory}
-          onOpenDocument={onOpenDocument}
-        />
-      )}
 
       {visibleIssues.length > 0 && (
         <View style={styles.issuePanel}>
@@ -150,7 +174,7 @@ const KoreanFieldworkRecordContextPanel: React.FC<KoreanFieldworkRecordContextPa
                 <View style={[styles.issueSeverity, issueSeverityStyle(issue)]} />
                 <View style={styles.issueText}>
                   <Text style={styles.issueTitle} numberOfLines={1}>
-                    {issue.identifier}
+                    {displayIdentifier}
                   </Text>
                   <Text style={styles.issueAction} numberOfLines={2}>
                     {issue.recommendedAction}
@@ -170,7 +194,8 @@ const KoreanFieldworkRecordContextPanel: React.FC<KoreanFieldworkRecordContextPa
           })}
         </View>
       )}
-    </View>
+      </View>
+    </>
   );
 };
 
@@ -236,19 +261,17 @@ export const getEvidenceMetrics = (
 const EvidenceButton: React.FC<{
   rootDocument: Document;
   metric: EvidenceMetric;
-  isExpanded: boolean;
   allowedAddCategoryNames: Set<string>;
   onAddDocumentOfCategory?: (parentDoc: Document, categoryName: string) => void;
   onOpenDocument: (document: Document) => void;
-  onToggleMetric: () => void;
+  onOpenMetric: () => void;
 }> = ({
   rootDocument,
   metric,
-  isExpanded,
   allowedAddCategoryNames,
   onAddDocumentOfCategory,
   onOpenDocument,
-  onToggleMetric,
+  onOpenMetric,
 }) => {
   const [firstDocument] = metric.documents;
   const hasMultipleDocuments = metric.documents.length > 1;
@@ -265,7 +288,7 @@ const EvidenceButton: React.FC<{
       testID={`evidenceMetric_${metric.id}`}
       onPress={() => {
         if (hasMultipleDocuments) {
-          onToggleMetric();
+          onOpenMetric();
           return;
         }
         if (firstDocument) {
@@ -287,7 +310,7 @@ const EvidenceButton: React.FC<{
           canCreateMissingEvidence
             ? 'add-circle-outline'
             : hasMultipleDocuments
-              ? isExpanded ? 'expand-less' : 'expand-more'
+              ? 'view-list'
               : metric.icon
         }
         size={16}
@@ -303,85 +326,6 @@ const EvidenceButton: React.FC<{
         <Text style={styles.metricActionLabel}>추가</Text>
       )}
     </TouchableOpacity>
-  );
-};
-
-const EvidenceGroupPanel: React.FC<{
-  rootDocument: Document;
-  metric: EvidenceMetric;
-  allowedAddCategoryNames: Set<string>;
-  onAddDocumentOfCategory?: (parentDoc: Document, categoryName: string) => void;
-  onOpenDocument: (document: Document) => void;
-}> = ({
-  rootDocument,
-  metric,
-  allowedAddCategoryNames,
-  onAddDocumentOfCategory,
-  onOpenDocument,
-}) => {
-  const canAddMoreEvidence = !!metric.createCategoryName
-    && allowedAddCategoryNames.has(metric.createCategoryName)
-    && !!onAddDocumentOfCategory;
-
-  return (
-    <View
-      style={styles.evidenceGroupPanel}
-      testID={`evidenceGroup_${metric.id}`}
-    >
-      <View style={styles.evidenceGroupHeader}>
-        <View style={styles.evidenceGroupTitleWrap}>
-          <Text style={styles.evidenceGroupTitle}>
-            {metric.label}
-          </Text>
-          <Text style={styles.evidenceGroupMeta}>
-            {`${metric.documents.length}\uac74`}
-          </Text>
-        </View>
-        {canAddMoreEvidence && (
-          <TouchableOpacity
-            activeOpacity={0.84}
-            onPress={() => {
-              if (metric.createCategoryName) {
-                onAddDocumentOfCategory?.(rootDocument, metric.createCategoryName);
-              }
-            }}
-            style={styles.evidenceGroupAddButton}
-            testID={`evidenceGroupAdd_${metric.id}`}
-          >
-            <MaterialIcons name="add" size={15} color="#175cd3" />
-            <Text style={styles.evidenceGroupAddText}>
-              {'\ucd94\uac00'}
-            </Text>
-          </TouchableOpacity>
-        )}
-      </View>
-      {metric.documents.map((evidenceDocument, index) => (
-        <TouchableOpacity
-          activeOpacity={0.84}
-          key={`${metric.id}-${evidenceDocument.resource.id}-${index}`}
-          onPress={() => onOpenDocument(evidenceDocument)}
-          style={styles.evidenceGroupItem}
-          testID={`evidenceGroupItem_${metric.id}_${evidenceDocument.resource.id}`}
-        >
-          <View style={styles.evidenceGroupItemNumber}>
-            <Text style={styles.evidenceGroupItemNumberText}>
-              {index + 1}
-            </Text>
-          </View>
-          <View style={styles.evidenceGroupItemText}>
-            <Text style={styles.evidenceGroupItemTitle} numberOfLines={1}>
-              {getEvidenceDocumentTitle(evidenceDocument)}
-            </Text>
-            {!!getEvidenceDocumentDetail(evidenceDocument) && (
-              <Text style={styles.evidenceGroupItemDetail} numberOfLines={1}>
-                {getEvidenceDocumentDetail(evidenceDocument)}
-              </Text>
-            )}
-          </View>
-          <MaterialIcons name="open-in-new" size={15} color="#475467" />
-        </TouchableOpacity>
-      ))}
-    </View>
   );
 };
 
@@ -565,36 +509,6 @@ const issueResolutionIconColor = (tone: KoreanFieldworkStatusTone): string => {
   }
 };
 
-const getEvidenceDocumentTitle = (document: Document): string =>
-  getKoreanFieldworkDisplayIdentifier(document.resource.identifier)
-  || document.resource.id;
-
-const getEvidenceDocumentDetail = (document: Document): string | undefined => {
-  const resource = document.resource as Record<string, unknown>;
-
-  return [
-    resource.shortDescription,
-    resource.description,
-    resource.fieldworkPhotoCaption,
-    resource.originalFilename,
-    resource.fieldworkPhotoUri,
-    resource.soilProfilePhotoUri,
-    resource.fileUri,
-    resource.imageUri,
-  ]
-    .map(getPrintableEvidenceValue)
-    .find((value): value is string => !!value);
-};
-
-const getPrintableEvidenceValue = (value: unknown): string | undefined => {
-  if (typeof value !== 'string') return undefined;
-
-  const text = value.replace(/\s+/g, ' ').trim();
-  if (!text) return undefined;
-
-  return text.length > 92 ? `${text.slice(0, 89)}...` : text;
-};
-
 const styles = StyleSheet.create({
   container: {
     backgroundColor: '#f8fafc',
@@ -739,91 +653,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '900',
     marginLeft: 4,
-  },
-  evidenceGroupPanel: {
-    backgroundColor: '#ffffff',
-    borderColor: '#d0d5dd',
-    borderRadius: 6,
-    borderWidth: 1,
-    marginTop: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 7,
-  },
-  evidenceGroupHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    marginBottom: 5,
-  },
-  evidenceGroupTitleWrap: {
-    alignItems: 'center',
-    flex: 1,
-    flexDirection: 'row',
-    minWidth: 0,
-  },
-  evidenceGroupTitle: {
-    color: '#27343b',
-    fontSize: 12,
-    fontWeight: '900',
-  },
-  evidenceGroupMeta: {
-    color: '#667085',
-    fontSize: 11,
-    fontWeight: '900',
-    marginLeft: 6,
-  },
-  evidenceGroupAddButton: {
-    alignItems: 'center',
-    backgroundColor: '#eff8ff',
-    borderColor: '#b2ddff',
-    borderRadius: 5,
-    borderWidth: 1,
-    flexDirection: 'row',
-    minHeight: 29,
-    paddingHorizontal: 7,
-  },
-  evidenceGroupAddText: {
-    color: '#175cd3',
-    fontSize: 11,
-    fontWeight: '900',
-    marginLeft: 2,
-  },
-  evidenceGroupItem: {
-    alignItems: 'center',
-    borderTopColor: '#eef2f6',
-    borderTopWidth: 1,
-    flexDirection: 'row',
-    minHeight: 43,
-    paddingVertical: 6,
-  },
-  evidenceGroupItemNumber: {
-    alignItems: 'center',
-    backgroundColor: '#eef2f6',
-    borderRadius: 5,
-    height: 24,
-    justifyContent: 'center',
-    marginRight: 8,
-    width: 24,
-  },
-  evidenceGroupItemNumberText: {
-    color: '#475467',
-    fontSize: 11,
-    fontWeight: '900',
-  },
-  evidenceGroupItemText: {
-    flex: 1,
-    minWidth: 0,
-    paddingRight: 8,
-  },
-  evidenceGroupItemTitle: {
-    color: '#1f2937',
-    fontSize: 12,
-    fontWeight: '900',
-  },
-  evidenceGroupItemDetail: {
-    color: '#667085',
-    fontSize: 11,
-    fontWeight: '700',
-    marginTop: 2,
   },
   issuePanel: {
     marginTop: 10,

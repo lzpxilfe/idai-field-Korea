@@ -8,6 +8,7 @@ import {
 import proj4 from 'proj4';
 import {
   MapLocation,
+  ReferenceVectorGeometry,
   SurveyBoundaryGeometry,
 } from './korean-fieldwork-drafts';
 
@@ -18,12 +19,33 @@ export interface ImportedBoundaryFile {
   coordinateSystem: string;
   fileName: string;
   geometry: SurveyBoundaryGeometry;
+  referenceVectorCoordinateCount?: number;
+  referenceVectorGeometry?: ReferenceVectorGeometry;
+  referenceVectorLineCount?: number;
   referenceBasemapProvider: string;
+}
+
+export interface ImportedDxfReferenceFile {
+  coordinateCount: number;
+  coordinateSystem: string;
+  fileName: string;
+  geometry: ReferenceVectorGeometry;
+  lineCount: number;
 }
 
 interface ParsedBoundaryGeometry {
   coordinateSystem: string;
   geometry: SurveyBoundaryGeometry;
+  referenceVectorCoordinateCount?: number;
+  referenceVectorGeometry?: ReferenceVectorGeometry;
+  referenceVectorLineCount?: number;
+}
+
+export interface ParsedDxfReferenceGeometry {
+  coordinateCount: number;
+  coordinateSystem: string;
+  geometry: ReferenceVectorGeometry;
+  lineCount: number;
 }
 
 type Coordinate = [number, number];
@@ -48,6 +70,9 @@ const SUPPORTED_CRS = new Set([
 ]);
 const FILE_URI_SCHEME_PATTERN = /^[a-z][a-z0-9+.-]*:\/\//i;
 const DXF_LINE_CONNECT_TOLERANCE = 0.001;
+const DXF_CURVE_SEGMENTS = 48;
+const MAX_DXF_REFERENCE_LINES = 20000;
+const MAX_DXF_REFERENCE_COORDINATES = 200000;
 
 let hasRegisteredProj4Definitions = false;
 
@@ -96,46 +121,67 @@ export const importBoundaryFileFromPath = async (
   };
 };
 
+export const importDxfReferenceFileFromPath = async (
+  filePath: string,
+  coordinateSystemFilePath?: string
+): Promise<ImportedDxfReferenceFile> => {
+  const uri = normalizeLocalFileUri(filePath);
+  if (getFileExtension(uri) !== 'dxf') {
+    throw new Error('DXF reference backgrounds require a .dxf file.');
+  }
+
+  const coordinateSystemHint = await readPrjCoordinateSystem(
+    uri,
+    coordinateSystemFilePath
+  );
+  const dxfText = await FileSystem.readAsStringAsync(uri, {
+    encoding: FileSystem.EncodingType.UTF8,
+  });
+  const parsedReference = parseDxfReferenceText(
+    dxfText,
+    coordinateSystemHint
+  );
+
+  return {
+    ...parsedReference,
+    fileName: getFileName(uri),
+  };
+};
+
 export const parseDxfBoundaryText = (
   dxfText: string,
   coordinateSystemHint?: string
 ): ParsedBoundaryGeometry => {
-  const entities = collectDxfEntities(dxfText);
-  const candidates: Coordinate[][] = [];
-  const segments: [Coordinate, Coordinate][] = [];
-
-  for (let index = 0; index < entities.length; index += 1) {
-    const entity = entities[index];
-    if (!entity) continue;
-
-    if (entity.type === 'LWPOLYLINE') {
-      addCandidate(candidates, parseDxfLightweightPolyline(entity.groups));
-    } else if (entity.type === 'POLYLINE') {
-      const vertices: Coordinate[] = [];
-      let cursor = index + 1;
-      while (cursor < entities.length && entities[cursor]?.type !== 'SEQEND') {
-        if (entities[cursor]?.type === 'VERTEX') {
-          addCoordinate(vertices, getDxfCoordinate(entities[cursor].groups));
-        }
-        cursor += 1;
-      }
-      addCandidate(candidates, vertices);
-      index = cursor;
-    } else if (entity.type === 'LINE') {
-      const segment = parseDxfLine(entity.groups);
-      if (segment) segments.push(segment);
-    }
-  }
+  const { candidates, lines, segments } = collectDxfLinework(dxfText);
 
   if (candidates.length === 0 && segments.length > 0) {
     addCandidate(candidates, buildLineStringFromSegments(segments));
   }
 
-  return createSurveyBoundaryGeometry(
+  const boundary = createSurveyBoundaryGeometry(
     selectBestCoordinateSet(candidates),
     coordinateSystemHint
   );
+  const reference = createDxfReferenceGeometry(
+    lines,
+    boundary.coordinateSystem
+  );
+
+  return {
+    ...boundary,
+    referenceVectorCoordinateCount: reference.coordinateCount,
+    referenceVectorGeometry: reference.geometry,
+    referenceVectorLineCount: reference.lineCount,
+  };
 };
+
+export const parseDxfReferenceText = (
+  dxfText: string,
+  coordinateSystemHint?: string
+): ParsedDxfReferenceGeometry => createDxfReferenceGeometry(
+  collectDxfLinework(dxfText).lines,
+  coordinateSystemHint
+);
 
 export const parseShpBoundaryBytes = (
   bytes: Uint8Array,
@@ -211,9 +257,12 @@ const getFileName = (uri: string): string => {
 };
 
 const readPrjCoordinateSystem = async (
-  uri: string
+  uri: string,
+  coordinateSystemFilePath?: string
 ): Promise<string | undefined> => {
-  const prjUri = replaceFileExtension(uri, '.prj');
+  const prjUri = coordinateSystemFilePath
+    ? normalizeLocalFileUri(coordinateSystemFilePath)
+    : replaceFileExtension(uri, '.prj');
   if (!prjUri || prjUri === uri) return undefined;
 
   let prjText: string;
@@ -274,6 +323,98 @@ const createSurveyBoundaryGeometry = (
   };
 };
 
+const createDxfReferenceGeometry = (
+  rawLines: Coordinate[][],
+  coordinateSystemHint?: string
+): ParsedDxfReferenceGeometry => {
+  const lines = rawLines
+    .map((line) => line.filter(isFiniteCoordinate))
+    .filter((line) => line.length >= 2);
+  const coordinateCount = lines.reduce(
+    (sum, line) => sum + line.length,
+    0
+  );
+
+  if (lines.length === 0) {
+    throw new Error('No DXF linework was found for the reference background.');
+  }
+  if (
+    lines.length > MAX_DXF_REFERENCE_LINES
+    || coordinateCount > MAX_DXF_REFERENCE_COORDINATES
+  ) {
+    throw new Error(
+      'The DXF reference background is too large. '
+      + `Use at most ${MAX_DXF_REFERENCE_LINES} lines and `
+      + `${MAX_DXF_REFERENCE_COORDINATES} coordinates.`
+    );
+  }
+
+  const coordinateSystem = detectCoordinateSystem(
+    lines.flat(),
+    coordinateSystemHint
+  );
+
+  return {
+    coordinateCount,
+    coordinateSystem,
+    geometry: {
+      type: 'MultiLineString',
+      coordinates: lines.map((line) =>
+        projectCoordinates(line, coordinateSystem)),
+    },
+    lineCount: lines.length,
+  };
+};
+
+const collectDxfLinework = (dxfText: string): {
+  candidates: Coordinate[][];
+  lines: Coordinate[][];
+  segments: [Coordinate, Coordinate][];
+} => {
+  const entities = collectDxfEntities(dxfText);
+  const candidates: Coordinate[][] = [];
+  const lines: Coordinate[][] = [];
+  const segments: [Coordinate, Coordinate][] = [];
+
+  for (let index = 0; index < entities.length; index += 1) {
+    const entity = entities[index];
+    if (!entity) continue;
+
+    if (entity.type === 'LWPOLYLINE') {
+      const coordinates = parseDxfLightweightPolyline(entity.groups);
+      addReferenceLine(lines, coordinates);
+      addCandidate(candidates, coordinates);
+    } else if (entity.type === 'POLYLINE') {
+      const vertices: Coordinate[] = [];
+      let cursor = index + 1;
+      while (cursor < entities.length && entities[cursor]?.type !== 'SEQEND') {
+        if (entities[cursor]?.type === 'VERTEX') {
+          addCoordinate(vertices, getDxfCoordinate(entities[cursor].groups));
+        }
+        cursor += 1;
+      }
+      const coordinates = closeDxfPolylineIfNeeded(vertices, entity.groups);
+      addReferenceLine(lines, coordinates);
+      addCandidate(candidates, coordinates);
+      index = cursor;
+    } else if (entity.type === 'LINE') {
+      const segment = parseDxfLine(entity.groups);
+      if (segment) {
+        segments.push(segment);
+        addReferenceLine(lines, segment);
+      }
+    } else if (entity.type === 'CIRCLE') {
+      const circle = parseDxfCurve(entity.groups, true);
+      addReferenceLine(lines, circle);
+      addCandidate(candidates, circle);
+    } else if (entity.type === 'ARC') {
+      addReferenceLine(lines, parseDxfCurve(entity.groups, false));
+    }
+  }
+
+  return { candidates, lines, segments };
+};
+
 const collectDxfEntities = (dxfText: string) => {
   const groups = collectDxfGroups(dxfText);
   const entities: DxfEntity[] = [];
@@ -319,7 +460,15 @@ const parseDxfLightweightPolyline = (
     }
   });
 
-  return coordinates;
+  return closeDxfPolylineIfNeeded(coordinates, groups);
+};
+
+const closeDxfPolylineIfNeeded = (
+  coordinates: Coordinate[],
+  groups: DxfGroup[]
+): Coordinate[] => {
+  const flags = getFirstDxfNumber(groups, 70) ?? 0;
+  return (flags & 1) === 1 ? closeLineString(coordinates) : coordinates;
 };
 
 const getDxfCoordinate = (
@@ -347,6 +496,43 @@ const parseDxfLine = (
   }
 
   return [[startX, startY], [endX, endY]];
+};
+
+const parseDxfCurve = (
+  groups: DxfGroup[],
+  isCircle: boolean
+): Coordinate[] => {
+  const centerX = getFirstDxfNumber(groups, 10);
+  const centerY = getFirstDxfNumber(groups, 20);
+  const radius = getFirstDxfNumber(groups, 40);
+  if (
+    centerX === undefined
+    || centerY === undefined
+    || radius === undefined
+    || radius <= 0
+  ) {
+    return [];
+  }
+
+  const startAngle = isCircle ? 0 : getFirstDxfNumber(groups, 50);
+  let endAngle = isCircle ? 360 : getFirstDxfNumber(groups, 51);
+  if (startAngle === undefined || endAngle === undefined) return [];
+  while (endAngle <= startAngle) endAngle += 360;
+  const angleSpan = Math.min(360, endAngle - startAngle);
+  const segmentCount = Math.max(
+    4,
+    Math.ceil((DXF_CURVE_SEGMENTS * angleSpan) / 360)
+  );
+
+  return Array.from({ length: segmentCount + 1 }, (_, index): Coordinate => {
+    const angle = startAngle + ((angleSpan * index) / segmentCount);
+    const radians = (angle * Math.PI) / 180;
+
+    return [
+      centerX + (Math.cos(radians) * radius),
+      centerY + (Math.sin(radians) * radius),
+    ];
+  });
 };
 
 const getFirstDxfNumber = (
@@ -541,6 +727,15 @@ const detectCoordinateSystem = (
   }
 
   return WEB_MERCATOR;
+};
+
+const addReferenceLine = (
+  lines: Coordinate[][],
+  coordinates: Coordinate[] | undefined
+) => {
+  if (coordinates && coordinates.filter(isFiniteCoordinate).length >= 2) {
+    lines.push(coordinates);
+  }
 };
 
 const isKoreanProjectedCoordinateCenter = (center: MapLocation): boolean =>

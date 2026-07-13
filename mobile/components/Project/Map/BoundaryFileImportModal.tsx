@@ -16,16 +16,22 @@ import {
 import Button from '@/components/common/Button';
 
 interface BoundaryFileImportModalProps {
+  mode?: 'boundary' | 'dxfReference';
   onClose: () => void;
-  onImport: (filePath: string) => Promise<void>;
+  onImport: (
+    filePath: string,
+    coordinateSystemFilePath?: string
+  ) => Promise<void>;
   visible: boolean;
 }
 
 const BoundaryFileImportModal: React.FC<BoundaryFileImportModalProps> = ({
+  mode = 'boundary',
   onClose,
   onImport,
   visible,
 }) => {
+  const [coordinateSystemFilePath, setCoordinateSystemFilePath] = useState('');
   const [filePath, setFilePath] = useState('');
   const [errorMessage, setErrorMessage] = useState<string>();
   const [isImporting, setIsImporting] = useState(false);
@@ -37,9 +43,12 @@ const BoundaryFileImportModal: React.FC<BoundaryFileImportModalProps> = ({
     }
 
     setErrorMessage(undefined);
+    setCoordinateSystemFilePath('');
     setFilePath('');
     setIsImporting(false);
-  }, [visible]);
+  }, [mode, visible]);
+
+  const isReferenceMode = mode === 'dxfReference';
 
   const pickBoundaryFile = async () => {
     setErrorMessage(undefined);
@@ -49,19 +58,44 @@ const BoundaryFileImportModal: React.FC<BoundaryFileImportModalProps> = ({
       );
       const result = await DocumentPicker.getDocumentAsync({
         copyToCacheDirectory: true,
-        multiple: false,
-        type: [
-          'application/geo+json',
-          'application/json',
-          'application/octet-stream',
-          'application/x-esri-shape',
-          'application/dxf',
-          'image/vnd.dxf',
-          'text/plain',
-          '*/*',
-        ],
+        multiple: isReferenceMode,
+        type: isReferenceMode
+          ? [
+            'application/dxf',
+            'image/vnd.dxf',
+            'text/plain',
+            'application/octet-stream',
+            '*/*',
+          ]
+          : [
+            'application/geo+json',
+            'application/json',
+            'application/octet-stream',
+            'application/x-esri-shape',
+            'application/dxf',
+            'image/vnd.dxf',
+            'text/plain',
+            '*/*',
+          ],
       });
-      if (!result.canceled) setFilePath(result.assets[0]?.uri ?? '');
+      if (result.canceled) return;
+
+      if (isReferenceMode) {
+        const dxfAsset = result.assets.find((asset) =>
+          getFileExtension(asset.name || asset.uri) === 'dxf');
+        if (!dxfAsset) {
+          setErrorMessage('.dxf 측량 파일을 함께 선택하세요.');
+          return;
+        }
+
+        const prjAsset = result.assets.find((asset) =>
+          getFileExtension(asset.name || asset.uri) === 'prj');
+        setFilePath(dxfAsset.uri);
+        setCoordinateSystemFilePath(prjAsset?.uri ?? '');
+        return;
+      }
+
+      setFilePath(result.assets[0]?.uri ?? '');
     } catch (error) {
       setErrorMessage(getErrorMessage(error));
     }
@@ -70,14 +104,22 @@ const BoundaryFileImportModal: React.FC<BoundaryFileImportModalProps> = ({
   const submitImport = async () => {
     const normalizedPath = filePath.trim();
     if (!normalizedPath) {
-      setErrorMessage('태블릿에서 .shp, .dxf, .geojson 파일을 선택하거나 파일 경로를 입력하세요.');
+      setErrorMessage(isReferenceMode
+        ? '태블릿에서 .dxf 측량 파일을 선택하거나 파일 경로를 입력하세요.'
+        : '태블릿에서 .shp, .dxf, .geojson 파일을 선택하거나 파일 경로를 입력하세요.');
       return;
     }
 
     setErrorMessage(undefined);
     setIsImporting(true);
     try {
-      await onImport(normalizedPath);
+      const normalizedCoordinateSystemPath = coordinateSystemFilePath.trim();
+      if (normalizedCoordinateSystemPath) {
+        await onImport(normalizedPath, normalizedCoordinateSystemPath);
+      } else {
+        await onImport(normalizedPath);
+      }
+      setCoordinateSystemFilePath('');
       setFilePath('');
     } catch (error) {
       setErrorMessage(getImportErrorMessage(error));
@@ -109,7 +151,11 @@ const BoundaryFileImportModal: React.FC<BoundaryFileImportModalProps> = ({
             <View style={styles.header}>
               <View style={styles.titleRow}>
                 <MaterialIcons name="folder-open" size={22} color="#24495d" />
-                <Text style={styles.title}>SHP/DXF/GeoJSON 경계 가져오기</Text>
+                <Text style={styles.title}>
+                  {isReferenceMode
+                    ? 'DXF 측량 배경 가져오기'
+                    : 'SHP/DXF/GeoJSON 경계 가져오기'}
+                </Text>
               </View>
               <Button
                 icon={<Ionicons name="close-outline" size={18} />}
@@ -119,14 +165,21 @@ const BoundaryFileImportModal: React.FC<BoundaryFileImportModalProps> = ({
               />
             </View>
             <Text style={styles.description}>
-              태블릿 안의 경계 파일을 선택하거나 파일 경로를 입력해 조사 경계로 저장합니다.
+              {isReferenceMode
+                ? '등고선·측량선·유구선을 조사 경계 위의 배경으로 저장합니다.'
+                : '태블릿 안의 경계 파일을 선택하거나 파일 경로를 입력해 조사 경계로 저장합니다.'}
             </Text>
             <TextInput
               autoCapitalize="none"
               autoCorrect={false}
               editable={!isImporting}
-              onChangeText={setFilePath}
-              placeholder="/storage/emulated/0/Android/data/kr.idai.fieldmobile/files/boundary.shp"
+              onChangeText={(value) => {
+                setCoordinateSystemFilePath('');
+                setFilePath(value);
+              }}
+              placeholder={isReferenceMode
+                ? '/storage/emulated/0/Download/survey.dxf'
+                : '/storage/emulated/0/Android/data/kr.idai.fieldmobile/files/boundary.shp'}
               style={styles.input}
               testID="boundaryFileImportPathInput"
               value={filePath}
@@ -142,9 +195,21 @@ const BoundaryFileImportModal: React.FC<BoundaryFileImportModalProps> = ({
               />
             </View>
             <Text style={styles.helpText}>
-              .shp, .dxf, .geojson을 지원합니다. 일반 Download 경로가 막히면 파일 선택을 사용하세요.
-              .prj 좌표계 파일까지 함께 쓰려면 앱이 읽을 수 있는 같은 폴더의 경로를 직접 입력하세요.
+              {isReferenceMode
+                ? '.dxf 폴리라인, 직선, 원호, 원을 지원합니다. 한국 투영좌표는 파일 선택에서 같은 이름의 .dxf와 .prj를 함께 선택하세요.'
+                : '.shp, .dxf, .geojson을 지원합니다. 일반 Download 경로가 막히면 파일 선택을 사용하세요. .prj 좌표계 파일까지 함께 쓰려면 앱이 읽을 수 있는 같은 폴더의 경로를 직접 입력하세요.'}
             </Text>
+            {!!coordinateSystemFilePath && (
+              <View
+                style={styles.sidecarStatus}
+                testID="boundaryFileImportCoordinateSystemFile"
+              >
+                <MaterialIcons name="check-circle" size={16} color="#28745d" />
+                <Text numberOfLines={1} style={styles.sidecarStatusText}>
+                  {`.prj 좌표계: ${getFileName(coordinateSystemFilePath)}`}
+                </Text>
+              </View>
+            )}
             {errorMessage && (
               <Text
                 style={styles.errorText}
@@ -163,7 +228,9 @@ const BoundaryFileImportModal: React.FC<BoundaryFileImportModalProps> = ({
                 isDisabled={isImporting}
                 onPress={() => { void submitImport(); }}
                 testID="boundaryFileImportSubmitButton"
-                title={isImporting ? '가져오는 중' : '경계로 저장'}
+                title={isImporting
+                  ? '가져오는 중'
+                  : (isReferenceMode ? '배경으로 저장' : '경계로 저장')}
                 variant="success"
               />
             </View>
@@ -175,6 +242,14 @@ const BoundaryFileImportModal: React.FC<BoundaryFileImportModalProps> = ({
 };
 
 export default BoundaryFileImportModal;
+
+const getFileExtension = (value: string): string =>
+  /\.([a-z0-9]+)$/i.exec(value.split(/[?#]/)[0])?.[1]?.toLowerCase() ?? '';
+
+const getFileName = (value: string): string => {
+  const path = decodeURIComponent(value.split(/[?#]/)[0]).replace(/\\/g, '/');
+  return path.split('/').pop() ?? path;
+};
 
 const getErrorMessage = (error: unknown): string => {
   if (error instanceof Error) return error.message;
@@ -254,6 +329,18 @@ const styles = StyleSheet.create({
   pickRow: {
     alignItems: 'flex-start',
     marginTop: 8,
+  },
+  sidecarStatus: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    marginTop: 10,
+  },
+  sidecarStatusText: {
+    color: '#28745d',
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '800',
+    marginLeft: 6,
   },
   title: {
     color: '#20313a',

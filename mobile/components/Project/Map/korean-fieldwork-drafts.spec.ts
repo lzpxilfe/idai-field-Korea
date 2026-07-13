@@ -17,6 +17,7 @@ import {
   REFERENCE_BASEMAP_PROVIDER_DEFAULT,
   REFERENCE_BASEMAP_PROVIDER_KAKAO_HYBRID,
   REFERENCE_BASEMAP_PROVIDER_PLAIN_CANVAS,
+  REFERENCE_VECTOR_FIELDS,
   SOIL_PROFILE_PHOTO_QUALITY_DEFAULT,
   SOIL_PROFILE_PHOTO_SIZE_HINT_KB_DEFAULT,
   SURVEY_BOUNDARY_ACCURACY_APPROXIMATE_GPS,
@@ -440,6 +441,44 @@ describe('Korean fieldwork map drafts', () => {
       referenceBasemapProvider: REFERENCE_BASEMAP_PROVIDER_KAKAO_HYBRID,
       surveyBoundaryAccuracy: SURVEY_BOUNDARY_ACCURACY_DEFAULT,
       surveyBoundarySource: SURVEY_BOUNDARY_SOURCE_DEFAULT,
+    });
+  });
+
+  it('stores imported DXF linework and source metadata on SurveyBoundary drafts', () => {
+    const operationDoc = {
+      resource: {
+        id: 'operation-1',
+        category: 'Operation',
+        relations: {},
+      },
+    } as any;
+    const referenceVectorGeometry = {
+      type: 'MultiLineString' as const,
+      coordinates: [
+        [[1000, 2000], [1100, 2000]],
+        [[1000, 2050], [1100, 2050]],
+      ],
+    };
+
+    const draft = createSurveyBoundaryDraft(
+      operationDoc,
+      undefined,
+      'A구역',
+      {
+        referenceVectorCoordinateCount: 4,
+        referenceVectorCoordinateSystem: 'EPSG:5186',
+        referenceVectorFileName: 'site-survey.dxf',
+        referenceVectorGeometry,
+        referenceVectorLineCount: 2,
+      }
+    );
+
+    expect(draft.resource).toMatchObject({
+      [REFERENCE_VECTOR_FIELDS.coordinateCount]: 4,
+      [REFERENCE_VECTOR_FIELDS.coordinateSystem]: 'EPSG:5186',
+      [REFERENCE_VECTOR_FIELDS.fileName]: 'site-survey.dxf',
+      [REFERENCE_VECTOR_FIELDS.geometry]: JSON.stringify(referenceVectorGeometry),
+      [REFERENCE_VECTOR_FIELDS.lineCount]: 2,
     });
   });
 
