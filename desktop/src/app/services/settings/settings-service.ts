@@ -6,7 +6,7 @@ import { AppConfigurator, ConfigReader, ConfigurationDocument, getConfigurationN
     ProjectConfiguration, SyncAuth, SyncService, Template, Document, I18N, validateUrl, ObserverUtil } from 'idai-field-core';
 import { M } from '../../components/messages/m';
 import { Messages } from '../../components/messages/messages';
-import { ExpressServer } from '../express-server/express-server';
+import { ExpressServer, TabletHandoffProjectPreparationResult } from '../express-server/express-server';
 import { Settings } from './settings';
 import { SyncTarget } from './sync-target';
 import { SettingsProvider } from './settings-provider';
@@ -210,6 +210,14 @@ export class SettingsService {
         if (syncTarget) settings.syncTargets[project] = syncTarget;
         settings.dbs = [project].concat(settings.dbs);
         await this.settingsProvider.setSettingsAndSerialize(settings);
+    }
+
+
+    public prepareTabletHandoffProject(
+        projectIdentifier: string
+    ): Promise<TabletHandoffProjectPreparationResult> {
+
+        return this.expressServer.prepareTabletHandoffProject(projectIdentifier);
     }
 
 

@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import { Keyboard } from 'react-native';
+import { Keyboard, StyleSheet, Text, View } from 'react-native';
 import { ProjectSettings } from '@/models/preferences';
 import { normalizeProjectSettings } from '@/models/project-settings';
 import {
@@ -14,12 +14,13 @@ import Input from '@/components/common/Input';
 import TitleBar from '@/components/common/TitleBar';
 
 interface ConnectPouchFormProps {
+    project?: string;
     settings: ProjectSettings,
     onConnect: (settings: ProjectSettings) => void;
     onClose: () => void;
 }
 
-const ConnectPouchForm: React.FC<ConnectPouchFormProps> = ({ settings, onConnect, onClose }) => {
+const ConnectPouchForm: React.FC<ConnectPouchFormProps> = ({ project, settings, onConnect, onClose }) => {
 
     const normalizedSettings = normalizeProjectSettings(settings);
     const [url, setUrl] = useState<string>(normalizedSettings.url);
@@ -64,6 +65,15 @@ const ConnectPouchForm: React.FC<ConnectPouchFormProps> = ({ settings, onConnect
                 /> }
             />
             <Column>
+                { project && (
+                    <View style={ styles.projectNotice }>
+                        <Text style={ styles.projectNoticeLabel }>연결할 프로젝트 ID</Text>
+                        <Text selectable style={ styles.projectIdentifier }>{ project }</Text>
+                        <Text style={ styles.projectNoticeText }>
+                            태블릿에서 먼저 만든 프로젝트라면 데스크톱 설정에서 이 ID를 ‘받을 준비’한 뒤 연결하세요.
+                        </Text>
+                    </View>
+                ) }
                 <Input placeholder="URL"
                     testID="sync-url-input"
                     value={ url }
@@ -89,5 +99,33 @@ const ConnectPouchForm: React.FC<ConnectPouchFormProps> = ({ settings, onConnect
         </>
     );
 };
+
+const styles = StyleSheet.create({
+    projectNotice: {
+        backgroundColor: '#f3f7f5',
+        borderColor: '#b9d4c4',
+        borderRadius: 6,
+        borderWidth: 1,
+        marginBottom: 12,
+        padding: 12,
+    },
+    projectNoticeLabel: {
+        color: '#526272',
+        fontSize: 12,
+        fontWeight: '700',
+    },
+    projectIdentifier: {
+        color: '#20313a',
+        fontSize: 16,
+        fontWeight: '900',
+        marginTop: 3,
+    },
+    projectNoticeText: {
+        color: '#526272',
+        fontSize: 12,
+        lineHeight: 18,
+        marginTop: 8,
+    },
+});
 
 export default ConnectPouchForm;

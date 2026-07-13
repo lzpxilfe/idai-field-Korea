@@ -92,7 +92,14 @@ const ProjectLayout = ({
     <ConfigurationContext.Provider value={config}>
       <ProjectContextProvider>
         <GestureHandlerRootView style={{ flex: 1 }}>
-          <Stack>
+          <Stack
+            screenOptions={{
+              contentStyle: { backgroundColor: '#f7faf8' },
+              headerStyle: { backgroundColor: '#ffffff' },
+              headerTintColor: '#20313a',
+              headerShadowVisible: true,
+            }}
+          >
             <Stack.Screen
               name="index"
               options={{

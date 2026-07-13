@@ -62,8 +62,16 @@ jobs:
           components/Project/FieldworkPhotoAnnotationPanel.spec.tsx
           components/Project/KoreanFieldworkSoilColorPanel.spec.tsx
           components/Project/SoilProfileCameraButton.spec.ts
+          components/Project/Sync/KoreanFieldworkDesktopHandoffPanel.spec.ts
+          components/Project/Sync/SyncSettingsModal.spec.tsx
+          components/Project/korean-fieldwork-document-drafts.spec.ts
           components/Project/korean-fieldwork-field-notes.spec.ts
           components/Project/soil-color-photo-assist.spec.ts
+          hooks/use-fieldwork-image-sync.spec.ts
+          hooks/use-pouchdb-datastore.spec.ts
+          hooks/use-sync.spec.ts
+          services/config/load-configuration.spec.ts
+          test/desktop-handoff-native-config.spec.ts
         working-directory: mobile
 
   build-android-apk:

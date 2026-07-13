@@ -208,9 +208,13 @@ export class AppController {
             '하남 교산 3구역 북쪽 경계, 기준점 HN-03에서 시작';
         await db.put(projectDocument);
 
-        const featureTargetId = await this.seedKoreanFieldworkReportHandoffFeature(db);
+        const { featureTargetId, operationTargetId } =
+            await this.seedKoreanFieldworkReportHandoffFeature(db);
 
-        for (const document of this.createKoreanFieldworkReportHandoffDocuments(featureTargetId)) {
+        for (const document of this.createKoreanFieldworkReportHandoffDocuments(
+            featureTargetId,
+            operationTargetId
+        )) {
             await db.put(document);
         }
 
@@ -241,13 +245,20 @@ export class AppController {
     }
 
 
-    private async seedKoreanFieldworkReportHandoffFeature(db: any): Promise<string> {
+    private async seedKoreanFieldworkReportHandoffFeature(db: any): Promise<{
+        featureTargetId: string;
+        operationTargetId: string;
+    }> {
 
         const sampleFeatureDocument = await this.getKoreanFieldworkReportHandoffSampleFeature(db);
         if (sampleFeatureDocument) {
-            sampleFeatureDocument.resource.reportIdentifier = 'pit-001';
+            sampleFeatureDocument.resource.reportIdentifier = '1호 주거지';
             await db.put(sampleFeatureDocument);
-            return sampleFeatureDocument.resource.id;
+            return {
+                featureTargetId: sampleFeatureDocument.resource.id,
+                operationTargetId: sampleFeatureDocument.resource.relations?.isRecordedIn?.[0]
+                    ?? 'fieldwork-operation-1'
+            };
         }
 
         const featureFields = this.getKoreanFieldworkReportHandoffFeatureFields();
@@ -271,7 +282,10 @@ export class AppController {
         }
 
         await db.put(featureDocument);
-        return featureDocument.resource.id;
+        return {
+            featureTargetId: featureDocument.resource.id,
+            operationTargetId: featureDocument.resource.relations.isRecordedIn[0]
+        };
     }
 
 
@@ -291,7 +305,7 @@ export class AppController {
     private getKoreanFieldworkReportHandoffFeatureFields() {
 
         return {
-            reportIdentifier: 'pit-001',
+            reportIdentifier: '1호 주거지',
             shortDescription: '원형 수혈, 암갈색 매몰토',
             geometry: {
                 type: 'Polygon',
@@ -307,7 +321,10 @@ export class AppController {
     }
 
 
-    private createKoreanFieldworkReportHandoffDocuments(featureTargetId: string): Document[] {
+    private createKoreanFieldworkReportHandoffDocuments(
+        featureTargetId: string,
+        operationTargetId: string
+    ): Document[] {
 
         return [
             this.createSeedDocument('fieldwork-operation-1', 'Operation', {
@@ -315,9 +332,9 @@ export class AppController {
                 shortDescription: '하남 교산 3구역 발굴조사'
             }),
             this.createSeedDocument('fieldwork-photo-12', 'Photo', {
-                identifier: '사진 12',
-                fieldworkPhotoUri: 'file:///tablet/photos/pit-001.jpg',
-                originalFilename: 'pit-001.jpg',
+                identifier: '1호 주거지 사진 12',
+                fieldworkPhotoUri: 'file:///tablet/photos/1호-주거지-전경.jpg',
+                originalFilename: '1호-주거지-전경.jpg',
                 fieldworkPhotoCapturedAt: '2026-06-23T01:02:03.000Z',
                 width: 4032,
                 height: 3024,
@@ -325,10 +342,38 @@ export class AppController {
                     '{"version":1,"strokes":[{"points":[{"x":10,"y":20},{"x":30,"y":40}]}]}',
                 relations: { depicts: [featureTargetId] }
             }),
+            this.createSeedDocument('fieldwork-find-1', 'Find', {
+                identifier: '1호 주거지 유물 1',
+                findSpotItems: JSON.stringify({
+                    version: 1,
+                    items: [
+                        { number: 1, label: '청동편', point: { x: 35, y: 42 } },
+                        { number: 2, label: '토기편', point: { x: 61, y: 58 } }
+                    ]
+                }),
+                relations: {
+                    isRecordedIn: [operationTargetId],
+                    liesWithin: [featureTargetId]
+                }
+            }),
+            this.createSeedDocument('fieldwork-sample-1', 'Sample', {
+                identifier: '1호 주거지 시료 1',
+                samplePurpose: '탄화물 연대측정',
+                findSpotItems: JSON.stringify({
+                    version: 1,
+                    items: [
+                        { number: 1, label: '바닥면', point: { x: 52, y: 67 } }
+                    ]
+                }),
+                relations: {
+                    isRecordedIn: [operationTargetId],
+                    liesWithin: [featureTargetId]
+                }
+            }),
             this.createSeedDocument('fieldwork-soil-photo-12', 'SoilProfilePhoto', {
-                identifier: '토층사진 12',
-                soilProfilePhotoUri: 'file:///tablet/photos/soil-photo-12.jpg',
-                originalFilename: 'soil-photo-12.jpg',
+                identifier: '1호 주거지 토층사진 12',
+                soilProfilePhotoUri: 'file:///tablet/photos/1호-주거지-토층.jpg',
+                originalFilename: '1호-주거지-토층.jpg',
                 soilProfilePhotoCapturedAt: '2026-06-23T02:03:04.000Z',
                 width: 3000,
                 height: 2000,
@@ -345,13 +390,13 @@ export class AppController {
                 relations: { depicts: [featureTargetId] }
             }),
             this.createSeedDocument('fieldwork-drawing-3', 'Drawing', {
-                identifier: '도면 3',
+                identifier: '1호 주거지 도면 3',
                 drawingSketchStrokes:
                     '{"version":1,"strokes":[{"points":[{"x":10,"y":20},{"x":50,"y":60}]}]}',
                 relations: { depicts: [featureTargetId] }
             }),
             this.createSeedDocument('fieldwork-memo-handwritten', 'PenMemo', {
-                identifier: '야장 메모',
+                identifier: '1호 주거지 야장 메모',
                 penMemoStrokes: '{"version":1,"strokes":[{"points":[{"x":10,"y":20},{"x":30,"y":40}]}]}',
                 penMemoTranscriptionStatus: 'pending',
                 relations: { depicts: [featureTargetId] }

@@ -338,6 +338,64 @@ describe('useFieldworkImageSync', () => {
     }));
   });
 
+  it('reuploads when the current local checksum differs from stored metadata during audit backfill', async () => {
+    (FileSystem.getInfoAsync as jest.Mock).mockResolvedValue({
+      exists: true,
+      isDirectory: false,
+      md5: 'new-tablet-md5',
+      size: 481600,
+    });
+    (FileSystem.uploadAsync as jest.Mock).mockResolvedValueOnce({
+      body: JSON.stringify({
+        md5: 'new-tablet-md5',
+        sha256: 'new-server-sha256',
+        size_bytes: 481600,
+      }),
+      status: 201,
+    });
+    const document = createDocument('photo-1', 'Photo', {
+      fieldworkPhotoUri: 'file:///tablet/photos/photo-1.jpg',
+      fieldworkImageUploadStatus: 'uploaded',
+      fieldworkImageUploadedAt: '2026-06-23T01:02:03.000Z',
+      fieldworkImageUploadedUri: 'file:///tablet/photos/photo-1.jpg',
+      fieldworkImageUploadTarget:
+        'https://field.example/files/fieldwork/photo-1?type=original_image',
+      fieldworkImageUploadedProject: 'fieldwork',
+      fieldworkImageStoredSizeBytes: 481516,
+      fieldworkImageStoredMd5: 'old-server-md5',
+      fieldworkImageStoredSha256: 'old-server-sha256',
+    });
+    const repository = {
+      get: jest.fn().mockResolvedValue(document),
+      update: jest.fn(async (doc) => doc),
+    };
+
+    renderHook(() => useFieldworkImageSync({
+      documents: [document] as any,
+      project: 'fieldwork',
+      projectSettings,
+      repository,
+      syncStatus: SyncStatus.InSync,
+    }));
+
+    await waitFor(() => {
+      expect(FileSystem.uploadAsync).toHaveBeenCalledTimes(1);
+    });
+    await waitFor(() => {
+      expect(repository.update).toHaveBeenCalledTimes(1);
+    });
+
+    expect(repository.update).toHaveBeenCalledWith(expect.objectContaining({
+      resource: expect.objectContaining({
+        fieldworkImageUploadedMd5: 'new-tablet-md5',
+        fieldworkImageUploadedSizeBytes: 481600,
+        fieldworkImageStoredMd5: 'new-tablet-md5',
+        fieldworkImageStoredSha256: 'new-server-sha256',
+        fieldworkImageStoredSizeBytes: 481600,
+      }),
+    }));
+  });
+
   it('completes partial upload records without reuploading the original image', async () => {
     const document = createDocument('photo-1', 'Photo', {
       fieldworkPhotoUri: 'file:///tablet/photos/photo-1.jpg',

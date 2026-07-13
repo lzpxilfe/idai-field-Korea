@@ -185,7 +185,7 @@ const useFieldworkImageSync = ({
             (
               !uploadAuditRecorded
               || uploadAuditMetadataMismatched
-              || isServerUploadMetadataMissing(target.document, target)
+              || isServerUploadMetadataMissing(target.document)
             )
             && !uploadedResults.current.has(key)
           ) {
@@ -305,7 +305,7 @@ export const recordFieldworkImageUpload = async ({
     return latestDocument;
   }
 
-  if (isFieldworkImageUploadRecordComplete(latestDocument, project, target)) {
+  if (isFieldworkImageUploadRecordComplete(latestDocument, project, target, target)) {
     return latestDocument;
   }
 
@@ -592,20 +592,21 @@ const isFileUploadMetadataMissing = (
 const hasCompleteServerStoredMetadata = (
   document: Document,
   target?: Pick<FieldworkImageSyncItem, 'uri'>
-): boolean => {
+): boolean => hasServerStoredMetadata(document)
+    && (!target?.uri.startsWith('file://')
+      || isFieldworkImageBackupVerified(getDocumentUploadResult(document)));
+
+const hasServerStoredMetadata = (document: Document): boolean => {
   const resource = document.resource as Record<string, unknown>;
 
   return getNumberValue(resource.fieldworkImageStoredSizeBytes) !== undefined
     && !!getStringValue(resource.fieldworkImageStoredMd5)
-    && !!getStringValue(resource.fieldworkImageStoredSha256)
-    && (!target?.uri.startsWith('file://')
-      || isFieldworkImageBackupVerified(getDocumentUploadResult(document)));
+    && !!getStringValue(resource.fieldworkImageStoredSha256);
 };
 
 const isServerUploadMetadataMissing = (
-  document: Document,
-  target?: Pick<FieldworkImageSyncItem, 'uri'>
-): boolean => !hasCompleteServerStoredMetadata(document, target);
+  document: Document
+): boolean => !hasServerStoredMetadata(document);
 
 const getFieldworkImageSyncKey = (
   project: string,
@@ -710,8 +711,10 @@ const isLocalUploadMetadataMismatched = (
   if (!currentUploadMetadata) return false;
 
   const resource = document.resource as Record<string, unknown>;
-  const recordedMd5 = getStringValue(resource.fieldworkImageUploadedMd5);
-  const recordedSize = getNumberValue(resource.fieldworkImageUploadedSizeBytes);
+  const recordedMd5 = getStringValue(resource.fieldworkImageUploadedMd5)
+    ?? getStringValue(resource.fieldworkImageStoredMd5);
+  const recordedSize = getNumberValue(resource.fieldworkImageUploadedSizeBytes)
+    ?? getNumberValue(resource.fieldworkImageStoredSizeBytes);
 
   return (
     !!currentUploadMetadata.uploadedMd5

@@ -37,6 +37,7 @@ import KoreanFieldworkNotebookLedger from '@/components/Project/KoreanFieldworkN
 import KoreanFieldworkOverviewChart from '@/components/Project/KoreanFieldworkOverviewChart';
 import KoreanFieldworkQuickFindSpotModal from '@/components/Project/KoreanFieldworkQuickFindSpotModal';
 import KoreanFieldworkSelectedRecordWorkbench from '@/components/Project/KoreanFieldworkSelectedRecordWorkbench';
+import KoreanFieldworkDesktopHandoffPanel from '@/components/Project/Sync/KoreanFieldworkDesktopHandoffPanel';
 import {
   KOREAN_FIELDWORK_CATEGORY_LABELS,
   getKoreanFieldworkDisplayIdentifier,
@@ -229,6 +230,7 @@ const DocumentsList: React.FC = () => {
     onDocumentSelected,
     relationsManager,
     repository,
+    syncStatus,
   } = useContext(ProjectContext);
   const config = useContext(ConfigurationContext);
   const preferencesContext = useContext(PreferencesContext);
@@ -1123,6 +1125,11 @@ const DocumentsList: React.FC = () => {
             <Text style={styles.mapButtonText}>지도</Text>
           </TouchableOpacity>
         </View>
+
+        <KoreanFieldworkDesktopHandoffPanel
+          projectId={projectId}
+          status={syncStatus}
+        />
 
         <KoreanFieldworkInvestigationModePanel
           modeId={investigationModeId}

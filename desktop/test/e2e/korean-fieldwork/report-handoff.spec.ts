@@ -6,14 +6,23 @@ import {
     pause,
     readClipboardText,
     resetApp,
+    scrollTo,
     sendMessageToAppController,
+    setViewportSize,
     start,
     stop,
+    takeElementScreenshot,
+    takeScreenshot,
+    typeIn,
     waitForExist
 } from '../app';
 import { NavbarPage } from '../navbar.page';
 
 const { test, expect } = require('@playwright/test');
+const path = require('path');
+
+const shouldCaptureReadmeScreenshots = process.env.IDAI_FIELD_CAPTURE_README_SCREENSHOTS === '1';
+const readmeImageDirectory = path.resolve(process.cwd(), '..', 'docs', 'korean-fieldwork', 'images');
 
 
 async function getReportHandoffCard(identifier: string) {
@@ -57,6 +66,16 @@ test.describe('Korean fieldwork report handoff', () => {
 
         await navigateTo('settings');
         await resetApp();
+        if (shouldCaptureReadmeScreenshots) {
+            await setViewportSize(1440, 960);
+            await waitForExist('#tablet-handoff-project-identifier-input');
+            await typeIn('#tablet-handoff-project-identifier-input', 'fieldwork-119k6d');
+            const tabletReceivePanel = await getLocator('.korean-fieldwork-tablet-handoff-preparation');
+            await takeElementScreenshot(
+                path.join(readmeImageDirectory, 'readme-desktop-tablet-receive-settings.png'),
+                tabletReceivePanel
+            );
+        }
         await sendMessageToAppController('seedKoreanFieldworkReportHandoff');
         await NavbarPage.clickCloseNonResourcesTab();
         await NavbarPage.clickTab('project');
@@ -77,19 +96,23 @@ test.describe('Korean fieldwork report handoff', () => {
         const reportPanel = await getLocator('.korean-fieldwork-report-handoff-strip');
         await waitForExist(reportPanel);
 
-        const soilPhotoCard = await getReportHandoffCard('토층사진 12');
+        const soilPhotoCard = await getReportHandoffCard('1호 주거지 토층사진 12');
         await waitForExist(soilPhotoCard);
         await click(await soilPhotoCard.locator('.korean-fieldwork-report-handoff-open'));
 
         const reportText = await getText(reportPanel, false);
         expect(reportText).toContain('보고서/HWP 복사');
-        expect(reportText).toContain('토층사진 12');
+        expect(reportText).toContain('1호 주거지 토층사진 12');
         expect(reportText).toContain('HWP 본문');
         expect(reportText).toContain('본문 복사');
         expect(reportText).toContain('토층사진');
         expect(reportText).toContain('스포이드 위치');
         expect(reportText).toContain('RGB 111/87/61 @ 20%/50%');
-        expect(reportText).toContain('원본 파일: soil-photo-12.jpg');
+        expect(reportText).toContain('원본 파일: 1호-주거지-토층.jpg');
+        expect(reportText).toContain('1호 주거지 유물 1');
+        expect(reportText).toContain('1번 35%/42% 청동편');
+        expect(reportText).toContain('1호 주거지 시료 1');
+        expect(reportText).toContain('1번 52%/67% 바닥면');
         expect(reportText).not.toContain('soilColorAssistCandidates');
         expect(reportText).not.toContain('fieldworkPhotoAnnotationStrokes');
 
@@ -97,8 +120,8 @@ test.describe('Korean fieldwork report handoff', () => {
 
         const bodyClipboardText = await readClipboardText();
         expect(bodyClipboardText).toContain('토층 단면 사진');
-        expect(bodyClipboardText).toContain('토층사진 12');
-        expect(bodyClipboardText).toContain('원본 파일: soil-photo-12.jpg');
+        expect(bodyClipboardText).toContain('1호 주거지 토층사진 12');
+        expect(bodyClipboardText).toContain('원본 파일: 1호-주거지-토층.jpg');
         expect(bodyClipboardText).not.toContain('soilColorAssistCandidates');
         expect(bodyClipboardText).not.toContain('fieldworkPhotoAnnotationStrokes');
 
@@ -108,11 +131,11 @@ test.describe('Korean fieldwork report handoff', () => {
         expect(fullClipboardText).toContain('토층사진');
         expect(fullClipboardText).toContain('스포이드 위치');
         expect(fullClipboardText).toContain('RGB 111/87/61 @ 20%/50%');
-        expect(fullClipboardText).toContain('원본 파일: soil-photo-12.jpg');
+        expect(fullClipboardText).toContain('원본 파일: 1호-주거지-토층.jpg');
         expect(fullClipboardText).not.toContain('soilProfilePhotoAnnotationStrokes');
         expect(fullClipboardText).not.toContain('"strokes"');
 
-        const featureCard = await getReportHandoffCard('pit-001');
+        const featureCard = await getReportHandoffCard('1호 주거지');
         await waitForExist(featureCard);
         await click(await featureCard.locator('.korean-fieldwork-report-handoff-open'));
 
@@ -120,9 +143,19 @@ test.describe('Korean fieldwork report handoff', () => {
         expect(featureReportText).toContain('\ud0dc\ube14\ub9bf');
         expect(featureReportText).toContain('\ucc98\ub9ac\ub300\uc0c1');
         expect(featureReportText).toContain('\ubbf8\ucc98\ub9ac');
-        expect(featureReportText).toContain('pit-001.jpg');
-        expect(featureReportText).toContain('soil-photo-12.jpg');
+        expect(featureReportText).toContain('1호-주거지-전경.jpg');
+        expect(featureReportText).toContain('1호-주거지-토층.jpg');
         expect(featureReportText).toContain('RGB 111/87/61 @ 20%/50%');
+        expect(featureReportText).toContain('유물 1');
+        expect(featureReportText).toContain('시료 1');
+        expect(featureReportText).toContain('1번 35%/42% 청동편');
+        expect(featureReportText).toContain('1번 52%/67% 바닥면');
+
+        if (shouldCaptureReadmeScreenshots) {
+            await scrollTo(reportPanel);
+            await pause(400);
+            await takeScreenshot(path.join(readmeImageDirectory, 'readme-desktop-tablet-handoff.png'));
+        }
 
         await click(await reportPanel.locator('.korean-fieldwork-report-handoff-preview-action.tablet'));
 
@@ -130,9 +163,13 @@ test.describe('Korean fieldwork report handoff', () => {
         expect(tabletClipboardText).toContain('[\ud0dc\ube14\ub9bf \uc790\ub8cc \ubb36\uc74c]');
         expect(tabletClipboardText).toContain('\uc6d0\uc790\ub8cc \ucc98\ub9ac: \ucc98\ub9ac\ub300\uc0c1');
         expect(tabletClipboardText).toContain('\ucc98\ub9ac: \ubbf8\ucc98\ub9ac');
-        expect(tabletClipboardText).toContain('pit-001.jpg');
-        expect(tabletClipboardText).toContain('soil-photo-12.jpg');
+        expect(tabletClipboardText).toContain('1호-주거지-전경.jpg');
+        expect(tabletClipboardText).toContain('1호-주거지-토층.jpg');
         expect(tabletClipboardText).toContain('RGB 111/87/61 @ 20%/50%');
+        expect(tabletClipboardText).toContain('1호 주거지 유물 1');
+        expect(tabletClipboardText).toContain('1호 주거지 시료 1');
+        expect(tabletClipboardText).toContain('1번 35%/42% 청동편');
+        expect(tabletClipboardText).toContain('1번 52%/67% 바닥면');
         expect(tabletClipboardText).not.toContain('soilProfilePhotoAnnotationStrokes');
         expect(tabletClipboardText).not.toContain('"strokes"');
     });

@@ -109,12 +109,35 @@
                             </div>
                             <div *ngIf="settings.allowLanSync" class="korean-fieldwork-tablet-sync-grid">
                                 <div class="korean-fieldwork-tablet-sync-item">
+                                    <span class="korean-fieldwork-tablet-sync-label">현재 프로젝트 ID</span>
+                                    <code>{{getKoreanProjectIdentifier()}}</code>
+                                </div>
+                                <div class="korean-fieldwork-tablet-sync-item">
                                     <span class="korean-fieldwork-tablet-sync-label">서버 URL</span>
                                     <code>{{getKoreanTabletSyncUrl()}}</code>
                                 </div>
                                 <div class="korean-fieldwork-tablet-sync-item">
                                     <span class="korean-fieldwork-tablet-sync-label">비밀번호</span>
-                                    <code *ngIf="hasKoreanTabletSyncPassword()">{{getKoreanTabletSyncPassword()}}</code>
+                                    <div *ngIf="hasKoreanTabletSyncPassword()"
+                                         class="korean-fieldwork-tablet-sync-password">
+                                        <code>{{koreanTabletSyncPasswordVisible
+                                            ? getKoreanTabletSyncPassword()
+                                            : '••••••••'}}</code>
+                                        <button type="button"
+                                                class="btn btn-sm btn-link"
+                                                [attr.aria-label]="koreanTabletSyncPasswordVisible
+                                                    ? '비밀번호 숨기기'
+                                                    : '비밀번호 보기'"
+                                                [attr.title]="koreanTabletSyncPasswordVisible
+                                                    ? '비밀번호 숨기기'
+                                                    : '비밀번호 보기'"
+                                                (click)="toggleKoreanTabletSyncPasswordVisibility()">
+                                            <span class="mdi"
+                                                  [ngClass]="koreanTabletSyncPasswordVisible
+                                                    ? 'mdi-eye-off-outline'
+                                                    : 'mdi-eye-outline'"></span>
+                                        </button>
+                                    </div>
                                     <span *ngIf="!hasKoreanTabletSyncPassword()"
                                           class="korean-fieldwork-tablet-sync-missing">
                                         동기화 비밀번호 필요
@@ -125,8 +148,25 @@
                                  i18n="@@settings.synchronization.lanDisabled">
                                 LAN-Synchronisation ist deaktiviert
                             </div>
+                            <ol *ngIf="settings.allowLanSync" class="korean-fieldwork-tablet-sync-steps">
+                                <li>태블릿과 이 컴퓨터를 같은 Wi-Fi에 연결합니다.</li>
+                                <li>태블릿의 사무실 인계에서 위 URL과 비밀번호를 입력합니다.</li>
+                                <li>상태가 ‘전송 완료’가 되면 이 컴퓨터에서 같은 프로젝트를 엽니다.</li>
+                            </ol>
+                            <div *ngIf="settings.allowLanSync" class="korean-fieldwork-tablet-sync-upload-row">
+                                <span>
+                                    <strong>원본 사진 받기</strong>
+                                    <small>{{settings.allowLargeFileUploads ? '켜짐' : '꺼짐'}}</small>
+                                </span>
+                                <label class="switch" style="margin-bottom: 0;">
+                                    <input type="checkbox" [checked]="settings.allowLargeFileUploads"
+                                           (change)="toggleAllowUploads()">
+                                    <span class="slider round"></span>
+                                </label>
+                            </div>
                             <div class="korean-fieldwork-tablet-sync-note">
-                                조사 방식·경계와 야장 기록은 같은 프로젝트 문서로 동기화됩니다.
+                                유구·유물·시료·사진 기록은 같은 프로젝트 문서로 이어집니다.
+                                원본 사진 받기가 꺼져 있으면 사진 기록과 미리보기만 먼저 도착합니다.
                             </div>
                         </div>
 
@@ -201,6 +241,57 @@
 
 
                     <h5 style="margin-top: 32px;" i18n="@@settings.synchronization">Synchronisation</h5>
+
+                    <div class="korean-fieldwork-tablet-handoff-preparation">
+                        <div class="korean-fieldwork-tablet-sync-header">
+                            <span class="mdi mdi-database-plus-outline"></span>
+                            <span>태블릿에서 먼저 만든 프로젝트 받기</span>
+                        </div>
+                        <div class="small-info-text korean-fieldwork-settings-help">
+                            태블릿 설정에 표시된 프로젝트 ID를 그대로 입력합니다. 내용이 없는 수신 저장소만 만들며,
+                            현장 기록은 태블릿에서 처음 동기화할 때 들어옵니다.
+                        </div>
+                        <label class="control-label col-form-label"
+                               for="tablet-handoff-project-identifier-input">
+                            태블릿 프로젝트 ID
+                        </label>
+                        <div class="input-group">
+                            <input id="tablet-handoff-project-identifier-input"
+                                   [ngModel]="tabletHandoffProjectIdentifier"
+                                   (ngModelChange)="updateTabletHandoffProjectIdentifier($event)"
+                                   class="form-control"
+                                   autocomplete="off"
+                                   autocapitalize="none"
+                                   spellcheck="false"
+                                   placeholder="예: fieldwork-119k6d">
+                            <button id="prepare-tablet-handoff-project-button"
+                                    type="button"
+                                    class="btn btn-secondary"
+                                    [disabled]="!canPrepareTabletHandoffProject()"
+                                    (click)="prepareTabletHandoffProject()">
+                                <span class="mdi mdi-database-plus-outline"></span>
+                                <span class="button-label">받을 준비</span>
+                            </button>
+                        </div>
+                        <div *ngIf="tabletHandoffProjectIdentifier && getTabletHandoffProjectValidationMessage()"
+                             class="small-info-text korean-fieldwork-tablet-handoff-validation">
+                            {{getTabletHandoffProjectValidationMessage()}}
+                        </div>
+                        <div class="korean-fieldwork-tablet-handoff-state"
+                             [class.ready]="tabletHandoffPreparationState === 'created'
+                                || tabletHandoffPreparationState === 'ready'"
+                             [class.error]="tabletHandoffPreparationState === 'error'">
+                            <span class="mdi"
+                                  [ngClass]="{
+                                    'mdi-loading mdi-spin': tabletHandoffPreparationState === 'preparing',
+                                    'mdi-check-circle-outline': tabletHandoffPreparationState === 'created'
+                                        || tabletHandoffPreparationState === 'ready',
+                                    'mdi-alert-circle-outline': tabletHandoffPreparationState === 'error',
+                                    'mdi-information-outline': tabletHandoffPreparationState === 'idle'
+                                  }"></span>
+                            <span>{{getTabletHandoffPreparationMessage()}}</span>
+                        </div>
+                    </div>
 
                     <div class="mb-3">
                         <div class="row" style="margin: 0 0 15px;">

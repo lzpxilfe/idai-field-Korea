@@ -1,5 +1,6 @@
 import { fireEvent, render } from '@testing-library/react-native';
 import React from 'react';
+import { SyncStatus } from 'idai-field-core';
 import SyncSettingsModal from './SyncSettingsModal';
 
 describe('SyncSettingsModal', () => {
@@ -7,6 +8,8 @@ describe('SyncSettingsModal', () => {
     const onSettingsSet = jest.fn();
     const { getByTestId } = render(
       <SyncSettingsModal
+        project="fieldwork-1"
+        status={SyncStatus.Offline}
         onSettingsSet={onSettingsSet}
         onClose={jest.fn()}
       />
@@ -23,6 +26,8 @@ describe('SyncSettingsModal', () => {
     const mapSettings = { pointRadius: 8 };
     const { getByTestId } = render(
       <SyncSettingsModal
+        project="fieldwork-1"
+        status={SyncStatus.InSync}
         settings={{
           url: 'https://field.example/db',
           password: 'secret',

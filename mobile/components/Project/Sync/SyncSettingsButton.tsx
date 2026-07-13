@@ -1,6 +1,7 @@
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { SyncStatus } from 'idai-field-core';
 import React, { useCallback, useContext, useState } from 'react';
+import { StyleProp, ViewStyle } from 'react-native';
 import { PreferencesContext } from '@/contexts/preferences-context';
 import { ProjectSettings } from '@/models/preferences';
 import { normalizeProjectSettings } from '@/models/project-settings';
@@ -9,9 +10,17 @@ import SyncSettingsModal from './SyncSettingsModal';
 
 interface SyncSettingsButtonProps {
   status: SyncStatus;
+  title?: string;
+  variant?: 'transparent'|'secondary';
+  style?: StyleProp<ViewStyle>;
 }
 
-const SyncSettingsButton: React.FC<SyncSettingsButtonProps> = ({ status }) => {
+const SyncSettingsButton: React.FC<SyncSettingsButtonProps> = ({
+  status,
+  title,
+  variant = 'transparent',
+  style,
+}) => {
   const preferences = useContext(PreferencesContext);
 
   const [showSettings, setShowSettings] = useState<boolean>(false);
@@ -34,6 +43,8 @@ const SyncSettingsButton: React.FC<SyncSettingsButtonProps> = ({ status }) => {
     <>
       {showSettings && (
         <SyncSettingsModal
+          project={preferences.preferences.currentProject}
+          status={status}
           settings={settings}
           onSettingsSet={(newSettings) => {
             setSettings(newSettings);
@@ -44,8 +55,10 @@ const SyncSettingsButton: React.FC<SyncSettingsButtonProps> = ({ status }) => {
       )}
 
       <Button
-        variant="transparent"
+        variant={variant}
         icon={React.cloneElement(getSyncStatusIcon(status), { size: 18 })}
+        title={title}
+        style={style}
         testID="sync-settings-button"
         onPress={() => setShowSettings(true)}
       />

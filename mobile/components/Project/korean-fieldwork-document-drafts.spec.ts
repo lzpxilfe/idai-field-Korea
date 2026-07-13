@@ -498,6 +498,85 @@ describe('Korean fieldwork document drafts', () => {
     });
   });
 
+  it('prefers a directly allowed recording parent over its inherited operation', () => {
+    const trenchDoc = createDoc('trench-1', C.TRENCH, {
+      isRecordedIn: ['operation-1'],
+    });
+    const config = allowRelations({
+      [`${C.FIND}:${C.TRENCH}`]: ['isRecordedIn', 'liesWithin'],
+    });
+
+    expect(
+      createKoreanFieldworkDraftRelations(trenchDoc, C.FIND, config)
+    ).toEqual({
+      isRecordedIn: ['trench-1'],
+      liesWithin: ['trench-1'],
+    });
+  });
+
+  it('does not inherit a recording context that the child category cannot use', () => {
+    const featureDoc = createDoc('feature-1', C.FEATURE, {
+      isRecordedIn: ['operation-1'],
+    });
+    const config = allowRelations(
+      { [`${C.FIND}:${C.FEATURE}`]: ['liesWithin'] },
+      {
+        [C.FEATURE]: [C.OPERATION],
+        [C.FIND]: [C.TRENCH],
+      }
+    );
+
+    expect(
+      createKoreanFieldworkDraftRelations(featureDoc, C.FIND, config)
+    ).toEqual({ liesWithin: ['feature-1'] });
+  });
+
+  it('does not inherit when only some possible parent recording ranges are valid for the child', () => {
+    const featureDoc = createDoc('feature-1', C.FEATURE, {
+      isRecordedIn: ['trench-1'],
+    });
+    const config = allowRelations(
+      { [`${C.FIND}:${C.FEATURE}`]: ['liesWithin'] },
+      {
+        [C.FEATURE]: [C.OPERATION, C.TRENCH],
+        [C.FIND]: [C.OPERATION],
+      }
+    );
+
+    expect(
+      createKoreanFieldworkDraftRelations(featureDoc, C.FIND, config)
+    ).toEqual({ liesWithin: ['feature-1'] });
+  });
+
+  it('inherits a known recording target after validating its actual category', () => {
+    const operationDoc = createDoc('operation-1', C.OPERATION);
+    const featureDoc = createDoc('feature-1', C.FEATURE, {
+      isRecordedIn: ['operation-1'],
+    });
+    const config = allowRelations(
+      {
+        [`${C.FIND}:${C.FEATURE}`]: ['liesWithin'],
+        [`${C.FIND}:${C.OPERATION}`]: ['isRecordedIn'],
+      },
+      {
+        [C.FEATURE]: [C.OPERATION, C.TRENCH],
+        [C.FIND]: [C.OPERATION],
+      }
+    );
+
+    const draft = createKoreanFieldworkDraftResource(
+      featureDoc,
+      C.FIND,
+      config,
+      { existingDocuments: [operationDoc, featureDoc] }
+    );
+
+    expect(draft.relations).toEqual({
+      isRecordedIn: ['operation-1'],
+      liesWithin: ['feature-1'],
+    });
+  });
+
   it('uses kebab-case identifiers for categories without a dedicated prefix', () => {
     expect(createDraftIdentifier('CustomRecordType')).toBe(
       'custom-record-type-1700000000000'
@@ -525,11 +604,22 @@ const createDoc = (
   },
 } as any);
 
-const allowRelations = (allowed: Record<string, string[]>) => ({
+const allowRelations = (
+  allowed: Record<string, string[]>,
+  recordedInRanges?: Record<string, string[]>
+) => ({
   isAllowedRelationDomainCategory: (
     categoryName: string,
     parentCategoryName: string,
     relationName: string
   ) => (allowed[`${categoryName}:${parentCategoryName}`] ?? [])
     .includes(relationName),
+  ...(recordedInRanges && {
+    getAllowedRelationRangeCategories: (
+      relationName: string,
+      categoryName: string
+    ) => relationName === 'isRecordedIn'
+      ? (recordedInRanges[categoryName] ?? []).map(name => ({ name }))
+      : [],
+  }),
 } as any);

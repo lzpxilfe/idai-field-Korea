@@ -197,12 +197,12 @@ describe('Korean fieldwork workbench', () => {
   });
 });
 
-const createDoc = (
+const createDoc = <T extends Record<string, unknown> = Record<string, never>>(
   id: string,
   category: string,
   identifier: string,
   relations: Record<string, string[]> = {},
-  extraResource: Record<string, unknown> = {}
+  extraResource: T = {} as T
 ) => ({
   resource: {
     id,

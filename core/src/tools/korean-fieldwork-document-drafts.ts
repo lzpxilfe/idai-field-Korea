@@ -136,7 +136,12 @@ export function createKoreanFieldworkDraftBaseResource(
                 categoryName === C.FEATURE ? options.featureType : undefined,
                 options.identifier
             ),
-        relations: createKoreanFieldworkDraftRelations(parentDoc, categoryName, projectConfiguration),
+        relations: createKoreanFieldworkDraftRelations(
+            parentDoc,
+            categoryName,
+            projectConfiguration,
+            options.existingDocuments
+        ),
         category: categoryName
     };
 }
@@ -145,7 +150,8 @@ export function createKoreanFieldworkDraftBaseResource(
 export function createKoreanFieldworkDraftRelations(
         parentDoc: Document,
         categoryName: string,
-        projectConfiguration: ProjectConfiguration
+        projectConfiguration: ProjectConfiguration,
+        existingDocuments: readonly Document[] = []
 ): Resource.Relations {
 
     const parentCategoryName = parentDoc.resource.category;
@@ -164,8 +170,15 @@ export function createKoreanFieldworkDraftRelations(
     if (isAllowedRelation('depicts')) return { depicts: [parentDoc.resource.id] };
 
     if (isAllowedRelation('liesWithin')) {
-        const recordedInTarget = parentRecordedIn
-            ?? (isAllowedRelation('isRecordedIn') ? parentDoc.resource.id : undefined);
+        const recordedInTarget = isAllowedRelation('isRecordedIn')
+            ? parentDoc.resource.id
+            : getCompatibleInheritedRecordedInTarget(
+                parentRecordedIn,
+                categoryName,
+                parentCategoryName,
+                projectConfiguration,
+                existingDocuments
+            );
 
         return {
             ...(recordedInTarget ? { isRecordedIn: [recordedInTarget] } : {}),
@@ -178,6 +191,45 @@ export function createKoreanFieldworkDraftRelations(
     return parentRecordedIn
         ? { isRecordedIn: [parentRecordedIn], liesWithin: [parentDoc.resource.id] }
         : { isRecordedIn: [parentDoc.resource.id] };
+}
+
+
+function getCompatibleInheritedRecordedInTarget(
+        parentRecordedIn: string|undefined,
+        categoryName: string,
+        parentCategoryName: string,
+        projectConfiguration: ProjectConfiguration,
+        existingDocuments: readonly Document[]
+): string|undefined {
+
+    if (!parentRecordedIn) return undefined;
+
+    const targetDocument = existingDocuments.find(
+        document => document.resource.id === parentRecordedIn
+    );
+    if (targetDocument) {
+        return projectConfiguration.isAllowedRelationDomainCategory(
+            categoryName,
+            targetDocument.resource.category,
+            'isRecordedIn'
+        )
+            ? parentRecordedIn
+            : undefined;
+    }
+
+    const getAllowedRanges = projectConfiguration.getAllowedRelationRangeCategories?.bind(projectConfiguration);
+    if (!getAllowedRanges) return parentRecordedIn;
+
+    const childRangeNames = new Set(
+        getAllowedRanges('isRecordedIn', categoryName).map(category => category.name)
+    );
+    const parentRangeNames = getAllowedRanges('isRecordedIn', parentCategoryName)
+        .map(category => category.name);
+
+    return parentRangeNames.length > 0
+        && parentRangeNames.every(categoryName => childRangeNames.has(categoryName))
+        ? parentRecordedIn
+        : undefined;
 }
 
 

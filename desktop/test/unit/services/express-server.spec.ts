@@ -39,6 +39,7 @@ describe('ExpressServer', () => {
 
     const testFilePath = process.cwd() + '/test/test-temp/';
     const testProjectIdentifier = 'test_tmp_project';
+    const tabletHandoffProjectIdentifier = 'tablet_handoff_project';
     const password = 'passwörd';
     const ajv = new Ajv();
     const validate = ajv.compile(schema);
@@ -57,7 +58,7 @@ describe('ExpressServer', () => {
     let imageStore: ImageStore;
     let PouchDB: any;
     let previousAxiosAdapter: any;
-    let allowedProjects: string[] = [testProjectIdentifier];
+    let registeredProjectIdentifiers: string[] = [testProjectIdentifier];
 
 
     beforeAll(async () => {
@@ -70,9 +71,25 @@ describe('ExpressServer', () => {
 
         imageStore = new ImageStore(new FsAdapter(), new ThumbnailGenerator());
 
-        expressServer = new ExpressServer(imageStore, undefined, {
-            getSettings: () => ({ dbs: allowedProjects.slice() })
-        } as any, undefined, undefined);
+        expressServer = new ExpressServer(
+            imageStore,
+            undefined,
+            {
+                getSettings: () => ({
+                    dbs: registeredProjectIdentifiers.slice(),
+                    selectedProject: testProjectIdentifier,
+                    username: 'tester'
+                }),
+                addProjectAndSerialize: async (project: string) => {
+                    if (!registeredProjectIdentifiers.includes(project)) {
+                        registeredProjectIdentifiers.push(project);
+                    }
+                }
+            } as any,
+            undefined,
+            undefined,
+            undefined
+        );
         expressServer.setPassword(password);
         expressServer.setAllowLargeFileUploads(true);
 
@@ -92,7 +109,7 @@ describe('ExpressServer', () => {
     // Re-initialize image store data for each test.
     beforeEach(async () => {
 
-        allowedProjects = [testProjectIdentifier];
+        registeredProjectIdentifiers = [testProjectIdentifier];
         expressServer.setAllowLargeFileUploads(true);
         await imageStore.init(`${testFilePath}imagestore/`, testProjectIdentifier);
     });
@@ -110,6 +127,7 @@ describe('ExpressServer', () => {
         axios.defaults.adapter = previousAxiosAdapter;
 
         await pouchdbDatastore.destroyDb(testProjectIdentifier);
+        await new PouchDB(tabletHandoffProjectIdentifier).destroy();
 
         await new Promise<void>((resolve) => {
             expressMainApp.close(resolve);
@@ -155,7 +173,7 @@ describe('ExpressServer', () => {
 
     it('does not let one configured project credential access another project path', async () => {
 
-        allowedProjects = [testProjectIdentifier, 'other-project'];
+        registeredProjectIdentifiers = [testProjectIdentifier, 'other-project'];
 
         await request(expressMainApp)
             .get(`/files/${testProjectIdentifier}`)
@@ -177,6 +195,45 @@ describe('ExpressServer', () => {
         }
 
         expect(expressMainApp.address().address).toBe('127.0.0.1');
+    });
+
+
+    test('tablet handoff preparation rejects invalid project identifiers', async () => {
+
+        await expect(expressServer.prepareTabletHandoffProject('Invalid Project'))
+            .rejects.toMatchObject({ reason: 'invalid_project_identifier' });
+        expect(registeredProjectIdentifiers).not.toContain('Invalid Project');
+    });
+
+
+    test('tablet handoff preparation registers an empty database before tablet sync', async () => {
+
+        const preparationResult = await expressServer.prepareTabletHandoffProject(
+            tabletHandoffProjectIdentifier
+        );
+
+        expect(preparationResult).toBe('created');
+        expect(registeredProjectIdentifiers).toContain(tabletHandoffProjectIdentifier);
+
+        await request(expressMainApp)
+            .put(`/db/${tabletHandoffProjectIdentifier}/tablet-record-1`)
+            .set('Authorization', `Basic ${base64Encode(tabletHandoffProjectIdentifier + ':' + password)}`)
+            .send({
+                _id: 'tablet-record-1',
+                resource: {
+                    id: 'tablet-record-1',
+                    identifier: '1호 주거지',
+                    category: 'Feature',
+                    relations: {}
+                }
+            })
+            .expect(201);
+
+        const tabletRecord = await new PouchDB(tabletHandoffProjectIdentifier).get('tablet-record-1');
+        expect(tabletRecord.resource.identifier).toBe('1호 주거지');
+
+        await expect(expressServer.prepareTabletHandoffProject(tabletHandoffProjectIdentifier))
+            .resolves.toBe('ready');
     });
 
 
@@ -299,7 +356,7 @@ describe('ExpressServer', () => {
             linkedProjectPath,
             process.platform === 'win32' ? 'junction' : 'dir'
         );
-        allowedProjects.push(linkedProject);
+        registeredProjectIdentifiers.push(linkedProject);
 
         try {
             await request(expressMainApp)

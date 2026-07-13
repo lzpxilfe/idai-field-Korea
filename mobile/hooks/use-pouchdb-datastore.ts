@@ -48,7 +48,18 @@ import {
 } from '@/constants/sample-project';
 import type { ProjectSettings } from '@/models/preferences';
 
-PouchDB.plugin(require('@neighbourhoodie/pouchdb-asyncstorage-adapter').default)
+const getCommonJsDefaultExport = (module: any) => module.default ?? module;
+
+export const configurePouchDbPlugins = (pouchDb: typeof PouchDB) => {
+  pouchDb.plugin(getCommonJsDefaultExport(
+    require('@neighbourhoodie/pouchdb-asyncstorage-adapter')
+  ));
+  pouchDb.plugin(getCommonJsDefaultExport(require('pouchdb-adapter-http')));
+  pouchDb.plugin(getCommonJsDefaultExport(require('pouchdb-mapreduce')));
+  pouchDb.plugin(getCommonJsDefaultExport(require('pouchdb-replication')));
+};
+
+configurePouchDbPlugins(PouchDB);
 
 const usePouchDbDatastore = (
   project: string,

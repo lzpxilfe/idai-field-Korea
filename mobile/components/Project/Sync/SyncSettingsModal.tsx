@@ -2,11 +2,14 @@ import React from 'react';
 import { Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ProjectSettings } from '@/models/preferences';
+import { SyncStatus } from 'idai-field-core';
 import { normalizeProjectSettings } from '@/models/project-settings';
 import ConnectPouchForm from './ConnectPouchForm';
 import DisconectPouchForm from './DisconnectPouchForm';
 
 interface SyncSettingsModalProps {
+    project: string;
+    status: SyncStatus;
     settings?: ProjectSettings;
     onSettingsSet: (syncSettings: ProjectSettings) => void,
     onClose: () => void;
@@ -14,6 +17,8 @@ interface SyncSettingsModalProps {
 
 
 const SyncSettingsModal: React.FC<SyncSettingsModalProps> = ({
+    project,
+    status,
     settings,
     onSettingsSet,
     onClose
@@ -32,10 +37,21 @@ const SyncSettingsModal: React.FC<SyncSettingsModalProps> = ({
             onRequestClose={ onClose }
             animationType="slide"
         >
-            <SafeAreaView>
+            <SafeAreaView style={{ flex: 1 }}>
                 { syncSettings.connected
-                    ? <DisconectPouchForm onDisconnect={ onDisconnect } onClose={ onClose } />
-                    : <ConnectPouchForm settings={ syncSettings } onConnect={ onConnect } onClose={ onClose } />
+                    ? <DisconectPouchForm
+                        project={ project }
+                        status={ status }
+                        url={ syncSettings.url }
+                        onDisconnect={ onDisconnect }
+                        onClose={ onClose }
+                    />
+                    : <ConnectPouchForm
+                        project={ project }
+                        settings={ syncSettings }
+                        onConnect={ onConnect }
+                        onClose={ onClose }
+                    />
                 }
             </SafeAreaView>
         </Modal>);

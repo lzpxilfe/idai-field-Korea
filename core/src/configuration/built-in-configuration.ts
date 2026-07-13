@@ -1800,7 +1800,14 @@ export class BuiltInConfiguration {
 
             this.builtInRelations.push({
                 name: 'isRecordedIn',
-                domain: ['Feature', 'FeatureGroup', 'FeatureSegment'],
+                domain: [
+                    'Feature',
+                    'FeatureGroup',
+                    'FeatureSegment',
+                    'Find',
+                    'FindCollection',
+                    'Sample'
+                ],
                 range: ['Operation', 'Trench', 'ExcavationArea'],
                 editable: false,
                 visible: false,

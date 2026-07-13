@@ -17,6 +17,7 @@ import { exportFile } from './endpoints/exportFile';
 import { electronCrypto as crypto, electronFs as fs, electronPath as path,
     electronRemote as remote } from 'src/app/electron/electron';
 import * as PouchDBBaseModule from 'pouchdb-browser';
+import { ProjectIdentifierValidation } from '../../model/project-identifier-validation';
 
 const PouchDBBase = getCommonJsDefaultExport<any>(PouchDBBaseModule);
 const MAIN_SERVER_PORT = 3000;
@@ -51,6 +52,7 @@ function loadExpressDependencies(): ExpressDependencies {
 
 
 export type ApiState = 'none'|'import'|'fileImport'|'export';
+export type TabletHandoffProjectPreparationResult = 'created'|'ready';
 
 interface ExpressDependencies {
     express: any;
@@ -114,6 +116,37 @@ export class ExpressServer {
     public setUploadStatus = (uploadStatus: UploadStatus) => this.uploadStatus = uploadStatus;
 
     public apiNotifications = (): Observable<ApiState> => ObserverUtil.register(this.apiObservers);
+
+
+    /**
+     * Creates an empty, registered database that a tablet-first project can push into.
+     * Project and configuration documents deliberately come from the tablet sync.
+     */
+    public async prepareTabletHandoffProject(
+        projectIdentifier: string
+    ): Promise<TabletHandoffProjectPreparationResult> {
+
+        const normalizedIdentifier = projectIdentifier?.trim();
+        if (ProjectIdentifierValidation.validate(normalizedIdentifier)) {
+            throw new TabletHandoffProjectPreparationError('invalid_project_identifier');
+        }
+        if (!this.settingsProvider) {
+            throw new TabletHandoffProjectPreparationError('settings_unavailable');
+        }
+
+        const settings = this.settingsProvider.getSettings();
+        if (settings.dbs?.includes(normalizedIdentifier)) return 'ready';
+
+        const db = new PouchDB(normalizedIdentifier);
+        try {
+            await db.info();
+        } finally {
+            if (db.close) await db.close();
+        }
+
+        await this.settingsProvider.addProjectAndSerialize(normalizedIdentifier);
+        return 'created';
+    }
 
 
     /**
@@ -582,6 +615,15 @@ export class ExpressServer {
         } else {
             ObserverUtil.notify(this.apiObservers, state);
         }
+    }
+}
+
+
+export class TabletHandoffProjectPreparationError extends Error {
+
+    constructor(public readonly reason: 'invalid_project_identifier'|'settings_unavailable') {
+
+        super(reason);
     }
 }
 

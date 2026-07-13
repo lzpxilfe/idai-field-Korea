@@ -114,6 +114,51 @@ describe('SettingsComponent', () => {
     });
 
 
+    it('prepares a desktop receive database for a tablet-first project', async () => {
+
+        const settingsService = {
+            updateSettings: jest.fn(),
+            setupSync: jest.fn(),
+            prepareTabletHandoffProject: jest.fn().mockResolvedValue('created')
+        };
+        const component = createComponent(
+            { get: jest.fn().mockResolvedValue(undefined) },
+            settingsService
+        );
+
+        component.updateTabletHandoffProjectIdentifier('  fieldwork-119k6d  ');
+        expect(component.canPrepareTabletHandoffProject()).toBe(true);
+
+        await component.prepareTabletHandoffProject();
+
+        expect(settingsService.prepareTabletHandoffProject).toHaveBeenCalledWith('fieldwork-119k6d');
+        expect(component.tabletHandoffProjectIdentifier).toBe('fieldwork-119k6d');
+        expect(component.tabletHandoffPreparationState).toBe('created');
+        expect(component.getTabletHandoffPreparationMessage()).toContain('준비 완료');
+    });
+
+
+    it('rejects invalid tablet project identifiers before preparing a database', async () => {
+
+        const settingsService = {
+            updateSettings: jest.fn(),
+            setupSync: jest.fn(),
+            prepareTabletHandoffProject: jest.fn()
+        };
+        const component = createComponent(
+            { get: jest.fn().mockResolvedValue(undefined) },
+            settingsService
+        );
+
+        component.updateTabletHandoffProjectIdentifier('현장 프로젝트');
+        await component.prepareTabletHandoffProject();
+
+        expect(component.canPrepareTabletHandoffProject()).toBe(false);
+        expect(component.getTabletHandoffProjectValidationMessage()).toContain('영문 소문자');
+        expect(settingsService.prepareTabletHandoffProject).not.toHaveBeenCalled();
+    });
+
+
     it('saves Korean fieldwork setup changes with general settings', async () => {
 
         const projectDocument = createProjectDocument({
@@ -186,7 +231,8 @@ const createComponent = (
     datastore: any,
     settingsService: any = {
         updateSettings: jest.fn().mockResolvedValue(undefined),
-        setupSync: jest.fn().mockResolvedValue(undefined)
+        setupSync: jest.fn().mockResolvedValue(undefined),
+        prepareTabletHandoffProject: jest.fn().mockResolvedValue('created')
     },
     messages: any = { add: jest.fn() }
 ) => new SettingsComponent(

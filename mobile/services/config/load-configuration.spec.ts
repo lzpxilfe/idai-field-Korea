@@ -70,6 +70,8 @@ describe('loadConfiguration()', () => {
     expect(config.isAllowedRelationDomainCategory('FeatureGroup', 'Operation', 'isRecordedIn')).toBe(true);
     expect(config.isAllowedRelationDomainCategory('FeatureSegment', 'Feature', 'liesWithin')).toBe(true);
     expect(config.isAllowedRelationDomainCategory('FeatureSegment', 'Operation', 'isRecordedIn')).toBe(true);
+    expect(config.isAllowedRelationDomainCategory('Find', 'Operation', 'isRecordedIn')).toBe(true);
+    expect(config.isAllowedRelationDomainCategory('Sample', 'Operation', 'isRecordedIn')).toBe(true);
     expect(config.isAllowedRelationDomainCategory('DailyLog', 'Operation', 'isRecordedIn')).toBe(true);
     expect(config.isAllowedRelationDomainCategory('FieldRecordQualityReview', 'Operation', 'isRecordedIn')).toBe(true);
   });
@@ -105,6 +107,8 @@ describe('loadConfiguration()', () => {
     expect(config.isAllowedRelationDomainCategory('Trench', 'Operation', 'isRecordedIn')).toBe(true);
     expect(config.isAllowedRelationDomainCategory('Trench', 'Operation', 'liesWithin')).toBe(true);
     expect(config.isAllowedRelationDomainCategory('FeatureSegment', 'Operation', 'isRecordedIn')).toBe(true);
+    expect(config.isAllowedRelationDomainCategory('Find', 'Operation', 'isRecordedIn')).toBe(true);
+    expect(config.isAllowedRelationDomainCategory('Sample', 'Operation', 'isRecordedIn')).toBe(true);
     expect(config.isAllowedRelationDomainCategory('DailyLog', 'Operation', 'isRecordedIn')).toBe(true);
     expect(config.isAllowedRelationDomainCategory('FieldRecordQualityReview', 'Operation', 'isRecordedIn')).toBe(true);
   });

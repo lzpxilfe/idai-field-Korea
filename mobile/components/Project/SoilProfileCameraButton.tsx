@@ -183,7 +183,7 @@ const FIELDWORK_IMAGE_BACKUP_PRESERVATION_VALUES = new Set([
 export const clearFieldworkImageUploadAudit = <
   TResource extends Record<string, unknown>
 >(resource: TResource): TResource => {
-  const nextResource = { ...resource };
+  const nextResource: Record<string, unknown> = { ...resource };
 
   FIELDWORK_IMAGE_UPLOAD_AUDIT_FIELDS.forEach((fieldName) => {
     delete nextResource[fieldName];

@@ -1,5 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
-import usePouchDbDatastore from './use-pouchdb-datastore';
+import usePouchDbDatastore, {
+  configurePouchDbPlugins,
+} from './use-pouchdb-datastore';
 
 const mockDatastoreInstances: any[] = [];
 const mockSyncServices: any[] = [];
@@ -38,6 +40,18 @@ jest.mock('pouchdb-core', () => {
 
 jest.mock('@neighbourhoodie/pouchdb-asyncstorage-adapter', () => ({
   default: jest.fn(),
+}));
+
+jest.mock('pouchdb-adapter-http', () => ({
+  name: 'http-adapter',
+}));
+
+jest.mock('pouchdb-mapreduce', () => ({
+  name: 'mapreduce',
+}));
+
+jest.mock('pouchdb-replication', () => ({
+  name: 'replication',
 }));
 
 jest.mock('idai-field-core', () => {
@@ -167,6 +181,30 @@ describe('usePouchDbDatastore', () => {
     mockLoadProjectSetupDefaults.mockResolvedValue({});
     mockLoadProjectBoundaryDraft.mockResolvedValue(undefined);
     mockRemoveProjectBoundaryDraft.mockResolvedValue(undefined);
+  });
+
+  it('registers the storage, HTTP and replication plugins required for desktop sync', () => {
+    const PouchDB = require('pouchdb-core');
+
+    configurePouchDbPlugins(PouchDB);
+
+    expect(PouchDB.plugin).toHaveBeenCalledTimes(4);
+    expect(PouchDB.plugin).toHaveBeenNthCalledWith(
+      1,
+      require('@neighbourhoodie/pouchdb-asyncstorage-adapter').default
+    );
+    expect(PouchDB.plugin).toHaveBeenNthCalledWith(
+      2,
+      require('pouchdb-adapter-http')
+    );
+    expect(PouchDB.plugin).toHaveBeenNthCalledWith(
+      3,
+      require('pouchdb-mapreduce')
+    );
+    expect(PouchDB.plugin).toHaveBeenNthCalledWith(
+      4,
+      require('pouchdb-replication')
+    );
   });
 
   it('opens the project database without preloading all documents and attachments', async () => {
@@ -318,7 +356,7 @@ describe('usePouchDbDatastore', () => {
     mockCreateDbDeferreds.set('fieldwork-stable', deferred);
 
     const { result, rerender } = renderHook(
-      ({ onComplete }) =>
+      ({ onComplete }: { onComplete: () => void }) =>
         usePouchDbDatastore('fieldwork-stable', undefined, onComplete),
       { initialProps: { onComplete: jest.fn() } }
     );

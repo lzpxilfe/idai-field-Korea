@@ -2,6 +2,7 @@ const { _electron: electron } = require('playwright');
 import { isString } from 'tsfun';
 
 const fs = require('fs');
+const path = require('path');
 
 
 export interface StartOptions {
@@ -118,6 +119,26 @@ export function getLocator(selector: string) {
 export function readClipboardText(): Promise<string> {
 
     return electronApp.evaluate(({ clipboard }) => clipboard.readText());
+}
+
+
+export async function setViewportSize(width: number, height: number) {
+
+    await window.setViewportSize({ width, height });
+}
+
+
+export async function takeScreenshot(filePath: string) {
+
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    await window.screenshot({ path: filePath, animations: 'disabled' });
+}
+
+
+export async function takeElementScreenshot(filePath: string, locator: any) {
+
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    await locator.screenshot({ path: filePath, animations: 'disabled' });
 }
 
 /**

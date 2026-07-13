@@ -12,6 +12,7 @@ import {
   updateSoilProfileColorSwatchSampleValue,
 } from 'idai-field-core';
 import React, { useEffect, useMemo, useState } from 'react';
+import type { ViewStyle } from 'react-native';
 import {
   Image,
   LayoutChangeEvent,
@@ -877,7 +878,7 @@ export const getSoilColorPhotoMarkerStyle = (
   point: SoilColorSamplePointSummary,
   containerSize: FieldworkPhotoSize,
   imageSize: FieldworkPhotoSize
-) => {
+): ViewStyle => {
   const xPercent = clampSamplePercent(point.xPercent);
   const yPercent = clampSamplePercent(point.yPercent);
 
@@ -888,8 +889,8 @@ export const getSoilColorPhotoMarkerStyle = (
     || imageSize.width <= 0
   ) {
     return {
-      left: `${xPercent}%`,
-      top: `${yPercent}%`,
+      left: `${xPercent}%` as `${number}%`,
+      top: `${yPercent}%` as `${number}%`,
     };
   }
 

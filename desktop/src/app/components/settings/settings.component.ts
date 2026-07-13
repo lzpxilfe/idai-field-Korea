@@ -35,6 +35,7 @@ import {
     getKoreanFieldworkSatelliteMapProviderNotice,
     hasKoreanFieldworkSatelliteMapDisplayKey
 } from '../../util/korean-fieldwork-map-provider-settings';
+import { ProjectIdentifierValidation } from '../../model/project-identifier-validation';
 
 import { ip as getIpAddress } from 'address';
 import { electronRemote as remote } from 'src/app/electron/electron';
@@ -69,6 +70,9 @@ export class SettingsComponent implements OnInit, AfterViewChecked {
     public koreanInvestigationMode: KoreanFieldworkInvestigationModeId = KOREAN_FIELDWORK_DEFAULT_INVESTIGATION_MODE;
     public koreanBoundarySummary: string = '';
     public koreanProjectSetupSaved: boolean = false;
+    public koreanTabletSyncPasswordVisible: boolean = false;
+    public tabletHandoffProjectIdentifier: string = '';
+    public tabletHandoffPreparationState: 'idle'|'preparing'|'created'|'ready'|'error' = 'idle';
     public readonly koreanInvestigationModes = KOREAN_FIELDWORK_INVESTIGATION_MODES;
 
     private existingBackups: Array<Backup> = [];
@@ -186,6 +190,81 @@ export class SettingsComponent implements OnInit, AfterViewChecked {
 
 
     public getKoreanTabletSyncPassword = () => this.settings?.hostPassword ?? '';
+
+
+    public toggleKoreanTabletSyncPasswordVisibility() {
+
+        this.koreanTabletSyncPasswordVisible = !this.koreanTabletSyncPasswordVisible;
+    }
+
+
+    public getTabletHandoffProjectValidationMessage(): string|undefined {
+
+        const validationError = ProjectIdentifierValidation.validate(this.tabletHandoffProjectIdentifier);
+        if (!validationError) return undefined;
+
+        switch (validationError[0]) {
+            case ProjectIdentifierValidation.Errors.PROJECT_IDENTIFIER_ERROR_MISSING:
+                return '태블릿 설정에 표시된 프로젝트 ID를 입력하세요.';
+            case ProjectIdentifierValidation.Errors.PROJECT_IDENTIFIER_ERROR_LENGTH:
+                return '프로젝트 ID는 30자 이하여야 합니다.';
+            case ProjectIdentifierValidation.Errors.PROJECT_IDENTIFIER_ERROR_CHARACTERS:
+                return '영문 소문자, 숫자, 하이픈(-), 밑줄(_)만 사용할 수 있습니다.';
+            case ProjectIdentifierValidation.Errors.PROJECT_IDENTIFIER_ERROR_STARTING_CHARACTER:
+                return '프로젝트 ID는 영문 소문자로 시작해야 합니다.';
+            default:
+                return '프로젝트 ID를 확인하세요.';
+        }
+    }
+
+
+    public canPrepareTabletHandoffProject = () =>
+        this.tabletHandoffPreparationState !== 'preparing'
+        && !this.getTabletHandoffProjectValidationMessage();
+
+
+    public updateTabletHandoffProjectIdentifier(identifier: string) {
+
+        this.tabletHandoffProjectIdentifier = identifier;
+        this.tabletHandoffPreparationState = 'idle';
+    }
+
+
+    public async prepareTabletHandoffProject() {
+
+        if (!this.canPrepareTabletHandoffProject()) return;
+
+        AngularUtility.blurActiveElement();
+        this.tabletHandoffPreparationState = 'preparing';
+
+        try {
+            const result = await this.settingsService.prepareTabletHandoffProject(
+                this.tabletHandoffProjectIdentifier.trim()
+            );
+            this.tabletHandoffProjectIdentifier = this.tabletHandoffProjectIdentifier.trim();
+            this.tabletHandoffPreparationState = result;
+        } catch (err) {
+            console.error(err);
+            this.tabletHandoffPreparationState = 'error';
+        }
+    }
+
+
+    public getTabletHandoffPreparationMessage(): string {
+
+        switch (this.tabletHandoffPreparationState) {
+            case 'preparing':
+                return '프로젝트를 받을 저장소를 준비하고 있습니다.';
+            case 'created':
+                return '준비 완료. 이제 태블릿에서 데스크톱 연결을 켜면 기록이 전송됩니다.';
+            case 'ready':
+                return '이미 받을 준비가 된 프로젝트입니다. 태블릿에서 연결 상태를 확인하세요.';
+            case 'error':
+                return '준비하지 못했습니다. 프로젝트 ID와 데스크톱 저장 공간을 확인하세요.';
+            default:
+                return '태블릿에서 먼저 만든 프로젝트도 같은 ID로 빈 저장소를 준비하면 받을 수 있습니다.';
+        }
+    }
 
 
     public hasKoreanSatelliteMapDisplayKey = () =>

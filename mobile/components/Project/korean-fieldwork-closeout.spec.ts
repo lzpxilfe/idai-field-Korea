@@ -497,11 +497,11 @@ const createIssue = (
   blocksSave: false,
 });
 
-const createDocument = (
+const createDocument = <T extends Record<string, unknown> = Record<string, never>>(
   id: string,
   category: string,
   identifier: string,
-  fields: Record<string, unknown> = {}
+  fields: T = {} as T
 ) => ({
   resource: {
     id,
