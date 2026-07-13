@@ -21,6 +21,8 @@ export * from './compare';
 export * from './korean-fieldwork-readiness';
 export * from './korean-fieldwork-assist-geometry';
 export * from './korean-fieldwork-assist-run';
+export * from './korean-fieldwork-assist-sidecar';
+export * from './korean-fieldwork-assist-sidecar-operations';
 export * from './korean-fieldwork-record-contract';
 export * from './korean-fieldwork-report-draft';
 export * from './korean-fieldwork-draft-defaults';
