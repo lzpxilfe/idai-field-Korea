@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import {
   Modal,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -33,9 +34,10 @@ const KoreanFieldworkQuickFindSpotModal: React.FC<Props> = ({
   const [resource, setResource] = useState(initialResource);
   const [isSaving, setIsSaving] = useState(false);
   const isSample = resource.category === KOREAN_FIELDWORK_CATEGORIES.SAMPLE;
-  const hasPoint = getKoreanFieldworkFindSpotItemCount(
+  const pointCount = getKoreanFieldworkFindSpotItemCount(
     resource[KOREAN_FIELDWORK_FIND_SPOT_FIELDS.items]
-  ) > 0;
+  );
+  const hasPoint = pointCount > 0;
   const title = isSample ? '시료 위치' : '유물 위치';
 
   const save = async () => {
@@ -62,6 +64,9 @@ const KoreanFieldworkQuickFindSpotModal: React.FC<Props> = ({
           <View style={styles.titleRow}>
             <MaterialIcons name="place" size={20} color="#344054" />
             <Text style={styles.title}>{title}</Text>
+            <Text style={styles.pointCount} testID="quickFindSpotCount">
+              {`${pointCount}\uc810`}
+            </Text>
           </View>
           <View style={styles.actions}>
             <TouchableOpacity
@@ -94,17 +99,21 @@ const KoreanFieldworkQuickFindSpotModal: React.FC<Props> = ({
           </View>
         </View>
 
-        <KoreanFieldworkFindSpotPanel
-          compact
-          documents={documents}
-          parentDocument={parentDocument}
-          resource={resource}
-          singlePointMode
-          onUpdateResourceFields={(updates) => setResource((current) => ({
-            ...current,
-            ...updates,
-          }))}
-        />
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+        >
+          <KoreanFieldworkFindSpotPanel
+            compact
+            documents={documents}
+            parentDocument={parentDocument}
+            resource={resource}
+            onUpdateResourceFields={(updates) => setResource((current) => ({
+              ...current,
+              ...updates,
+            }))}
+          />
+        </ScrollView>
       </SafeAreaView>
     </Modal>
   );
@@ -135,6 +144,21 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '900',
     marginLeft: 6,
+  },
+  pointCount: {
+    backgroundColor: '#eef2f6',
+    borderRadius: 6,
+    color: '#344054',
+    fontSize: 12,
+    fontWeight: '900',
+    marginLeft: 8,
+    minWidth: 38,
+    paddingHorizontal: 7,
+    paddingVertical: 4,
+    textAlign: 'center',
+  },
+  content: {
+    flexGrow: 1,
   },
   actions: {
     alignItems: 'center',

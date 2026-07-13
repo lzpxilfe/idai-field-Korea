@@ -80,7 +80,6 @@ interface Props {
   onUpdateResourceFields: (updates: Record<string, unknown>) => void;
   parentDocument?: Document;
   resource: EditableFindResource;
-  singlePointMode?: boolean;
 }
 
 export const KOREAN_FIELDWORK_FIND_SPOT_FIELDS = {
@@ -120,12 +119,13 @@ const FIND_CONTEXT_CATEGORIES = new Set<string>([
   KOREAN_FIELDWORK_CATEGORIES.SAMPLE,
 ]);
 const TEXT = {
+  findEmptyItem: '\uc720\ubb3c\uba85/\uc218\ub7c9 \uba54\ubaa8',
   findHint:
     '\uc720\uad6c \ubaa8\uc591 \uc704\uc5d0 \uc720\ubb3c \uc704\uce58\ub97c \ub204\ub974\uc138\uc694. \ucc0d\uc740 \uc810\uc740 \ub4dc\ub798\uadf8\ud574 \uc62e\uae38 \uc218 \uc788\uc2b5\ub2c8\ub2e4.',
-  emptyItem: '\uc720\ubb3c\uba85/\uc218\ub7c9 \uba54\ubaa8',
   feature: '\uc720\uad6c',
   noFeature: '\uc5f0\uacb0\ub41c \uc720\uad6c \uc2a4\ucf00\uce58 \uc5c6\uc74c',
   numberSuffix: '\ubc88',
+  sampleEmptyItem: '\uc2dc\ub8cc\uba85/\ucc44\ucde8 \uba54\ubaa8',
   title: '\uc720\ubb3c \ucd9c\ud1a0 \uc704\uce58',
   sampleHint:
     '\uc720\uad6c \ubaa8\uc591 \uc704\uc5d0 \uc2dc\ub8cc \uc704\uce58\ub97c \ub204\ub974\uc138\uc694. \ucc0d\uc740 \uc810\uc740 \ub4dc\ub798\uadf8\ud574 \uc62e\uae38 \uc218 \uc788\uc2b5\ub2c8\ub2e4.',
@@ -138,7 +138,6 @@ const KoreanFieldworkFindSpotPanel: React.FC<Props> = ({
   onUpdateResourceFields,
   parentDocument,
   resource,
-  singlePointMode = false,
 }) => {
   const [canvasSize, setCanvasSize] = useState(DEFAULT_CANVAS_SIZE);
   const [viewport, setViewport] = useState(DEFAULT_FIND_SPOT_VIEWPORT);
@@ -333,9 +332,7 @@ const KoreanFieldworkFindSpotPanel: React.FC<Props> = ({
         number: getNextFindSpotNumber(items),
         point,
     };
-    writeItems(singlePointMode && items.length > 0
-      ? [{ ...items[0], point }]
-      : items.concat(nextItem));
+    writeItems(items.concat(nextItem));
   };
   const updateLabel = (number: number, label: string) => {
     writeItems(items.map((item) =>
@@ -441,7 +438,7 @@ const KoreanFieldworkFindSpotPanel: React.FC<Props> = ({
           </TouchableOpacity>
         )}
       </View>
-      {items.length > 0 && !singlePointMode && (
+      {items.length > 0 && (
         <View style={styles.itemList}>
           {items.map((item) => (
             <View
@@ -455,7 +452,9 @@ const KoreanFieldworkFindSpotPanel: React.FC<Props> = ({
               <TextInput
                 autoCapitalize="none"
                 onChangeText={(text) => updateLabel(item.number, text)}
-                placeholder={`${item.number}${TEXT.numberSuffix} ${TEXT.emptyItem}`}
+                placeholder={`${item.number}${TEXT.numberSuffix} ${
+                  isSample ? TEXT.sampleEmptyItem : TEXT.findEmptyItem
+                }`}
                 placeholderTextColor="#98a2b3"
                 style={styles.itemInput}
                 testID={`findSpotLabelInput_${item.number}`}

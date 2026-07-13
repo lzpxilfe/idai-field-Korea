@@ -19,7 +19,7 @@ describe('KoreanFieldworkQuickFindSpotModal', () => {
   it.each([
     [C.FIND, '유물 위치'],
     [C.SAMPLE, '시료 위치'],
-  ])('saves a point-only %s record without opening the full form', async (
+  ])('records multiple detailed points before saving a %s record', async (
     category,
     title
   ) => {
@@ -48,13 +48,26 @@ describe('KoreanFieldworkQuickFindSpotModal', () => {
     fireEvent(canvas, 'responderRelease', {
       nativeEvent: { locationX: 180, locationY: 120 },
     });
+    fireEvent.changeText(getByTestId('findSpotLabelInput_1'), '1\ubc88 \uc704\uce58');
+    fireEvent(canvas, 'responderGrant', {
+      nativeEvent: { locationX: 280, locationY: 80 },
+    });
+    fireEvent(canvas, 'responderRelease', {
+      nativeEvent: { locationX: 280, locationY: 80 },
+    });
+    fireEvent.changeText(getByTestId('findSpotLabelInput_2'), '2\ubc88 \uc704\uce58');
+
+    expect(getByText('2\uc810')).toBeTruthy();
     fireEvent.press(getByTestId('quickFindSpotSave'));
 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
-    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
-      category,
-      findSpotItems: expect.stringContaining('"number":1'),
-    }));
+    const savedResource = onSave.mock.calls[0][0];
+    const savedItems = JSON.parse(savedResource.findSpotItems).items;
+    expect(savedResource.category).toBe(category);
+    expect(savedItems).toEqual(expect.arrayContaining([
+      expect.objectContaining({ number: 1, label: '1\ubc88 \uc704\uce58' }),
+      expect.objectContaining({ number: 2, label: '2\ubc88 \uc704\uce58' }),
+    ]));
   });
 });
 

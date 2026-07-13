@@ -219,7 +219,6 @@ describe('KoreanFieldworkFindSpotPanel', () => {
         documents={[feature]}
         parentDocument={feature}
         resource={findResource}
-        singlePointMode
         onUpdateResourceFields={onUpdateResourceFields}
       />
     );
@@ -247,10 +246,10 @@ describe('KoreanFieldworkFindSpotPanel', () => {
     ]));
   });
 
-  it('uses the same point-only feature sketch for sample records', () => {
+  it('shows point details while adding sample records', () => {
     const onUpdateResourceFields = jest.fn();
     const feature = createFeature();
-    const { getByTestId, getByText, queryByTestId } = render(
+    const { getByTestId, getByText } = render(
       <KoreanFieldworkFindSpotPanel
         compact
         documents={[feature]}
@@ -259,26 +258,19 @@ describe('KoreanFieldworkFindSpotPanel', () => {
           category: C.SAMPLE,
           identifier: 'sample-1',
           relations: { liesWithin: ['feature-1'] },
+          findSpotItems: JSON.stringify({
+            items: [{ number: 1, point: { x: 60, y: 40 }, label: '' }],
+            version: 1,
+          }),
         }}
-        singlePointMode
         onUpdateResourceFields={onUpdateResourceFields}
       />
     );
-    const canvas = getByTestId('findSpotCanvas');
 
     expect(getByText(/시료 위치를 누르세요/)).toBeTruthy();
-    fireEvent(canvas, 'layout', {
-      nativeEvent: { layout: { height: 200, width: 400 } },
-    });
-    fireEvent(canvas, 'responderGrant', {
-      nativeEvent: { locationX: 240, locationY: 80 },
-    });
-    fireEvent(canvas, 'responderRelease', {
-      nativeEvent: { locationX: 240, locationY: 80 },
-    });
-
-    expect(onUpdateResourceFields).toHaveBeenCalledTimes(1);
-    expect(queryByTestId('findSpotRow_1')).toBeNull();
+    expect(getByTestId('findSpotRow_1')).toBeTruthy();
+    expect(getByTestId('findSpotLabelInput_1').props.placeholder)
+      .toContain('\uc2dc\ub8cc\uba85');
   });
 
   it('finds the feature sketch from an existing find relation', () => {

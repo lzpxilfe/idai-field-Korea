@@ -488,7 +488,7 @@ export function getKoreanFieldworkEvidenceChips(document: Document,
 
     return definitions.flatMap(definition => {
         const evidenceDocuments = getEvidenceDocuments(bundle, definition.bundleKey);
-        const count = evidenceDocuments.length;
+        const count = getEvidenceCount(definition, evidenceDocuments);
         if (count === 0 && !definition.createCategoryName) return [];
 
         return [{
@@ -500,6 +500,49 @@ export function getKoreanFieldworkEvidenceChips(document: Document,
             createCategoryName: definition.createCategoryName
         }];
     });
+}
+
+
+function getEvidenceCount(definition: KoreanFieldworkEvidenceDefinition,
+                          documents: Document[]): number {
+
+    if (definition.id !== 'finds' && definition.id !== 'samples') return documents.length;
+
+    return documents.reduce((count, document) => {
+        const pointCount = getFindSpotItemCount(document.resource.findSpotItems);
+
+        return count + (pointCount > 0 ? pointCount : 1);
+    }, 0);
+}
+
+
+function getFindSpotItemCount(value: unknown): number {
+
+    const parsedValue = typeof value === 'string' ? parseJsonValue(value) : value;
+    const items = Array.isArray(parsedValue)
+        ? parsedValue
+        : parsedValue && typeof parsedValue === 'object'
+            ? (parsedValue as { items?: unknown }).items
+            : undefined;
+
+    if (!Array.isArray(items)) return 0;
+
+    return items.filter(item => {
+        if (!item || typeof item !== 'object') return false;
+
+        const candidate = item as { number?: unknown, point?: unknown };
+        if (typeof candidate.number !== 'number'
+            || !Number.isInteger(candidate.number)
+            || !candidate.point
+            || typeof candidate.point !== 'object') return false;
+
+        const point = candidate.point as { x?: unknown, y?: unknown };
+
+        return typeof point.x === 'number'
+            && Number.isFinite(point.x)
+            && typeof point.y === 'number'
+            && Number.isFinite(point.y);
+    }).length;
 }
 
 

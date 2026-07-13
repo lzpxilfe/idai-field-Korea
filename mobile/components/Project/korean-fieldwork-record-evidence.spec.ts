@@ -126,18 +126,35 @@ describe('Korean fieldwork record evidence', () => {
     )).toEqual([]);
   });
 
-  it('counts quick evidence linked directly with isRecordedIn', () => {
+  it('counts each detailed find and sample point linked with isRecordedIn', () => {
     const feature = createDoc('feature-1', C.FEATURE, '수혈 1');
     const find = createDoc('find-1', C.FIND, '수혈 1 유물 1', {
       isRecordedIn: ['feature-1'],
+    }, {
+      findSpotItems: JSON.stringify({
+        items: [
+          { number: 1, point: { x: 20, y: 30 } },
+          { number: 2, point: { x: 60, y: 70 } },
+        ],
+        version: 1,
+      }),
     });
     const sample = createDoc('sample-1', C.SAMPLE, '수혈 1 시료 1', {
       isRecordedIn: ['feature-1'],
+    }, {
+      findSpotItems: JSON.stringify({
+        items: [
+          { number: 1, point: { x: 15, y: 25 } },
+          { number: 2, point: { x: 45, y: 55 } },
+          { number: 3, point: { x: 75, y: 85 } },
+        ],
+        version: 1,
+      }),
     });
     const chips = getKoreanFieldworkEvidenceChips(feature, [feature, find, sample]);
 
-    expect(chips.find((chip) => chip.id === 'finds')?.count).toBe(1);
-    expect(chips.find((chip) => chip.id === 'samples')?.count).toBe(1);
+    expect(chips.find((chip) => chip.id === 'finds')?.count).toBe(2);
+    expect(chips.find((chip) => chip.id === 'samples')?.count).toBe(3);
   });
 
   it('keeps direct tablet photos visible on find, find collection, and sample records', () => {
