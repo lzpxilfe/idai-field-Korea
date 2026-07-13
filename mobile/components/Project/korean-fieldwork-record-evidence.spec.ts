@@ -126,6 +126,20 @@ describe('Korean fieldwork record evidence', () => {
     )).toEqual([]);
   });
 
+  it('counts quick evidence linked directly with isRecordedIn', () => {
+    const feature = createDoc('feature-1', C.FEATURE, '수혈 1');
+    const find = createDoc('find-1', C.FIND, '수혈 1 유물 1', {
+      isRecordedIn: ['feature-1'],
+    });
+    const sample = createDoc('sample-1', C.SAMPLE, '수혈 1 시료 1', {
+      isRecordedIn: ['feature-1'],
+    });
+    const chips = getKoreanFieldworkEvidenceChips(feature, [feature, find, sample]);
+
+    expect(chips.find((chip) => chip.id === 'finds')?.count).toBe(1);
+    expect(chips.find((chip) => chip.id === 'samples')?.count).toBe(1);
+  });
+
   it('keeps direct tablet photos visible on find, find collection, and sample records', () => {
     const find = createDoc('find-1', C.FIND, '유물 1', {}, {
       fieldworkPhotoUri: 'file:///tablet/photos/find-1.jpg',

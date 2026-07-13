@@ -52,6 +52,8 @@ jest.mock('@/contexts/project-context', () => {
 jest.mock('@/components/Project/korean-fieldwork-child-records', () => ({
   getKoreanFieldworkAllowedChildCategoryNames: () => [
     'FeatureSegment',
+    'Find',
+    'Sample',
     'SoilProfilePhoto',
   ],
 }));
@@ -139,6 +141,42 @@ describe('ProjectScreen RecordRow', () => {
       feature,
       KOREAN_FIELDWORK_CATEGORIES.FEATURE_SEGMENT
     );
+  });
+
+  it.each([
+    ['finds', KOREAN_FIELDWORK_CATEGORIES.FIND],
+    ['samples', KOREAN_FIELDWORK_CATEGORIES.SAMPLE],
+  ])('opens the empty %s location flow without an extra add screen', (
+    chipId,
+    categoryName
+  ) => {
+    const onAddEvidence = jest.fn();
+    const feature = createFeature();
+    const { getByTestId, queryByTestId } = render(
+      <ConfigurationContext.Provider value={createConfiguration()}>
+        <RecordRow
+          categoryLabel="유구"
+          contextPath={undefined}
+          document={feature}
+          documents={[feature]}
+          isDeleting={false}
+          issueCount={0}
+          onAddChild={jest.fn()}
+          onAddEvidence={onAddEvidence}
+          onDelete={jest.fn()}
+          onEdit={jest.fn()}
+          onOpen={jest.fn()}
+          onOpenEvidence={jest.fn()}
+          onUpdateResourceFields={jest.fn()}
+          selected
+        />
+      </ConfigurationContext.Provider>
+    );
+
+    fireEvent.press(getByTestId(`evidenceChip_${chipId}`));
+
+    expect(onAddEvidence).toHaveBeenCalledWith(feature, categoryName);
+    expect(queryByTestId('evidenceManagerModal')).toBeNull();
   });
 });
 
