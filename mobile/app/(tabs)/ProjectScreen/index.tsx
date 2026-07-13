@@ -29,6 +29,7 @@ import DocumentAddModal from '@/components/Project/DocumentAddModal';
 import KoreanFieldworkDailyNotebookDigest from '@/components/Project/KoreanFieldworkDailyNotebookDigest';
 import KoreanFieldworkDailyJournalCalendar from '@/components/Project/KoreanFieldworkDailyJournalCalendar';
 import KoreanFieldworkFieldNotePanel from '@/components/Project/KoreanFieldworkFieldNotePanel';
+import KoreanFieldworkEvidenceModal from '@/components/Project/KoreanFieldworkEvidenceModal';
 import KoreanFieldworkFeaturePitLinePanel from '@/components/Project/KoreanFieldworkFeaturePitLinePanel';
 import KoreanFieldworkInvestigationModePanel from '@/components/Project/KoreanFieldworkInvestigationModePanel';
 import KoreanFieldworkNotebookLedger from '@/components/Project/KoreanFieldworkNotebookLedger';
@@ -135,7 +136,11 @@ interface RecordGroup {
 const getRecordFilters = (
   investigationModeId?: KoreanFieldworkInvestigationModeId
 ): RecordFilter[] => [
-  { id: 'all', label: '전체', categories: [] },
+  {
+    id: 'all',
+    label: '주요 기록',
+    categories: getOverviewRecordCategories(investigationModeId),
+  },
   {
     id: 'operation',
     label: '조사 구역 기록',
@@ -178,6 +183,19 @@ const getRecordFilters = (
       KOREAN_FIELDWORK_CATEGORIES.SOURCE_EVIDENCE_INDEX,
     ],
   },
+];
+
+const getOverviewRecordCategories = (
+  investigationModeId?: KoreanFieldworkInvestigationModeId
+): string[] => [
+  KOREAN_FIELDWORK_CATEGORIES.OPERATION,
+  KOREAN_FIELDWORK_CATEGORIES.SURVEY,
+  KOREAN_FIELDWORK_CATEGORIES.SURVEY_BOUNDARY,
+  ...(shouldUseKoreanFieldworkTrenchWorkflow(investigationModeId)
+    ? [KOREAN_FIELDWORK_CATEGORIES.TRENCH]
+    : []),
+  KOREAN_FIELDWORK_CATEGORIES.FEATURE_GROUP,
+  KOREAN_FIELDWORK_CATEGORIES.FEATURE,
 ];
 
 const getRecordGroups = (
@@ -400,12 +418,16 @@ const DocumentsList: React.FC = () => {
 
   const categoryFilteredDocuments = useMemo(
     () => recordBoardDocuments.filter((document) => {
-      const filterCategories = activeFilterDefinition.categories;
+      const filterCategories = activeFilter === 'all' && normalizedQuery
+        ? []
+        : activeFilterDefinition.categories;
       return filterCategories.length === 0
         || filterCategories.includes(document.resource.category);
     }),
     [
       activeFilterDefinition,
+      activeFilter,
+      normalizedQuery,
       recordBoardDocuments,
     ]
   );
@@ -1753,6 +1775,10 @@ export const RecordRow: React.FC<{
   const description = getRecordDescription(document);
   const statusChips = getKoreanFieldworkRecordStatusChips(document);
   const evidenceChips = getKoreanFieldworkEvidenceChips(document, documents);
+  const [activeEvidenceChipId, setActiveEvidenceChipId] = useState<string>();
+  const activeEvidenceChip = evidenceChips.find((chip) =>
+    chip.id === activeEvidenceChipId
+  );
   const allowedAddCategoryNames = useMemo(
     () => getKoreanFieldworkAllowedChildCategoryNames(document, config),
     [config, document]
@@ -1794,8 +1820,28 @@ export const RecordRow: React.FC<{
     onOpen();
   };
 
+  const canCreateActiveEvidence = !!activeEvidenceChip?.createCategoryName
+    && allowedEvidenceCategories.has(activeEvidenceChip.createCategoryName);
+
   return (
-    <SwipeableActionRow
+    <>
+      {activeEvidenceChip && (
+        <KoreanFieldworkEvidenceModal
+          canCreate={canCreateActiveEvidence}
+          chip={activeEvidenceChip}
+          onClose={() => setActiveEvidenceChipId(undefined)}
+          onCreate={() => {
+            const categoryName = activeEvidenceChip.createCategoryName;
+            setActiveEvidenceChipId(undefined);
+            if (categoryName) onAddEvidence(document, categoryName);
+          }}
+          onOpenDocument={(evidenceDocument) => {
+            setActiveEvidenceChipId(undefined);
+            onOpenEvidence(evidenceDocument);
+          }}
+        />
+      )}
+      <SwipeableActionRow
       actions={[
         {
           icon: 'edit',
@@ -1890,11 +1936,9 @@ export const RecordRow: React.FC<{
             {evidenceChips.length > 0 && (
               <View style={styles.evidenceChipRow}>
                 {evidenceChips.map((chip) => {
-                  const [firstEvidenceDocument] = chip.documents;
-                  const canCreate = !firstEvidenceDocument
-                    && !!chip.createCategoryName
+                  const canCreate = !!chip.createCategoryName
                     && allowedEvidenceCategories.has(chip.createCategoryName);
-                  const isPressable = !!firstEvidenceDocument || canCreate;
+                  const isPressable = chip.documents.length > 0 || canCreate;
 
                   return (
                     <EvidenceChip
@@ -1902,15 +1946,7 @@ export const RecordRow: React.FC<{
                       chip={chip}
                       canCreate={canCreate}
                       disabled={!isPressable}
-                      onPress={() => {
-                        if (firstEvidenceDocument) {
-                          onOpenEvidence(firstEvidenceDocument);
-                          return;
-                        }
-                        if (canCreate && chip.createCategoryName) {
-                          onAddEvidence(document, chip.createCategoryName);
-                        }
-                      }}
+                      onPress={() => setActiveEvidenceChipId(chip.id)}
                     />
                   );
                 })}
@@ -1949,7 +1985,8 @@ export const RecordRow: React.FC<{
           </View>
         )}
       </View>
-    </SwipeableActionRow>
+      </SwipeableActionRow>
+    </>
   );
 };
 
@@ -2048,7 +2085,7 @@ const EvidenceChip: React.FC<{
       accessibilityLabel={`${chip.label} ${chip.count}건${canCreate ? ', 추가' : ''}`}
       disabled={disabled}
       onPress={(event) => {
-        event.stopPropagation();
+        event?.stopPropagation?.();
         onPress();
       }}
       style={[
@@ -2057,6 +2094,7 @@ const EvidenceChip: React.FC<{
         canCreate && styles.evidenceChipCreate,
         disabled && styles.evidenceChipDisabled,
       ]}
+      testID={`evidenceChip_${chip.id}`}
     >
       <Text style={[styles.evidenceChipLabel, textStyle]}>{chip.label}</Text>
       <Text style={[styles.evidenceChipCount, textStyle]}>{chip.count}</Text>

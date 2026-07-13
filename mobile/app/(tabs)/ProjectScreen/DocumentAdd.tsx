@@ -87,7 +87,6 @@ const DocumentAdd: React.FC = () => {
   const { showToast } = useToast();
   const [category, setCategory] = useState<CategoryForm>();
   const [newResource, setNewResource] = useState<NewResource>();
-  const [saveBtnEnabled, setSaveBtnEnabled] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState(false);
   const [investigationModeId, setInvestigationModeId] =
     useState<KoreanFieldworkInvestigationModeId>();
@@ -139,11 +138,6 @@ const DocumentAdd: React.FC = () => {
   );
 
   useEffect(() => setResourceToDefault(), [setResourceToDefault, category]);
-
-  useEffect(() => {
-    if (newResource?.identifier) setSaveBtnEnabled(true);
-    else setSaveBtnEnabled(false);
-  }, [newResource]);
 
   useEffect(
     () => {
@@ -199,6 +193,14 @@ const DocumentAdd: React.FC = () => {
 
   const saveButtonHandler = async () => {
     if (!newResource || !repository || saveInFlightRef.current) return;
+    if (!newResource.identifier?.trim()) {
+      Keyboard.dismiss();
+      showToast(
+        ToastType.Error,
+        '이름(식별자)을 입력해야 저장할 수 있습니다.'
+      );
+      return;
+    }
 
     saveInFlightRef.current = true;
     setIsSaving(true);
@@ -228,14 +230,16 @@ const DocumentAdd: React.FC = () => {
 
     saveInFlightRef.current = false;
     setIsSaving(false);
-    showToast(
-      ToastType.Success,
-      getKoreanFieldworkReportHandoffSaveMessage(
-        `${doc.resource.identifier} 기록을 만들었습니다.`,
-        reportHandoffValidation
-      ),
-      reportHandoffValidation.status === 'review' ? 5000 : 3000
-    );
+    if (reportHandoffValidation.status === 'review') {
+      showToast(
+        ToastType.Info,
+        getKoreanFieldworkReportHandoffSaveMessage(
+          `${doc.resource.identifier} 기록을 만들었습니다.`,
+          reportHandoffValidation
+        ),
+        5000
+      );
+    }
     navigateToKoreanFieldworkReturnTarget(returnTarget, doc.resource.id);
   };
 
@@ -268,7 +272,7 @@ const DocumentAdd: React.FC = () => {
           variant="success"
           onPress={() => saveButtonHandler()}
           title={isSaving ? '저장 중' : '저장'}
-          isDisabled={!saveBtnEnabled || isSaving}
+          isDisabled={isSaving}
           icon={
             <MaterialIcons
               name="save"

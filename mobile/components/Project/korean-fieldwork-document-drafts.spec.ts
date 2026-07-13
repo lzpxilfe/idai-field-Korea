@@ -69,7 +69,7 @@ describe('Korean fieldwork document drafts', () => {
     );
 
     expect(draft).toMatchObject({
-      identifier: 'feature-segment-1700000000000',
+      identifier: 'feature-1 피트 1',
       category: C.FEATURE_SEGMENT,
       relations: {
         isRecordedIn: ['operation-1'],

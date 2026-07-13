@@ -49,13 +49,20 @@ jest.mock('@/contexts/project-context', () => {
   };
 });
 
+jest.mock('@/components/Project/korean-fieldwork-child-records', () => ({
+  getKoreanFieldworkAllowedChildCategoryNames: () => [
+    'FeatureSegment',
+    'SoilProfilePhoto',
+  ],
+}));
+
 jest.mock('expo-router', () => ({
   router: { navigate: jest.fn(), push: jest.fn() },
   useGlobalSearchParams: () => ({}),
 }));
 
 describe('ProjectScreen RecordRow', () => {
-  it('restores pit-line drawing inside an expanded feature row', () => {
+  it('opens straight pit-line drawing from a compact button', () => {
     const onUpdateResourceFields = jest.fn();
     const feature = createFeature();
     const { getByTestId } = render(
@@ -79,17 +86,59 @@ describe('ProjectScreen RecordRow', () => {
       </ConfigurationContext.Provider>
     );
 
+    fireEvent.press(getByTestId('featurePitLineOpen'));
     const canvas = getByTestId('featurePitLineCanvas');
+    fireEvent(canvas, 'layout', {
+      nativeEvent: { layout: { height: 220, width: 320 } },
+    });
     fireEvent(canvas, 'responderGrant', {
       nativeEvent: { locationX: 64, locationY: 66 },
     });
-    fireEvent(canvas, 'responderGrant', {
+    fireEvent(canvas, 'responderMove', {
+      nativeEvent: { locationX: 160, locationY: 110 },
+    });
+    fireEvent(canvas, 'responderRelease', {
       nativeEvent: { locationX: 250, locationY: 170 },
     });
 
     expect(onUpdateResourceFields).toHaveBeenCalledWith(expect.objectContaining({
       featureSoilPitLines: expect.stringContaining('soil-pit-line-1'),
     }));
+  });
+
+  it('keeps pit creation available after the first pit and shows the count', () => {
+    const onAddEvidence = jest.fn();
+    const feature = createFeature();
+    const pit = createPit();
+    const { getByTestId } = render(
+      <ConfigurationContext.Provider value={createConfiguration()}>
+        <RecordRow
+          categoryLabel="유구"
+          contextPath={undefined}
+          document={feature}
+          documents={[feature, pit]}
+          isDeleting={false}
+          issueCount={0}
+          onAddChild={jest.fn()}
+          onAddEvidence={onAddEvidence}
+          onDelete={jest.fn()}
+          onEdit={jest.fn()}
+          onOpen={jest.fn()}
+          onOpenEvidence={jest.fn()}
+          onUpdateResourceFields={jest.fn()}
+          selected
+        />
+      </ConfigurationContext.Provider>
+    );
+
+    fireEvent.press(getByTestId('evidenceChip_featureSegments'));
+
+    expect(getByTestId('evidenceManagerCount').props.children).toBe(1);
+    fireEvent.press(getByTestId('evidenceManagerAdd'));
+    expect(onAddEvidence).toHaveBeenCalledWith(
+      feature,
+      KOREAN_FIELDWORK_CATEGORIES.FEATURE_SEGMENT
+    );
   });
 });
 
@@ -113,6 +162,21 @@ const createFeature = (): Document => ({
       shape: 'polygon',
       version: 2,
     }),
+  },
+  created: { user: 'tester', date: new Date(0) },
+  modified: [],
+});
+
+const createPit = (): Document => ({
+  _id: 'pit-1',
+  resource: {
+    id: 'pit-1',
+    identifier: '1호 유구 피트 1',
+    category: KOREAN_FIELDWORK_CATEGORIES.FEATURE_SEGMENT,
+    relations: {
+      isRecordedIn: ['operation-1'],
+      liesWithin: ['feature-1'],
+    },
   },
   created: { user: 'tester', date: new Date(0) },
   modified: [],

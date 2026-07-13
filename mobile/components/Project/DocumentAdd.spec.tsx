@@ -25,7 +25,7 @@ import { ProjectContext } from '@/contexts/project-context';
 import { Preferences } from '@/models/preferences';
 import { DocumentRepository } from '@/repositories/document-repository';
 import loadConfiguration from '@/services/config/load-configuration';
-import { ToastProvider } from '@/components/common/Toast/ToastProvider';
+import { ToastProvider, ToastType } from '@/components/common/Toast/ToastProvider';
 import DocumentAdd from '@/app/(tabs)/ProjectScreen/DocumentAdd';
 import { defaultMapSettings } from '@/components/Project/Map/map-settings';
 
@@ -230,8 +230,8 @@ describe('DocumentAdd', () => {
   });
 
   it.each([
-    ['Find', 'find-1700000000000'],
-    ['Sample', 'sample-1700000000000'],
+    ['Find', 'T2 유물 1'],
+    ['Sample', 'T2 시료 1'],
   ])('saves a %s field record from the tablet add flow', async (
     categoryName,
     expectedIdentifier
@@ -260,6 +260,7 @@ describe('DocumentAdd', () => {
       }),
     } as NewDocument);
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/ProjectScreen'));
+    expect(mockShowToast.mock.calls.some(([type]) => type === ToastType.Success)).toBe(false);
   });
 
   it('does not run two creates when the tablet save button is tapped twice', async () => {

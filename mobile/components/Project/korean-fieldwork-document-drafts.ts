@@ -158,6 +158,9 @@ export const createDraftIdentifier = (
 };
 
 const getLinkedIdentifierLabel = (categoryName: string): string | undefined => {
+  if (categoryName === C.FEATURE_SEGMENT) return '피트';
+  if (categoryName === C.FIND) return '유물';
+  if (categoryName === C.SAMPLE) return '시료';
   if (categoryName === C.PHOTO) return '사진';
   if (categoryName === C.SOIL_PROFILE_PHOTO) return '토층사진';
 
