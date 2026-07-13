@@ -73,6 +73,7 @@ const DocumentAdd: React.FC = () => {
   const categoryName = getParam(params.categoryName);
   const featureType = getParam(params.featureType);
   const featureGeometryRevisionNote = getParam(params.featureGeometryRevisionNote);
+  const featureMeasurements = getParam(params.featureMeasurements);
   const featureLocationSketch = getParam(params.featureLocationSketch);
   const featureGeometry = getParam(params.featureGeometry);
   const geometryConfidence = getParam(params.geometryConfidence);
@@ -110,6 +111,7 @@ const DocumentAdd: React.FC = () => {
         createKoreanFieldworkDraftResource(parentDoc, categoryName, config, {
           existingDocuments: documentsRef.current ?? [],
           featureGeometryRevisionNote,
+          featureMeasurements,
           featureGeometry,
           featureLocationSketch,
           featureType,
@@ -125,6 +127,7 @@ const DocumentAdd: React.FC = () => {
       categoryName,
       config,
       featureGeometryRevisionNote,
+      featureMeasurements,
       featureGeometry,
       featureLocationSketch,
       featureType,

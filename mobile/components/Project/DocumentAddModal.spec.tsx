@@ -1,5 +1,4 @@
 import {
-  act,
   fireEvent,
   render,
   waitFor,
@@ -145,6 +144,77 @@ describe('DocumentAddModal', () => {
       featureType: 'pit',
       identifier: '1호 수혈',
     });
+  });
+
+  it('shows type-specific measurements and carries them into the Feature draft', () => {
+    const onAddCategory = jest.fn();
+    const parentDoc = {
+      resource: {
+        id: 'trench-1',
+        identifier: 'T1',
+        category: C.TRENCH,
+        relations: {},
+      },
+    } as any;
+
+    const { getByTestId, queryByTestId } = render(
+      <LabelsContext.Provider value={{ labels: new Labels(() => ['ko']) }}>
+        <ConfigurationContext.Provider value={createConfig([
+          createCategory(C.TRENCH),
+          createFeatureCategoryWithMeasurements(),
+        ])}
+        >
+          <DocumentAddModal
+            initialCategoryName={C.FEATURE}
+            onAddCategory={onAddCategory}
+            onClose={jest.fn()}
+            parentDoc={parentDoc}
+          />
+        </ConfigurationContext.Provider>
+      </LabelsContext.Provider>
+    );
+
+    expect(queryByTestId('featureCreationMeasurements')).toBeNull();
+
+    fireEvent.press(getByTestId('featureType_kiln'));
+
+    expect(getByTestId('featureCreationMeasurements')).toBeTruthy();
+    expect(getByTestId('quickRecordMeasurementGroup_kilnFireboxCombustion'))
+      .toBeTruthy();
+    expect(getByTestId('quickRecordMeasurementGroup_kilnFiringFlue'))
+      .toBeTruthy();
+
+    fireEvent.changeText(
+      getByTestId('quickRecordMeasurement_kilnOverallLength'),
+      '3.2'
+    );
+    fireEvent.press(getByTestId('quickRecordMeasurementUnit_kilnOverallLength_m'));
+    fireEvent.changeText(
+      getByTestId('quickRecordMeasurement_kilnCombustionWidth'),
+      '85'
+    );
+    fireEvent.press(getByTestId('featureCreateSubmitTop'));
+
+    const draftParams = onAddCategory.mock.calls[0][2];
+    const featureMeasurements = JSON.parse(draftParams.featureMeasurements);
+
+    expect(draftParams.featureType).toBe('kiln');
+    expect(featureMeasurements.dimensionLength).toEqual([
+      expect.objectContaining({
+        inputUnit: 'm',
+        inputValue: 3.2,
+        measurementComment: '가마 전체 길이',
+        value: 3200000,
+      }),
+    ]);
+    expect(featureMeasurements.dimensionWidth).toEqual([
+      expect.objectContaining({
+        inputUnit: 'cm',
+        inputValue: 85,
+        measurementComment: '가마 연소부 폭',
+        value: 850000,
+      }),
+    ]);
   });
 
   it('auto-names a feature when a type is chosen without a typed name', () => {
@@ -472,7 +542,7 @@ describe('DocumentAddModal', () => {
         expect.objectContaining({ height: expect.any(Number) }),
       ])
     );
-    const canvasStyles = canvas.props.style as Array<{ height?: number }>;
+    const canvasStyles = canvas.props.style as { height?: number }[];
     const dynamicCanvasStyle = canvasStyles[canvasStyles.length - 1];
     expect(dynamicCanvasStyle.height).toBeGreaterThanOrEqual(440);
     expect(dynamicCanvasStyle.height).toBeLessThanOrEqual(860);
@@ -868,6 +938,25 @@ const createConfig = (categories: Forest<CategoryForm>) => ({
     && parentCategoryName === C.TRENCH
     && relationName === 'liesWithin',
 } as any);
+
+const createFeatureCategoryWithMeasurements = () => {
+  const category = createCategory(C.FEATURE);
+
+  return {
+    ...category,
+    item: {
+      ...category.item,
+      groups: [{
+        name: 'measurements',
+        fields: [
+          'dimensionLength',
+          'dimensionWidth',
+          'dimensionVerticalExtent',
+        ].map((name) => ({ name })),
+      }],
+    },
+  } as any;
+};
 
 const createDocument = (
   id: string,

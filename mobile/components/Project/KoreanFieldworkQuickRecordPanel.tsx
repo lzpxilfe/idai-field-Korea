@@ -1,6 +1,7 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import {
   CategoryForm,
+  getKoreanFieldworkFeatureMeasurementGroups,
   NewResource,
 } from 'idai-field-core';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -42,6 +43,8 @@ import {
   VERIFICATION_QUICK_OPTIONS,
 } from './korean-fieldwork-quick-record';
 import { KoreanFieldworkInvestigationModeId } from './korean-fieldwork-investigation-mode';
+import KoreanFieldworkFeatureMeasurementFields
+  from './KoreanFieldworkFeatureMeasurementFields';
 
 const ORIENTATION_DIRECTION_OPTIONS = ['N', 'E', 'S', 'W'] as const;
 
@@ -85,6 +88,10 @@ const KoreanFieldworkQuickRecordPanel: React.FC<KoreanFieldworkQuickRecordPanelP
   );
   const featureAttributeGroups = useMemo(
     () => getKoreanFieldworkFeatureAttributeGroups(category, resource),
+    [category, resource]
+  );
+  const featureMeasurementGroups = useMemo(
+    () => getKoreanFieldworkFeatureMeasurementGroups(category, resource),
     [category, resource]
   );
   const observationFieldName = getQuickObservationFieldName(
@@ -145,7 +152,7 @@ const KoreanFieldworkQuickRecordPanel: React.FC<KoreanFieldworkQuickRecordPanelP
   );
   const panelTitle = getQuickRecordPanelTitle(
     availability.featureType,
-    featureAttributeGroups.length > 0
+    featureAttributeGroups.length > 0 || featureMeasurementGroups.length > 0
   );
   const hasOrientationReference =
     categoryFieldNames.has(FIELDWORK_QUICK_FIELDS.orientationReference);
@@ -180,6 +187,7 @@ const KoreanFieldworkQuickRecordPanel: React.FC<KoreanFieldworkQuickRecordPanelP
   const hasPrimarySections =
     availability.period
     || availability.featureType
+    || featureMeasurementGroups.length > 0
     || featureAttributeGroups.length > 0
     || !!observationFieldName
     || availability.axisOrientation
@@ -276,6 +284,19 @@ const KoreanFieldworkQuickRecordPanel: React.FC<KoreanFieldworkQuickRecordPanelP
             activeValues={getSingleValue(resource, FIELDWORK_QUICK_FIELDS.featureType)}
             onPress={applyFeatureType}
             singleChoice
+          />
+        </QuickSection>
+      )}
+
+      {featureMeasurementGroups.length > 0 && (
+        <QuickSection
+          title="제원"
+          description="현재 확인한 실측값만 입력하세요. 단위는 항목마다 바꿀 수 있습니다."
+        >
+          <KoreanFieldworkFeatureMeasurementFields
+            groups={featureMeasurementGroups}
+            onUpdateResourceFields={applyUpdates}
+            resource={resource}
           />
         </QuickSection>
       )}

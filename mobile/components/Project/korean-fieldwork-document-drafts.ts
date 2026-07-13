@@ -14,6 +14,8 @@ import { KOREAN_FIELDWORK_CATEGORIES } from './korean-fieldwork-categories';
 import {
   getKoreanFieldworkFeatureTypeOption,
 } from './korean-fieldwork-feature-types';
+import { parseKoreanFieldworkFeatureMeasurements }
+  from './korean-fieldwork-feature-measurement-draft';
 
 const C = KOREAN_FIELDWORK_CATEGORIES;
 
@@ -21,6 +23,7 @@ export interface KoreanFieldworkDraftResourceOptions {
   existingDocuments?: readonly Document[];
   featureGeometry?: string;
   featureGeometryRevisionNote?: string;
+  featureMeasurements?: string;
   featureLocationSketch?: string;
   featureType?: string;
   geometryConfidence?: string;
@@ -54,6 +57,9 @@ export const createKoreanFieldworkDraftResource = (
     const featureDraftValues = featureTypeOption
       ? getKoreanFieldworkFeatureDraftValues(featureTypeOption.value)
       : undefined;
+    const featureMeasurementValues = categoryName === C.FEATURE
+      ? parseKoreanFieldworkFeatureMeasurements(options.featureMeasurements)
+      : {};
     const normalizedFeatureGeometryRevisionNote =
       options.featureGeometryRevisionNote?.trim();
     const normalizedFeatureLocationSketch =
@@ -67,6 +73,7 @@ export const createKoreanFieldworkDraftResource = (
       ...resource,
       ...(featureGeometry ? { geometry: featureGeometry } : {}),
       ...(featureDraftValues ?? {}),
+      ...featureMeasurementValues,
       ...getKoreanFieldworkDraftFieldDefaults(categoryName, {
         geometryConfidence: normalizedGeometryConfidence,
         geometrySource: normalizedGeometrySource,
