@@ -1,5 +1,6 @@
 import {
   Document,
+  getKoreanFieldworkFeaturePhotoProgress,
   KoreanFieldworkTodaySummary,
 } from 'idai-field-core';
 import {
@@ -65,6 +66,8 @@ export interface KoreanFieldworkOverviewChartData {
   checklistDone: number;
   checklistTotal: number;
   checklistPercent: number;
+  photoProgressDone?: number;
+  photoProgressTotal?: number;
   openIssueCount: number;
   criticalIssueCount: number;
   metrics: KoreanFieldworkOverviewMetric[];
@@ -169,6 +172,24 @@ export const getKoreanFieldworkOverviewChartData = (
     : 0;
   const usesTrenchWorkflow =
     shouldUseKoreanFieldworkTrenchWorkflow(investigationModeId);
+  const featurePhotoProgress = usesTrenchWorkflow
+    ? []
+    : featureWorkflowDocuments.map((document) =>
+      getKoreanFieldworkFeaturePhotoProgress(
+        getResource(document).featureInvestigationChecklist
+      )
+    );
+  const photoProgressDone = featurePhotoProgress.reduce(
+    (count, progress) => count + progress.checkedCount,
+    0
+  );
+  const photoProgressTotal = featurePhotoProgress.length * 3;
+  const photoStagePercent = featurePhotoProgress.length > 0
+    ? Math.round(featurePhotoProgress.reduce(
+      (sum, progress) => sum + progress.progressPercent,
+      0
+    ) / featurePhotoProgress.length)
+    : 0;
 
   return {
     totalDocumentCount: userVisibleDocuments.length,
@@ -189,6 +210,8 @@ export const getKoreanFieldworkOverviewChartData = (
     checklistDone: checklistStats.done,
     checklistTotal: checklistStats.total,
     checklistPercent,
+    photoProgressDone: usesTrenchWorkflow ? undefined : photoProgressDone,
+    photoProgressTotal: usesTrenchWorkflow ? undefined : photoProgressTotal,
     openIssueCount,
     criticalIssueCount,
     metrics: [
@@ -217,12 +240,20 @@ export const getKoreanFieldworkOverviewChartData = (
       },
       {
         id: 'process',
-        label: '진행',
-        value: checklistStats.total > 0 ? `${checklistPercent}%` : '0%',
-        detail: checklistStats.total > 0
-          ? `과정 ${checklistStats.done}/${checklistStats.total}`
-          : '과정 기록 없음',
-        tone: getChecklistTone(checklistPercent, checklistStats.total),
+        label: usesTrenchWorkflow ? '진행' : '사진 진척',
+        value: usesTrenchWorkflow
+          ? `${checklistPercent}%`
+          : `${photoStagePercent}%`,
+        detail: usesTrenchWorkflow
+          ? checklistStats.total > 0
+            ? `과정 ${checklistStats.done}/${checklistStats.total}`
+            : '과정 기록 없음'
+          : photoProgressTotal > 0
+            ? `사진 징표 ${photoProgressDone}/${photoProgressTotal}`
+            : '유구 사진 기록 없음',
+        tone: usesTrenchWorkflow
+          ? getChecklistTone(checklistPercent, checklistStats.total)
+          : getChecklistTone(photoStagePercent, featurePhotoProgress.length),
       },
       {
         id: 'review',
@@ -334,10 +365,10 @@ const buildFeatureStatusSegments = (
   }, {} as Record<string, number>);
 
   return [
-    createSegment('candidate', '조사 전', counts.candidate ?? 0, total, 'warning'),
-    createSegment('investigating', '조사 중', counts.investigating ?? 0, total, 'info'),
-    createSegment('confirmed', '완료', counts.confirmed ?? 0, total, 'success'),
-    createSegment('unclassified', '상태 없음', counts.unclassified ?? 0, total, 'neutral'),
+    createSegment('candidate', '조사 전 사진', counts.candidate ?? 0, total, 'warning'),
+    createSegment('investigating', '조사 중 사진', counts.investigating ?? 0, total, 'info'),
+    createSegment('confirmed', '완료 사진', counts.confirmed ?? 0, total, 'success'),
+    createSegment('unclassified', '사진 미확인', counts.unclassified ?? 0, total, 'neutral'),
   ];
 };
 
@@ -399,13 +430,13 @@ const getFeatureTypeRank = (
 const getFeatureRecordingStatus = (
   document: Document
 ): 'candidate'|'investigating'|'confirmed'|'unclassified' => {
-  const status = getResource(document).featureRecordingStatus;
+  const progress = getKoreanFieldworkFeaturePhotoProgress(
+    getResource(document).featureInvestigationChecklist
+  );
 
-  return status === 'candidate'
-    || status === 'investigating'
-    || status === 'confirmed'
-    ? status
-    : 'unclassified';
+  return progress.stage === 'unrecorded'
+    ? 'unclassified'
+    : progress.recordingStatus;
 };
 
 const createSegment = (

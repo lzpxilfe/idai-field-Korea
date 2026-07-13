@@ -1,6 +1,8 @@
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import {
   Document,
+  getKoreanFieldworkFeaturePhotoProgress,
+  isKoreanFieldworkFeaturePhotoMilestone,
   KoreanFieldworkReadinessIssue,
 } from 'idai-field-core';
 import React, { useMemo } from 'react';
@@ -96,6 +98,17 @@ const MapBottomSheet: React.FC<MapBottomSheetProps> = ({
     document.resource.category,
     investigationModeId
   );
+  const featurePhotoSteps = featureWorkflowSteps.filter((step) =>
+    isKoreanFieldworkFeaturePhotoMilestone(step.value)
+  );
+  const isFeaturePhotoWorkflow = isFeatureWorkflowVisible
+    && featurePhotoSteps.length === 3;
+  const visibleWorkflowSteps = isFeaturePhotoWorkflow
+    ? featurePhotoSteps
+    : featureWorkflowSteps;
+  const featurePhotoProgress = getKoreanFieldworkFeaturePhotoProgress(
+    featureChecklistValues
+  );
   const geometryEditStatus =
     (document.resource as any).featureGeometryEditStatus ?? 'roughSketch';
 
@@ -190,13 +203,26 @@ const MapBottomSheet: React.FC<MapBottomSheetProps> = ({
       </Row>
       {isFeatureWorkflowVisible && (
         <View style={styles.panel}>
-          <Text style={styles.fieldLabel}>조사 단계 확인</Text>
+          <View style={styles.workflowHeader}>
+            <Text style={styles.fieldLabel}>
+              {isFeaturePhotoWorkflow ? '조사 사진' : '조사 단계 확인'}
+            </Text>
+            {isFeaturePhotoWorkflow && (
+              <Text
+                style={styles.workflowProgress}
+                testID="mapPhotoProgressSummary"
+              >
+                {featurePhotoProgress.label} {featurePhotoProgress.progressPercent}%
+                {' · '}사진 {featurePhotoProgress.checkedCount}/{featurePhotoProgress.totalCount}
+              </Text>
+            )}
+          </View>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.workflowSteps}
           >
-            {featureWorkflowSteps.map((item, index) => {
+            {visibleWorkflowSteps.map((item, index) => {
               const checked = checkedFeatureChecklistValues.has(item.value);
               return (
                 <View key={item.value} style={styles.workflowStepWrap}>
@@ -216,7 +242,7 @@ const MapBottomSheet: React.FC<MapBottomSheetProps> = ({
                     />
                     <Text style={styles.workflowStepLabel}>{item.label}</Text>
                   </TouchableOpacity>
-                  {index < featureWorkflowSteps.length - 1 && (
+                  {index < visibleWorkflowSteps.length - 1 && (
                     <MaterialIcons name="chevron-right" size={16} color="#999" />
                   )}
                 </View>
@@ -313,6 +339,16 @@ const styles = StyleSheet.create({
   workflowSteps: {
     alignItems: 'center',
     paddingVertical: 4,
+  },
+  workflowHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  workflowProgress: {
+    color: '#475467',
+    fontSize: 11,
+    fontWeight: '800',
   },
   workflowStepWrap: {
     alignItems: 'center',

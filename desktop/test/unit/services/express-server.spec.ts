@@ -1,7 +1,7 @@
 jest.mock('src/app/electron/electron', () => ({
     electronCrypto: require('crypto'),
-    electronFs: { promises: require('fs').promises },
-    electronPath: { sep: '/' },
+    electronFs: require('fs'),
+    electronPath: require('path'),
     electronRemote: {
         app: { getVersion: () => 'test' },
         getGlobal: (key: string) => key === 'appDataPath'
@@ -29,6 +29,7 @@ import { ThumbnailGenerator } from '../../../src/app/services/imagestore/thumbna
 import * as schema from '../../../../core/api-schemas/files-list.json';
 
 const fs = require('fs');
+const path = require('path');
 const crypto = require('crypto');
 const axios = require('axios');
 const request = require('supertest');
@@ -56,6 +57,7 @@ describe('ExpressServer', () => {
     let imageStore: ImageStore;
     let PouchDB: any;
     let previousAxiosAdapter: any;
+    let allowedProjects: string[] = [testProjectIdentifier];
 
 
     beforeAll(async () => {
@@ -68,7 +70,9 @@ describe('ExpressServer', () => {
 
         imageStore = new ImageStore(new FsAdapter(), new ThumbnailGenerator());
 
-        expressServer = new ExpressServer(imageStore, undefined, undefined, undefined, undefined);
+        expressServer = new ExpressServer(imageStore, undefined, {
+            getSettings: () => ({ dbs: allowedProjects.slice() })
+        } as any, undefined, undefined);
         expressServer.setPassword(password);
         expressServer.setAllowLargeFileUploads(true);
 
@@ -88,6 +92,7 @@ describe('ExpressServer', () => {
     // Re-initialize image store data for each test.
     beforeEach(async () => {
 
+        allowedProjects = [testProjectIdentifier];
         expressServer.setAllowLargeFileUploads(true);
         await imageStore.init(`${testFilePath}imagestore/`, testProjectIdentifier);
     });
@@ -128,7 +133,50 @@ describe('ExpressServer', () => {
             .expect(401)
             .end((err: Error, res: any) => {
                 if (err) fail(err);
-            });
+        });
+    });
+
+
+    it('binds the synchronization API and Fauxton to loopback by default', () => {
+
+        expect(expressMainApp.address().address).toBe('127.0.0.1');
+        expect(expressFauxtonApp.address().address).toBe('127.0.0.1');
+    });
+
+
+    it('rejects valid passwords paired with an unknown project username', async () => {
+
+        await request(expressMainApp)
+            .get('/info/')
+            .set('Authorization', `Basic ${base64Encode('unknown-project:' + password)}`)
+            .expect(401);
+    });
+
+
+    it('does not let one configured project credential access another project path', async () => {
+
+        allowedProjects = [testProjectIdentifier, 'other-project'];
+
+        await request(expressMainApp)
+            .get(`/files/${testProjectIdentifier}`)
+            .set('Authorization', `Basic ${base64Encode('other-project:' + password)}`)
+            .expect(403);
+    });
+
+
+    it('binds the synchronization API to the LAN only after explicit opt-in', async () => {
+
+        try {
+            expressServer.setAllowLanSync(true);
+            expressMainApp = await expressServer.rebindMainListener();
+
+            expect(expressMainApp.address().address).toBe('0.0.0.0');
+        } finally {
+            expressServer.setAllowLanSync(false);
+            expressMainApp = await expressServer.rebindMainListener();
+        }
+
+        expect(expressMainApp.address().address).toBe('127.0.0.1');
     });
 
 
@@ -180,6 +228,136 @@ describe('ExpressServer', () => {
             expect(response.body).toEqual(mockImageStoredMetadata);
         } catch (err) {
             throw new Error(err);
+        }
+    });
+
+
+    test('/files/:project/:uuid rejects encoded path traversal image ids', async () => {
+
+        const unsafeImageIds = [
+            '%252e%252e%252fescape',
+            '%252e%252e%255cescape',
+            '%255c%255cserver%255cshare',
+            'C%253a%255ctemp%255cescape'
+        ];
+
+        for (const unsafeImageId of unsafeImageIds) {
+            await request(expressMainApp)
+                .get(`/files/${testProjectIdentifier}/${unsafeImageId}?type=original_image`)
+                .set('Authorization', `Basic ${base64Encode(testProjectIdentifier + ':' + password)}`)
+                .expect(400);
+
+            await request(expressMainApp)
+                .put(`/files/${testProjectIdentifier}/${unsafeImageId}?type=thumbnail_image`)
+                .send(mockImage)
+                .set('Content-Type', 'image/x-www-form-urlencoded')
+                .set('Authorization', `Basic ${base64Encode(testProjectIdentifier + ':' + password)}`)
+                .expect(400);
+
+            await request(expressMainApp)
+                .delete(`/files/${testProjectIdentifier}/${unsafeImageId}`)
+                .set('Authorization', `Basic ${base64Encode(testProjectIdentifier + ':' + password)}`)
+                .expect(400);
+        }
+    });
+
+
+    test('/files/:project rejects encoded path traversal project names', async () => {
+
+        await request(expressMainApp)
+            .get('/files/%252e%252e%255cescape')
+            .set('Authorization', `Basic ${base64Encode(testProjectIdentifier + ':' + password)}`)
+            .expect(400);
+    });
+
+
+    test('/files/:project rejects projects outside the settings allowlist', async () => {
+
+        await request(expressMainApp)
+            .get('/files/not_configured')
+            .set('Authorization', `Basic ${base64Encode(testProjectIdentifier + ':' + password)}`)
+            .expect(404);
+    });
+
+
+    test('/files GET, PUT and DELETE reject an allowlisted project directory symlink', async () => {
+
+        const linkedProject = 'linked_project';
+        const imageStoreRoot = imageStore.getAbsoluteRootPath();
+        if (!imageStoreRoot) throw new Error('Image store is not initialized');
+        const linkedProjectPath = path.join(imageStoreRoot, linkedProject);
+        const outsidePath = path.join(testFilePath, 'outside-imagestore');
+        const outsideSecretPath = path.join(outsidePath, 'secret');
+        const outsideDeletePath = path.join(outsidePath, 'delete-me');
+        const outsideUploadPath = path.join(outsidePath, 'uploaded');
+
+        fs.mkdirSync(outsidePath, { recursive: true });
+        fs.writeFileSync(outsideSecretPath, mockImage);
+        fs.writeFileSync(outsideDeletePath, mockImage);
+        fs.symlinkSync(
+            outsidePath,
+            linkedProjectPath,
+            process.platform === 'win32' ? 'junction' : 'dir'
+        );
+        allowedProjects.push(linkedProject);
+
+        try {
+            await request(expressMainApp)
+                .get(`/files/${linkedProject}/secret?type=original_image`)
+                .set('Authorization', `Basic ${base64Encode(linkedProject + ':' + password)}`)
+                .expect(400);
+
+            await request(expressMainApp)
+                .put(`/files/${linkedProject}/uploaded?type=original_image`)
+                .send(mockImage)
+                .set('Content-Type', 'image/x-www-form-urlencoded')
+                .set('Authorization', `Basic ${base64Encode(linkedProject + ':' + password)}`)
+                .expect(400);
+
+            await request(expressMainApp)
+                .delete(`/files/${linkedProject}/delete-me`)
+                .set('Authorization', `Basic ${base64Encode(linkedProject + ':' + password)}`)
+                .expect(400);
+
+            expect(fs.readFileSync(outsideSecretPath)).toEqual(mockImage);
+            expect(fs.readFileSync(outsideDeletePath)).toEqual(mockImage);
+            expect(fs.existsSync(outsideUploadPath)).toBe(false);
+        } finally {
+            fs.rmSync(linkedProjectPath, { recursive: true, force: true });
+            fs.rmSync(outsidePath, { recursive: true, force: true });
+        }
+    });
+
+
+    test('/files/:project/:uuid rejects a symlinked image variant directory', async () => {
+
+        const thumbnailPath = imageStore.getDirectoryPath(testProjectIdentifier, ImageVariant.THUMBNAIL);
+        const thumbnailLinkPath = thumbnailPath.replace(/[\\/]+$/, '');
+        const outsidePath = path.join(testFilePath, 'outside-thumbnails');
+        const outsideUploadPath = path.join(outsidePath, 'uploaded');
+
+        fs.rmSync(thumbnailLinkPath, { recursive: true, force: true });
+        fs.mkdirSync(path.dirname(thumbnailLinkPath), { recursive: true });
+        fs.mkdirSync(outsidePath, { recursive: true });
+        fs.symlinkSync(
+            outsidePath,
+            thumbnailLinkPath,
+            process.platform === 'win32' ? 'junction' : 'dir'
+        );
+
+        try {
+            await request(expressMainApp)
+                .put(`/files/${testProjectIdentifier}/uploaded?type=thumbnail_image`)
+                .send(mockImage)
+                .set('Content-Type', 'image/x-www-form-urlencoded')
+                .set('Authorization', `Basic ${base64Encode(testProjectIdentifier + ':' + password)}`)
+                .expect(400);
+
+            expect(fs.existsSync(outsideUploadPath)).toBe(false);
+        } finally {
+            fs.rmSync(thumbnailLinkPath, { recursive: true, force: true });
+            fs.rmSync(outsidePath, { recursive: true, force: true });
+            await imageStore.init(`${testFilePath}imagestore/`, testProjectIdentifier);
         }
     });
 

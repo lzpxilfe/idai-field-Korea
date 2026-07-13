@@ -64,6 +64,25 @@ defmodule FieldHub.FileStoreTest do
       assert byte_size(@content) == File.stat!(target_path).size
     end
 
+    test "temporary upload files are unique and excluded from quota usage" do
+      assert :ok = FileStore.store("stored", @project, :original_image, "stored")
+
+      {{:ok, first_io}, first_path} =
+        FileStore.create_write_io_device("same-uuid", @project, :original_image)
+
+      {{:ok, second_io}, second_path} =
+        FileStore.create_write_io_device("same-uuid", @project, :original_image)
+
+      assert first_path != second_path
+      assert :ok = IO.binwrite(first_io, "in progress")
+      assert :ok = IO.binwrite(second_io, "also in progress")
+      File.close(first_io)
+      File.close(second_io)
+
+      assert {:ok, 6} = FileStore.project_usage_bytes(@project)
+      assert {:ok, 6} = FileStore.total_usage_bytes()
+    end
+
     test "file deletion creates tombstone but leaves original file" do
       FileStore.store("1234", @project, :original_image, @content)
       assert File.exists?("#{@project_directory}/original_images/1234")

@@ -163,6 +163,46 @@ const SoilProfileCameraButton: React.FC<SoilProfileCameraButtonProps> = ({
 );
 
 const FIELDWORK_CAPTURE_DIRECTORY_NAME = 'fieldwork-captures';
+const FIELDWORK_IMAGE_UPLOAD_AUDIT_FIELDS = [
+  'fieldworkImageUploadStatus',
+  'fieldworkImageUploadedAt',
+  'fieldworkImageUploadedUri',
+  'fieldworkImageUploadTarget',
+  'fieldworkImageUploadedProject',
+  'fieldworkImageUploadedSizeBytes',
+  'fieldworkImageUploadedMd5',
+  'fieldworkImageStoredSizeBytes',
+  'fieldworkImageStoredMd5',
+  'fieldworkImageStoredSha256',
+];
+const FIELDWORK_IMAGE_BACKUP_PRESERVATION_VALUES = new Set([
+  'webOrServerBackup',
+  'backupVerified',
+]);
+
+export const clearFieldworkImageUploadAudit = <
+  TResource extends Record<string, unknown>
+>(resource: TResource): TResource => {
+  const nextResource = { ...resource };
+
+  FIELDWORK_IMAGE_UPLOAD_AUDIT_FIELDS.forEach((fieldName) => {
+    delete nextResource[fieldName];
+  });
+
+  if (Array.isArray(nextResource.digitalSourcePreservation)) {
+    const localPreservationValues = nextResource.digitalSourcePreservation
+      .filter((value): value is string => typeof value === 'string')
+      .filter((value) => !FIELDWORK_IMAGE_BACKUP_PRESERVATION_VALUES.has(value));
+
+    if (localPreservationValues.length > 0) {
+      nextResource.digitalSourcePreservation = localPreservationValues;
+    } else {
+      delete nextResource.digitalSourcePreservation;
+    }
+  }
+
+  return nextResource as TResource;
+};
 
 const FieldworkCameraButton = <TCaptureData,>({
   buttonTitle,
@@ -331,10 +371,8 @@ const getPersistentCaptureFilename = (
   const filename = getFilenameFromUri(uri);
   const extension = getImageFileExtension(filename);
   const preferredBasename = getSafeFilenameBase(filenameBase);
-  if (preferredBasename) return `${preferredBasename}.${extension}`;
-
-  const basename = getSafeFilenameBase(filename) || 'capture';
   const timestamp = capturedAt.toISOString().replace(/[:.]/g, '-');
+  const basename = preferredBasename || getSafeFilenameBase(filename) || 'capture';
 
   return `fieldwork-photo-${timestamp}-${basename}.${extension}`;
 };

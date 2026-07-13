@@ -24,6 +24,8 @@ export * from './korean-fieldwork-draft-defaults';
 export * from './korean-fieldwork-document-drafts';
 export * from './korean-fieldwork-drawing-survey';
 export * from './korean-fieldwork-feature-attributes';
+export * from './korean-fieldwork-feature-measurements';
+export * from './korean-fieldwork-feature-photo-progress';
 export * from './korean-fieldwork-feature-types';
 export * from './korean-fieldwork-field-note';
 export * from './korean-fieldwork-find-spots';

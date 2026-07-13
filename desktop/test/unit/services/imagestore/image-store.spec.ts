@@ -93,4 +93,23 @@ describe('Imagestore', () => {
             fail('Image thumbnail tombstone not found.');
         }
     });
+
+
+    test('should reject unsafe project and image id path segments', async () => {
+
+        await expect(imageStore.store('../escape', mockImage))
+            .rejects.toMatchObject({ code: 'EINVAL' });
+        await expect(imageStore.getData('..%2fescape', ImageVariant.ORIGINAL))
+            .rejects.toMatchObject({ code: 'EINVAL' });
+        await expect(imageStore.remove('..%255cescape'))
+            .rejects.toMatchObject({ code: 'EINVAL' });
+        await expect(imageStore.store('safe-id', mockImage, '..\\escape'))
+            .rejects.toMatchObject({ code: 'EINVAL' });
+        await expect(imageStore.store('C:escape', mockImage))
+            .rejects.toMatchObject({ code: 'EINVAL' });
+        await expect(imageStore.store('CON', mockImage))
+            .rejects.toMatchObject({ code: 'EINVAL' });
+        await expect(imageStore.store('trailing.', mockImage))
+            .rejects.toMatchObject({ code: 'EINVAL' });
+    });
 });

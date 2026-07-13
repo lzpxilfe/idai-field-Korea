@@ -4,30 +4,30 @@ services:
   couchdb:
     image: couchdb:3.3.2
     environment:
-      - COUCHDB_USER=${COUCHDB_ADMIN_NAME}
-      - COUCHDB_PASSWORD=${COUCHDB_ADMIN_PASSWORD}
+      - COUCHDB_USER=${COUCHDB_ADMIN_NAME:?Set a strong CouchDB admin name}
+      - COUCHDB_PASSWORD=${COUCHDB_ADMIN_PASSWORD:?Set a strong CouchDB admin password}
     volumes:
       - /mnt/field_hub/db:/opt/couchdb/data
     networks:
-      - web
       - default
     deploy:
       labels:
-        - "traefik.docker.network=web"
-        - "traefik.enable=true"
-        - "traefik.frontend.rule=Host:db.${HOST}"
-        - "traefik.port=5984"
+        - "traefik.enable=false"
 
   app:
     image: "ghcr.io/dainst/field_hub:${FIELD_HUB_VERSION}"
     environment:
-      - HOST
-      - SECRET_KEY_BASE
+      - HOST=${HOST:?Set the public Field Hub host name}
+      - SECRET_KEY_BASE=${SECRET_KEY_BASE:?Generate a unique SECRET_KEY_BASE}
       - COUCHDB_URL=http://couchdb:5984
-      - COUCHDB_ADMIN_NAME=${COUCHDB_ADMIN_NAME}
-      - COUCHDB_ADMIN_PASSWORD=${COUCHDB_ADMIN_PASSWORD}
-      - COUCHDB_USER_NAME=${COUCHDB_USER_NAME}
-      - COUCHDB_USER_PASSWORD=${COUCHDB_USER_PASSWORD}
+      - COUCHDB_ADMIN_NAME=${COUCHDB_ADMIN_NAME:?Set a strong CouchDB admin name}
+      - COUCHDB_ADMIN_PASSWORD=${COUCHDB_ADMIN_PASSWORD:?Set a strong CouchDB admin password}
+      - COUCHDB_USER_NAME=${COUCHDB_USER_NAME:?Set a Field Hub CouchDB user name}
+      - COUCHDB_USER_PASSWORD=${COUCHDB_USER_PASSWORD:?Set a strong Field Hub CouchDB user password}
+      - FILE_UPLOAD_MAX_BYTES=${FILE_UPLOAD_MAX_BYTES:-536870912}
+      - FILE_PROJECT_QUOTA_BYTES=${FILE_PROJECT_QUOTA_BYTES:-107374182400}
+      - FILE_STORAGE_QUOTA_BYTES=${FILE_STORAGE_QUOTA_BYTES:-1099511627776}
+      - FILE_RESERVED_FREE_BYTES=${FILE_RESERVED_FREE_BYTES:-5368709120}
     depends_on:
       - "couchdb"
     volumes:
@@ -39,7 +39,7 @@ services:
       labels:
         - "traefik.docker.network=web"
         - "traefik.enable=true"
-        - "traefik.frontend.rule=Host:${HOST}"
+        - "traefik.frontend.rule=Host:${HOST:?Set the public Field Hub host name}"
         - "traefik.port=4000"
 
 networks:

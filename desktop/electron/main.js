@@ -50,6 +50,7 @@ global.setConfigDefaults = config => {
     setFileSync(config);
     setMapProviderSettingsDefaults(config);
     if (config.isAutoUpdateActive === undefined) config.isAutoUpdateActive = true;
+    if (config.allowLanSync === undefined) config.allowLanSync = false;
     if (config.highlightCustomElements === undefined) config.highlightCustomElements = true;
     setLanguages(config);
     if (os.type() === 'Linux') config.isAutoUpdateActive = false;

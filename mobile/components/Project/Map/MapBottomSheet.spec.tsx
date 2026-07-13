@@ -39,13 +39,25 @@ describe('MapBottomSheet', () => {
   });
 
   it('uses excavation workflow steps outside trench mode', () => {
-    const { getByText, queryByText } = render(
-      createBottomSheet({ investigationModeId: 'excavation' })
+    const handleToggle = jest.fn();
+    const { getByTestId, getByText, queryByText } = render(
+      createBottomSheet({
+        investigationModeId: 'excavation',
+        toggleFeatureWorkflowStep: handleToggle,
+      })
     );
 
-    expect(getByText('수습 전 사진')).toBeTruthy();
-    expect(getByText('유물 수습')).toBeTruthy();
+    expect(getByText('조사 사진')).toBeTruthy();
+    expect(getByText('조사 전 사진')).toBeTruthy();
+    expect(getByText('조사 중 사진')).toBeTruthy();
+    expect(getByText('완료 사진')).toBeTruthy();
+    expect(queryByText('수습 전 사진')).toBeNull();
+    expect(queryByText('유물 수습')).toBeNull();
     expect(queryByText('피트 토층도')).toBeNull();
+
+    fireEvent.press(getByTestId('mapWorkflowStep_completionPhotoTaken'));
+
+    expect(handleToggle).toHaveBeenCalledWith('completionPhotoTaken');
   });
 
   it('shows trial trench workflow steps for trench records', () => {

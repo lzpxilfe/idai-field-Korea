@@ -38,6 +38,7 @@ import { KOREAN_FIELDWORK_CATEGORIES } from './korean-fieldwork-categories';
 import {
   KOREAN_FIELDWORK_MAP_VIEW_PARAM,
   KOREAN_FIELDWORK_MAP_VIEWS,
+  pushKoreanFieldworkDocumentAdd,
 } from './korean-fieldwork-navigation';
 interface DocumentsMapProps {
   repository: DocumentRepository;
@@ -147,13 +148,10 @@ const DocumentsMap: React.FC<DocumentsMapProps> = ({
       return;
     }
 
-    router.navigate({
-      pathname: '/ProjectScreen/DocumentAdd',
-      params: {
-        parentDocId: parentDoc.resource.id,
-        categoryName,
-        ...draftParams,
-      },
+    pushKoreanFieldworkDocumentAdd({
+      categoryName,
+      draftParams,
+      parentDocId: parentDoc.resource.id,
     });
   };
 
@@ -262,13 +260,10 @@ const DocumentsMap: React.FC<DocumentsMapProps> = ({
     }
 
     closeAddModal();
-    router.navigate({
-      pathname: '/ProjectScreen/DocumentAdd',
-      params: {
-        parentDocId: parentDoc.resource.id,
-        categoryName,
-        ...draftParams,
-      },
+    pushKoreanFieldworkDocumentAdd({
+      categoryName,
+      draftParams,
+      parentDocId: parentDoc.resource.id,
     });
   };
 

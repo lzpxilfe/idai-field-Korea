@@ -3973,6 +3973,30 @@
           <context context-type="linenumber">73</context>
         </context-group>
       </trans-unit>
+      <trans-unit id="settings.synchronization.allowLanSync" datatype="html">
+        <source>Synchronisation im LAN freigeben</source>
+        <target state="translated">LAN 동기화 허용</target>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/components/settings/settings.html</context>
+          <context context-type="linenumber">205</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="settings.synchronization.allowLanSync.info" datatype="html">
+        <source> Standardmäßig ist der Server nur auf diesem Computer erreichbar. Die LAN-Freigabe verwendet unverschlüsseltes HTTP und darf nur in einem vertrauenswürdigen, isolierten Netzwerk aktiviert werden. </source>
+        <target state="translated">기본적으로 서버는 이 컴퓨터에서만 접근할 수 있습니다. LAN 공유는 암호화되지 않은 HTTP를 사용하므로 신뢰할 수 있는 격리 네트워크에서만 활성화하십시오.</target>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/components/settings/settings.html</context>
+          <context context-type="linenumber">217</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="settings.synchronization.lanDisabled" datatype="html">
+        <source> LAN-Synchronisation ist deaktiviert </source>
+        <target state="translated">LAN 동기화가 비활성화되어 있습니다</target>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/components/settings/settings.html</context>
+          <context context-type="linenumber">124</context>
+        </context-group>
+      </trans-unit>
       <trans-unit id="settings.synchronization.hostPassword" datatype="html">
         <source>Eigenes Passwort</source>
         <target state="translated">귀하의 비밀번호</target><context-group purpose="location">

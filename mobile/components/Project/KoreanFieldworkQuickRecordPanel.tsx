@@ -1,6 +1,9 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import {
   CategoryForm,
+  getKoreanFieldworkFeatureMeasurementGroups,
+  getKoreanFieldworkFeaturePhotoProgress,
+  isKoreanFieldworkFeaturePhotoMilestone,
   NewResource,
 } from 'idai-field-core';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -42,6 +45,8 @@ import {
   VERIFICATION_QUICK_OPTIONS,
 } from './korean-fieldwork-quick-record';
 import { KoreanFieldworkInvestigationModeId } from './korean-fieldwork-investigation-mode';
+import KoreanFieldworkFeatureMeasurementFields
+  from './KoreanFieldworkFeatureMeasurementFields';
 
 const ORIENTATION_DIRECTION_OPTIONS = ['N', 'E', 'S', 'W'] as const;
 
@@ -60,6 +65,7 @@ const KoreanFieldworkQuickRecordPanel: React.FC<KoreanFieldworkQuickRecordPanelP
   onUpdateResourceField,
   onUpdateResourceFields,
 }) => {
+  const [showDetailedChecklist, setShowDetailedChecklist] = useState(false);
   const [showSecondaryFields, setShowSecondaryFields] = useState(false);
   const availability = useMemo(
     () => getKoreanFieldworkQuickRecordAvailability(
@@ -77,6 +83,23 @@ const KoreanFieldworkQuickRecordPanel: React.FC<KoreanFieldworkQuickRecordPanelP
     () => getKoreanFieldworkChecklistQuickOptions(investigationModeId),
     [investigationModeId]
   );
+  const featurePhotoOptions = useMemo(
+    () => checklistOptions.filter((option) =>
+      isKoreanFieldworkFeaturePhotoMilestone(option.value)
+    ),
+    [checklistOptions]
+  );
+  const detailedChecklistOptions = useMemo(
+    () => checklistOptions.filter((option) =>
+      !isKoreanFieldworkFeaturePhotoMilestone(option.value)
+    ),
+    [checklistOptions]
+  );
+  const isFeaturePhotoWorkflow = availability.checklist
+    && featurePhotoOptions.length === 3;
+  const featurePhotoProgress = getKoreanFieldworkFeaturePhotoProgress(
+    getResourceFieldValue(resource, FIELDWORK_QUICK_FIELDS.checklist)
+  );
   const categoryFieldNames = useMemo(
     () => new Set(category.groups.flatMap((group) =>
       group.fields.map((field) => field.name)
@@ -85,6 +108,10 @@ const KoreanFieldworkQuickRecordPanel: React.FC<KoreanFieldworkQuickRecordPanelP
   );
   const featureAttributeGroups = useMemo(
     () => getKoreanFieldworkFeatureAttributeGroups(category, resource),
+    [category, resource]
+  );
+  const featureMeasurementGroups = useMemo(
+    () => getKoreanFieldworkFeatureMeasurementGroups(category, resource),
     [category, resource]
   );
   const observationFieldName = getQuickObservationFieldName(
@@ -129,6 +156,28 @@ const KoreanFieldworkQuickRecordPanel: React.FC<KoreanFieldworkQuickRecordPanelP
     });
   };
 
+  const toggleChecklistValue = (value: string) => {
+    const nextChecklist = toggleStringArrayFieldValue(
+      resource,
+      FIELDWORK_QUICK_FIELDS.checklist,
+      value
+    );
+
+    if (
+      isFeaturePhotoWorkflow
+      && isKoreanFieldworkFeaturePhotoMilestone(value)
+    ) {
+      applyUpdates({
+        [FIELDWORK_QUICK_FIELDS.checklist]: nextChecklist,
+        [FIELDWORK_QUICK_FIELDS.featureStatus]:
+          getKoreanFieldworkFeaturePhotoProgress(nextChecklist).recordingStatus,
+      });
+      return;
+    }
+
+    onUpdateResourceField(FIELDWORK_QUICK_FIELDS.checklist, nextChecklist);
+  };
+
   const orientationNoteValue = getTextValue(
     resource,
     FIELDWORK_QUICK_FIELDS.orientationNote
@@ -145,7 +194,7 @@ const KoreanFieldworkQuickRecordPanel: React.FC<KoreanFieldworkQuickRecordPanelP
   );
   const panelTitle = getQuickRecordPanelTitle(
     availability.featureType,
-    featureAttributeGroups.length > 0
+    featureAttributeGroups.length > 0 || featureMeasurementGroups.length > 0
   );
   const hasOrientationReference =
     categoryFieldNames.has(FIELDWORK_QUICK_FIELDS.orientationReference);
@@ -180,17 +229,20 @@ const KoreanFieldworkQuickRecordPanel: React.FC<KoreanFieldworkQuickRecordPanelP
   const hasPrimarySections =
     availability.period
     || availability.featureType
+    || featureMeasurementGroups.length > 0
     || featureAttributeGroups.length > 0
     || !!observationFieldName
     || availability.axisOrientation
     || availability.checklist;
+  const showManualFeatureStatus = availability.featureStatus
+    && !isFeaturePhotoWorkflow;
   const hasSecondarySections =
-    availability.featureStatus
+    showManualFeatureStatus
     || availability.quality
     || availability.verification
     || availability.timing;
   const secondarySectionCount = [
-    availability.featureStatus,
+    showManualFeatureStatus,
     availability.quality,
     availability.verification,
     availability.timing,
@@ -236,7 +288,7 @@ const KoreanFieldworkQuickRecordPanel: React.FC<KoreanFieldworkQuickRecordPanelP
         </View>
       </View>
 
-      {presets.length > 0 && (
+      {presets.length > 0 && !isFeaturePhotoWorkflow && (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -276,6 +328,19 @@ const KoreanFieldworkQuickRecordPanel: React.FC<KoreanFieldworkQuickRecordPanelP
             activeValues={getSingleValue(resource, FIELDWORK_QUICK_FIELDS.featureType)}
             onPress={applyFeatureType}
             singleChoice
+          />
+        </QuickSection>
+      )}
+
+      {featureMeasurementGroups.length > 0 && (
+        <QuickSection
+          title="제원"
+          description="현재 확인한 실측값만 입력하세요. 단위는 항목마다 바꿀 수 있습니다."
+        >
+          <KoreanFieldworkFeatureMeasurementFields
+            groups={featureMeasurementGroups}
+            onUpdateResourceFields={applyUpdates}
+            resource={resource}
           />
         </QuickSection>
       )}
@@ -385,7 +450,66 @@ const KoreanFieldworkQuickRecordPanel: React.FC<KoreanFieldworkQuickRecordPanelP
         </QuickSection>
       )}
 
-      {availability.checklist && (
+      {availability.checklist && (isFeaturePhotoWorkflow ? (
+        <QuickSection title="조사 사진">
+          <View
+            style={styles.photoProgressSummary}
+            testID="quickRecordPhotoProgressSummary"
+          >
+            <View style={styles.photoProgressStage}>
+              <MaterialIcons name="photo-camera" size={16} color="#175cd3" />
+              <Text style={styles.photoProgressLabel}>
+                {featurePhotoProgress.label}
+              </Text>
+            </View>
+            <Text style={styles.photoProgressPercent}>
+              {featurePhotoProgress.progressPercent}%
+            </Text>
+            <Text style={styles.photoProgressCount}>
+              사진 {featurePhotoProgress.checkedCount}/{featurePhotoProgress.totalCount}
+            </Text>
+          </View>
+          <OptionRow
+            options={featurePhotoOptions}
+            activeValues={getStringArrayFieldValues(
+              resource,
+              FIELDWORK_QUICK_FIELDS.checklist
+            )}
+            onPress={toggleChecklistValue}
+          />
+          {detailedChecklistOptions.length > 0 && (
+            <>
+              <TouchableOpacity
+                activeOpacity={0.84}
+                onPress={() => setShowDetailedChecklist((current) => !current)}
+                style={styles.detailChecklistToggle}
+                testID="quickRecordToggleDetailedChecklist"
+              >
+                <Text style={styles.detailChecklistToggleText}>
+                  세부 기록 {showDetailedChecklist ? '접기' : '보기'}
+                </Text>
+                <MaterialIcons
+                  name={showDetailedChecklist ? 'expand-less' : 'expand-more'}
+                  size={18}
+                  color="#475467"
+                />
+              </TouchableOpacity>
+              {showDetailedChecklist && (
+                <View style={styles.detailChecklist}>
+                  <OptionRow
+                    options={detailedChecklistOptions}
+                    activeValues={getStringArrayFieldValues(
+                      resource,
+                      FIELDWORK_QUICK_FIELDS.checklist
+                    )}
+                    onPress={toggleChecklistValue}
+                  />
+                </View>
+              )}
+            </>
+          )}
+        </QuickSection>
+      ) : (
         <QuickSection title="조사 단계 확인">
           <OptionRow
             options={checklistOptions}
@@ -393,17 +517,10 @@ const KoreanFieldworkQuickRecordPanel: React.FC<KoreanFieldworkQuickRecordPanelP
               resource,
               FIELDWORK_QUICK_FIELDS.checklist
             )}
-            onPress={(value) => onUpdateResourceField(
-              FIELDWORK_QUICK_FIELDS.checklist,
-              toggleStringArrayFieldValue(
-                resource,
-                FIELDWORK_QUICK_FIELDS.checklist,
-                value
-              )
-            )}
+            onPress={toggleChecklistValue}
           />
         </QuickSection>
-      )}
+      ))}
 
       {hasPrimarySections && hasSecondarySections && (
         <TouchableOpacity
@@ -430,7 +547,7 @@ const KoreanFieldworkQuickRecordPanel: React.FC<KoreanFieldworkQuickRecordPanelP
 
       {shouldShowSecondaryFields && (
         <>
-          {availability.featureStatus && (
+          {showManualFeatureStatus && (
             <QuickSection title="유구 진행">
               <OptionRow
                 options={FEATURE_STATUS_QUICK_OPTIONS}
@@ -873,6 +990,55 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '900',
     marginBottom: 5,
+  },
+  photoProgressSummary: {
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderColor: '#b2ddff',
+    borderRadius: 6,
+    borderWidth: 1,
+    flexDirection: 'row',
+    marginBottom: 7,
+    minHeight: 34,
+    paddingHorizontal: 8,
+  },
+  photoProgressStage: {
+    alignItems: 'center',
+    flex: 1,
+    flexDirection: 'row',
+  },
+  photoProgressLabel: {
+    color: '#344054',
+    fontSize: 12,
+    fontWeight: '900',
+    marginLeft: 5,
+  },
+  photoProgressPercent: {
+    color: '#175cd3',
+    fontSize: 12,
+    fontWeight: '900',
+    marginLeft: 8,
+  },
+  photoProgressCount: {
+    color: '#667085',
+    fontSize: 11,
+    fontWeight: '800',
+    marginLeft: 8,
+  },
+  detailChecklistToggle: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    marginTop: 7,
+    minHeight: 28,
+  },
+  detailChecklistToggleText: {
+    color: '#475467',
+    fontSize: 11,
+    fontWeight: '900',
+  },
+  detailChecklist: {
+    marginTop: 3,
   },
   secondaryToggle: {
     alignItems: 'center',

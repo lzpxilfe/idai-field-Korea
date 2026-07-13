@@ -1,4 +1,8 @@
-import { Document } from 'idai-field-core';
+import {
+  Document,
+  getKoreanFieldworkFeaturePhotoProgress,
+  KoreanFieldworkFeaturePhotoProgressStage,
+} from 'idai-field-core';
 import {
   getKoreanFieldworkDisplayIdentifier,
   KOREAN_FIELDWORK_CATEGORIES,
@@ -81,6 +85,11 @@ const QUALITY_TRACKED_CATEGORIES = new Set<string>([
   C.FEATURE_SEGMENT,
   C.DAILY_LOG,
   C.FIELD_RECORD_QUALITY_REVIEW,
+]);
+
+const FEATURE_PHOTO_PROGRESS_CATEGORIES = new Set<string>([
+  C.FEATURE,
+  C.FEATURE_SEGMENT,
 ]);
 
 export const getKoreanFieldworkPrimaryParent = (
@@ -189,7 +198,11 @@ export const getKoreanFieldworkRecordStatusChips = (
   if (featureTypeLabel) chips.push({ label: featureTypeLabel, tone: 'info' });
   if (axisOrientationChip) chips.push(axisOrientationChip);
 
-  pushMappedChip(chips, resource.featureRecordingStatus, FEATURE_RECORDING_STATUS_LABELS);
+  if (FEATURE_PHOTO_PROGRESS_CATEGORIES.has(resource.category)) {
+    chips.push(getFeaturePhotoProgressChip(resource));
+  } else {
+    pushMappedChip(chips, resource.featureRecordingStatus, FEATURE_RECORDING_STATUS_LABELS);
+  }
   pushMappedChip(chips, resource.verificationState, VERIFICATION_STATE_LABELS);
   pushMappedChip(chips, resource.recordCreationTiming, RECORD_CREATION_TIMING_LABELS);
   pushMappedChip(chips, resource.featureGeometryEditStatus, GEOMETRY_EDIT_STATUS_LABELS);
@@ -204,6 +217,32 @@ export const getKoreanFieldworkRecordStatusChips = (
   }
 
   return dedupeChips(chips).slice(0, 4);
+};
+
+const getFeaturePhotoProgressChip = (
+  resource: Record<string, unknown>
+): KoreanFieldworkStatusChip => {
+  const progress = getKoreanFieldworkFeaturePhotoProgress(
+    resource.featureInvestigationChecklist
+  );
+
+  return {
+    label: `${progress.label} · 사진 ${progress.checkedCount}/${progress.totalCount}`,
+    tone: getFeaturePhotoProgressTone(progress.stage),
+  };
+};
+
+const getFeaturePhotoProgressTone = (
+  stage: KoreanFieldworkFeaturePhotoProgressStage
+): KoreanFieldworkStatusTone => {
+  switch (stage) {
+    case 'completed':
+      return 'success';
+    case 'investigating':
+      return 'info';
+    default:
+      return 'warning';
+  }
 };
 
 const pushProjectSetupChips = (

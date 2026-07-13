@@ -1,5 +1,6 @@
 import {
   Document,
+  getKoreanFieldworkFeaturePhotoProgress,
   KoreanFieldworkReadinessIssue,
   KoreanFieldworkTodaySummary,
 } from 'idai-field-core';
@@ -61,6 +62,8 @@ export interface KoreanFieldworkUnitMatrixItem {
   hasCriticalIssue: boolean;
   checklistDone: number;
   checklistTotal: number;
+  photoProgressDone?: number;
+  photoProgressTotal?: number;
   completionPercent: number;
   tone: KoreanFieldworkStatusTone;
   statusChips: KoreanFieldworkStatusChip[];
@@ -155,13 +158,21 @@ const buildUnitMatrixItem = (
     ? getChecklistDoneCount(document, checklistSteps)
     : 0;
   const hasCriticalIssue = issues.some((issue) => issue.severity === 'critical');
+  const photoProgress = isFeaturePhotoProgressDocument(document, investigationModeId)
+    ? getKoreanFieldworkFeaturePhotoProgress(
+      (document.resource as unknown as Record<string, unknown>)
+        .featureInvestigationChecklist
+    )
+    : undefined;
   const completionPercent = getCompletionPercent(
+    document,
     childStructureCount,
     evidenceCount,
     issues.length,
     checklistDone,
     checklistTotal,
-    !!nextChildCategoryName
+    !!nextChildCategoryName,
+    investigationModeId
   );
 
   return {
@@ -176,6 +187,8 @@ const buildUnitMatrixItem = (
     hasCriticalIssue,
     checklistDone,
     checklistTotal,
+    photoProgressDone: photoProgress?.checkedCount,
+    photoProgressTotal: photoProgress?.totalCount,
     completionPercent,
     tone: getTone(hasCriticalIssue, issues.length, completionPercent, evidenceCount),
     statusChips: getKoreanFieldworkRecordStatusChips(document),
@@ -188,13 +201,22 @@ const buildUnitMatrixItem = (
 };
 
 const getCompletionPercent = (
+  document: Document,
   childStructureCount: number,
   evidenceCount: number,
   issueCount: number,
   checklistDone: number,
   checklistTotal: number,
-  needsChildStructure: boolean
+  needsChildStructure: boolean,
+  investigationModeId?: KoreanFieldworkInvestigationModeId
 ): number => {
+  if (isFeaturePhotoProgressDocument(document, investigationModeId)) {
+    return getKoreanFieldworkFeaturePhotoProgress(
+      (document.resource as unknown as Record<string, unknown>)
+        .featureInvestigationChecklist
+    ).progressPercent;
+  }
+
   const checks: boolean[] = [
     issueCount === 0,
     evidenceCount > 0,
@@ -290,14 +312,25 @@ const toFeatureOverviewItem = (
 const getFeatureOverviewStatusLabel = (
   item: KoreanFieldworkUnitMatrixItem
 ): string => {
-  if (item.hasCriticalIssue) return '필수 보완';
-  if (item.issueCount > 0) return '보완 필요';
-  if (item.evidenceCount === 0) return '근거자료 없음';
-  if (item.checklistTotal > 0 && item.checklistDone < item.checklistTotal) {
-    return '조사 중';
+  if (item.photoProgressTotal === undefined) {
+    if (item.hasCriticalIssue) return '필수 보완';
+    if (item.issueCount > 0) return '보완 필요';
+    if (item.evidenceCount === 0) return '근거자료 없음';
+    if (item.checklistTotal > 0 && item.checklistDone < item.checklistTotal) {
+      return '조사 중';
+    }
+    if (item.completionPercent >= 100) return '정리됨';
+    return '검토 중';
   }
-  if (item.completionPercent >= 100) return '정리됨';
-  return '검토 중';
+
+  const progress = getKoreanFieldworkFeaturePhotoProgress(
+    (item.document.resource as unknown as Record<string, unknown>)
+      .featureInvestigationChecklist
+  );
+
+  if (item.hasCriticalIssue) return `${progress.label} · 필수 보완`;
+  if (item.issueCount > 0) return `${progress.label} · 보완`;
+  return progress.label;
 };
 
 const getFeatureOverviewEvidenceLabel = (
@@ -314,15 +347,39 @@ const getFeatureOverviewNextActionLabel = (
   item: KoreanFieldworkUnitMatrixItem
 ): string => {
   if (item.issueCount > 0) return '보완 항목 확인';
-  if (item.evidenceCount === 0) return '사진·스케치 연결';
-  if (item.checklistTotal > 0 && item.checklistDone < item.checklistTotal) {
-    return `조사 과정 ${item.checklistDone}/${item.checklistTotal}`;
+  if (item.photoProgressTotal === undefined) {
+    if (item.evidenceCount === 0) return '사진·스케치 연결';
+    if (item.checklistTotal > 0 && item.checklistDone < item.checklistTotal) {
+      return `조사 과정 ${item.checklistDone}/${item.checklistTotal}`;
+    }
+    if (item.nextChildCategoryName) {
+      return `${getKoreanFieldworkCategoryLabel(item.nextChildCategoryName)} 추가`;
+    }
+    return '검토 완료';
   }
+
+  const photoProgress = getKoreanFieldworkFeaturePhotoProgress(
+    (item.document.resource as unknown as Record<string, unknown>)
+      .featureInvestigationChecklist
+  );
+  if (photoProgress.stage === 'unrecorded') return '조사 전 사진 확인';
+  if (photoProgress.stage === 'preInvestigation') return '조사 중 사진 확인';
+  if (photoProgress.stage === 'investigating') return '완료 사진 확인';
+  if (item.evidenceCount === 0) return '사진 원본 연결';
   if (item.nextChildCategoryName) {
     return `${getKoreanFieldworkCategoryLabel(item.nextChildCategoryName)} 추가`;
   }
   return '검토 완료';
 };
+
+const isFeaturePhotoProgressDocument = (
+  document: Document,
+  investigationModeId?: KoreanFieldworkInvestigationModeId
+): boolean => investigationModeId !== 'trialTrench'
+  && (
+    document.resource.category === C.FEATURE
+    || document.resource.category === C.FEATURE_SEGMENT
+  );
 
 const getChecklistDoneCount = (
   document: Document,

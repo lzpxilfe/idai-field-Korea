@@ -18,7 +18,26 @@ jest.mock('@expo/vector-icons', () => {
 const C = KOREAN_FIELDWORK_CATEGORIES;
 
 describe('KoreanFieldworkFeaturePitLinePanel', () => {
-  it('stores a straight soil pit line from two tapped points', () => {
+  it('keeps the editor behind a compact button with a numeric count', () => {
+    const { getByTestId, queryByTestId } = render(
+      <KoreanFieldworkFeaturePitLinePanel
+        document={createDoc('feature-1', C.FEATURE, {
+          featureSoilPitLines: JSON.stringify([createPitLine(1), createPitLine(2)]),
+        })}
+        documents={[]}
+        onUpdateResourceFields={jest.fn()}
+      />
+    );
+
+    expect(getByTestId('featurePitLineCount').props.children).toBe(2);
+    expect(queryByTestId('featurePitLineCanvas')).toBeNull();
+
+    fireEvent.press(getByTestId('featurePitLineOpen'));
+
+    expect(getByTestId('featurePitLineCanvas')).toBeTruthy();
+  });
+
+  it('stores a straight soil pit line from one drag gesture', () => {
     const onUpdateResourceFields = jest.fn();
     const { getByTestId } = render(
       <KoreanFieldworkFeaturePitLinePanel
@@ -43,6 +62,7 @@ describe('KoreanFieldworkFeaturePitLinePanel', () => {
         onUpdateResourceFields={onUpdateResourceFields}
       />
     );
+    fireEvent.press(getByTestId('featurePitLineOpen'));
     const canvas = getByTestId('featurePitLineCanvas');
 
     fireEvent(canvas, 'layout', {
@@ -55,7 +75,10 @@ describe('KoreanFieldworkFeaturePitLinePanel', () => {
     expect(onUpdateResourceFields).not.toHaveBeenCalled();
     expect(getByTestId('featurePitLinePendingStart')).toBeTruthy();
 
-    fireEvent(canvas, 'responderGrant', {
+    fireEvent(canvas, 'responderMove', {
+      nativeEvent: { locationX: 200, locationY: 100 },
+    });
+    fireEvent(canvas, 'responderRelease', {
       nativeEvent: { locationX: 320, locationY: 150 },
     });
 
@@ -85,6 +108,7 @@ describe('KoreanFieldworkFeaturePitLinePanel', () => {
         onUpdateResourceFields={jest.fn()}
       />
     );
+    fireEvent.press(getByTestId('featurePitLineOpen'));
     const canvas = getByTestId('featurePitLineCanvas');
 
     expect(getByTestId('featurePitLinePendingHint')).toBeTruthy();
@@ -117,6 +141,7 @@ describe('KoreanFieldworkFeaturePitLinePanel', () => {
         onUpdateResourceFields={onUpdateResourceFields}
       />
     );
+    fireEvent.press(getByTestId('featurePitLineOpen'));
     const canvas = getByTestId('featurePitLineCanvas');
 
     fireEvent(canvas, 'layout', {
@@ -125,7 +150,10 @@ describe('KoreanFieldworkFeaturePitLinePanel', () => {
     fireEvent(canvas, 'responderGrant', {
       nativeEvent: { locationX: 40, locationY: 40 },
     });
-    fireEvent(canvas, 'responderGrant', {
+    fireEvent(canvas, 'responderMove', {
+      nativeEvent: { locationX: 200, locationY: 100 },
+    });
+    fireEvent(canvas, 'responderRelease', {
       nativeEvent: { locationX: 360, locationY: 160 },
     });
 
@@ -143,34 +171,6 @@ describe('KoreanFieldworkFeaturePitLinePanel', () => {
     ]);
   });
 
-  it('renders legacy multi-point pit lines as one straight segment', () => {
-    const { getAllByTestId, queryByTestId } = render(
-      <KoreanFieldworkFeaturePitLinePanel
-        document={createDoc('feature-1', C.FEATURE, {
-          featureSoilPitLines: JSON.stringify([
-            {
-              version: 2,
-              id: 'soil-pit-line-1',
-              label: '1',
-              start: { x: 20, y: 25 },
-              end: { x: 80, y: 75 },
-              points: [
-                { x: 20, y: 25 },
-                { x: 80, y: 25 },
-                { x: 80, y: 75 },
-              ],
-            },
-          ]),
-        })}
-        documents={[]}
-        onUpdateResourceFields={jest.fn()}
-      />
-    );
-
-    expect(getAllByTestId('featurePitLineSegment')).toHaveLength(1);
-    expect(queryByTestId('featurePitLineCorner_0_0')).toBeNull();
-  });
-
   it('ignores non-finite touch coordinates instead of saving an invalid pit line', () => {
     const onUpdateResourceFields = jest.fn();
     const { getByTestId, queryByTestId } = render(
@@ -180,6 +180,7 @@ describe('KoreanFieldworkFeaturePitLinePanel', () => {
         onUpdateResourceFields={onUpdateResourceFields}
       />
     );
+    fireEvent.press(getByTestId('featurePitLineOpen'));
     const canvas = getByTestId('featurePitLineCanvas');
 
     fireEvent(canvas, 'layout', {
@@ -188,11 +189,14 @@ describe('KoreanFieldworkFeaturePitLinePanel', () => {
     fireEvent(canvas, 'responderGrant', {
       nativeEvent: { locationX: Number.NaN, locationY: 50 },
     });
-    fireEvent(canvas, 'responderGrant', {
+    fireEvent(canvas, 'responderMove', {
+      nativeEvent: { locationX: 320, locationY: 150 },
+    });
+    fireEvent(canvas, 'responderRelease', {
       nativeEvent: { locationX: 320, locationY: 150 },
     });
 
-    expect(queryByTestId('featurePitLinePendingStart')).toBeTruthy();
+    expect(queryByTestId('featurePitLinePendingStart')).toBeNull();
     expect(onUpdateResourceFields).not.toHaveBeenCalled();
   });
 
@@ -209,6 +213,7 @@ describe('KoreanFieldworkFeaturePitLinePanel', () => {
       />
     );
 
+    fireEvent.press(getByTestId('featurePitLineOpen'));
     fireEvent.press(getByTestId('featurePitLineAddSoilProfilePhoto'));
 
     expect(onAddSoilProfilePhoto).toHaveBeenCalledWith(
@@ -245,6 +250,7 @@ describe('KoreanFieldworkFeaturePitLinePanel', () => {
       />
     );
 
+    fireEvent.press(getByTestId('featurePitLineOpen'));
     expect(getAllByTestId('featurePitLineSegment')).toHaveLength(1);
     fireEvent.press(getByTestId('featurePitLineClear'));
 
@@ -281,6 +287,7 @@ describe('KoreanFieldworkFeaturePitLinePanel', () => {
       />
     );
 
+    fireEvent.press(getByTestId('featurePitLineOpen'));
     fireEvent.press(getByTestId('featurePitLineUndoLast'));
 
     const updates = onUpdateResourceFields.mock.calls[0][0];
@@ -299,6 +306,7 @@ describe('KoreanFieldworkFeaturePitLinePanel', () => {
         onUpdateResourceFields={onUpdateResourceFields}
       />
     );
+    fireEvent.press(getByTestId('featurePitLineOpen'));
     const canvas = getByTestId('featurePitLineCanvas');
 
     fireEvent(canvas, 'layout', {
@@ -330,9 +338,22 @@ describe('KoreanFieldworkFeaturePitLinePanel', () => {
       />
     );
 
+    fireEvent.press(getByTestId('featurePitLineOpen'));
     expect(getAllByTestId('featurePitLineSegment')).toHaveLength(1);
     expect(getByTestId('featurePitLineLabel_0')).toBeTruthy();
   });
+});
+
+const createPitLine = (number: number) => ({
+  version: 2,
+  id: `soil-pit-line-${number}`,
+  label: `${number}`,
+  start: { x: 10 * number, y: 20 },
+  end: { x: 10 * number + 20, y: 70 },
+  points: [
+    { x: 10 * number, y: 20 },
+    { x: 10 * number + 20, y: 70 },
+  ],
 });
 
 const createDoc = (

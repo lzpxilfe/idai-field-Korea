@@ -2,12 +2,15 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { Document } from 'idai-field-core';
 import React, {
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import type { DimensionValue } from 'react-native';
 import {
   GestureResponderEvent,
   LayoutChangeEvent,
+  Modal,
+  SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -89,13 +92,13 @@ const TEXT = {
   clear: '\uc9c0\uc6b0\uae30',
   connectedCount: '\uc5f0\uacb0\ub41c \ud1a0\uce35\uc0ac\uc9c4',
   drawHint:
-    '\ud53c\ud2b8\ub294 \uc2dc\uc791\uc810\uacfc \ub05d\uc810\uc744 \uc9c1\uc120\uc73c\ub85c \uc5f0\uacb0\ud574 \uc800\uc7a5\ud569\ub2c8\ub2e4.',
+    '\uc2dc\uc791\uc810\uc5d0\uc11c \ub05d\uc810\uae4c\uc9c0 \uc190\uac00\ub77d\uc73c\ub85c \ud55c \ubc88 \uadf8\uc73c\uba74 \uc9c1\uc120\uc73c\ub85c \uc800\uc7a5\ub429\ub2c8\ub2e4.',
   feature: '\uc720\uad6c',
   lineCount: '\ud53c\ud2b8\uc120',
   noSketch: '\uc720\uad6c \uc2a4\ucf00\uce58 \uc5c6\uc74c',
-  pendingHint: '\ub2e4\uc74c \uc810\uc744 \ucc0d\uc73c\uba74 \uc9c1\uc120 \ud53c\ud2b8\uc120\uc774 \ucd94\uac00\ub429\ub2c8\ub2e4.',
-  readyHint: '\uc2dc\uc791\uc810\uc744 \ucc0d\uace0 \ub05d\uc810\uc744 \ucc0d\uc73c\uba74 \uc9c1\uc120 \ud53c\ud2b8\uc120\uc774 \uc5f0\uacb0\ub429\ub2c8\ub2e4.',
-  title: '\ud53c\ud2b8\uc120\u00b7\ud1a0\uce35\uc0ac\uc9c4',
+  pendingHint: '\uc190\uac00\ub77d\uc744 \ub5bc\uba74 \ud604\uc7ac \uc704\uce58\uae4c\uc9c0 \uc9c1\uc120\uc774 \ucd94\uac00\ub429\ub2c8\ub2e4.',
+  readyHint: '\uc120\uc744 \uadf8\uc744 \uc2dc\uc791\uc810\uc744 \ub204\ub974\uc138\uc694.',
+  title: '\ud53c\ud2b8\uc120',
   undo: '\ub9c8\uc9c0\ub9c9 \uc9c0\uc6b0\uae30',
 };
 
@@ -106,8 +109,11 @@ const KoreanFieldworkFeaturePitLinePanel: React.FC<Props> = ({
   onAddSoilProfilePhoto,
   onUpdateResourceFields,
 }) => {
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [canvasSize, setCanvasSize] = useState(DEFAULT_CANVAS_SIZE);
   const [pendingStartPoint, setPendingStartPoint] = useState<SketchPoint>();
+  const [pendingEndPoint, setPendingEndPoint] = useState<SketchPoint>();
+  const pendingStartPointRef = useRef<SketchPoint>();
   const sketch = useMemo(
     () => normalizeFeatureLocationSketch(
       (document.resource as Record<string, unknown>).featureLocationSketch
@@ -149,32 +155,52 @@ const KoreanFieldworkFeaturePitLinePanel: React.FC<Props> = ({
     const { height, width } = event.nativeEvent.layout;
     if (height > 0 && width > 0) setCanvasSize({ height, width });
   };
-  const addLinePoint = (event: GestureResponderEvent) => {
+  const beginLine = (event: GestureResponderEvent) => {
     const point = getNormalizedPoint(event, canvasSize);
     if (!point) return;
 
-    if (!pendingStartPoint) {
-      setPendingStartPoint(point);
-      return;
-    }
-    if (getPointDistance(pendingStartPoint, point) < MIN_LINE_DISTANCE) return;
+    pendingStartPointRef.current = point;
+    setPendingStartPoint(point);
+    setPendingEndPoint(point);
+  };
+  const moveLine = (event: GestureResponderEvent) => {
+    if (!pendingStartPointRef.current) return;
 
+    const point = getNormalizedPoint(event, canvasSize);
+    if (point) setPendingEndPoint(point);
+  };
+  const cancelPendingLine = () => {
+    pendingStartPointRef.current = undefined;
     setPendingStartPoint(undefined);
+    setPendingEndPoint(undefined);
+  };
+  const finishLine = (event: GestureResponderEvent) => {
+    const start = pendingStartPointRef.current;
+    const end = getNormalizedPoint(event, canvasSize) ?? pendingEndPoint;
+    cancelPendingLine();
+    if (!start || !end || getPointDistance(start, end) < MIN_LINE_DISTANCE) return;
+
     saveLines([
       ...savedLines,
-      createFeatureSoilPitLine(pendingStartPoint, point, savedLines.length),
+      createFeatureSoilPitLine(start, end, savedLines.length),
     ]);
   };
   const saveLines = (lines: FeatureSoilPitLine[]) => {
     const updatedAt = new Date().toISOString();
-    const updatedLines = lines.map((line, index) => ({
-      ...line,
-      id: createFeatureSoilPitLineId(index),
-      label: `${index + 1}`,
-      points: normalizePitLinePoints(line.points, line.start, line.end),
-      updatedAt,
-      version: 2 as const,
-    }));
+    const updatedLines = lines.map((line, index) => {
+      const points = normalizePitLinePoints(line.points, line.start, line.end);
+
+      return {
+        ...line,
+        end: points[points.length - 1],
+        id: createFeatureSoilPitLineId(index),
+        label: `${index + 1}`,
+        points,
+        start: points[0],
+        updatedAt,
+        version: 2 as const,
+      };
+    });
     onUpdateResourceFields({
       [KOREAN_FIELDWORK_FEATURE_PIT_LINE_FIELDS.lines]:
         JSON.stringify(updatedLines),
@@ -186,7 +212,7 @@ const KoreanFieldworkFeaturePitLinePanel: React.FC<Props> = ({
   };
   const undoLastLine = () => {
     if (pendingStartPoint) {
-      setPendingStartPoint(undefined);
+      cancelPendingLine();
       return;
     }
     if (!hasSavedLines) return;
@@ -194,162 +220,217 @@ const KoreanFieldworkFeaturePitLinePanel: React.FC<Props> = ({
     saveLines(savedLines.slice(0, -1));
   };
   const clearLines = () => {
-    setPendingStartPoint(undefined);
+    cancelPendingLine();
     saveLines([]);
   };
 
   return (
-    <View style={styles.container} testID="featurePitLinePanel">
-      <View style={styles.headerRow}>
-        <View style={styles.titleRow}>
-          <MaterialIcons name="timeline" size={17} color="#344054" />
-          <Text style={styles.title}>{TEXT.title}</Text>
-          <Text style={styles.countText}>
-            {TEXT.connectedCount} {relatedSoilProfilePhotoCount}
+    <>
+      <View style={styles.compactContainer} testID="featurePitLinePanel">
+        <TouchableOpacity
+          accessibilityLabel={`${TEXT.title} ${savedLines.length}\uac1c`}
+          activeOpacity={0.84}
+          onPress={() => setIsEditorOpen(true)}
+          style={styles.compactButton}
+          testID="featurePitLineOpen"
+        >
+          <MaterialIcons name="timeline" size={16} color="#344054" />
+          <Text style={styles.compactButtonText}>{TEXT.title}</Text>
+          <Text style={styles.compactCount} testID="featurePitLineCount">
+            {savedLines.length}
           </Text>
-          <Text style={styles.countText}>
-            {TEXT.lineCount} {savedLines.length}
-          </Text>
-        </View>
-        <View style={styles.actionRow}>
-          <TouchableOpacity
-            activeOpacity={0.86}
-            accessibilityLabel={TEXT.addSoilProfilePhoto}
-            disabled={!canAddSoilProfilePhoto}
-            onPress={() => onAddSoilProfilePhoto?.(
-              document,
-              KOREAN_FIELDWORK_CATEGORIES.SOIL_PROFILE_PHOTO
-            )}
-            style={[
-              styles.addButton,
-              !canAddSoilProfilePhoto && styles.addButtonDisabled,
-            ]}
-            testID="featurePitLineAddSoilProfilePhoto"
-          >
-            <MaterialIcons
-              name="terrain"
-              size={15}
-              color={canAddSoilProfilePhoto ? '#2f5f4a' : '#98a2b3'}
-            />
-            <Text
-              style={[
-                styles.addButtonText,
-                !canAddSoilProfilePhoto && styles.addButtonTextDisabled,
-              ]}
-            >
-              {TEXT.addSoilProfilePhoto}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            activeOpacity={0.86}
-            accessibilityLabel={TEXT.undo}
-            disabled={!canClearLine}
-            onPress={undoLastLine}
-            style={[styles.clearButton, !canClearLine && styles.clearButtonDisabled]}
-            testID="featurePitLineUndoLast"
-          >
-            <MaterialIcons
-              name="undo"
-              size={15}
-              color={canClearLine ? '#344054' : '#98a2b3'}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity
-            activeOpacity={0.86}
-            accessibilityLabel={TEXT.clear}
-            disabled={!canClearLine}
-            onPress={clearLines}
-            style={[styles.clearButton, !canClearLine && styles.clearButtonDisabled]}
-            testID="featurePitLineClear"
-          >
-            <MaterialIcons
-              name="delete-outline"
-              size={15}
-              color={canClearLine ? '#b42318' : '#98a2b3'}
-            />
-          </TouchableOpacity>
-        </View>
+          <MaterialIcons name="chevron-right" size={17} color="#667085" />
+        </TouchableOpacity>
       </View>
-      <Text style={styles.hint}>{TEXT.drawHint}</Text>
-      <Text style={styles.pendingHint} testID="featurePitLinePendingHint">
-        {pitLineStatusText}
-      </Text>
-      <View
-        onLayout={updateCanvasSize}
-        onMoveShouldSetResponder={() => false}
-        onResponderGrant={addLinePoint}
-        onResponderTerminationRequest={() => true}
-        onStartShouldSetResponder={() => true}
-        style={styles.canvas}
-        testID="featurePitLineCanvas"
-      >
-        <View style={styles.northBand}>
-          <Text style={styles.northText}>N</Text>
-        </View>
-        <View style={styles.verticalAxis} />
-        <View style={styles.horizontalAxis} />
-        {sketch
-          ? renderFeatureSketch(sketch, canvasSize)
-          : (
-            <View style={styles.emptyPreview}>
-              <Text style={styles.emptyPreviewText}>{TEXT.noSketch}</Text>
-            </View>
-          )}
-        {savedLines.map((line, index) => {
-          const points = getPitLinePoints(line);
 
-          return (
-            <React.Fragment key={`${line.id}-${index}`}>
-              {toLineSegments({
-                canvasSize,
-                closePath: false,
-                color: '#2f5f4a',
-                keyPrefix: `feature-pit-line-${line.id}-${index}`,
-                points,
-                testID: 'featurePitLineSegment',
-                width: 4,
-              })}
-              <LineHandle
-                label={line.label}
-                point={points[0]}
-                testID="featurePitLineStart"
-              />
-              <LineHandle
-                label={line.label}
-                point={points[points.length - 1]}
-                testID="featurePitLineEnd"
-              />
-              <View
-                pointerEvents="none"
-                style={[
-                  styles.lineLabel,
-                  getPointPercentStyle(getLineMidpoint(line)),
-                ]}
-                testID={`featurePitLineLabel_${index}`}
-              >
-                <Text style={styles.lineLabelText}>{line.label}</Text>
+      <Modal
+        animationType="slide"
+        onRequestClose={() => {
+          cancelPendingLine();
+          setIsEditorOpen(false);
+        }}
+        presentationStyle="fullScreen"
+        testID="featurePitLineModal"
+        visible={isEditorOpen}
+      >
+        <SafeAreaView style={styles.modalScreen}>
+          <View style={styles.modalHeader}>
+            <View style={styles.titleRow}>
+              <MaterialIcons name="timeline" size={19} color="#344054" />
+              <Text style={styles.modalTitle}>{TEXT.title}</Text>
+              <Text style={styles.compactCount}>{savedLines.length}</Text>
+            </View>
+            <TouchableOpacity
+              accessibilityLabel="\ub2eb\uae30"
+              activeOpacity={0.84}
+              onPress={() => {
+                cancelPendingLine();
+                setIsEditorOpen(false);
+              }}
+              style={styles.modalCloseButton}
+              testID="featurePitLineClose"
+            >
+              <MaterialIcons name="close" size={22} color="#344054" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.container} testID="featurePitLineEditor">
+            <View style={styles.headerRow}>
+              <Text style={styles.countText}>
+                {TEXT.connectedCount} {relatedSoilProfilePhotoCount}
+              </Text>
+              <View style={styles.actionRow}>
+                <TouchableOpacity
+                  activeOpacity={0.86}
+                  accessibilityLabel={TEXT.addSoilProfilePhoto}
+                  disabled={!canAddSoilProfilePhoto}
+                  onPress={() => onAddSoilProfilePhoto?.(
+                    document,
+                    KOREAN_FIELDWORK_CATEGORIES.SOIL_PROFILE_PHOTO
+                  )}
+                  style={[
+                    styles.addButton,
+                    !canAddSoilProfilePhoto && styles.addButtonDisabled,
+                  ]}
+                  testID="featurePitLineAddSoilProfilePhoto"
+                >
+                  <MaterialIcons
+                    name="terrain"
+                    size={15}
+                    color={canAddSoilProfilePhoto ? '#2f5f4a' : '#98a2b3'}
+                  />
+                  <Text
+                    style={[
+                      styles.addButtonText,
+                      !canAddSoilProfilePhoto && styles.addButtonTextDisabled,
+                    ]}
+                  >
+                    {TEXT.addSoilProfilePhoto}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  activeOpacity={0.86}
+                  accessibilityLabel={TEXT.undo}
+                  disabled={!canClearLine}
+                  onPress={undoLastLine}
+                  style={[styles.clearButton, !canClearLine && styles.clearButtonDisabled]}
+                  testID="featurePitLineUndoLast"
+                >
+                  <MaterialIcons
+                    name="undo"
+                    size={15}
+                    color={canClearLine ? '#344054' : '#98a2b3'}
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  activeOpacity={0.86}
+                  accessibilityLabel={TEXT.clear}
+                  disabled={!canClearLine}
+                  onPress={clearLines}
+                  style={[styles.clearButton, !canClearLine && styles.clearButtonDisabled]}
+                  testID="featurePitLineClear"
+                >
+                  <MaterialIcons
+                    name="delete-outline"
+                    size={15}
+                    color={canClearLine ? '#b42318' : '#98a2b3'}
+                  />
+                </TouchableOpacity>
               </View>
-            </React.Fragment>
-          );
-        })}
-        {pendingStartPoint && (
-          <>
-            <LineHandle
-              label="+"
-              point={pendingStartPoint}
-              testID="featurePitLinePendingStart"
-            />
+            </View>
+            <Text style={styles.hint}>{TEXT.drawHint}</Text>
+            <Text style={styles.pendingHint} testID="featurePitLinePendingHint">
+              {pitLineStatusText}
+            </Text>
             <View
-              pointerEvents="none"
-              style={[
-                styles.pendingPulse,
-                getPointPercentStyle(pendingStartPoint),
-              ]}
-            />
-          </>
-        )}
-      </View>
-    </View>
+              onLayout={updateCanvasSize}
+              onMoveShouldSetResponder={() => true}
+              onResponderGrant={beginLine}
+              onResponderMove={moveLine}
+              onResponderRelease={finishLine}
+              onResponderTerminate={cancelPendingLine}
+              onResponderTerminationRequest={() => false}
+              onStartShouldSetResponder={() => true}
+              style={styles.canvas}
+              testID="featurePitLineCanvas"
+            >
+              <View style={styles.northBand}>
+                <Text style={styles.northText}>N</Text>
+              </View>
+              <View style={styles.verticalAxis} />
+              <View style={styles.horizontalAxis} />
+              {sketch
+                ? renderFeatureSketch(sketch, canvasSize)
+                : (
+                  <View style={styles.emptyPreview}>
+                    <Text style={styles.emptyPreviewText}>{TEXT.noSketch}</Text>
+                  </View>
+                )}
+              {savedLines.map((line, index) => {
+                const points = getPitLinePoints(line);
+
+                return (
+                  <React.Fragment key={`${line.id}-${index}`}>
+                    {toLineSegments({
+                      canvasSize,
+                      closePath: false,
+                      color: '#2f5f4a',
+                      keyPrefix: `feature-pit-line-${line.id}-${index}`,
+                      points,
+                      testID: 'featurePitLineSegment',
+                      width: 4,
+                    })}
+                    <LineHandle
+                      label={line.label}
+                      point={points[0]}
+                      testID="featurePitLineStart"
+                    />
+                    <LineHandle
+                      label={line.label}
+                      point={points[points.length - 1]}
+                      testID="featurePitLineEnd"
+                    />
+                    <View
+                      pointerEvents="none"
+                      style={[
+                        styles.lineLabel,
+                        getPointPercentStyle(getLineMidpoint(line)),
+                      ]}
+                      testID={`featurePitLineLabel_${index}`}
+                    >
+                      <Text style={styles.lineLabelText}>{line.label}</Text>
+                    </View>
+                  </React.Fragment>
+                );
+              })}
+              {pendingStartPoint && pendingEndPoint && (
+                <>
+                  {getPointDistance(pendingStartPoint, pendingEndPoint) >= MIN_LINE_DISTANCE
+                    && toLineSegments({
+                      canvasSize,
+                      closePath: false,
+                      color: '#175cd3',
+                      keyPrefix: 'feature-pit-line-pending',
+                      points: [pendingStartPoint, pendingEndPoint],
+                      testID: 'featurePitLinePendingSegment',
+                      width: 3,
+                    })}
+                  <LineHandle
+                    label="+"
+                    point={pendingStartPoint}
+                    testID="featurePitLinePendingStart"
+                  />
+                  <LineHandle
+                    point={pendingEndPoint}
+                    testID="featurePitLinePendingEnd"
+                  />
+                </>
+              )}
+            </View>
+          </View>
+        </SafeAreaView>
+      </Modal>
+    </>
   );
 };
 
@@ -446,7 +527,7 @@ const normalizeFeatureSoilPitLine = (
   if (!start || !end) return undefined;
   const points = Array.isArray(rawValue.points)
     ? normalizePitLinePoints(rawValue.points, start, end)
-    : createStraightPitLinePoints(start, end);
+    : [start, end];
 
   return {
     end: points[points.length - 1],
@@ -470,7 +551,7 @@ const createFeatureSoilPitLine = (
   end: SketchPoint,
   index: number
 ): FeatureSoilPitLine => {
-  const points = createStraightPitLinePoints(start, end);
+  const points = [start, end];
 
   return {
     end: points[points.length - 1],
@@ -495,33 +576,23 @@ const normalizePitLinePoints = (
       .map(normalizeSketchPoint)
       .filter((point): point is SketchPoint => !!point)
     : [];
-  if (points.length >= 2) {
-    return createStraightPitLinePoints(points[0], points[points.length - 1]);
-  }
+  if (points.length >= 2) return [points[0], points[points.length - 1]];
 
-  return createStraightPitLinePoints(fallbackStart, fallbackEnd);
+  return [fallbackStart, fallbackEnd];
 };
-
-const createStraightPitLinePoints = (
-  start: SketchPoint,
-  end: SketchPoint
-): SketchPoint[] => [start, end];
 
 const createFeatureSoilPitLineId = (index: number): string =>
   `soil-pit-line-${index + 1}`;
 
 const getLineMidpoint = (line: FeatureSoilPitLine): SketchPoint => {
   const points = getPitLinePoints(line);
-  const start = points[0];
-  const end = points[points.length - 1];
-  if (start && end) {
-    return {
-      x: (start.x + end.x) / 2,
-      y: (start.y + end.y) / 2,
-    };
-  }
+  const start = points[0] ?? line.start;
+  const end = points[points.length - 1] ?? line.end;
 
-  return line.start;
+  return {
+    x: (start.x + end.x) / 2,
+    y: (start.y + end.y) / 2,
+  };
 };
 
 const normalizeFeatureLocationSketch = (
@@ -882,6 +953,39 @@ const styles = StyleSheet.create({
   clearButtonDisabled: {
     borderColor: '#e4e7ec',
   },
+  compactContainer: {
+    alignItems: 'flex-start',
+    marginHorizontal: 14,
+    marginTop: 8,
+  },
+  compactButton: {
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderColor: '#d0d5dd',
+    borderRadius: 6,
+    borderWidth: 1,
+    flexDirection: 'row',
+    height: 34,
+    paddingHorizontal: 9,
+  },
+  compactButtonText: {
+    color: '#344054',
+    fontSize: 12,
+    fontWeight: '900',
+    marginLeft: 5,
+  },
+  compactCount: {
+    backgroundColor: '#eef2f6',
+    borderRadius: 6,
+    color: '#344054',
+    fontSize: 11,
+    fontWeight: '900',
+    marginLeft: 6,
+    minWidth: 23,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    textAlign: 'center',
+  },
   container: {
     backgroundColor: 'white',
     borderColor: '#d0d5dd',
@@ -1010,6 +1114,31 @@ const styles = StyleSheet.create({
     fontSize: 8,
     fontWeight: '900',
     lineHeight: 10,
+  },
+  modalCloseButton: {
+    alignItems: 'center',
+    height: 40,
+    justifyContent: 'center',
+    width: 40,
+  },
+  modalHeader: {
+    alignItems: 'center',
+    borderBottomColor: '#e4e7ec',
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    minHeight: 60,
+    paddingHorizontal: 14,
+  },
+  modalScreen: {
+    backgroundColor: '#f2f4f7',
+    flex: 1,
+  },
+  modalTitle: {
+    color: '#1d2939',
+    fontSize: 18,
+    fontWeight: '900',
+    marginLeft: 6,
   },
   northBand: {
     alignItems: 'center',

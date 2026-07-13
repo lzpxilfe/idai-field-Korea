@@ -99,10 +99,25 @@ describe('Korean fieldwork record summary', () => {
 
     expect(getKoreanFieldworkRecordStatusChips(feature)).toEqual([
       { label: '수혈', tone: 'info' },
-      { label: '조사 전', tone: 'warning' },
+      { label: '사진 미확인 · 사진 0/3', tone: 'warning' },
       { label: '재검토', tone: 'warning' },
       { label: '추가 기록', tone: 'info' },
     ]);
+  });
+
+  it('derives feature status from the latest photo milestone', () => {
+    const feature = createDoc('feature-1', C.FEATURE, '유구 1', {}, {
+      featureRecordingStatus: 'candidate',
+      featureInvestigationChecklist: [
+        'preInvestigationPhotoTaken',
+        'completionPhotoTaken',
+      ],
+    });
+
+    expect(getKoreanFieldworkRecordStatusChips(feature)).toContainEqual({
+      label: '완료 · 사진 2/3',
+      tone: 'success',
+    });
   });
 
   it('shows quality completion when field quality checks exist', () => {

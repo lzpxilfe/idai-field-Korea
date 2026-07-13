@@ -10,6 +10,19 @@ import Config
 # :test or :dev blocks.
 
 if config_env() == :prod do
+  parse_non_negative_integer_env! = fn name, default ->
+    case System.get_env(name) do
+      nil ->
+        default
+
+      value ->
+        case Integer.parse(value) do
+          {parsed, ""} when parsed >= 0 -> parsed
+          _ -> raise "environment variable #{name} must be a non-negative integer number of bytes"
+        end
+    end
+  end
+
   # The secret key base is used to sign/encrypt cookies and other secrets.
   # A default value is used in config/dev.exs and config/test.exs but you
   # want to use a different value for prod and you most likely don't want
@@ -56,7 +69,21 @@ if config_env() == :prod do
     couchdb_admin_name: System.fetch_env!("COUCHDB_ADMIN_NAME"),
     couchdb_admin_password: System.fetch_env!("COUCHDB_ADMIN_PASSWORD"),
     couchdb_user_name: System.fetch_env!("COUCHDB_USER_NAME"),
-    couchdb_user_password: System.fetch_env!("COUCHDB_USER_PASSWORD")
+    couchdb_user_password: System.fetch_env!("COUCHDB_USER_PASSWORD"),
+    file_upload_max_bytes:
+      parse_non_negative_integer_env!.("FILE_UPLOAD_MAX_BYTES", 512 * 1024 * 1024),
+    file_project_quota_bytes:
+      parse_non_negative_integer_env!.(
+        "FILE_PROJECT_QUOTA_BYTES",
+        100 * 1024 * 1024 * 1024
+      ),
+    file_storage_quota_bytes:
+      parse_non_negative_integer_env!.(
+        "FILE_STORAGE_QUOTA_BYTES",
+        1024 * 1024 * 1024 * 1024
+      ),
+    file_reserved_free_bytes:
+      parse_non_negative_integer_env!.("FILE_RESERVED_FREE_BYTES", 5 * 1024 * 1024 * 1024)
 
   # ## Configuring the mailer
   #

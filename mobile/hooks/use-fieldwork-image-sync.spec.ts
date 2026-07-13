@@ -142,6 +142,46 @@ describe('useFieldworkImageSync', () => {
     }));
   });
 
+  it('does not mark uploads as backupVerified when server metadata differs from the local original', async () => {
+    (FileSystem.uploadAsync as jest.Mock).mockResolvedValueOnce({
+      body: JSON.stringify({
+        md5: 'server-different-md5',
+        sha256: 'server-sha256',
+        size_bytes: 481516,
+      }),
+      status: 201,
+    });
+    const document = createDocument('photo-1', 'Photo', {
+      fieldworkPhotoUri: 'file:///tablet/photos/photo-1.jpg',
+    });
+    const repository = {
+      get: jest.fn().mockResolvedValue(document),
+      update: jest.fn(async (doc) => doc),
+    };
+
+    renderHook(() => useFieldworkImageSync({
+      documents: [document] as any,
+      getUploadedAt: () => '2026-06-23T01:02:03.000Z',
+      project: 'fieldwork',
+      projectSettings,
+      repository,
+      syncStatus: SyncStatus.InSync,
+    }));
+
+    await waitFor(() => {
+      expect(repository.update).toHaveBeenCalledTimes(1);
+    });
+
+    const updatedDocument = repository.update.mock.calls[0][0];
+    expect(updatedDocument.resource.digitalSourcePreservation).toEqual([
+      'originalPhoto',
+      'originalImage',
+      'webOrServerBackup',
+    ]);
+    expect(updatedDocument.resource.fieldworkImageUploadedMd5).toBe('tablet-md5');
+    expect(updatedDocument.resource.fieldworkImageStoredMd5).toBe('server-different-md5');
+  });
+
   it('records Field Hub stored metadata for content URI uploads', async () => {
     const document = createDocument('drawing-1', 'Drawing', {
       fileUri: 'content://tablet/drawings/drawing-1.jpg',
@@ -170,7 +210,6 @@ describe('useFieldworkImageSync', () => {
       digitalSourcePreservation: [
         'originalDrawing',
         'webOrServerBackup',
-        'backupVerified',
       ],
       fieldworkImageUploadStatus: 'uploaded',
       fieldworkImageUploadedUri: 'content://tablet/drawings/drawing-1.jpg',
@@ -223,6 +262,80 @@ describe('useFieldworkImageSync', () => {
 
     expect(FileSystem.uploadAsync).not.toHaveBeenCalled();
     expect(repository.update).not.toHaveBeenCalled();
+  });
+
+  it('reuploads the same file URI when the current local checksum differs from the audit record', async () => {
+    (FileSystem.getInfoAsync as jest.Mock).mockResolvedValue({
+      exists: true,
+      isDirectory: false,
+      md5: 'new-tablet-md5',
+      size: 481600,
+    });
+    (FileSystem.uploadAsync as jest.Mock).mockResolvedValueOnce({
+      body: JSON.stringify({
+        md5: 'new-tablet-md5',
+        sha256: 'new-server-sha256',
+        size_bytes: 481600,
+      }),
+      status: 201,
+    });
+    const document = createDocument('photo-1', 'Photo', {
+      fieldworkPhotoUri: 'file:///tablet/photos/photo-1.jpg',
+      digitalSourcePreservation: [
+        'originalPhoto',
+        'originalImage',
+        'webOrServerBackup',
+        'backupVerified',
+      ],
+      fieldworkImageUploadStatus: 'uploaded',
+      fieldworkImageUploadedAt: '2026-06-23T01:02:03.000Z',
+      fieldworkImageUploadedUri: 'file:///tablet/photos/photo-1.jpg',
+      fieldworkImageUploadTarget:
+        'https://field.example/files/fieldwork/photo-1?type=original_image',
+      fieldworkImageUploadedProject: 'fieldwork',
+      fieldworkImageUploadedSizeBytes: 481516,
+      fieldworkImageUploadedMd5: 'old-tablet-md5',
+      fieldworkImageStoredSizeBytes: 481516,
+      fieldworkImageStoredMd5: 'old-tablet-md5',
+      fieldworkImageStoredSha256: 'old-server-sha256',
+    });
+    const repository = {
+      get: jest.fn().mockResolvedValue(document),
+      update: jest.fn(async (doc) => doc),
+    };
+
+    renderHook(() => useFieldworkImageSync({
+      documents: [document] as any,
+      getUploadedAt: () => '2026-06-23T02:03:04.000Z',
+      project: 'fieldwork',
+      projectSettings,
+      repository,
+      syncStatus: SyncStatus.InSync,
+    }));
+
+    await waitFor(() => {
+      expect(FileSystem.uploadAsync).toHaveBeenCalledTimes(1);
+    });
+    await waitFor(() => {
+      expect(repository.update).toHaveBeenCalledTimes(1);
+    });
+
+    expect(repository.update).toHaveBeenCalledWith(expect.objectContaining({
+      resource: expect.objectContaining({
+        digitalSourcePreservation: [
+          'originalPhoto',
+          'originalImage',
+          'webOrServerBackup',
+          'backupVerified',
+        ],
+        fieldworkImageUploadedAt: '2026-06-23T02:03:04.000Z',
+        fieldworkImageUploadedMd5: 'new-tablet-md5',
+        fieldworkImageUploadedSizeBytes: 481600,
+        fieldworkImageStoredMd5: 'new-tablet-md5',
+        fieldworkImageStoredSha256: 'new-server-sha256',
+        fieldworkImageStoredSizeBytes: 481600,
+      }),
+    }));
   });
 
   it('completes partial upload records without reuploading the original image', async () => {
@@ -757,7 +870,6 @@ describe('useFieldworkImageSync', () => {
         'unpublishedDrawingRetained',
         'originalDrawing',
         'webOrServerBackup',
-        'backupVerified',
       ],
     }));
   });

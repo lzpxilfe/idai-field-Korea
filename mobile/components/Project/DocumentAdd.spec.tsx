@@ -229,6 +229,97 @@ describe('DocumentAdd', () => {
     } as NewDocument);
   });
 
+  it.each([
+    ['Find', 'T2 유물 1'],
+    ['Sample', 'T2 시료 1'],
+  ])('saves a %s field record from the tablet add flow', async (
+    categoryName,
+    expectedIdentifier
+  ) => {
+    cleanup();
+    mockUseGlobalSearchParams.mockReturnValue({
+      parentDocId: t2.resource.id,
+      categoryName,
+      returnTo: 'fieldBoard',
+    });
+    renderAPI = renderDocumentAddScreen(
+      preferences,
+      createProjectConfiguration([createCategory(categoryName)]),
+      repository,
+      [t2]
+    );
+
+    await waitFor(() => renderAPI.getByTestId('documentForm'));
+    fireEvent.press(renderAPI.getByTestId('saveDocBtn'));
+
+    await waitFor(() => expect(repository.create).toHaveBeenCalledTimes(1));
+    expect(repository.create).toHaveBeenCalledWith({
+      resource: expect.objectContaining({
+        category: categoryName,
+        identifier: expectedIdentifier,
+      }),
+    } as NewDocument);
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/ProjectScreen'));
+    expect(mockShowToast).not.toHaveBeenCalled();
+  });
+
+  it('does not run two creates when the tablet save button is tapped twice', async () => {
+    await waitFor(() => renderAPI.getByTestId('documentForm'));
+
+    fireEvent.press(renderAPI.getByTestId('saveDocBtn'));
+    fireEvent.press(renderAPI.getByTestId('saveDocBtn'));
+
+    await waitFor(() => expect(repository.create).toHaveBeenCalledTimes(1));
+  });
+
+  it('shows the datastore error when creating a field record fails', async () => {
+    (repository.create as jest.Mock).mockRejectedValueOnce([
+      'GENERIC_ERROR',
+      new Error('disk full'),
+    ]);
+    await waitFor(() => renderAPI.getByTestId('documentForm'));
+
+    fireEvent.press(renderAPI.getByTestId('saveDocBtn'));
+
+    await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.stringContaining('GENERIC_ERROR / disk full')
+    ));
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it('keeps entered draft values when live documents change', async () => {
+    cleanup();
+    renderAPI = renderDocumentAddScreen(preferences, config, repository, [t2]);
+
+    await waitFor(() => renderAPI.getByTestId('documentForm'));
+    fireEvent.changeText(
+      renderAPI.getByTestId('quickRecordInput_description'),
+      observationDescription
+    );
+
+    renderAPI.rerender(getDocumentAddScreen(
+      preferences,
+      config,
+      repository,
+      [
+        t2,
+        {
+          ...t2,
+          resource: {
+            ...t2.resource,
+            id: 'remote-change',
+            identifier: 'remote-change',
+          },
+        },
+      ]
+    ));
+
+    expect(renderAPI.getByTestId('quickRecordInput_description').props.value)
+      .toBe(observationDescription);
+    expect(repository.create).not.toHaveBeenCalled();
+  });
+
   it('should navigate back to DocumentsMap after object hast been created', async () => {
     const { getByTestId } = renderAPI;
     const highlightedDocId = 'id'; //see mock of DocumentRepository class
@@ -332,8 +423,16 @@ describe('DocumentAdd', () => {
 const renderDocumentAddScreen = (
   preferences: Preferences,
   config: ProjectConfiguration,
-  repository: DocumentRepository
-): RenderAPI => render(
+  repository: DocumentRepository,
+  documents?: any[]
+): RenderAPI => render(getDocumentAddScreen(preferences, config, repository, documents));
+
+const getDocumentAddScreen = (
+  preferences: Preferences,
+  config: ProjectConfiguration,
+  repository: DocumentRepository,
+  documents?: any[]
+) => (
   <ToastProvider>
     <PreferencesContext.Provider
       value={{
@@ -350,7 +449,7 @@ const renderDocumentAddScreen = (
     >
       <LabelsContext.Provider value={{ labels: new Labels(() => ['en']) }}>
         <ConfigurationContext.Provider value={config}>
-          <ProjectContext.Provider value={{ repository } as any}>
+          <ProjectContext.Provider value={{ repository, documents } as any}>
             <DocumentAdd />
           </ProjectContext.Provider>
         </ConfigurationContext.Provider>

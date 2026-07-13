@@ -269,7 +269,11 @@ const UnitRow: React.FC<{
       <Text style={styles.progressText}>
         이어진 기록 {item.childStructureCount}
       </Text>
-      {item.checklistTotal > 0 && (
+      {item.photoProgressTotal !== undefined ? (
+        <Text style={styles.progressText}>
+          사진 {item.photoProgressDone}/{item.photoProgressTotal}
+        </Text>
+      ) : item.checklistTotal > 0 && (
         <Text style={styles.progressText}>
           과정 {item.checklistDone}/{item.checklistTotal}
         </Text>

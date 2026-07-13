@@ -120,14 +120,23 @@ const filesystem = {
 };
 
 const fsFacade = {
-    copyFileSync: (source, target) => fs.copyFileSync(source, target),
+    constants: {
+        COPYFILE_EXCL: fs.constants.COPYFILE_EXCL
+    },
+    copyFileSync: (source, target, mode) => fs.copyFileSync(source, target, mode),
     existsSync: filePath => fs.existsSync(filePath),
     lstatSync: filePath => {
         const stat = fs.lstatSync(filePath);
-        return { isFile: () => stat.isFile(), isDirectory: () => stat.isDirectory(), size: stat.size };
+        return {
+            isFile: () => stat.isFile(),
+            isDirectory: () => stat.isDirectory(),
+            isSymbolicLink: () => stat.isSymbolicLink(),
+            size: stat.size
+        };
     },
     mkdirSync: (filePath, options) => fs.mkdirSync(filePath, options),
     readFileSync: (filePath, options) => fs.readFileSync(filePath, options),
+    realpathSync: filePath => fs.realpathSync(filePath),
     readdirSync: filePath => fs.readdirSync(filePath),
     rmSync: (filePath, options) => fs.rmSync(filePath, options),
     statSync: filePath => {
@@ -142,8 +151,11 @@ const pathFacade = {
     basename: (...args) => path.basename(...args),
     dirname: (...args) => path.dirname(...args),
     extname: (...args) => path.extname(...args),
+    isAbsolute: (...args) => path.isAbsolute(...args),
     join: (...args) => path.join(...args),
     normalize: (...args) => path.normalize(...args),
+    relative: (...args) => path.relative(...args),
+    resolve: (...args) => path.resolve(...args),
     sep: path.sep
 };
 

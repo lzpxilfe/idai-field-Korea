@@ -1,4 +1,5 @@
 import {
+  createServerCompatibleProjectId,
   getLocalProjectNameInvalidText,
   getProjectNameInvalidText,
   LOCAL_PROJECT_NAME_MAX_LENGTH,
@@ -14,6 +15,7 @@ describe('project name validation', () => {
   it('normalizes project names before checking availability', () => {
     expect(validateProjectName('  fieldwork-1  ', [' fieldwork-1 '])).toEqual({
       alreadyExists: true,
+      displayName: 'fieldwork-1',
       hasUnsafeCharacters: false,
       isAvailable: false,
       isPresent: true,
@@ -28,6 +30,7 @@ describe('project name validation', () => {
 
     expect(validation).toEqual({
       alreadyExists: false,
+      displayName: '',
       hasUnsafeCharacters: false,
       isAvailable: false,
       isPresent: false,
@@ -81,7 +84,9 @@ describe('project name validation', () => {
 
       expect(validation.hasUnsafeCharacters).toBe(false);
       expect(validation.isAvailable).toBe(true);
-      expect(validation.projectId).toBe(projectName);
+      expect(validation.displayName).toBe(projectName);
+      expect(validation.projectId).toBe(createServerCompatibleProjectId(projectName));
+      expect(validation.projectId).toMatch(/^[a-z][a-z0-9_-]{0,29}$/);
     }
   });
 
@@ -100,8 +105,10 @@ describe('project name validation', () => {
 
     expect(projectName.length).toBeGreaterThan(PROJECT_IDENTIFIER_MAX_LENGTH);
     expect(projectName.length).toBeLessThanOrEqual(LOCAL_PROJECT_NAME_MAX_LENGTH);
-    expect(validateProjectName(projectName, [], { mode: 'local' }).isAvailable)
-      .toBe(true);
+    const validation = validateProjectName(projectName, [], { mode: 'local' });
+
+    expect(validation.isAvailable).toBe(true);
+    expect(validation.projectId.length).toBeLessThanOrEqual(PROJECT_IDENTIFIER_MAX_LENGTH);
     expect(validateProjectName(projectName).isAvailable).toBe(false);
   });
 
@@ -119,6 +126,7 @@ describe('project name validation', () => {
 
     expect(validation).toEqual({
       alreadyExists: false,
+      displayName: SAMPLE_PROJECT_ID,
       hasUnsafeCharacters: false,
       isAvailable: false,
       isPresent: true,

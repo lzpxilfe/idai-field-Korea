@@ -1,6 +1,7 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import {
   Document,
+  NewResource,
   getKoreanFieldworkTodaySummary,
 } from 'idai-field-core';
 import { router, useGlobalSearchParams } from 'expo-router';
@@ -29,9 +30,12 @@ import DocumentAddModal from '@/components/Project/DocumentAddModal';
 import KoreanFieldworkDailyNotebookDigest from '@/components/Project/KoreanFieldworkDailyNotebookDigest';
 import KoreanFieldworkDailyJournalCalendar from '@/components/Project/KoreanFieldworkDailyJournalCalendar';
 import KoreanFieldworkFieldNotePanel from '@/components/Project/KoreanFieldworkFieldNotePanel';
+import KoreanFieldworkEvidenceModal from '@/components/Project/KoreanFieldworkEvidenceModal';
+import KoreanFieldworkFeaturePitLinePanel from '@/components/Project/KoreanFieldworkFeaturePitLinePanel';
 import KoreanFieldworkInvestigationModePanel from '@/components/Project/KoreanFieldworkInvestigationModePanel';
 import KoreanFieldworkNotebookLedger from '@/components/Project/KoreanFieldworkNotebookLedger';
 import KoreanFieldworkOverviewChart from '@/components/Project/KoreanFieldworkOverviewChart';
+import KoreanFieldworkQuickFindSpotModal from '@/components/Project/KoreanFieldworkQuickFindSpotModal';
 import KoreanFieldworkSelectedRecordWorkbench from '@/components/Project/KoreanFieldworkSelectedRecordWorkbench';
 import {
   KOREAN_FIELDWORK_CATEGORY_LABELS,
@@ -79,6 +83,10 @@ import {
   getKoreanFieldworkRecordListEmptyState,
 } from '@/components/Project/korean-fieldwork-record-list-empty-state';
 import {
+  getKoreanFieldworkRecordBoardCategories,
+  getKoreanFieldworkRecordBoardDocuments,
+} from '@/components/Project/korean-fieldwork-record-board';
+import {
   hasKoreanFieldworkProjectStartContext,
 } from '@/components/Project/korean-fieldwork-project-start';
 import {
@@ -86,6 +94,7 @@ import {
   getKoreanFieldworkReturnParam,
   KOREAN_FIELDWORK_FIELD_BOARD_RESET_PARAM,
   KOREAN_FIELDWORK_RETURN_TARGETS,
+  pushKoreanFieldworkDocumentAdd,
 } from '@/components/Project/korean-fieldwork-navigation';
 import {
   loadKoreanFieldworkProjectBoundaryDraft,
@@ -104,6 +113,9 @@ import {
 import {
   getLegacyRootDocumentsForOperation,
 } from '@/components/Project/korean-fieldwork-operation-wrap';
+import {
+  createKoreanFieldworkDraftResource,
+} from '@/components/Project/korean-fieldwork-document-drafts';
 import { ConfigurationContext } from '@/contexts/configuration-context';
 import LabelsContext from '@/contexts/labels/labels-context';
 import { PreferencesContext } from '@/contexts/preferences-context';
@@ -113,7 +125,7 @@ import useKoreanFieldworkProjectSetupDefaults from '@/hooks/use-korean-fieldwork
 import useToast from '@/hooks/use-toast';
 import { colors } from '@/utils/colors';
 
-type FilterId = 'all'|'operation'|'feature'|'find'|'media'|'review';
+type FilterId = 'all'|'operation'|'feature';
 type FieldworkWorkspaceTabId = 'records'|'journal';
 
 const RECORD_ROW_DOUBLE_TAP_DURATION_MS = 350;
@@ -133,7 +145,11 @@ interface RecordGroup {
 const getRecordFilters = (
   investigationModeId?: KoreanFieldworkInvestigationModeId
 ): RecordFilter[] => [
-  { id: 'all', label: '전체', categories: [] },
+  {
+    id: 'all',
+    label: '주요 기록',
+    categories: getKoreanFieldworkRecordBoardCategories(investigationModeId),
+  },
   {
     id: 'operation',
     label: '조사 구역 기록',
@@ -147,34 +163,6 @@ const getRecordFilters = (
     id: 'feature',
     label: getPrimaryFieldRecordLabel(investigationModeId),
     categories: getPrimaryFieldRecordCategories(investigationModeId),
-  },
-  {
-    id: 'find',
-    label: '유물·시료',
-    categories: [
-      KOREAN_FIELDWORK_CATEGORIES.FIND,
-      KOREAN_FIELDWORK_CATEGORIES.FIND_COLLECTION,
-      KOREAN_FIELDWORK_CATEGORIES.SAMPLE,
-    ],
-  },
-  {
-    id: 'media',
-    label: '사진·도면·메모',
-    categories: [
-      KOREAN_FIELDWORK_CATEGORIES.PHOTO,
-      KOREAN_FIELDWORK_CATEGORIES.SOIL_PROFILE_PHOTO,
-      KOREAN_FIELDWORK_CATEGORIES.DRAWING,
-      KOREAN_FIELDWORK_CATEGORIES.PEN_MEMO,
-      KOREAN_FIELDWORK_CATEGORIES.AERIAL_MAP_LAYER,
-    ],
-  },
-  {
-    id: 'review',
-    label: '점검',
-    categories: [
-      KOREAN_FIELDWORK_CATEGORIES.FIELD_RECORD_QUALITY_REVIEW,
-      KOREAN_FIELDWORK_CATEGORIES.SOURCE_EVIDENCE_INDEX,
-    ],
   },
 ];
 
@@ -196,34 +184,6 @@ const getRecordGroups = (
     title: getPrimaryFieldRecordLabel(investigationModeId),
     subtitle: getPrimaryFieldRecordSubtitle(investigationModeId),
     categories: getPrimaryFieldRecordCategories(investigationModeId),
-  },
-  {
-    title: '유물과 시료',
-    subtitle: '수습, 라벨, 분석 목적까지 이어지는 기록',
-    categories: [
-      KOREAN_FIELDWORK_CATEGORIES.FIND,
-      KOREAN_FIELDWORK_CATEGORIES.FIND_COLLECTION,
-      KOREAN_FIELDWORK_CATEGORIES.SAMPLE,
-    ],
-  },
-  {
-    title: '사진·도면·메모',
-    subtitle: '현장 사진, 도면, 메모 기록',
-    categories: [
-      KOREAN_FIELDWORK_CATEGORIES.PHOTO,
-      KOREAN_FIELDWORK_CATEGORIES.SOIL_PROFILE_PHOTO,
-      KOREAN_FIELDWORK_CATEGORIES.DRAWING,
-      KOREAN_FIELDWORK_CATEGORIES.PEN_MEMO,
-      KOREAN_FIELDWORK_CATEGORIES.AERIAL_MAP_LAYER,
-    ],
-  },
-  {
-    title: '점검과 색인',
-    subtitle: '마감 전 확인과 근거 색인',
-    categories: [
-      KOREAN_FIELDWORK_CATEGORIES.FIELD_RECORD_QUALITY_REVIEW,
-      KOREAN_FIELDWORK_CATEGORIES.SOURCE_EVIDENCE_INDEX,
-    ],
   },
 ];
 
@@ -263,7 +223,7 @@ const getPrimaryFieldRecordCategories = (
 const DocumentsList: React.FC = () => {
   const { showToast } = useToast();
   const {
-    documents,
+    documents: persistedDocuments,
     clearHierarchy,
     hierarchyPath,
     onDocumentSelected,
@@ -302,12 +262,44 @@ const DocumentsList: React.FC = () => {
   const [projectBoundaryDraft, setProjectBoundaryDraft] =
     useState<KoreanFieldworkProjectBoundaryDraft>();
   const [isSavingDailyJournal, setIsSavingDailyJournal] = useState(false);
+  const [locallyCreatedDocuments, setLocallyCreatedDocuments] =
+    useState<Document[]>([]);
+  const [quickFindSpotRequest, setQuickFindSpotRequest] = useState<{
+    parentDocument: Document;
+    resource: NewResource;
+  }>();
   const now = useMemo(() => new Date(), []);
   const routeParams = useGlobalSearchParams();
   const resetToOverviewKey = getStringRouteParam(
     routeParams[KOREAN_FIELDWORK_FIELD_BOARD_RESET_PARAM]
   );
   const projectId = preferencesContext.preferences.currentProject;
+  const documents = useMemo(() => {
+    const documentsById = new Map(persistedDocuments.map((document) => [
+      document.resource.id,
+      document,
+    ]));
+    locallyCreatedDocuments.forEach((document) => {
+      if (!documentsById.has(document.resource.id)) {
+        documentsById.set(document.resource.id, document);
+      }
+    });
+    return Array.from(documentsById.values());
+  }, [locallyCreatedDocuments, persistedDocuments]);
+
+  useEffect(() => {
+    const persistedIds = new Set(persistedDocuments.map((document) =>
+      document.resource.id));
+    setLocallyCreatedDocuments((current) => {
+      const pending = current.filter((document) =>
+        !persistedIds.has(document.resource.id));
+      return pending.length === current.length ? current : pending;
+    });
+  }, [persistedDocuments]);
+  useEffect(() => {
+    setLocallyCreatedDocuments([]);
+    setQuickFindSpotRequest(undefined);
+  }, [projectId]);
   const {
     investigationModeId: loadedInvestigationModeId,
     boundarySummary,
@@ -337,10 +329,11 @@ const DocumentsList: React.FC = () => {
     [documents]
   );
   const recordBoardDocuments = useMemo(
-    () => userVisibleDocuments.filter((document) =>
-      document.resource.category !== KOREAN_FIELDWORK_CATEGORIES.DAILY_LOG
+    () => getKoreanFieldworkRecordBoardDocuments(
+      userVisibleDocuments,
+      investigationModeId
     ),
-    [userVisibleDocuments]
+    [investigationModeId, userVisibleDocuments]
   );
   const currentScopeParent = hierarchyPath[hierarchyPath.length - 1];
   const todaySummary = useMemo(
@@ -398,12 +391,16 @@ const DocumentsList: React.FC = () => {
 
   const categoryFilteredDocuments = useMemo(
     () => recordBoardDocuments.filter((document) => {
-      const filterCategories = activeFilterDefinition.categories;
+      const filterCategories = activeFilter === 'all' && normalizedQuery
+        ? []
+        : activeFilterDefinition.categories;
       return filterCategories.length === 0
         || filterCategories.includes(document.resource.category);
     }),
     [
       activeFilterDefinition,
+      activeFilter,
+      normalizedQuery,
       recordBoardDocuments,
     ]
   );
@@ -441,12 +438,6 @@ const DocumentsList: React.FC = () => {
     recordGroups,
   ]);
 
-  const groupedDocumentIds = useMemo(() => new Set(groupedDocuments
-    .flatMap((group) => group.documents.map((document) => document.resource.id))
-  ), [groupedDocuments]);
-  const otherDocuments = filteredDocuments.filter((document) =>
-    !groupedDocumentIds.has(document.resource.id)
-  );
   const actionTargets = useMemo(
     () => getKoreanFieldworkTodayActionTargets(
       actionSummary,
@@ -827,17 +818,64 @@ const DocumentsList: React.FC = () => {
 
     closeAddChildModal();
 
-    router.navigate({
-      pathname: '/ProjectScreen/DocumentAdd',
-      params: {
-        parentDocId: parentDoc.resource.id,
-        categoryName,
-        ...draftParams,
-        ...getKoreanFieldworkReturnParam(
-          KOREAN_FIELDWORK_RETURN_TARGETS.FIELD_BOARD
-        ),
-      },
+    pushKoreanFieldworkDocumentAdd({
+      categoryName,
+      draftParams,
+      parentDocId: parentDoc.resource.id,
+      returnTarget: KOREAN_FIELDWORK_RETURN_TARGETS.FIELD_BOARD,
     });
+  };
+  const openDocumentAddCategory = (
+    categoryName: string,
+    parentDoc: Document | undefined,
+    draftParams: Record<string, string> = {}
+  ) => {
+    const isQuickFindSpotCategory =
+      categoryName === KOREAN_FIELDWORK_CATEGORIES.FIND
+      || categoryName === KOREAN_FIELDWORK_CATEGORIES.SAMPLE;
+    if (
+      parentDoc?.resource.category === KOREAN_FIELDWORK_CATEGORIES.FEATURE
+      && isQuickFindSpotCategory
+    ) {
+      closeAddChildModal();
+      setQuickFindSpotRequest({
+        parentDocument: parentDoc,
+        resource: createKoreanFieldworkDraftResource(
+          parentDoc,
+          categoryName,
+          config,
+          {
+            existingDocuments: documents,
+            identifier: draftParams.identifier,
+          }
+        ),
+      });
+      return;
+    }
+
+    navigateAddCategory(categoryName, parentDoc, draftParams);
+  };
+  const saveQuickFindSpot = async (resource: NewResource) => {
+    if (!repository || !quickFindSpotRequest) {
+      showToast(ToastType.Error, '저장소를 준비하는 중입니다. 잠시 후 다시 저장해 주세요.');
+      return;
+    }
+
+    try {
+      const createdDocument = await repository.create({ resource });
+      setLocallyCreatedDocuments((current) => [
+        ...current.filter((document) =>
+          document.resource.id !== createdDocument.resource.id),
+        createdDocument,
+      ]);
+      setSelectedWorkbenchDocumentId(quickFindSpotRequest.parentDocument.resource.id);
+      setQuickFindSpotRequest(undefined);
+    } catch (error) {
+      showToast(
+        ToastType.Error,
+        `${resource.identifier} 기록을 저장하지 못했습니다. ${error}`
+      );
+    }
   };
   const updateWorkbenchResourceFields = (
     document: Document,
@@ -1005,7 +1043,7 @@ const DocumentsList: React.FC = () => {
       case 'createDocument': {
         const parentDocument = actionDocumentsById.get(action.parentDocumentId);
         if (parentDocument) {
-          navigateAddCategory(action.categoryName, parentDocument);
+          openDocumentAddCategory(action.categoryName, parentDocument);
         }
         return;
       }
@@ -1041,6 +1079,15 @@ const DocumentsList: React.FC = () => {
 
   return (
     <View style={styles.screen}>
+      {quickFindSpotRequest && (
+        <KoreanFieldworkQuickFindSpotModal
+          documents={documents}
+          initialResource={quickFindSpotRequest.resource}
+          onClose={() => setQuickFindSpotRequest(undefined)}
+          onSave={saveQuickFindSpot}
+          parentDocument={quickFindSpotRequest.parentDocument}
+        />
+      )}
       {addModalParent && (
         <DocumentAddModal
           boundaryDraft={effectiveProjectBoundaryDraft}
@@ -1050,7 +1097,7 @@ const DocumentsList: React.FC = () => {
           investigationModeId={investigationModeId}
           onClose={closeAddChildModal}
           parentDoc={addModalParent}
-          onAddCategory={navigateAddCategory}
+          onAddCategory={openDocumentAddCategory}
         />
       )}
       <ScrollView
@@ -1164,7 +1211,7 @@ const DocumentsList: React.FC = () => {
               isExpanded={isSelectedWorkbenchExpanded}
               onAddChild={openAddChildModal}
               onAddDocumentOfCategory={(parentDoc, categoryName) =>
-                navigateAddCategory(categoryName, parentDoc)}
+                openDocumentAddCategory(categoryName, parentDoc)}
               onClearSelection={() => {
                 setSelectedWorkbenchDocumentId(undefined);
                 setIsSelectedWorkbenchExpanded(false);
@@ -1199,7 +1246,7 @@ const DocumentsList: React.FC = () => {
                   if (!wasUpdated) throw new Error('record update failed');
                 }}
                 onAddDocumentOfCategory={(parentDoc, categoryName) =>
-                  navigateAddCategory(categoryName, parentDoc)}
+                  openDocumentAddCategory(categoryName, parentDoc)}
                 onOpenDocument={(document) =>
                   selectWorkbenchDocument(document, { expand: true })}
               />
@@ -1309,35 +1356,13 @@ const DocumentsList: React.FC = () => {
               onOpenRelatedDocument={editDocument}
               onAddChild={openAddChildModal}
               onAddDocumentOfCategory={(parentDoc, categoryName) =>
-                navigateAddCategory(categoryName, parentDoc)}
+                openDocumentAddCategory(categoryName, parentDoc)}
               onEditDocument={editDocument}
               onDeleteDocument={confirmRemoveDocument}
+              onUpdateResourceFields={updateWorkbenchResourceFields}
             />
           ))}
 
-          {otherDocuments.length > 0 && (
-            <RecordSection
-              title="기타 기록"
-              subtitle="설정에는 남아 있지만 현장 기록 목록에는 따로 분류되지 않은 기록"
-              documents={otherDocuments}
-              documentsById={documentsById}
-              getCategoryLabel={getCategoryLabel}
-              issueCountByDocumentId={
-                userVisibleTodaySummary.issueCountByDocumentId
-              }
-              investigationModeId={investigationModeId}
-              removingDocumentIds={removingDocumentIds}
-              expandedDocumentIds={expandedRecordDocumentIds}
-              onOpenDocument={(document) =>
-                selectWorkbenchDocument(document, { toggle: true })}
-              onOpenRelatedDocument={editDocument}
-              onAddChild={openAddChildModal}
-              onAddDocumentOfCategory={(parentDoc, categoryName) =>
-                navigateAddCategory(categoryName, parentDoc)}
-              onEditDocument={editDocument}
-              onDeleteDocument={confirmRemoveDocument}
-            />
-          )}
         </View>
         </>
         )}
@@ -1653,6 +1678,10 @@ const RecordSection: React.FC<{
   onAddDocumentOfCategory: (parentDoc: Document, categoryName: string) => void;
   onEditDocument: (document: Document) => void;
   onDeleteDocument: (document: Document) => void;
+  onUpdateResourceFields: (
+    document: Document,
+    updates: Record<string, unknown>
+  ) => Promise<boolean> | void;
 }> = ({
   title,
   subtitle,
@@ -1669,6 +1698,7 @@ const RecordSection: React.FC<{
   onAddDocumentOfCategory,
   onEditDocument,
   onDeleteDocument,
+  onUpdateResourceFields,
 }) => {
   const allDocuments = Array.from(documentsById.values());
 
@@ -1700,13 +1730,15 @@ const RecordSection: React.FC<{
           onAddEvidence={onAddDocumentOfCategory}
           onEdit={() => onEditDocument(document)}
           onDelete={() => onDeleteDocument(document)}
+          onUpdateResourceFields={(updates) =>
+            onUpdateResourceFields(document, updates)}
         />
       ))}
     </View>
   );
 };
 
-const RecordRow: React.FC<{
+export const RecordRow: React.FC<{
   document: Document;
   documents: Document[];
   contextPath: string | undefined;
@@ -1721,6 +1753,7 @@ const RecordRow: React.FC<{
   onAddEvidence: (parentDoc: Document, categoryName: string) => void;
   onEdit: () => void;
   onDelete: () => void;
+  onUpdateResourceFields: (updates: Record<string, unknown>) => void;
 }> = ({
   document,
   documents,
@@ -1736,6 +1769,7 @@ const RecordRow: React.FC<{
   onAddEvidence,
   onEdit,
   onDelete,
+  onUpdateResourceFields,
 }) => {
   const config = useContext(ConfigurationContext);
   const lastPressTimeRef = useRef<number>();
@@ -1745,6 +1779,10 @@ const RecordRow: React.FC<{
   const description = getRecordDescription(document);
   const statusChips = getKoreanFieldworkRecordStatusChips(document);
   const evidenceChips = getKoreanFieldworkEvidenceChips(document, documents);
+  const [activeEvidenceChipId, setActiveEvidenceChipId] = useState<string>();
+  const activeEvidenceChip = evidenceChips.find((chip) =>
+    chip.id === activeEvidenceChipId
+  );
   const allowedAddCategoryNames = useMemo(
     () => getKoreanFieldworkAllowedChildCategoryNames(document, config),
     [config, document]
@@ -1763,10 +1801,13 @@ const RecordRow: React.FC<{
     [allowedAddCategoryNames, document, documents, investigationModeId]
   );
   const visibleActions = actionSummary.actions.slice(0, 2);
+  const isFeatureRecord =
+    document.resource.category === KOREAN_FIELDWORK_CATEGORIES.FEATURE;
   const hasExpandedBody = selected && (
     evidenceChips.length > 0
     || !!description
     || actionSummary.isTracked
+    || isFeatureRecord
   );
   const handleOpenOrEdit = () => {
     const nowMs = Date.now();
@@ -1783,8 +1824,28 @@ const RecordRow: React.FC<{
     onOpen();
   };
 
+  const canCreateActiveEvidence = !!activeEvidenceChip?.createCategoryName
+    && allowedEvidenceCategories.has(activeEvidenceChip.createCategoryName);
+
   return (
-    <SwipeableActionRow
+    <>
+      {activeEvidenceChip && (
+        <KoreanFieldworkEvidenceModal
+          canCreate={canCreateActiveEvidence}
+          chip={activeEvidenceChip}
+          onClose={() => setActiveEvidenceChipId(undefined)}
+          onCreate={() => {
+            const categoryName = activeEvidenceChip.createCategoryName;
+            setActiveEvidenceChipId(undefined);
+            if (categoryName) onAddEvidence(document, categoryName);
+          }}
+          onOpenDocument={(evidenceDocument) => {
+            setActiveEvidenceChipId(undefined);
+            onOpenEvidence(evidenceDocument);
+          }}
+        />
+      )}
+      <SwipeableActionRow
       actions={[
         {
           icon: 'edit',
@@ -1879,11 +1940,15 @@ const RecordRow: React.FC<{
             {evidenceChips.length > 0 && (
               <View style={styles.evidenceChipRow}>
                 {evidenceChips.map((chip) => {
-                  const [firstEvidenceDocument] = chip.documents;
-                  const canCreate = !firstEvidenceDocument
-                    && !!chip.createCategoryName
+                  const canCreate = !!chip.createCategoryName
                     && allowedEvidenceCategories.has(chip.createCategoryName);
-                  const isPressable = !!firstEvidenceDocument || canCreate;
+                  const isPressable = chip.documents.length > 0 || canCreate;
+                  const opensQuickSpotDirectly = canCreate
+                    && chip.count === 0
+                    && (
+                      chip.id === 'finds'
+                      || chip.id === 'samples'
+                    );
 
                   return (
                     <EvidenceChip
@@ -1892,13 +1957,11 @@ const RecordRow: React.FC<{
                       canCreate={canCreate}
                       disabled={!isPressable}
                       onPress={() => {
-                        if (firstEvidenceDocument) {
-                          onOpenEvidence(firstEvidenceDocument);
+                        if (opensQuickSpotDirectly && chip.createCategoryName) {
+                          onAddEvidence(document, chip.createCategoryName);
                           return;
                         }
-                        if (canCreate && chip.createCategoryName) {
-                          onAddEvidence(document, chip.createCategoryName);
-                        }
+                        setActiveEvidenceChipId(chip.id);
                       }}
                     />
                   );
@@ -1926,10 +1989,20 @@ const RecordRow: React.FC<{
                 }}
               />
             )}
+            {isFeatureRecord && (
+              <KoreanFieldworkFeaturePitLinePanel
+                allowedAddCategoryNames={allowedAddCategoryNames}
+                document={document}
+                documents={documents}
+                onAddSoilProfilePhoto={onAddEvidence}
+                onUpdateResourceFields={onUpdateResourceFields}
+              />
+            )}
           </View>
         )}
       </View>
-    </SwipeableActionRow>
+      </SwipeableActionRow>
+    </>
   );
 };
 
@@ -2028,7 +2101,7 @@ const EvidenceChip: React.FC<{
       accessibilityLabel={`${chip.label} ${chip.count}건${canCreate ? ', 추가' : ''}`}
       disabled={disabled}
       onPress={(event) => {
-        event.stopPropagation();
+        event?.stopPropagation?.();
         onPress();
       }}
       style={[
@@ -2037,6 +2110,7 @@ const EvidenceChip: React.FC<{
         canCreate && styles.evidenceChipCreate,
         disabled && styles.evidenceChipDisabled,
       ]}
+      testID={`evidenceChip_${chip.id}`}
     >
       <Text style={[styles.evidenceChipLabel, textStyle]}>{chip.label}</Text>
       <Text style={[styles.evidenceChipCount, textStyle]}>{chip.count}</Text>

@@ -127,6 +127,51 @@ describe('usePreferences', () => {
             .toEqual(KOREAN_FIELDWORK_PROJECT_LANGUAGES);
     });
 
+    it('should preserve project display names when updating sync settings', async () => {
+
+        const { result } = await renderUsePreferences();
+
+        await act(async () => {
+            result.current.setCurrentProject(koreanFieldworkProject, KOREAN_FIELDWORK_PROJECT_LANGUAGES.slice(), {
+                displayName: 'Seoul Area 1',
+            });
+            result.current.setProjectSettings(koreanFieldworkProject, {
+                url: 'https://test.url',
+                password: 'testword',
+                connected: true,
+                mapSettings: defaultMapSettings(),
+            });
+        });
+
+        expect(result.current.preferences.projects[koreanFieldworkProject].displayName)
+            .toBe('Seoul Area 1');
+    });
+
+    it('should clear the initial pull marker after the first server import completes', async () => {
+
+        const { result } = await renderUsePreferences();
+
+        await act(async () => {
+            result.current.setProjectSettings('server-project', {
+                url: 'https://field.example',
+                password: 'secret',
+                connected: true,
+                initialPullPending: true,
+                mapSettings: defaultMapSettings(),
+            });
+            result.current.setProjectSettings('server-project', {
+                url: 'https://field.example',
+                password: 'secret',
+                connected: true,
+                initialPullPending: false,
+                mapSettings: defaultMapSettings(),
+            });
+        });
+
+        expect(result.current.preferences.projects['server-project'].initialPullPending)
+            .toBeUndefined();
+    });
+
     it('should use default map settings when project settings are missing', async () => {
 
         const { result } = await renderUsePreferences();

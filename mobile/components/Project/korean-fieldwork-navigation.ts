@@ -56,6 +56,28 @@ export const getKoreanFieldworkSiteOverviewMapRoute = () => ({
   },
 });
 
+export const pushKoreanFieldworkDocumentAdd = ({
+  categoryName,
+  draftParams = {},
+  parentDocId,
+  returnTarget,
+}: {
+  categoryName: string;
+  draftParams?: Record<string, string>;
+  parentDocId: string;
+  returnTarget?: KoreanFieldworkReturnTarget;
+}) => {
+  router.push({
+    pathname: '/ProjectScreen/DocumentAdd',
+    params: {
+      parentDocId,
+      categoryName,
+      ...draftParams,
+      ...(returnTarget ? getKoreanFieldworkReturnParam(returnTarget) : {}),
+    },
+  });
+};
+
 export const navigateToKoreanFieldworkReturnTarget = (
   returnTarget: KoreanFieldworkReturnTarget,
   highlightedDocId?: string

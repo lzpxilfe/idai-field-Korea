@@ -35,7 +35,7 @@ describe('Korean fieldwork today actions', () => {
     });
   });
 
-  it('labels existing feature candidates as records instead of new additions', () => {
+  it('keeps feature quick creation available when a candidate already exists', () => {
     const operation = createDoc('operation-1', C.OPERATION);
     const candidate = createDoc('feature-1', C.FEATURE, {
       featureRecordingStatus: 'candidate',
@@ -55,10 +55,11 @@ describe('Korean fieldwork today actions', () => {
       undefined,
       'excavation'
     ).featureCandidate).toMatchObject({
-      label: '유구 기록',
+      label: '유구 추가',
       action: {
-        type: 'openDocument',
-        documentId: 'feature-1',
+        type: 'createDocument',
+        parentDocumentId: 'operation-1',
+        categoryName: C.FEATURE,
       },
     });
   });
@@ -287,6 +288,35 @@ describe('Korean fieldwork today actions', () => {
         parentDocumentId: 'operation-1',
         categoryName: C.FEATURE,
       });
+  });
+
+  it('keeps 유구 추가 creating a new record after the first 유구 exists', () => {
+    const operation = createDoc('operation-1', C.OPERATION);
+    const feature = createDoc('feature-1', C.FEATURE, {
+      relations: { isRecordedIn: ['operation-1'] },
+    });
+    const summary = createSummary({ featureCandidates: [feature] });
+    const targets = getKoreanFieldworkTodayActionTargets(
+      summary as any,
+      [operation, feature] as any,
+      'excavation'
+    );
+
+    expect(getKoreanFieldworkQuickActionStates(
+      summary as any,
+      targets,
+      undefined,
+      'excavation'
+    ).featureCandidate).toMatchObject({
+      label: '유구 추가',
+      detail: '1건 기록 · 새 유구 추가',
+      action: {
+        type: 'createDocument',
+        parentDocumentId: 'operation-1',
+        categoryName: C.FEATURE,
+      },
+      disabled: false,
+    });
   });
 
   it('guides 발굴조사 feature records through photos, sectioning, and drawings', () => {

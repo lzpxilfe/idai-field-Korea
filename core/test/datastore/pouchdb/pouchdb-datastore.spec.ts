@@ -150,6 +150,27 @@ describe('PouchdbDatastore', () => {
     });
 
 
+    it('bulkCreate: should throw if pouchdb reports a partial bulkDocs failure', async done => {
+
+        pouchdbProxy.bulkDocs.and.returnValue(Promise.resolve([
+            { ok: true, id: '1', rev: '1-ok' },
+            { error: 'conflict', id: '2', name: 'conflict', status: 409, message: 'Document update conflict' }
+        ]));
+
+        try {
+            await datastore.bulkCreate([doc('sd1'), doc('sd2')], 'u');
+            fail();
+        } catch (expected) {
+            expect(expected[0]).toEqual(DatastoreErrors.GENERIC_ERROR);
+            expect(expected[1].results).toEqual([
+                { error: 'conflict', id: '2', name: 'conflict', status: 409, message: 'Document update conflict' }
+            ]);
+            expect(pouchdbProxy.allDocs).not.toHaveBeenCalled();
+        }
+        done();
+    });
+
+
     it('update: should update an existing document with no identifier conflict', async done => {
 
         let doc2 = doc('id2');

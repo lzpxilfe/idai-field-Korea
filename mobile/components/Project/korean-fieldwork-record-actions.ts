@@ -1,6 +1,7 @@
 import {
   buildEvidenceBundle,
   Document,
+  getKoreanFieldworkFeaturePhotoProgress,
   KoreanFieldworkReadinessIssue,
 } from 'idai-field-core';
 import {
@@ -93,6 +94,8 @@ export interface KoreanFieldworkRecordActionSummary {
   issueCount: number;
   checklistDone: number;
   checklistTotal: number;
+  photoProgressDone?: number;
+  photoProgressTotal?: number;
   completionPercent: number;
   tone: KoreanFieldworkStatusTone;
   actions: KoreanFieldworkRecordActionItem[];
@@ -127,6 +130,15 @@ export const getKoreanFieldworkRecordActionSummary = (
   const structureCount = directChildren
     .filter((child) => STRUCTURE_CATEGORIES.has(child.resource.category))
     .length;
+  const photoProgress = isFeaturePhotoProgressDocument(
+    document,
+    investigationModeId
+  )
+    ? getKoreanFieldworkFeaturePhotoProgress(
+      (document.resource as unknown as Record<string, unknown>)
+        .featureInvestigationChecklist
+    )
+    : undefined;
   const completionPercent = getCompletionPercent(
     document,
     directChildren,
@@ -148,6 +160,8 @@ export const getKoreanFieldworkRecordActionSummary = (
     issueCount: issues.length,
     checklistDone,
     checklistTotal,
+    photoProgressDone: photoProgress?.checkedCount,
+    photoProgressTotal: photoProgress?.totalCount,
     completionPercent,
     tone,
     actions: getRecordActions(
@@ -339,6 +353,13 @@ const getCompletionPercent = (
   checklistTotal: number,
   investigationModeId?: KoreanFieldworkInvestigationModeId
 ): number => {
+  if (isFeaturePhotoProgressDocument(document, investigationModeId)) {
+    return getKoreanFieldworkFeaturePhotoProgress(
+      (document.resource as unknown as Record<string, unknown>)
+        .featureInvestigationChecklist
+    ).progressPercent;
+  }
+
   const resource = document.resource as unknown as Record<string, unknown>;
   const checks: boolean[] = [
     issueCount === 0,
@@ -369,6 +390,15 @@ const getCompletionPercent = (
 
   return Math.round((checks.filter(Boolean).length / checks.length) * 100);
 };
+
+const isFeaturePhotoProgressDocument = (
+  document: Document,
+  investigationModeId?: KoreanFieldworkInvestigationModeId
+): boolean => investigationModeId !== 'trialTrench'
+  && (
+    document.resource.category === C.FEATURE
+    || document.resource.category === C.FEATURE_SEGMENT
+  );
 
 const getNextChildCategory = (
   parentCategoryName: string,

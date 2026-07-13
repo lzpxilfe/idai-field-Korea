@@ -330,6 +330,75 @@ describe('KoreanFieldworkFindSpotPanel', () => {
     });
   });
 
+  it('moves an existing point by dragging its smaller numbered marker', () => {
+    const onUpdateResourceFields = jest.fn();
+    const feature = createFeature();
+    const findResource = createFindResource({
+      findSpotItems: JSON.stringify({
+        version: 1,
+        items: [{ number: 1, point: { x: 25, y: 75 }, label: '' }],
+      }),
+    });
+    const { getByTestId } = render(
+      <KoreanFieldworkFindSpotPanel
+        compact
+        documents={[feature]}
+        parentDocument={feature}
+        resource={findResource}
+        onUpdateResourceFields={onUpdateResourceFields}
+      />
+    );
+    const canvas = getByTestId('findSpotCanvas');
+
+    fireEvent(canvas, 'layout', {
+      nativeEvent: { layout: { height: 200, width: 400 } },
+    });
+    fireEvent(canvas, 'responderGrant', {
+      nativeEvent: { locationX: 100, locationY: 150 },
+    });
+    fireEvent(canvas, 'responderMove', {
+      nativeEvent: { locationX: 200, locationY: 100 },
+    });
+    fireEvent(canvas, 'responderRelease', {
+      nativeEvent: { locationX: 200, locationY: 100 },
+    });
+
+    const updates = onUpdateResourceFields.mock.calls[0][0];
+    const payload = JSON.parse(updates[KOREAN_FIELDWORK_FIND_SPOT_FIELDS.items]);
+    expect(payload.items).toHaveLength(1);
+    expect(payload.items[0].point).toEqual({ x: 50, y: 50 });
+    expect(getByTestId('findSpotPoint_1').props.style).toEqual(expect.arrayContaining([
+      expect.objectContaining({ height: 18, width: 18 }),
+    ]));
+  });
+
+  it('shows point details while adding sample records', () => {
+    const onUpdateResourceFields = jest.fn();
+    const feature = createFeature();
+    const { getByTestId, getByText } = render(
+      <KoreanFieldworkFindSpotPanel
+        compact
+        documents={[feature]}
+        parentDocument={feature}
+        resource={{
+          category: C.SAMPLE,
+          identifier: 'sample-1',
+          relations: { liesWithin: ['feature-1'] },
+          findSpotItems: JSON.stringify({
+            items: [{ number: 1, point: { x: 60, y: 40 }, label: '' }],
+            version: 1,
+          }),
+        }}
+        onUpdateResourceFields={onUpdateResourceFields}
+      />
+    );
+
+    expect(getByText(/시료 위치를 누르세요/)).toBeTruthy();
+    expect(getByTestId('findSpotRow_1')).toBeTruthy();
+    expect(getByTestId('findSpotLabelInput_1').props.placeholder)
+      .toContain('\uc2dc\ub8cc\uba85');
+  });
+
   it('finds the feature sketch from an existing find relation', () => {
     const feature = createFeature();
     const findResource = createFindResource({}, {

@@ -36,30 +36,35 @@ describe('KoreanFieldworkQuickRecordPanel', () => {
     );
 
     expect(getByText('현장 최소 기록')).toBeTruthy();
-    expect(getByText('조사 단계 확인')).toBeTruthy();
-    expect(getByText('현장 보조판 보기 (4)')).toBeTruthy();
+    expect(getByText('조사 사진')).toBeTruthy();
+    expect(getByText('사진 1/3')).toBeTruthy();
+    expect(getByText('현장 보조판 보기 (3)')).toBeTruthy();
     expect(queryByText('유구 진행')).toBeNull();
+    expect(queryByText('토층사진')).toBeNull();
+
+    fireEvent.press(getByTestId('quickRecordToggleDetailedChecklist'));
+
+    expect(getByText('토층사진')).toBeTruthy();
 
     fireEvent.press(getByTestId('quickRecordToggleSecondaryFields'));
 
-    expect(getByText('유구 진행')).toBeTruthy();
+    expect(queryByText('유구 진행')).toBeNull();
     expect(getByText('기록 구분')).toBeTruthy();
     expect(getByText('확인 상태')).toBeTruthy();
 
-    fireEvent.press(getByTestId('quickRecordOption_investigating'));
     fireEvent.press(getByTestId('quickRecordOption_completionPhotoTaken'));
     fireEvent.press(getByTestId('quickRecordOption_immediateRecording'));
     fireEvent.press(getByTestId('quickRecordOption_observedInField'));
 
     expect(handleUpdateResourceField).toHaveBeenNthCalledWith(
       1,
-      FIELDWORK_QUICK_FIELDS.featureStatus,
-      'investigating'
+      FIELDWORK_QUICK_FIELDS.checklist,
+      ['preInvestigationPhotoTaken', 'completionPhotoTaken']
     );
     expect(handleUpdateResourceField).toHaveBeenNthCalledWith(
       2,
-      FIELDWORK_QUICK_FIELDS.checklist,
-      ['preInvestigationPhotoTaken', 'completionPhotoTaken']
+      FIELDWORK_QUICK_FIELDS.featureStatus,
+      'confirmed'
     );
     expect(handleUpdateResourceField).toHaveBeenNthCalledWith(
       3,
@@ -412,10 +417,10 @@ describe('KoreanFieldworkQuickRecordPanel', () => {
     expect(getByText('기존 방위 참고: 장축 N-23°-E · 단축 N-67°-W · 자북')).toBeTruthy();
   });
 
-  it('applies fieldwork workflow presets as a batch update', () => {
+  it('uses explicit photo milestones instead of bulk status presets', () => {
     const handleUpdateResourceField = jest.fn();
     const handleUpdateResourceFields = jest.fn();
-    const { getByTestId } = render(
+    const { getByTestId, queryByTestId } = render(
       <KoreanFieldworkQuickRecordPanel
         category={createCategoryForm([
           FIELDWORK_QUICK_FIELDS.checklist,
@@ -436,16 +441,16 @@ describe('KoreanFieldworkQuickRecordPanel', () => {
       />
     );
 
-    fireEvent.press(getByTestId('quickRecordPreset_startFeatureInvestigation'));
+    expect(queryByTestId('quickRecordPreset_startFeatureInvestigation')).toBeNull();
+
+    fireEvent.press(getByTestId('quickRecordOption_completionPhotoTaken'));
 
     expect(handleUpdateResourceFields).toHaveBeenCalledWith({
-      featureRecordingStatus: 'investigating',
       featureInvestigationChecklist: [
         'preInvestigationPhotoTaken',
-        'inProgressPhotoTaken',
+        'completionPhotoTaken',
       ],
-      fieldRecordQuality: ['immediateRecording'],
-      recordCreationTiming: 'duringFieldwork',
+      featureRecordingStatus: 'confirmed',
     });
     expect(handleUpdateResourceField).not.toHaveBeenCalled();
   });

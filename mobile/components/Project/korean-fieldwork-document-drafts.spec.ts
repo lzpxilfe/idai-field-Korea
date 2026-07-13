@@ -141,6 +141,45 @@ describe('Korean fieldwork document drafts', () => {
     });
   });
 
+  it('restores validated measurements from the Feature creation route', () => {
+    const trenchDoc = createDoc('trench-1', C.TRENCH, {
+      isRecordedIn: ['operation-1'],
+    });
+    const config = allowRelations({
+      [`${C.FEATURE}:${C.TRENCH}`]: ['liesWithin'],
+    });
+
+    const draft = createKoreanFieldworkDraftResource(
+      trenchDoc,
+      C.FEATURE,
+      config,
+      {
+        featureType: 'kiln',
+        featureMeasurements: JSON.stringify({
+          dimensionLength: [{
+            inputUnit: 'm',
+            inputValue: 3.2,
+            isImprecise: false,
+            measurementComment: '가마 전체 길이',
+            value: 3200000,
+          }],
+          dimensionWidth: [{ inputUnit: 'kg', inputValue: 5 }],
+          arbitraryField: ['not allowed'],
+        }),
+      }
+    );
+
+    expect(draft.dimensionLength).toEqual([{
+      inputUnit: 'm',
+      inputValue: 3.2,
+      isImprecise: false,
+      measurementComment: '가마 전체 길이',
+      value: 3200000,
+    }]);
+    expect(draft.dimensionWidth).toBeUndefined();
+    expect(draft.arbitraryField).toBeUndefined();
+  });
+
   it('uses the entered field feature name as the Feature draft identifier', () => {
     const trenchDoc = createDoc('trench-1', C.TRENCH, {
       isRecordedIn: ['operation-1'],

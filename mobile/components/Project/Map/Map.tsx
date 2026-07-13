@@ -1,6 +1,8 @@
 import * as Location from 'expo-location';
 import {
   Document,
+  getKoreanFieldworkFeaturePhotoProgress,
+  isKoreanFieldworkFeaturePhotoMilestone,
   KoreanFieldworkReadinessIssue,
 } from 'idai-field-core';
 import proj4 from 'proj4';
@@ -624,12 +626,25 @@ const Map: React.FC<MapProps> = (props) => {
     const nextValues = currentValues.includes(stepValue)
       ? currentValues.filter((value: string) => value !== stepValue)
       : [...currentValues, stepValue];
+    const shouldSyncPhotoProgress = props.investigationModeId !== 'trialTrench'
+      && (
+        highlightedDoc.resource.category === KOREAN_FIELDWORK_CATEGORIES.FEATURE
+        || highlightedDoc.resource.category
+          === KOREAN_FIELDWORK_CATEGORIES.FEATURE_SEGMENT
+      )
+      && isKoreanFieldworkFeaturePhotoMilestone(stepValue);
 
     const updatedDocument = await props.repository.update({
       ...highlightedDoc,
       resource: {
         ...highlightedDoc.resource,
         featureInvestigationChecklist: nextValues,
+        ...(shouldSyncPhotoProgress
+          ? {
+            featureRecordingStatus:
+              getKoreanFieldworkFeaturePhotoProgress(nextValues).recordingStatus,
+          }
+          : {}),
       },
     });
 

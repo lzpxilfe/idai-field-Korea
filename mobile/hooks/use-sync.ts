@@ -105,6 +105,7 @@ const useSync = ({
       !syncService ||
       !project ||
       !projectSettings?.connected ||
+      projectSettings.initialPullPending ||
       !initializedSyncKey ||
       !live
     ) {
@@ -134,7 +135,15 @@ const useSync = ({
         console.error('Failed to stop sync:', getSyncErrorMessage(error, projectSettings.password));
       }
     };
-  }, [syncService, live, project, projectSettings?.connected, projectSettings?.password, initializedSyncKey]);
+  }, [
+    syncService,
+    live,
+    project,
+    projectSettings?.connected,
+    projectSettings?.initialPullPending,
+    projectSettings?.password,
+    initializedSyncKey,
+  ]);
 
   return status;
 };

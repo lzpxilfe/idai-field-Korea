@@ -224,8 +224,33 @@ defmodule FieldHub.FileStore do
   """
   def create_write_io_device(uuid, project_identifier, file_variant) do
     directory = get_variant_directory(project_identifier, file_variant)
-    file_path = "#{directory}/#{uuid}.writing"
-    {File.open(file_path, [:write]), file_path}
+    token = Base.url_encode64(:crypto.strong_rand_bytes(12), padding: false)
+    file_path = "#{directory}/#{uuid}.#{token}.writing"
+    {File.open(file_path, [:write, :binary, :exclusive]), file_path}
+  end
+
+  @doc """
+  Return the number of bytes occupied by regular files in one project's file directory.
+
+  In-progress `.writing` files and symbolic links are excluded. Upload reservations account
+  for in-progress files separately and links must never make quota checks traverse outside
+  the configured storage root.
+  """
+  def project_usage_bytes(project_identifier) do
+    project_identifier
+    |> get_project_directory()
+    |> directory_usage_bytes()
+  end
+
+  @doc """
+  Return the number of bytes occupied by regular files below the configured storage root.
+  """
+  def total_usage_bytes do
+    directory_usage_bytes(@file_directory_root)
+  end
+
+  def root_directory do
+    @file_directory_root
   end
 
   @doc """
@@ -373,5 +398,53 @@ defmodule FieldHub.FileStore do
 
   def clear_cache(project) do
     Cachex.del(@index_cache_name, project)
+  end
+
+  defp directory_usage_bytes(path) do
+    case File.lstat(path) do
+      {:ok, %File.Stat{type: :directory}} ->
+        directory_entries_usage_bytes(path)
+
+      {:ok, _stat} ->
+        {:ok, 0}
+
+      {:error, :enoent} ->
+        {:ok, 0}
+
+      {:error, _reason} = error ->
+        error
+    end
+  end
+
+  defp directory_entries_usage_bytes(path) do
+    case File.ls(path) do
+      {:ok, entries} ->
+        Enum.reduce_while(entries, {:ok, 0}, fn entry, {:ok, total} ->
+          case entry_usage_bytes(Path.join(path, entry), entry) do
+            {:ok, size} -> {:cont, {:ok, total + size}}
+            {:error, _reason} = error -> {:halt, error}
+          end
+        end)
+
+      {:error, _reason} = error ->
+        error
+    end
+  end
+
+  defp entry_usage_bytes(path, entry) when is_binary(entry) do
+    if String.ends_with?(entry, ".writing") do
+      {:ok, 0}
+    else
+      entry_usage_bytes(path)
+    end
+  end
+
+  defp entry_usage_bytes(path) do
+    case File.lstat(path) do
+      {:ok, %File.Stat{type: :regular, size: size}} -> {:ok, size}
+      {:ok, %File.Stat{type: :directory}} -> directory_usage_bytes(path)
+      {:ok, _stat} -> {:ok, 0}
+      {:error, _reason} = error -> error
+    end
   end
 end

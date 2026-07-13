@@ -107,7 +107,7 @@
                                 <span class="mdi mdi-tablet-cellphone"></span>
                                 <span>태블릿 연결</span>
                             </div>
-                            <div class="korean-fieldwork-tablet-sync-grid">
+                            <div *ngIf="settings.allowLanSync" class="korean-fieldwork-tablet-sync-grid">
                                 <div class="korean-fieldwork-tablet-sync-item">
                                     <span class="korean-fieldwork-tablet-sync-label">서버 URL</span>
                                     <code>{{getKoreanTabletSyncUrl()}}</code>
@@ -120,6 +120,10 @@
                                         동기화 비밀번호 필요
                                     </span>
                                 </div>
+                            </div>
+                            <div *ngIf="!settings.allowLanSync" class="korean-fieldwork-tablet-sync-missing"
+                                 i18n="@@settings.synchronization.lanDisabled">
+                                LAN-Synchronisation ist deaktiviert
                             </div>
                             <div class="korean-fieldwork-tablet-sync-note">
                                 조사 방식·경계와 야장 기록은 같은 프로젝트 문서로 동기화됩니다.
@@ -199,8 +203,26 @@
                     <h5 style="margin-top: 32px;" i18n="@@settings.synchronization">Synchronisation</h5>
 
                     <div class="mb-3">
+                        <div class="row" style="margin: 0 0 15px;">
+                            <div class="col-auto me-auto">
+                                <span i18n="@@settings.synchronization.allowLanSync">Synchronisation im LAN freigeben</span>
+                            </div>
+                            <div class="col-auto">
+                                <label class="switch" style="margin-bottom: 0;">
+                                    <input type="checkbox" [checked]="settings.allowLanSync"
+                                           (change)="settings.allowLanSync = !settings.allowLanSync">
+                                    <span class="slider round"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="small-info-text" i18n="@@settings.synchronization.allowLanSync.info">
+                            Standardmäßig ist der Server nur auf diesem Computer erreichbar. Die LAN-Freigabe
+                            verwendet unverschlüsseltes HTTP und darf nur in einem vertrauenswürdigen,
+                            isolierten Netzwerk aktiviert werden.
+                        </div>
+
                         <label class="control-label col-form-label" i18n="@@settings.synchronization.ownAddress">Eigene Adresse</label>
-                        <pre><code>http://{{ipAddress}}:3000</code></pre>
+                        <pre><code>http://{{settings.allowLanSync ? ipAddress : '127.0.0.1'}}:3000</code></pre>
 
                         <label for="sync-target-host-password-input"
                                class="control-label col-form-label"

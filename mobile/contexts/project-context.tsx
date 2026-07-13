@@ -3,6 +3,7 @@ import React, {
   useState,
   useContext,
   useEffect,
+  useCallback,
   Dispatch,
   SetStateAction,
 } from 'react';
@@ -76,6 +77,7 @@ export const ProjectContextProvider = ({ children }) => {
   const config = useContext(ConfigurationContext);
   const preferences = useContext(PreferencesContext);
   const currentProject = preferences.preferences.currentProject;
+  const currentProjectSettings = preferences.preferences.projects[currentProject];
   const [projectOpeningGate, setProjectOpeningGate] =
     useState<ProjectOpeningGate>({
       project: currentProject,
@@ -100,8 +102,19 @@ export const ProjectContextProvider = ({ children }) => {
     return () => clearTimeout(timeoutId);
   }, [currentProject]);
 
+  const clearInitialPullPending = useCallback(() => {
+    if (!currentProject || !currentProjectSettings?.initialPullPending) return;
+
+    preferences.setProjectSettings(currentProject, {
+      ...currentProjectSettings,
+      initialPullPending: false,
+    });
+  }, [currentProject, currentProjectSettings, preferences]);
+
   const pouchdbDatastore = usePouchDbDatastore(
-    currentProject
+    currentProject,
+    currentProjectSettings,
+    clearInitialPullPending
   );
 
   const repository = useRepository(
@@ -112,8 +125,7 @@ export const ProjectContextProvider = ({ children }) => {
 
   const syncStatus = useSync({
     project: currentProject,
-    projectSettings:
-      preferences.preferences.projects[currentProject],
+    projectSettings: currentProjectSettings,
     pouchdbDatastore,
   });
 
@@ -141,8 +153,7 @@ export const ProjectContextProvider = ({ children }) => {
   useFieldworkImageSync({
     documents: allDocuments,
     project: currentProject,
-    projectSettings:
-      preferences.preferences.projects[currentProject],
+    projectSettings: currentProjectSettings,
     repository,
     syncStatus,
   });

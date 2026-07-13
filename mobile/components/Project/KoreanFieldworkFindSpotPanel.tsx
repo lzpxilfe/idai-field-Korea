@@ -75,6 +75,7 @@ interface FindSpotItem {
 }
 
 interface Props {
+  compact?: boolean;
   documents: readonly Document[];
   onUpdateResourceFields: (updates: Record<string, unknown>) => void;
   parentDocument?: Document;
@@ -105,6 +106,7 @@ const SHAPE_PREVIEW_BOTTOM_PADDING = 12;
 const FIND_SPOT_MIN_SCALE = 1;
 const FIND_SPOT_MAX_SCALE = 5;
 const FIND_SPOT_TAP_DISTANCE = 8;
+const FIND_SPOT_DRAG_HIT_RADIUS = 20;
 const VALID_SHAPES = new Set<FeatureLocationSketchShape>([
   'point',
   'polygon',
@@ -116,7 +118,6 @@ const LOCATION_CONTEXT_CATEGORIES = new Set<string>([
   KOREAN_FIELDWORK_CATEGORIES.FIND_COLLECTION,
   KOREAN_FIELDWORK_CATEGORIES.SAMPLE,
 ]);
-
 interface FindSpotPanelText {
   addHint: string;
   emptyItem: string;
@@ -128,7 +129,7 @@ interface FindSpotPanelText {
 
 const FIND_TEXT: FindSpotPanelText = {
   addHint:
-    '\uc720\uad6c \uc2a4\ucf00\uce58 \uc704\uc5d0 \ucd9c\ud1a0 \uc704\uce58\ub97c \ub204\ub974\uba74 \ubc88\ud638\uc810\uc774 \ucd94\uac00\ub429\ub2c8\ub2e4.',
+    '\uc720\uad6c \ubaa8\uc591 \uc704\uc5d0 \uc720\ubb3c \uc704\uce58\ub97c \ub204\ub974\uc138\uc694. \ucc0d\uc740 \uc810\uc740 \ub4dc\ub798\uadf8\ud574 \uc62e\uae38 \uc218 \uc788\uc2b5\ub2c8\ub2e4.',
   emptyItem: '\uc720\ubb3c\uba85/\uc218\ub7c9 \uba54\ubaa8',
   feature: '\uc720\uad6c',
   noFeature: '\uc5f0\uacb0\ub41c \uc720\uad6c \uc2a4\ucf00\uce58 \uc5c6\uc74c',
@@ -138,12 +139,13 @@ const FIND_TEXT: FindSpotPanelText = {
 const SAMPLE_TEXT: FindSpotPanelText = {
   ...FIND_TEXT,
   addHint:
-    '\uc720\uad6c \uc2a4\ucf00\uce58 \uc704\uc5d0 \uc2dc\ub8cc \ucc44\ucde8 \uc704\uce58\ub97c \ub204\ub974\uba74 \ubc88\ud638\uc810\uc774 \ucd94\uac00\ub429\ub2c8\ub2e4.',
+    '\uc720\uad6c \ubaa8\uc591 \uc704\uc5d0 \uc2dc\ub8cc \uc704\uce58\ub97c \ub204\ub974\uc138\uc694. \ucc0d\uc740 \uc810\uc740 \ub4dc\ub798\uadf8\ud574 \uc62e\uae38 \uc218 \uc788\uc2b5\ub2c8\ub2e4.',
   emptyItem: '\uc2dc\ub8cc\uba85/\uc218\ub7c9 \uba54\ubaa8',
   title: '\uc2dc\ub8cc \ucc44\ucde8 \uc704\uce58',
 };
 
 const KoreanFieldworkFindSpotPanel: React.FC<Props> = ({
+  compact = false,
   documents,
   onUpdateResourceFields,
   parentDocument,
@@ -155,6 +157,12 @@ const KoreanFieldworkFindSpotPanel: React.FC<Props> = ({
   const panGestureRef = useRef<FindSpotPanGesture>();
   const tapGestureRef = useRef<FindSpotTapGesture>();
   const didMoveGestureRef = useRef(false);
+  const draggedItemNumberRef = useRef<number>();
+  const dragPreviewPointRef = useRef<SketchPoint>();
+  const [dragPreview, setDragPreview] = useState<{
+    number: number;
+    point: SketchPoint;
+  }>();
   const featureDocument = useMemo(
     () => getFeatureContextDocument(resource, documents, parentDocument),
     [documents, parentDocument, resource]
@@ -199,6 +207,19 @@ const KoreanFieldworkFindSpotPanel: React.FC<Props> = ({
     }
 
     const point = getPrimaryTouchPoint(event);
+    const draggedItem = point
+      ? getFindSpotItemAtTouch(items, point, canvasSize, normalizedViewport)
+      : undefined;
+    if (draggedItem) {
+      draggedItemNumberRef.current = draggedItem.number;
+      dragPreviewPointRef.current = draggedItem.point;
+      setDragPreview({ number: draggedItem.number, point: draggedItem.point });
+      pinchGestureRef.current = undefined;
+      panGestureRef.current = undefined;
+      tapGestureRef.current = undefined;
+      return;
+    }
+
     tapGestureRef.current = point
       ? { start: point, viewport: normalizedViewport }
       : undefined;
@@ -207,6 +228,18 @@ const KoreanFieldworkFindSpotPanel: React.FC<Props> = ({
       : undefined;
   };
   const moveViewportGesture = (event: GestureResponderEvent) => {
+    if (draggedItemNumberRef.current !== undefined) {
+      const touchPoint = getPrimaryTouchPoint(event);
+      const point = touchPoint
+        ? getNormalizedPoint(touchPoint, canvasSize, normalizedViewport)
+        : undefined;
+      if (point) {
+        dragPreviewPointRef.current = point;
+        setDragPreview({ number: draggedItemNumberRef.current, point });
+      }
+      return;
+    }
+
     const pinchGesture = getFindSpotTouchGesture(event);
     if (pinchGesture) {
       const initialGesture = pinchGestureRef.current ?? {
@@ -265,6 +298,23 @@ const KoreanFieldworkFindSpotPanel: React.FC<Props> = ({
     }, canvasSize));
   };
   const finishViewportGesture = (event?: GestureResponderEvent) => {
+    const draggedItemNumber = draggedItemNumberRef.current;
+    if (draggedItemNumber !== undefined) {
+      const touchPoint = event ? getPrimaryTouchPoint(event) : undefined;
+      const point = touchPoint
+        ? getNormalizedPoint(touchPoint, canvasSize, normalizedViewport)
+        : dragPreviewPointRef.current;
+      draggedItemNumberRef.current = undefined;
+      dragPreviewPointRef.current = undefined;
+      setDragPreview(undefined);
+      if (point) {
+        writeItems(items.map((item) =>
+          item.number === draggedItemNumber ? { ...item, point } : item
+        ));
+      }
+      return;
+    }
+
     const tapGesture = tapGestureRef.current;
     const point = event ? getPrimaryTouchPoint(event) : undefined;
     const fallbackPoint = point ?? tapGesture?.start;
@@ -289,6 +339,9 @@ const KoreanFieldworkFindSpotPanel: React.FC<Props> = ({
     panGestureRef.current = undefined;
     tapGestureRef.current = undefined;
     didMoveGestureRef.current = false;
+    draggedItemNumberRef.current = undefined;
+    dragPreviewPointRef.current = undefined;
+    setDragPreview(undefined);
     setViewport(DEFAULT_FIND_SPOT_VIEWPORT);
   };
   const addPointFromPixelPoint = (
@@ -300,13 +353,12 @@ const KoreanFieldworkFindSpotPanel: React.FC<Props> = ({
     const point = getNormalizedPoint(pixelPoint, canvasSize, viewportForPoint);
     if (!point) return;
 
-    writeItems(
-      items.concat({
+    const nextItem = {
         label: '',
         number: getNextFindSpotNumber(items),
         point,
-      })
-    );
+    };
+    writeItems(items.concat(nextItem));
   };
   const updateLabel = (number: number, label: string) => {
     writeItems(items.map((item) =>
@@ -331,19 +383,23 @@ const KoreanFieldworkFindSpotPanel: React.FC<Props> = ({
   const featureLabel = getKoreanFieldworkDisplayIdentifier(
     featureDocument.resource.identifier
   ) || featureDocument.resource.id;
-
   return (
-    <View style={styles.container} testID="findSpotPanel">
-      <View style={styles.headerRow}>
-        <View style={styles.titleRow}>
-          <MaterialIcons name="place" size={17} color="#344054" />
-          <Text style={styles.title}>{text.title}</Text>
-          <Text style={styles.countText}>{items.length}</Text>
+    <View
+      style={compact ? styles.compactContainer : styles.container}
+      testID="findSpotPanel"
+    >
+      {!compact && (
+        <View style={styles.headerRow}>
+          <View style={styles.titleRow}>
+            <MaterialIcons name="place" size={17} color="#344054" />
+            <Text style={styles.title}>{text.title}</Text>
+            <Text style={styles.countText}>{items.length}</Text>
+          </View>
+          <Text style={styles.featureLabel} numberOfLines={1}>
+            {featureLabel}
+          </Text>
         </View>
-        <Text style={styles.featureLabel} numberOfLines={1}>
-          {featureLabel}
-        </Text>
-      </View>
+      )}
       <Text style={styles.hint}>{text.addHint}</Text>
       <View
         onLayout={updateCanvasSize}
@@ -380,7 +436,12 @@ const KoreanFieldworkFindSpotPanel: React.FC<Props> = ({
             <View
               key={`find-spot-${item.number}`}
               pointerEvents="none"
-              style={[styles.findPoint, getPointPercentStyle(item.point)]}
+              style={[
+                styles.findPoint,
+                getPointPercentStyle(
+                  dragPreview?.number === item.number ? dragPreview.point : item.point
+                ),
+              ]}
               testID={`findSpotPoint_${item.number}`}
             >
               <Text style={styles.findPointText}>{item.number}</Text>
@@ -499,6 +560,9 @@ const normalizeFindSpotItems = (value: unknown): FindSpotItem[] => {
     .filter((item): item is FindSpotItem => !!item)
     .sort((a, b) => a.number - b.number);
 };
+
+export const getKoreanFieldworkFindSpotItemCount = (value: unknown): number =>
+  normalizeFindSpotItems(value).length;
 
 const normalizeFindSpotItem = (value: unknown): FindSpotItem | undefined => {
   if (!isRecord(value)) return undefined;
@@ -802,6 +866,36 @@ const screenToViewportContentPoint = (
   };
 };
 
+const viewportContentToScreenPoint = (
+  point: PixelPoint,
+  canvasSize: CanvasSize,
+  viewport: FindSpotViewport
+): PixelPoint => {
+  const center = getCanvasCenter(canvasSize);
+
+  return {
+    x: center.x + ((point.x - center.x) * viewport.scale) + viewport.offsetX,
+    y: center.y + ((point.y - center.y) * viewport.scale) + viewport.offsetY,
+  };
+};
+
+const getFindSpotItemAtTouch = (
+  items: FindSpotItem[],
+  touchPoint: PixelPoint,
+  canvasSize: CanvasSize,
+  viewport: FindSpotViewport
+): FindSpotItem | undefined =>
+  items.find((item) => {
+    const itemPoint = viewportContentToScreenPoint(
+      denormalizePoint(item.point, canvasSize),
+      canvasSize,
+      viewport
+    );
+
+    return getPixelDistance(itemPoint, touchPoint)
+      <= Math.max(FIND_SPOT_DRAG_HIT_RADIUS, 10 * viewport.scale);
+  });
+
 const getViewportTransformStyle = (
   viewport: FindSpotViewport
 ): ViewStyle => ({
@@ -994,6 +1088,10 @@ const styles = StyleSheet.create({
     marginTop: 8,
     padding: 10,
   },
+  compactContainer: {
+    flex: 1,
+    padding: 14,
+  },
   countText: {
     backgroundColor: '#ecfdf3',
     borderRadius: 4,
@@ -1075,18 +1173,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#2f5f4a',
     borderColor: '#ffffff',
-    borderRadius: 12,
+    borderRadius: 9,
     borderWidth: 2,
-    height: 24,
+    height: 18,
     justifyContent: 'center',
-    marginLeft: -12,
-    marginTop: -12,
+    marginLeft: -9,
+    marginTop: -9,
     position: 'absolute',
-    width: 24,
+    width: 18,
   },
   findPointText: {
     color: '#ffffff',
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: '900',
   },
   headerRow: {

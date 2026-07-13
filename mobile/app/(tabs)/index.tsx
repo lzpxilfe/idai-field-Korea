@@ -107,10 +107,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ deleteProject }) => {
   }, [preferences.preferences.recentProjects]);
 
   const openProject = useCallback(
-    (project: string, languages?: string[]) => {
+    (project: string, languages?: string[], displayName?: string) => {
       if (!project) return;
       setSelectedProject(project);
       preferences.setCurrentProject(project, languages, {
+        ...(displayName ? { displayName } : {}),
         includeInRecentProjects: project !== SAMPLE_PROJECT_ID,
       });
       navigate('/ProjectScreen');
@@ -147,6 +148,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ deleteProject }) => {
         url,
         password,
         connected: true,
+        initialPullPending: true,
         mapSettings: defaultMapSettings(),
       });
       navigate('/ProjectScreen');
@@ -195,6 +197,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ deleteProject }) => {
             <RecentProjects
               setIsDeleteModalOpen={setIsDeleteModalOpen}
               openProject={openProject}
+              projectSettings={preferences.preferences.projects}
               recentProjects={preferences.preferences.recentProjects}
               setSelectedProject={setSelectedProject}
             />

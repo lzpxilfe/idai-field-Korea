@@ -38,6 +38,7 @@ import {
   saveKoreanFieldworkBoundarySummary,
   saveKoreanFieldworkInvestigationModeId,
   saveKoreanFieldworkProjectBoundaryDraft,
+  saveKoreanFieldworkProjectDisplayName,
 } from '@/components/Project/korean-fieldwork-investigation-mode';
 import type {
   KoreanFieldworkInvestigationModeId,
@@ -51,7 +52,11 @@ import {
 
 interface CreateProjectModalProps {
   existingProjects?: string[];
-  onProjectCreated: (project: string, languages?: string[]) => void;
+  onProjectCreated: (
+    project: string,
+    languages?: string[],
+    displayName?: string
+  ) => void;
   onClose: () => void;
 }
 
@@ -88,7 +93,7 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
   const projectNameValidation = validateProjectName(project, existingProjects, {
     mode: 'local',
   });
-  const { projectId } = projectNameValidation;
+  const { displayName, projectId } = projectNameValidation;
   const hasBoundaryGeometry = (pickedBoundary?.coordinates.length ?? 0) >= 3;
   const canCreateProject =
     projectNameValidation.isAvailable && !!investigationModeId && hasBoundaryGeometry;
@@ -115,6 +120,7 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
       projectId,
       investigationModeId as KoreanFieldworkInvestigationModeId
     );
+    await saveKoreanFieldworkProjectDisplayName(projectId, displayName);
     await saveKoreanFieldworkBoundarySummary(projectId, normalizedBoundarySummary);
     if (pickedBoundary) {
       await saveKoreanFieldworkProjectBoundaryDraft(projectId, pickedBoundary);
@@ -122,7 +128,8 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
 
     onProjectCreated(
       projectId,
-      KOREAN_FIELDWORK_PROJECT_LANGUAGES.slice()
+      KOREAN_FIELDWORK_PROJECT_LANGUAGES.slice(),
+      displayName !== projectId ? displayName : undefined
     );
     resetForm();
     onClose();

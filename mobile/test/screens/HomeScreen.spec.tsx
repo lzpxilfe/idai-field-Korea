@@ -141,6 +141,19 @@ describe('HomeScreen', () => {
     expect(queryByTestId('recent-project-row-5')).toBeNull();
   });
 
+  it('shows stored display names for generated project ids', () => {
+    const preferences = createPreferencesContextValue({
+      username: '',
+      recentProjects: ['seoul-area-1'],
+      projectDisplayNames: {
+        'seoul-area-1': 'Seoul Area 1',
+      },
+    });
+    const { getByText } = renderHomeScreen(preferences);
+
+    expect(getByText('Seoul Area 1')).toBeTruthy();
+  });
+
   it('opens imported server projects immediately after saving sync settings', () => {
     const setCurrentProject = jest.fn();
     const setProjectSettings = jest.fn();
@@ -165,6 +178,7 @@ describe('HomeScreen', () => {
         url: 'https://field.example/db',
         password: 'secret',
         connected: true,
+        initialPullPending: true,
         mapSettings: defaultMapSettings(),
       }
     );
@@ -212,12 +226,14 @@ const createPreferencesContextValue = ({
   setCurrentProject = jest.fn(),
   setProjectSettings = jest.fn(),
   removeProject = jest.fn(),
+  projectDisplayNames = {},
 }: {
   username: string;
   recentProjects: string[];
   setCurrentProject?: UsePreferences['setCurrentProject'];
   setProjectSettings?: UsePreferences['setProjectSettings'];
   removeProject?: UsePreferences['removeProject'];
+  projectDisplayNames?: Record<string, string>;
 }): UsePreferences => ({
   preferences: {
     username,
@@ -236,6 +252,9 @@ const createPreferencesContextValue = ({
           url: '',
           password: '',
           connected: false,
+          ...(projectDisplayNames[project]
+            ? { displayName: projectDisplayNames[project] }
+            : {}),
           languages: ['ko'],
           mapSettings: defaultMapSettings(),
         },

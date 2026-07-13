@@ -11,6 +11,7 @@ export interface Settings {
     languages: string[];
     isAutoUpdateActive: boolean;
     hostPassword: string;
+    allowLanSync?: boolean;
     syncTargets: { [projectIdentifier: string]: SyncTarget };
     username: string;
     dbs: string[];

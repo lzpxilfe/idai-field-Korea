@@ -2,10 +2,11 @@ import { MaterialIcons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system';
 import {
   CategoryForm,
+  Document,
   NewDocument,
   NewResource,
 } from 'idai-field-core';
-import React, { useCallback, useContext, useEffect, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { Keyboard, StyleSheet, Text, View } from 'react-native';
 import { ConfigurationContext } from '@/contexts/configuration-context';
 import LabelsContext from '@/contexts/labels/labels-context';
@@ -17,6 +18,7 @@ import SoilProfileCameraButton, {
   FieldworkPhotoCaptureData,
   PhotoCameraButton,
   SoilProfileCaptureData,
+  clearFieldworkImageUploadAudit,
 } from '@/components/Project/SoilProfileCameraButton';
 import KoreanFieldworkDraftContextPanel from '@/components/Project/KoreanFieldworkDraftContextPanel';
 import KoreanFieldworkDrawingSurveyPanel
@@ -71,6 +73,7 @@ const DocumentAdd: React.FC = () => {
   const categoryName = getParam(params.categoryName);
   const featureType = getParam(params.featureType);
   const featureGeometryRevisionNote = getParam(params.featureGeometryRevisionNote);
+  const featureMeasurements = getParam(params.featureMeasurements);
   const featureLocationSketch = getParam(params.featureLocationSketch);
   const featureGeometry = getParam(params.featureGeometry);
   const geometryConfidence = getParam(params.geometryConfidence);
@@ -83,13 +86,19 @@ const DocumentAdd: React.FC = () => {
   const { showToast } = useToast();
   const [category, setCategory] = useState<CategoryForm>();
   const [newResource, setNewResource] = useState<NewResource>();
-  const [saveBtnEnabled, setSaveBtnEnabled] = useState<boolean>(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [investigationModeId, setInvestigationModeId] =
     useState<KoreanFieldworkInvestigationModeId>();
   const [isFreeDrawingActive, setIsFreeDrawingActive] = useState(false);
   const [soilProfileSampleRequest, setSoilProfileSampleRequest] =
     useState<SoilProfileLayerSampleRequest>();
   const projectId = preferencesContext.preferences.currentProject;
+  const documentsRef = useRef(documents);
+  const saveInFlightRef = useRef(false);
+
+  useEffect(() => {
+    documentsRef.current = documents;
+  }, [documents]);
 
   const setResourceToDefault = useCallback(
     () => {
@@ -100,8 +109,9 @@ const DocumentAdd: React.FC = () => {
 
       setNewResource(
         createKoreanFieldworkDraftResource(parentDoc, categoryName, config, {
-          existingDocuments: documents ?? [],
+          existingDocuments: documentsRef.current ?? [],
           featureGeometryRevisionNote,
+          featureMeasurements,
           featureGeometry,
           featureLocationSketch,
           featureType,
@@ -114,10 +124,10 @@ const DocumentAdd: React.FC = () => {
     },
     [
       parentDoc,
-      documents,
       categoryName,
       config,
       featureGeometryRevisionNote,
+      featureMeasurements,
       featureGeometry,
       featureLocationSketch,
       featureType,
@@ -129,11 +139,6 @@ const DocumentAdd: React.FC = () => {
   );
 
   useEffect(() => setResourceToDefault(), [setResourceToDefault, category]);
-
-  useEffect(() => {
-    if (newResource?.identifier) setSaveBtnEnabled(true);
-    else setSaveBtnEnabled(false);
-  }, [newResource]);
 
   useEffect(
     () => {
@@ -175,28 +180,50 @@ const DocumentAdd: React.FC = () => {
   };
 
   const updateSoilProfileCapture = (data: SoilProfileCaptureData) => {
-    setNewResource((oldResource) => oldResource && { ...oldResource, ...data });
+    setNewResource((oldResource) => oldResource && {
+      ...clearFieldworkImageUploadAudit(oldResource),
+      ...data,
+    });
   };
   const updatePhotoCapture = (data: FieldworkPhotoCaptureData) => {
-    setNewResource((oldResource) => oldResource && { ...oldResource, ...data });
+    setNewResource((oldResource) => oldResource && {
+      ...clearFieldworkImageUploadAudit(oldResource),
+      ...data,
+    });
   };
 
-  const saveButtonHandler = () => {
-    if (newResource) {
-      const newDocument: NewDocument = {
-        resource: newResource,
-      };
-      repository
-        ?.create(newDocument)
-        .then((doc) => {
-          setResourceToDefault();
-          navigateToKoreanFieldworkReturnTarget(returnTarget, doc.resource.id);
-        })
-        .catch(() => {
-          Keyboard.dismiss();
-          showToast(ToastType.Error, '기록을 만들지 못했습니다.');
-        });
+  const saveButtonHandler = async () => {
+    if (!newResource || !repository || saveInFlightRef.current) return;
+    if (!newResource.identifier?.trim()) {
+      Keyboard.dismiss();
+      showToast(
+        ToastType.Error,
+        '이름(식별자)을 입력해야 저장할 수 있습니다.'
+      );
+      return;
     }
+
+    saveInFlightRef.current = true;
+    setIsSaving(true);
+
+    let doc: Document;
+    try {
+      const newDocument: NewDocument = { resource: newResource };
+      doc = await repository.create(newDocument);
+    } catch (error) {
+      Keyboard.dismiss();
+      showToast(
+        ToastType.Error,
+        `기록을 만들지 못했습니다${formatSaveErrorDetail(error)}.`
+      );
+      saveInFlightRef.current = false;
+      setIsSaving(false);
+      return;
+    }
+
+    saveInFlightRef.current = false;
+    setIsSaving(false);
+    navigateToKoreanFieldworkReturnTarget(returnTarget, doc.resource.id);
   };
 
   const onReturn = () => {
@@ -227,8 +254,8 @@ const DocumentAdd: React.FC = () => {
         <Button
           variant="success"
           onPress={() => saveButtonHandler()}
-          title="저장"
-          isDisabled={!saveBtnEnabled}
+          title={isSaving ? '저장 중' : '저장'}
+          isDisabled={isSaving}
           icon={
             <MaterialIcons
               name="save"
@@ -321,6 +348,26 @@ export default DocumentAdd;
 
 const getParam = (param: string | string[] | undefined): string | undefined =>
   Array.isArray(param) ? param[0] : param;
+
+const formatSaveErrorDetail = (error: unknown): string => {
+  const detail = getSaveErrorMessage(error);
+  return detail ? `: ${detail}` : '';
+};
+
+const getSaveErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) return error.message.trim();
+  if (Array.isArray(error)) {
+    return error
+      .map(getSaveErrorMessage)
+      .filter(Boolean)
+      .join(' / ');
+  }
+  if (typeof error === 'string') return error.trim();
+  if (error && typeof error === 'object' && 'message' in error) {
+    return getSaveErrorMessage((error as { message?: unknown }).message);
+  }
+  return '';
+};
 
 const renderPhotoResourceActions = (
   categoryName: string,

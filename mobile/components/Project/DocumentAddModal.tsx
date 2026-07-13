@@ -1,5 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
-import { CategoryForm, Document, Tree } from 'idai-field-core';
+import {
+  CategoryForm,
+  Document,
+  getKoreanFieldworkFeatureMeasurementGroups,
+  NewResource,
+  Tree,
+} from 'idai-field-core';
 import * as Location from 'expo-location';
 import React, {
   useCallback,
@@ -45,6 +51,10 @@ import {
   getKoreanFieldworkFeatureTypeOption,
   KOREAN_FIELDWORK_FEATURE_TYPE_OPTIONS,
 } from './korean-fieldwork-feature-types';
+import KoreanFieldworkFeatureMeasurementFields
+  from './KoreanFieldworkFeatureMeasurementFields';
+import { serializeKoreanFieldworkFeatureMeasurements }
+  from './korean-fieldwork-feature-measurement-draft';
 import type {
   KoreanFieldworkBoundaryLocation,
   KoreanFieldworkInvestigationModeId,
@@ -166,6 +176,8 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
   const [expandedFeatureGuideType, setExpandedFeatureGuideType] = useState<string>();
   const [selectedFeatureType, setSelectedFeatureType] = useState<string>('unknown');
   const [featureIdentifier, setFeatureIdentifier] = useState('');
+  const [featureMeasurementValues, setFeatureMeasurementValues] =
+    useState<Record<string, unknown>>({});
   const isFeatureOnlyFlow =
     initialCategoryName === KOREAN_FIELDWORK_CATEGORIES.FEATURE;
   const [isChoosingFeatureType, setIsChoosingFeatureType] =
@@ -338,6 +350,14 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
 
     const resolvedFeatureIdentifier = normalizedFeatureIdentifier
       || createNextFeatureIdentifier(featureType, existingDocuments);
+    const featureMeasurementResource = createFeatureMeasurementResource(
+      featureType,
+      resolvedFeatureIdentifier,
+      featureMeasurementValues
+    );
+    const featureMeasurements = serializeKoreanFieldworkFeatureMeasurements(
+      featureMeasurementResource
+    );
 
     onAddCategory(
       KOREAN_FIELDWORK_CATEGORIES.FEATURE,
@@ -345,6 +365,7 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
       {
         ...initialDraftParams,
         featureType,
+        ...(featureMeasurements ? { featureMeasurements } : {}),
         identifier: resolvedFeatureIdentifier,
         ...getFeatureLocationSketchDraftParams({
           background: featureSketchBackground,
@@ -416,6 +437,7 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
     setExpandedFeatureGuideType(undefined);
     setSelectedFeatureType('unknown');
     setFeatureIdentifier('');
+    setFeatureMeasurementValues({});
     resetFeatureLocationSketch();
     setIsChoosingFeatureType(true);
   };
@@ -1319,6 +1341,15 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
     const updateFeatureIdentifier = (value: string) => {
       setFeatureIdentifier(value);
     };
+    const featureMeasurementResource = createFeatureMeasurementResource(
+      selectedFeatureType,
+      featureIdentifier,
+      featureMeasurementValues
+    );
+    const featureMeasurementGroups = getKoreanFieldworkFeatureMeasurementGroups(
+      featureCategory,
+      featureMeasurementResource
+    );
 
     const renderFeatureInvestigationGuide = (featureType: string) => (
       <View style={styles.featureGuide}>
@@ -1496,6 +1527,26 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
               </View>
             ))}
           </View>
+          {featureMeasurementGroups.length > 0 && (
+            <View
+              style={styles.featureMeasurementSection}
+              testID="featureCreationMeasurements"
+            >
+              <Text style={styles.featureMeasurementTitle}>제원</Text>
+              <Text style={styles.featureMeasurementDescription}>
+                현재 확인한 실측값만 입력하세요. 단위는 항목마다 바꿀 수 있습니다.
+              </Text>
+              <KoreanFieldworkFeatureMeasurementFields
+                groups={featureMeasurementGroups}
+                onUpdateResourceFields={(updates) =>
+                  setFeatureMeasurementValues((currentValues) => ({
+                    ...currentValues,
+                    ...updates,
+                  }))}
+                resource={featureMeasurementResource}
+              />
+            </View>
+          )}
           <View style={styles.featureCreateFooter}>
             <Text style={styles.featureCreateFooterText} testID="featureCreateSelection">
               {selectedFeatureTypeLabel
@@ -1799,6 +1850,19 @@ const rotateSketchPoint = (
     y: clamp(center.y + (deltaX * sin) + (deltaY * cos), 0, 100),
   };
 };
+
+const createFeatureMeasurementResource = (
+  featureType: string,
+  identifier: string,
+  measurementValues: Record<string, unknown>
+): NewResource => ({
+  id: 'feature-measurement-draft',
+  identifier,
+  category: KOREAN_FIELDWORK_CATEGORIES.FEATURE,
+  relations: {},
+  featureType,
+  ...measurementValues,
+} as NewResource);
 
 const createNextFeatureIdentifier = (
   featureType: string,
@@ -3346,6 +3410,24 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 15,
     marginTop: 2,
+  },
+  featureMeasurementSection: {
+    borderTopColor: '#d0d5dd',
+    borderTopWidth: 1,
+    marginTop: 8,
+    paddingTop: 12,
+  },
+  featureMeasurementTitle: {
+    color: '#344054',
+    fontSize: 14,
+    fontWeight: '900',
+    marginBottom: 4,
+  },
+  featureMeasurementDescription: {
+    color: '#667085',
+    fontSize: 11,
+    lineHeight: 16,
+    marginBottom: 9,
   },
   featureHelpButton: {
     alignItems: 'center',

@@ -77,7 +77,6 @@ export const KOREAN_FIELDWORK_DRAFT_PRESETS: readonly KoreanFieldworkDraftPreset
       featureRecordingStatus: 'candidate',
       recordCreationTiming: 'sameDayFieldRecord',
       fieldRecordQuality: ['immediateRecording'],
-      featureInvestigationChecklist: ['preInvestigationPhotoTaken'],
     },
   },
   {
@@ -91,10 +90,6 @@ export const KOREAN_FIELDWORK_DRAFT_PRESETS: readonly KoreanFieldworkDraftPreset
       recordCreationTiming: 'duringFieldwork',
       fieldRecordQuality: ['immediateRecording'],
       verificationState: 'observedInField',
-      featureInvestigationChecklist: [
-        'preInvestigationPhotoTaken',
-        'inProgressPhotoTaken',
-      ],
     },
   },
   {
@@ -109,11 +104,6 @@ export const KOREAN_FIELDWORK_DRAFT_PRESETS: readonly KoreanFieldworkDraftPreset
       fieldRecordQuality: [
         'immediateRecording',
         'observationInterpretationSeparated',
-      ],
-      featureInvestigationChecklist: [
-        'measuredDrawingCompleted',
-        'findsRecovered',
-        'completionPhotoTaken',
       ],
     },
   },

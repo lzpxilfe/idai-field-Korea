@@ -1,5 +1,6 @@
 import {
   Document,
+  getKoreanFieldworkFeaturePhotoProgress,
   getKoreanFieldworkRecordFieldValueSummary,
   KoreanFieldworkReadinessIssue,
   KoreanFieldworkTodaySummary,
@@ -157,13 +158,28 @@ const getWorkbenchReasons = (
 
   if (issues.length > 0) reasons.push(`확인 ${issues.length}`);
 
-  if (FEATURE_WORKFLOW_CATEGORIES.has(document.resource.category)) {
+  const usesPhotoProgress = FEATURE_WORKFLOW_CATEGORIES.has(
+    document.resource.category
+  ) && investigationModeId !== 'trialTrench';
+  if (usesPhotoProgress) {
+    const photoProgress = getKoreanFieldworkFeaturePhotoProgress(
+      resource.featureInvestigationChecklist
+    );
+    if (photoProgress.stage !== 'completed') {
+      reasons.push(photoProgress.label);
+      reasons.push(`사진 ${photoProgress.checkedCount}/${photoProgress.totalCount}`);
+    }
+  } else if (FEATURE_WORKFLOW_CATEGORIES.has(document.resource.category)) {
     const featureRecordingStatus = resource.featureRecordingStatus;
     if (featureRecordingStatus === 'candidate') reasons.push('조사 전');
     if (featureRecordingStatus === 'investigating') reasons.push('조사 중');
   }
 
-  if (isKoreanFieldworkChecklistRecord(document.resource.category, investigationModeId)) {
+  if (!usesPhotoProgress
+      && isKoreanFieldworkChecklistRecord(
+        document.resource.category,
+        investigationModeId
+      )) {
     const checklistSteps = getKoreanFieldworkChecklistQuickOptions(investigationModeId)
       .map((option) => option.value);
     const checkedStepCount = getStringArray(resource.featureInvestigationChecklist)
@@ -204,6 +220,7 @@ const getWorkbenchTone = (
 ): KoreanFieldworkStatusTone => {
   if (issues.some((issue) => issue.severity === 'critical')) return 'danger';
   if (issues.length > 0) return 'warning';
+  if (reasons.includes('사진 미확인')) return 'warning';
   if (reasons.includes('조사 전') || reasons.includes('조사 중')) return 'info';
   if (isKoreanFieldworkChecklistRecord(document.resource.category, investigationModeId)) {
     return 'info';

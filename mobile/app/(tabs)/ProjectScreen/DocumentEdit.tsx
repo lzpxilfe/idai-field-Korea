@@ -33,6 +33,7 @@ import SoilProfileCameraButton, {
   FieldworkPhotoCaptureData,
   PhotoCameraButton,
   SoilProfileCaptureData,
+  clearFieldworkImageUploadAudit,
 } from '@/components/Project/SoilProfileCameraButton';
 import KoreanFieldworkRecordActionPanel from '@/components/Project/KoreanFieldworkRecordActionPanel';
 import KoreanFieldworkRecordContextPanel from '@/components/Project/KoreanFieldworkRecordContextPanel';
@@ -44,6 +45,7 @@ import {
   getKoreanFieldworkReturnParam,
   getKoreanFieldworkReturnTarget,
   navigateToKoreanFieldworkReturnTarget,
+  pushKoreanFieldworkDocumentAdd,
 } from '@/components/Project/korean-fieldwork-navigation';
 import { ToastType } from '@/components/common/Toast/ToastProvider';
 import { router, useGlobalSearchParams } from 'expo-router';
@@ -155,10 +157,16 @@ const DocumentEdit: React.FC = () => {
   };
 
   const updateSoilProfileCapture = (data: SoilProfileCaptureData) => {
-    setResource((oldResource) => oldResource && { ...oldResource, ...data });
+    setResource((oldResource) => oldResource && {
+      ...clearFieldworkImageUploadAudit(oldResource),
+      ...data,
+    });
   };
   const updatePhotoCapture = (data: FieldworkPhotoCaptureData) => {
-    setResource((oldResource) => oldResource && { ...oldResource, ...data });
+    setResource((oldResource) => oldResource && {
+      ...clearFieldworkImageUploadAudit(oldResource),
+      ...data,
+    });
   };
   const allowedAddCategoryNames = useMemo(
     () => document
@@ -177,13 +185,10 @@ const DocumentEdit: React.FC = () => {
     });
   };
   const addRelatedDocument = (parentDoc: Document, childCategoryName: string) => {
-    router.navigate({
-      pathname: '/ProjectScreen/DocumentAdd',
-      params: {
-        parentDocId: parentDoc.resource.id,
-        categoryName: childCategoryName,
-        ...getKoreanFieldworkReturnParam(returnTarget),
-      },
+    pushKoreanFieldworkDocumentAdd({
+      categoryName: childCategoryName,
+      parentDocId: parentDoc.resource.id,
+      returnTarget,
     });
   };
 
