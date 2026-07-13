@@ -105,5 +105,11 @@ describe('Imagestore', () => {
             .rejects.toMatchObject({ code: 'EINVAL' });
         await expect(imageStore.store('safe-id', mockImage, '..\\escape'))
             .rejects.toMatchObject({ code: 'EINVAL' });
+        await expect(imageStore.store('C:escape', mockImage))
+            .rejects.toMatchObject({ code: 'EINVAL' });
+        await expect(imageStore.store('CON', mockImage))
+            .rejects.toMatchObject({ code: 'EINVAL' });
+        await expect(imageStore.store('trailing.', mockImage))
+            .rejects.toMatchObject({ code: 'EINVAL' });
     });
 });

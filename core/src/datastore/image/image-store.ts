@@ -330,13 +330,18 @@ export class ImageStore {
 
         const decodedSegment = ImageStore.decodeRepeatedly(segment);
         if (
-            decodedSegment === '.'
+            segment.length > 255
+            || decodedSegment.length > 255
+            || decodedSegment !== decodedSegment.trim()
+            || decodedSegment === '.'
             || decodedSegment === '..'
             || decodedSegment.includes('/')
             || decodedSegment.includes('\\')
             || decodedSegment.includes('\0')
             || /[\u0000-\u001f]/.test(decodedSegment)
-            || /^[a-zA-Z]:/.test(decodedSegment)
+            || /[<>:"|?*]/.test(decodedSegment)
+            || /[. ]$/.test(decodedSegment)
+            || /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(decodedSegment)
         ) {
             throw ImageStore.getInvalidPathSegmentError(label);
         }

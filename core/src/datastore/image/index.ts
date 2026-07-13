@@ -1,4 +1,14 @@
-export { ImageStore, ImageVariant, THUMBNAIL_TARGET_HEIGHT, FileInfo, FileVariantInformation } from './image-store';
+export {
+    displayDirectory,
+    ImageStore,
+    ImageVariant,
+    THUMBNAIL_TARGET_HEIGHT,
+    thumbnailDirectory,
+    tombstoneSuffix,
+    useOriginalSuffix,
+    FileInfo,
+    FileVariantInformation
+} from './image-store';
 export { RemoteImageStoreInterface } from './remote-image-store-interface';
 export { FilesystemAdapterInterface, FileStat } from './filesystem-adapter-interface';
 export { ThumbnailGeneratorInterface } from './thumbnail-generator-interface'

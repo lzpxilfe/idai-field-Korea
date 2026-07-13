@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { Observable, Observer } from 'rxjs';
 import { Map } from 'tsfun';
 import { ImageStore, ImageVariant, FileInfo, ConfigurationSerializer, ConfigReader, Datastore, ProjectConfiguration,
-    RelationsManager, IdGenerator, ObserverUtil, Document } from 'idai-field-core';
+    RelationsManager, IdGenerator, ObserverUtil, Document, tombstoneSuffix, useOriginalSuffix } from 'idai-field-core';
 import { SettingsProvider } from '../settings/settings-provider';
 import { exportConfiguration } from './endpoints/configuration';
 import { exportData } from './endpoints/export';
@@ -14,8 +14,8 @@ import { importFiles } from './endpoints/importFiles';
 import { ImageUploader } from '../../components/image/upload/image-uploader';
 import { UploadStatus } from '../../components/image/upload/upload-status';
 import { exportFile } from './endpoints/exportFile';
-import { electronCrypto as crypto } from 'src/app/electron/electron';
-import { electronRemote as remote } from 'src/app/electron/electron';
+import { electronCrypto as crypto, electronFs as fs, electronPath as path,
+    electronRemote as remote } from 'src/app/electron/electron';
 import * as PouchDBBaseModule from 'pouchdb-browser';
 
 const PouchDBBase = getCommonJsDefaultExport<any>(PouchDBBaseModule);
@@ -127,6 +127,7 @@ export class ExpressServer {
         app.get('/files/:project', async (req: any, res: any) => {
 
             try {
+                this.assertImageStorePaths(req.params.project);
                 let list: { [uuid: string]: FileInfo };
 
                 if (!req.query.types) {
@@ -167,6 +168,7 @@ export class ExpressServer {
                         reason: `Please provide a 'type', possible values: ${Object.values(ImageVariant).join(', ')}`
                     });
                 } else if (Object.values(ImageVariant).includes(req.query.type)) {
+                    this.assertImageReadPaths(req.params.project, req.params.uuid, req.query.type);
                     const data = await self.imagestore.getData(req.params.uuid, req.query.type, req.params.project);
                     res.header('Content-Type', 'image/*').status(200).send(data);
                 } else {
@@ -193,6 +195,7 @@ export class ExpressServer {
                     });
                 }
                 else if (Object.values(ImageVariant).includes(req.query.type)) {
+                    this.assertImageWritePath(req.params.project, req.params.uuid, req.query.type);
                     if (req.query.type === ImageVariant.ORIGINAL && !this.allowLargeFileUploads) {
                         res.status(409).send({ reason: 'Currently no large file uploads accepted.' });
                     } else {
@@ -215,6 +218,7 @@ export class ExpressServer {
         app.delete('/files/:project/:uuid', async (req: any, res: any) => {
 
             try {
+                this.assertImageDeletePaths(req.params.project, req.params.uuid);
                 await this.imagestore.remove(req.params.uuid, req.params.project);
                 res.status(200).send({});
             } catch (e) {
@@ -364,6 +368,129 @@ export class ExpressServer {
         });
 
         return [mainAppHandle, fauxtonAppHandle];
+    }
+
+
+    private assertImageStorePaths(project: string): void {
+
+        this.assertConfiguredProject(project);
+        this.assertImageStorePath(this.imagestore.getDirectoryPath(project, ImageVariant.ORIGINAL));
+        this.assertImageStorePath(this.imagestore.getDirectoryPath(project, ImageVariant.THUMBNAIL));
+        this.assertImageStorePath(this.imagestore.getDirectoryPath(project, ImageVariant.DISPLAY));
+    }
+
+
+    private assertImageReadPaths(project: string, uuid: string, type: ImageVariant): void {
+
+        this.assertConfiguredProject(project);
+        this.assertImageVariantPath(project, type, uuid);
+
+        if (type === ImageVariant.THUMBNAIL) {
+            this.assertImageVariantPath(project, ImageVariant.ORIGINAL, uuid);
+        } else if (type === ImageVariant.DISPLAY) {
+            this.assertImageVariantPath(project, ImageVariant.DISPLAY, uuid + useOriginalSuffix);
+            this.assertImageVariantPath(project, ImageVariant.ORIGINAL, uuid);
+        }
+    }
+
+
+    private assertImageWritePath(project: string, uuid: string, type: ImageVariant): void {
+
+        this.assertImageStorePaths(project);
+        this.assertImageVariantPath(project, type, uuid);
+    }
+
+
+    private assertImageDeletePaths(project: string, uuid: string): void {
+
+        this.assertImageStorePaths(project);
+        this.assertImageVariantPath(project, ImageVariant.ORIGINAL, uuid);
+        this.assertImageVariantPath(project, ImageVariant.ORIGINAL, uuid + tombstoneSuffix);
+        this.assertImageVariantPath(project, ImageVariant.THUMBNAIL, uuid);
+        this.assertImageVariantPath(project, ImageVariant.THUMBNAIL, uuid + tombstoneSuffix);
+        this.assertImageVariantPath(project, ImageVariant.DISPLAY, uuid);
+        this.assertImageVariantPath(project, ImageVariant.DISPLAY, uuid + useOriginalSuffix);
+    }
+
+
+    private assertConfiguredProject(project: string): void {
+
+        this.imagestore.getDirectoryPath(project, ImageVariant.ORIGINAL);
+
+        const configuredProjects: string[]|undefined = this.settingsProvider?.getSettings()?.dbs;
+        const activeProject = this.imagestore.getActiveProject();
+        const allowedProjects = Array.isArray(configuredProjects) && configuredProjects.length > 0
+            ? configuredProjects
+            : activeProject
+                ? [activeProject]
+                : [];
+
+        if (!allowedProjects.includes(project)) {
+            const error: any = new Error('Unknown project.');
+            error.code = 'ENOENT';
+            throw error;
+        }
+    }
+
+
+    private assertImageVariantPath(project: string, type: ImageVariant, filename: string): void {
+
+        this.assertImageStorePath(path.resolve(this.imagestore.getDirectoryPath(project, type), filename));
+    }
+
+
+    private assertImageStorePath(candidatePath: string): void {
+
+        const imageStoreRoot = this.imagestore.getAbsoluteRootPath();
+        if (!imageStoreRoot) throw this.createUnsafeImagePathError();
+
+        const resolvedRoot = path.resolve(imageStoreRoot);
+        const resolvedCandidate = path.resolve(candidatePath);
+        if (!this.isPathWithin(resolvedRoot, resolvedCandidate)) {
+            throw this.createUnsafeImagePathError();
+        }
+
+        let existingPath = resolvedRoot;
+        const relativeParts = path.relative(resolvedRoot, resolvedCandidate)
+            .split(/[\\/]+/)
+            .filter(Boolean);
+
+        for (const part of relativeParts) {
+            const currentPath = path.resolve(existingPath, part);
+            try {
+                const stat = fs.lstatSync(currentPath);
+                if (stat.isSymbolicLink?.()) throw this.createUnsafeImagePathError();
+                existingPath = currentPath;
+            } catch (error) {
+                if (error?.code === 'ENOENT') break;
+                throw error;
+            }
+        }
+
+        const realRoot = fs.realpathSync(resolvedRoot);
+        const realExistingPath = fs.realpathSync(existingPath);
+        if (!this.isPathWithin(realRoot, realExistingPath)) {
+            throw this.createUnsafeImagePathError();
+        }
+    }
+
+
+    private isPathWithin(rootPath: string, candidatePath: string): boolean {
+
+        const relativePath = path.relative(rootPath, candidatePath);
+        return relativePath === '' || (
+            relativePath !== '..'
+            && !relativePath.startsWith('..' + path.sep)
+            && !path.isAbsolute(relativePath)
+        );
+    }
+
+
+    private createUnsafeImagePathError(): Error & { code: string } {
+
+        const error = new Error('Unsafe image store path.') as Error & { code: string };
+        error.code = 'EINVAL';
+        return error;
     }
 
 
