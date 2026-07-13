@@ -68,10 +68,18 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
 
         expect(template).toContain('korean-fieldwork-report-handoff-tablet-bundle-source-group');
         expect(template).toContain('<details *ngFor="let group of tabletBundle.groups"');
+        expect(template).toContain('korean-fieldwork-report-handoff-search');
+        expect(template).toContain('placeholder="기록 찾기"');
         expect(template).toContain('korean-fieldwork-report-handoff-raw-preview');
         expect(template).toContain('전체 복사 내용 미리보기');
+        expect(template).not.toContain('[ngbTooltip]="item.copyText"');
+        expect(template).not.toContain('class="korean-fieldwork-report-handoff-tablet-bundle-groups"');
+        expect(template.indexOf('class="korean-fieldwork-report-handoff-preview-body"'))
+            .toBeLessThan(template.indexOf('class="korean-fieldwork-report-handoff-tablet-bundle"'));
         expect(styles).toContain('grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);');
-        expect(styles).toContain('max-height: 68vh;');
+        expect(styles).toContain('.korean-fieldwork-report-handoff-index');
+        expect(styles).toContain('position: sticky;');
+        expect(styles).toContain('@media (prefers-reduced-motion: reduce)');
         expect(styles).toContain('.korean-fieldwork-report-handoff-raw-preview');
     });
 
@@ -1374,6 +1382,55 @@ describe('KoreanFieldworkPriorityStripComponent', () => {
         expect(component.getReportHandoffItems().some(item => item.documentId === 'feature-010')).toBe(false);
         expect(component.getReportHandoffPreviewItem()?.documentId)
             .toBe(component.getReportHandoffItems()[0].documentId);
+    });
+
+
+    it('searches the complete report handoff index without expanding every record', async () => {
+
+        const featureDocuments = Array.from({ length: 10 }, (_, index) => {
+            const number = String(index + 1).padStart(3, '0');
+
+            return createDocument(`feature-${number}`, 'Feature', {
+                identifier: `pit-${number}`,
+                shortDescription: `feature ${number}`,
+                featureRecordingStatus: 'confirmed',
+                featureInvestigationChecklist: []
+            });
+        });
+        const component = createComponent({
+            find: jest.fn().mockResolvedValue({
+                documents: [
+                    createDocument('project', 'Project'),
+                    ...featureDocuments
+                ]
+            }),
+            get: jest.fn()
+        });
+
+        await component.refresh();
+
+        expect(component.getReportHandoffItems()).toHaveLength(8);
+
+        component.setReportHandoffQuery('PIT 010');
+
+        expect(component.hasReportHandoffQuery()).toBe(true);
+        expect(component.getReportHandoffFilteredCount()).toBe(1);
+        expect(component.getReportHandoffItems().map(item => item.documentId))
+            .toEqual(['feature-010']);
+        expect(component.getReportHandoffPreviewItem()?.documentId).toBe('feature-010');
+        expect(component.hasReportHandoffOverflow()).toBe(false);
+
+        component.setReportHandoffQuery('missing-record');
+
+        expect(component.getReportHandoffItems()).toEqual([]);
+        expect(component.getReportHandoffPreviewItem()).toBeUndefined();
+        expect(component.getReportHandoffEmptyLabel()).toBe('검색 결과 없음');
+
+        component.setReportHandoffQuery('');
+
+        expect(component.hasReportHandoffQuery()).toBe(false);
+        expect(component.getReportHandoffItems()).toHaveLength(8);
+        expect(component.hasReportHandoffOverflow()).toBe(true);
     });
 
 

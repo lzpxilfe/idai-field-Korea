@@ -57,10 +57,10 @@ async function getReportHandoffCard(identifier: string) {
 
 async function expectReportHandoffWorkspaceLayout(reportPanel: any, stacked: boolean) {
 
-    const list = reportPanel.locator('.korean-fieldwork-report-handoff-list');
+    const index = reportPanel.locator('.korean-fieldwork-report-handoff-index');
     const preview = reportPanel.locator('.korean-fieldwork-report-handoff-preview');
-    const [listBox, previewBox, panelSize] = await Promise.all([
-        list.boundingBox(),
+    const [indexBox, previewBox, panelSize] = await Promise.all([
+        index.boundingBox(),
         preview.boundingBox(),
         reportPanel.evaluate((element: HTMLElement) => ({
             clientWidth: element.clientWidth,
@@ -68,15 +68,15 @@ async function expectReportHandoffWorkspaceLayout(reportPanel: any, stacked: boo
         }))
     ]);
 
-    expect(listBox).not.toBeNull();
+    expect(indexBox).not.toBeNull();
     expect(previewBox).not.toBeNull();
     expect(panelSize.scrollWidth).toBeLessThanOrEqual(panelSize.clientWidth + 1);
 
     if (stacked) {
-        expect(previewBox!.y).toBeGreaterThan(listBox!.y);
+        expect(previewBox!.y).toBeGreaterThan(indexBox!.y);
     } else {
-        expect(listBox!.x + listBox!.width).toBeLessThanOrEqual(previewBox!.x + 1);
-        expect(Math.abs(previewBox!.y - listBox!.y)).toBeLessThanOrEqual(2);
+        expect(indexBox!.x + indexBox!.width).toBeLessThanOrEqual(previewBox!.x + 1);
+        expect(Math.abs(previewBox!.y - indexBox!.y)).toBeLessThanOrEqual(4);
     }
 }
 
@@ -122,6 +122,15 @@ test.describe('Korean fieldwork report handoff', () => {
 
         const reportPanel = await getLocator('.korean-fieldwork-report-handoff-strip');
         await waitForExist(reportPanel);
+
+        const recordSearch = reportPanel.locator('.korean-fieldwork-report-handoff-search input');
+        await recordSearch.fill('SE6');
+        await expect(recordSearch).toHaveValue('SE6');
+        expect(await reportPanel.locator(
+            '.korean-fieldwork-report-handoff-list .korean-fieldwork-report-handoff-identifier'
+        ).allTextContents())
+            .toEqual(['SE6']);
+        await recordSearch.fill('');
 
         const soilPhotoCard = await getReportHandoffCard('1호 주거지 토층사진 12');
         await waitForExist(soilPhotoCard);
@@ -177,6 +186,16 @@ test.describe('Korean fieldwork report handoff', () => {
         expect(featureReportText).toContain('시료 1');
         expect(featureReportText).toContain('1번 35%/42% 청동편');
         expect(featureReportText).toContain('1번 52%/67% 바닥면');
+
+        const firstTabletSourceGroup = reportPanel
+            .locator('.korean-fieldwork-report-handoff-tablet-bundle-source-group')
+            .first();
+        await click(firstTabletSourceGroup.locator('summary'));
+        await click(firstTabletSourceGroup.locator(
+            '.korean-fieldwork-report-handoff-tablet-bundle-source-group-copy'
+        ));
+        expect(await readClipboardText()).toContain('1호-주거지-전경.jpg');
+        await click(firstTabletSourceGroup.locator('summary'));
 
         await setViewportSize(1024, 840);
         await pause(200);

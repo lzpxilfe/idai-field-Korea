@@ -246,6 +246,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
     public selectedReportHandoffDocumentId: string|undefined;
     public reportHandoffShowsAll: boolean = false;
     public reportHandoffShowsTabletWorkOnly: boolean = false;
+    public reportHandoffQuery: string = '';
     public overviewChartData: KoreanFieldworkOverviewChartData|undefined;
     public isLoading: boolean = false;
     public activePanel: KoreanFieldworkPriorityPanelId = 'overview';
@@ -254,6 +255,7 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
     private changesSubscription: Subscription|undefined;
     private refreshId: number = 0;
     private projectDocuments: Document[] = [];
+    private reportHandoffSearchTextByDocumentId: Map<string, string> = new Map();
 
 
     constructor(private datastore: Datastore,
@@ -848,16 +850,34 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
     public getReportHandoffItems = () => {
         const items = this.getFilteredReportHandoffItems();
 
-        return this.reportHandoffShowsAll
+        return this.reportHandoffShowsAll || this.hasReportHandoffQuery()
             ? items
             : items.slice(0, REPORT_HANDOFF_COLLAPSED_LIMIT);
     };
 
     public hasReportHandoffOverflow = () =>
-        this.getFilteredReportHandoffItems().length > REPORT_HANDOFF_COLLAPSED_LIMIT;
+        !this.hasReportHandoffQuery()
+        && this.getFilteredReportHandoffItems().length > REPORT_HANDOFF_COLLAPSED_LIMIT;
 
     public getReportHandoffHiddenCount = () =>
         Math.max(0, this.getFilteredReportHandoffItems().length - this.getReportHandoffItems().length);
+
+    public hasReportHandoffQuery = () => this.reportHandoffQuery.trim().length > 0;
+
+    public getReportHandoffFilteredCount = () => this.getFilteredReportHandoffItems().length;
+
+    public getReportHandoffEmptyLabel = () =>
+        this.hasReportHandoffQuery() ? '검색 결과 없음' : '태블릿 처리 대상 없음';
+
+    public setReportHandoffQuery(query: string) {
+
+        this.reportHandoffQuery = query;
+        this.reportHandoffShowsAll = false;
+        this.ensureReportHandoffPreviewSelection();
+    }
+
+    public trackReportHandoffItem = (_index: number, item: KoreanFieldworkReportHandoffItem) =>
+        item.documentId;
 
     public getReportHandoffSummaryLabel = () => {
         const reviewCount = this.reportHandoffItems.filter(item => item.tone === 'review').length;
@@ -1908,6 +1928,10 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
                 this.notebookDailyLogParentDocumentId = notebookDailyLogParentDocumentId;
                 this.reportHandoffItems = reportHandoff?.items ?? [];
                 this.reportHandoffTabletBundlesByDocumentId = reportHandoffTabletBundlesByDocumentId;
+                this.reportHandoffSearchTextByDocumentId = this.makeReportHandoffSearchTextIndex(
+                    this.reportHandoffItems,
+                    reportHandoffTabletBundlesByDocumentId
+                );
                 this.reportHandoffCopyAllText = reportHandoff?.copyAllText ?? '';
                 this.reportHandoffCopyAllBodyText = reportHandoff?.copyAllBodyText ?? '';
                 this.ensureReportHandoffPreviewSelection();
@@ -1934,11 +1958,13 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
                 this.notebookDailyLogParentDocumentId = undefined;
                 this.reportHandoffItems = [];
                 this.reportHandoffTabletBundlesByDocumentId = new Map();
+                this.reportHandoffSearchTextByDocumentId = new Map();
                 this.reportHandoffCopyAllText = '';
                 this.reportHandoffCopyAllBodyText = '';
                 this.selectedReportHandoffDocumentId = undefined;
                 this.reportHandoffShowsAll = false;
                 this.reportHandoffShowsTabletWorkOnly = false;
+                this.reportHandoffQuery = '';
                 this.projectDocuments = [];
                 this.activePanel = 'workflow';
             }
@@ -2493,9 +2519,64 @@ export class KoreanFieldworkPriorityStripComponent implements OnInit, OnDestroy 
 
     private getFilteredReportHandoffItems(): KoreanFieldworkReportHandoffItem[] {
 
-        return this.reportHandoffShowsTabletWorkOnly
+        const items = this.reportHandoffShowsTabletWorkOnly
             ? this.getTabletWorkReportHandoffItems()
             : this.reportHandoffItems;
+        const queryTerms = this.normalizeReportHandoffSearchText(this.reportHandoffQuery)
+            .trim()
+            .split(/\s+/)
+            .filter(term => term.length > 0);
+
+        if (queryTerms.length === 0) return items;
+
+        return items.filter(item => {
+            const searchText = this.reportHandoffSearchTextByDocumentId.get(item.documentId) ?? '';
+
+            return queryTerms.every(term => searchText.includes(term));
+        });
+    }
+
+
+    private makeReportHandoffSearchTextIndex(
+            items: KoreanFieldworkReportHandoffItem[],
+            bundlesByDocumentId: Map<string, KoreanFieldworkTabletRecordBundle>
+    ): Map<string, string> {
+
+        return new Map(items.map(item => {
+            const bundle = bundlesByDocumentId.get(item.documentId);
+            const tabletSourceText = bundle?.groups.flatMap(group => [
+                group.label,
+                group.detail,
+                ...group.sources.flatMap(source => [
+                    source.label,
+                    source.detail ?? '',
+                    source.copyText,
+                    ...source.issueDetails
+                ])
+            ]) ?? [];
+            const searchText = [
+                item.categoryLabel,
+                item.identifier,
+                item.title,
+                item.summary,
+                item.bodyPreview,
+                item.copyText,
+                ...item.details,
+                ...item.relationDetails,
+                ...item.evidenceDetails,
+                ...item.issueDetails,
+                bundle?.summary ?? '',
+                ...tabletSourceText
+            ].join('\n');
+
+            return [item.documentId, this.normalizeReportHandoffSearchText(searchText)] as const;
+        }));
+    }
+
+
+    private normalizeReportHandoffSearchText(value: string): string {
+
+        return value.normalize('NFKC').toLocaleLowerCase('ko-KR');
     }
 
 

@@ -260,19 +260,31 @@
                 <span>{{getReportHandoffCopyAllActionLabel()}}</span>
             </button>
         </div>
-        <div class="korean-fieldwork-report-handoff-list">
-            <div *ngFor="let item of getReportHandoffItems()"
+        <div class="korean-fieldwork-report-handoff-index">
+            <label class="korean-fieldwork-report-handoff-search">
+                <span class="mdi mdi-magnify"></span>
+                <input type="search"
+                       [value]="reportHandoffQuery"
+                       placeholder="기록 찾기"
+                       aria-label="보고서 기록 찾기"
+                       (input)="setReportHandoffQuery($any($event.target).value)">
+                <span class="korean-fieldwork-report-handoff-search-count">
+                    {{getReportHandoffFilteredCount()}}건
+                </span>
+            </label>
+            <div *ngIf="getReportHandoffItems().length > 0"
+                 class="korean-fieldwork-report-handoff-list">
+                <div *ngFor="let item of getReportHandoffItems(); trackBy: trackReportHandoffItem"
                  class="korean-fieldwork-report-handoff-card"
                  [class.review]="item.tone === 'review'"
                  [class.ready]="item.tone === 'ready'"
                  [class.selected]="isReportHandoffItemSelected(item)">
                 <button type="button"
                         class="korean-fieldwork-report-handoff-open"
-                        [ngbTooltip]="item.copyText"
-                        #reportHandoffTooltip="ngbTooltip"
-                        container="body"
-                        placement="bottom"
-                        (click)="reportHandoffTooltip.close(); selectReportHandoffItem(item, $event)">
+                        [attr.aria-current]="isReportHandoffItemSelected(item) ? 'true' : null"
+                        [attr.aria-label]="item.categoryLabel + ' ' + item.identifier + ' 선택'"
+                        [attr.title]="item.categoryLabel + ' ' + item.identifier + ' 선택'"
+                        (click)="selectReportHandoffItem(item, $event)">
                     <span class="korean-fieldwork-report-handoff-topline">
                         <span class="korean-fieldwork-report-handoff-category">{{item.categoryLabel}}</span>
                         <span class="korean-fieldwork-report-handoff-identifier">{{item.identifier}}</span>
@@ -337,22 +349,23 @@
                           [class.mdi-content-copy]="!isReportHandoffItemCopied(item)"></span>
                     <span>{{getReportHandoffCopyActionLabel(item)}}</span>
                 </button>
+                </div>
             </div>
+            <div *ngIf="getReportHandoffItems().length === 0"
+                 class="korean-fieldwork-report-handoff-empty">
+                <span class="mdi mdi-check-circle-outline"></span>
+                <span>{{getReportHandoffEmptyLabel()}}</span>
+            </div>
+            <button *ngIf="hasReportHandoffOverflow()"
+                    type="button"
+                    class="korean-fieldwork-report-handoff-overflow"
+                    (click)="toggleReportHandoffItems($event)">
+                <span class="mdi"
+                      [class.mdi-chevron-up]="reportHandoffShowsAll"
+                      [class.mdi-chevron-down]="!reportHandoffShowsAll"></span>
+                <span>{{getReportHandoffOverflowActionLabel()}}</span>
+            </button>
         </div>
-        <div *ngIf="reportHandoffShowsTabletWorkOnly && getReportHandoffItems().length === 0"
-             class="korean-fieldwork-report-handoff-empty">
-            <span class="mdi mdi-check-circle-outline"></span>
-            <span>&#53468;&#48660;&#47551; &#52376;&#47532; &#45824;&#49345; &#50630;&#51020;</span>
-        </div>
-        <button *ngIf="hasReportHandoffOverflow()"
-                type="button"
-                class="korean-fieldwork-report-handoff-overflow"
-                (click)="toggleReportHandoffItems($event)">
-            <span class="mdi"
-                  [class.mdi-chevron-up]="reportHandoffShowsAll"
-                  [class.mdi-chevron-down]="!reportHandoffShowsAll"></span>
-            <span>{{getReportHandoffOverflowActionLabel()}}</span>
-        </button>
         <div *ngIf="getReportHandoffPreviewItem() as previewItem"
              class="korean-fieldwork-report-handoff-preview">
             <div class="korean-fieldwork-report-handoff-preview-header">
@@ -420,6 +433,27 @@
                     </button>
                 </span>
             </div>
+            <div *ngIf="previewItem.bodyPreview"
+                 class="korean-fieldwork-report-handoff-preview-body">
+                <span>HWP &#48376;&#47928;</span>
+                <span>{{previewItem.bodyPreview}}</span>
+            </div>
+            <div *ngIf="previewItem.copySections.length > 0"
+                 class="korean-fieldwork-report-handoff-copy-sections">
+                <button *ngFor="let section of previewItem.copySections"
+                        type="button"
+                        class="korean-fieldwork-report-handoff-copy-section"
+                        [class.copied]="isReportHandoffSectionCopied(previewItem, section)"
+                        (click)="copyReportHandoffSection(previewItem, section, $event)">
+                    <span class="mdi"
+                          [class.mdi-check]="isReportHandoffSectionCopied(previewItem, section)"
+                          [class.mdi-content-copy]="!isReportHandoffSectionCopied(previewItem, section)"></span>
+                    <span>{{getReportHandoffSectionCopyActionLabel(previewItem, section)}}</span>
+                    <span class="korean-fieldwork-report-handoff-copy-section-lines">
+                        {{section.lineCount}}
+                    </span>
+                </button>
+            </div>
             <div *ngIf="getReportHandoffTabletBundle(previewItem) as tabletBundle"
                  class="korean-fieldwork-report-handoff-tablet-bundle"
                  [class.warning]="tabletBundle.issueCount > 0">
@@ -438,14 +472,6 @@
                       [class.warning]="tabletBundle.reviewState.tone === 'warning'">
                     {{tabletBundle.reviewState.detail}}
                 </span>
-                <span class="korean-fieldwork-report-handoff-tablet-bundle-groups">
-                    <span *ngFor="let group of tabletBundle.groups"
-                          class="korean-fieldwork-report-handoff-tablet-bundle-group"
-                          [class.warning]="group.issueCount > 0">
-                        <span>{{group.label}} {{group.count}}</span>
-                        <span>{{group.detail}}</span>
-                    </span>
-                </span>
                 <div class="korean-fieldwork-report-handoff-tablet-bundle-source-groups">
                     <details *ngFor="let group of tabletBundle.groups"
                              class="korean-fieldwork-report-handoff-tablet-bundle-source-group"
@@ -461,6 +487,8 @@
                                 </span>
                                 <span>{{group.detail}}</span>
                             </span>
+                        </summary>
+                        <div class="korean-fieldwork-report-handoff-tablet-bundle-source-group-actions">
                             <button type="button"
                                     class="korean-fieldwork-report-handoff-tablet-bundle-source-group-copy"
                                     [class.copied]="isReportHandoffTabletBundleGroupCopied(previewItem, group)"
@@ -470,7 +498,7 @@
                                       [class.mdi-content-copy]="!isReportHandoffTabletBundleGroupCopied(previewItem, group)"></span>
                                 <span>{{getReportHandoffTabletBundleGroupCopyActionLabel(previewItem, group)}}</span>
                             </button>
-                        </summary>
+                        </div>
                         <span class="korean-fieldwork-report-handoff-tablet-bundle-sources">
                             <span *ngFor="let source of getReportHandoffTabletBundleGroupSources(group)"
                                   class="korean-fieldwork-report-handoff-tablet-bundle-source"
@@ -536,27 +564,6 @@
                         </span>
                     </details>
                 </div>
-            </div>
-            <div *ngIf="previewItem.bodyPreview"
-                 class="korean-fieldwork-report-handoff-preview-body">
-                <span>HWP &#48376;&#47928;</span>
-                <span>{{previewItem.bodyPreview}}</span>
-            </div>
-            <div *ngIf="previewItem.copySections.length > 0"
-                 class="korean-fieldwork-report-handoff-copy-sections">
-                <button *ngFor="let section of previewItem.copySections"
-                        type="button"
-                        class="korean-fieldwork-report-handoff-copy-section"
-                        [class.copied]="isReportHandoffSectionCopied(previewItem, section)"
-                        (click)="copyReportHandoffSection(previewItem, section, $event)">
-                    <span class="mdi"
-                          [class.mdi-check]="isReportHandoffSectionCopied(previewItem, section)"
-                          [class.mdi-content-copy]="!isReportHandoffSectionCopied(previewItem, section)"></span>
-                    <span>{{getReportHandoffSectionCopyActionLabel(previewItem, section)}}</span>
-                    <span class="korean-fieldwork-report-handoff-copy-section-lines">
-                        {{section.lineCount}}
-                    </span>
-                </button>
             </div>
             <details class="korean-fieldwork-report-handoff-raw-preview">
                 <summary>
