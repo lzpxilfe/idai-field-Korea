@@ -126,6 +126,7 @@ jobs:
           IDAI_FIELD_ANDROID_RELEASE_KEY_ALIAS: ${{ secrets.IDAI_FIELD_ANDROID_RELEASE_KEY_ALIAS }}
           IDAI_FIELD_ANDROID_RELEASE_KEY_PASSWORD: ${{ secrets.IDAI_FIELD_ANDROID_RELEASE_KEY_PASSWORD }}
           IDAI_FIELD_ANDROID_VERSION_CODE: ${{ github.run_number }}
+          IDAI_FIELD_ANDROID_VERSION_NAME: 1.0.${{ github.run_number }}
         run: ./gradlew --no-daemon app:assembleRelease
         working-directory: mobile/android
 

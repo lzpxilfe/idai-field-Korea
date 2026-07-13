@@ -5,29 +5,25 @@ services:
     image: couchdb:3.3.2
     container_name: field-hub-db
     environment:
-      - COUCHDB_USER
-      - COUCHDB_PASSWORD
+      - COUCHDB_USER=${COUCHDB_USER:?Set a strong CouchDB admin name}
+      - COUCHDB_PASSWORD=${COUCHDB_PASSWORD:?Set a strong CouchDB admin password}
     volumes:
-      - ${DB_DATA_DIRECTORY}:/opt/couchdb/data
+      - ${DB_DATA_DIRECTORY:?Set the CouchDB data directory}:/opt/couchdb/data
     labels:
-      - traefik.enable=true
-      - traefik.http.routers.db.rule=Host(`db.${HOST}`)        
-      - traefik.http.services.db.loadbalancer.server.port=5984
-      - traefik.http.routers.db.tls=true
-      - traefik.http.routers.db.tls.certresolver=myresolver
+      - traefik.enable=false
     restart: always
 
   app:
     image: "ghcr.io/dainst/field_hub:${FIELD_HUB_VERSION}"
     container_name: field-hub-app
     environment:
-      - HOST
-      - SECRET_KEY_BASE
+      - HOST=${HOST:?Set the public Field Hub host name}
+      - SECRET_KEY_BASE=${SECRET_KEY_BASE:?Generate a unique SECRET_KEY_BASE}
       - COUCHDB_URL=http://couchdb:5984
-      - COUCHDB_ADMIN_NAME=${COUCHDB_USER}
-      - COUCHDB_ADMIN_PASSWORD=${COUCHDB_PASSWORD}
-      - COUCHDB_USER_NAME=${COUCHDB_USER_NAME}
-      - COUCHDB_USER_PASSWORD=${COUCHDB_USER_PASSWORD}
+      - COUCHDB_ADMIN_NAME=${COUCHDB_USER:?Set a strong CouchDB admin name}
+      - COUCHDB_ADMIN_PASSWORD=${COUCHDB_PASSWORD:?Set a strong CouchDB admin password}
+      - COUCHDB_USER_NAME=${COUCHDB_USER_NAME:?Set a Field Hub CouchDB user name}
+      - COUCHDB_USER_PASSWORD=${COUCHDB_USER_PASSWORD:?Set a strong Field Hub CouchDB user password}
       - FILE_UPLOAD_MAX_BYTES=${FILE_UPLOAD_MAX_BYTES:-536870912}
       - FILE_PROJECT_QUOTA_BYTES=${FILE_PROJECT_QUOTA_BYTES:-107374182400}
       - FILE_STORAGE_QUOTA_BYTES=${FILE_STORAGE_QUOTA_BYTES:-1099511627776}
@@ -35,13 +31,13 @@ services:
     depends_on:
       - "couchdb"
     volumes:
-      - ${FILE_DIRECTORY}:/files
+      - ${FILE_DIRECTORY:?Set the Field Hub file directory}:/files
     labels:
       - traefik.enable=true
       - traefik.http.routers.app.rule=Host(`${HOST}`)
       - traefik.http.services.app.loadbalancer.server.port=4000
       - traefik.http.routers.app.tls=true
-      - traefik.http.routers.app.tls.certresolver=myresolver
+      - traefik.http.routers.app.tls.certresolver=fieldresolver
     restart: always
 
   traefik:
@@ -50,7 +46,7 @@ services:
       - "80:80"
       - "443:443"
     command: 
-      - "--docker.domain=${HOST}"
+      - "--docker.domain=${HOST:?Set the public Field Hub host name}"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
       - "./acme.json:/acme.json"

@@ -63,6 +63,10 @@ def configuredVersionCode = getReleaseSigningValue(
     'IDAI_FIELD_ANDROID_VERSION_CODE',
     'IDAI_FIELD_ANDROID_VERSION_CODE'
 )
+def configuredVersionName = getReleaseSigningValue(
+    'IDAI_FIELD_ANDROID_VERSION_NAME',
+    'IDAI_FIELD_ANDROID_VERSION_NAME'
+)
 
 /**
  * This is the configuration block to customize your React Native Android app.
@@ -154,7 +158,7 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode configuredVersionCode != null ? configuredVersionCode.toInteger() : 1
-        versionName "1.0.0"
+        versionName configuredVersionName != null ? configuredVersionName : "1.0.0"
     }
     signingConfigs {
         debug {
