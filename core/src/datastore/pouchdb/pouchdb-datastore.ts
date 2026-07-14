@@ -6,6 +6,7 @@ import { ObserverUtil } from '../../tools';
 import { DatastoreErrors } from '../datastore-errors';
 import { ChangeHistoryMerge } from './change-history-merge';
 import { IdGenerator } from './id-generator';
+import { isIdaiFieldInternalDocumentId } from './internal-document';
 
 
 /**
@@ -304,6 +305,7 @@ export class PouchdbDatastore {
 
             if (!change || !change.id) return;
             if (change.id.indexOf('_design') === 0) return; // starts with _design
+            if (isIdaiFieldInternalDocumentId(change.id)) return;
 
             if (change.deleted || this.deletedOnes.indexOf(change.id as never) != -1) {
                 ObserverUtil.notify(this.deletedObservers, { resource: { id: change.id } } as Document);

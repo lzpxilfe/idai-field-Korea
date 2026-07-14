@@ -4,6 +4,7 @@ import { DocumentCache, Migrator } from '../datastore';
 import { Document } from '../model/document/document';
 import { WarningsUpdater } from '../datastore/warnings-updater';
 import { ProjectConfiguration } from '../services';
+import { isIdaiFieldInternalDocumentId } from '../datastore/pouchdb/internal-document';
 
 
 /**
@@ -65,7 +66,7 @@ import { ProjectConfiguration } from '../services';
                 include_docs: true,
                 conflicts: true
             })).rows
-            .filter(row => !isDesignDoc(row))
+            .filter(row => !isDesignDoc(row) && !isIdaiFieldInternalDocumentId(row.id))
             .map(row => row.doc);
     }
 
