@@ -124,12 +124,11 @@ test.describe('Korean fieldwork report handoff', () => {
         await waitForExist(reportPanel);
 
         const recordSearch = reportPanel.locator('.korean-fieldwork-report-handoff-search input');
-        await recordSearch.click();
-        await recordSearch.press('S');
-        await expect(recordSearch).toHaveValue('S');
-        await recordSearch.press('E');
-        await expect(recordSearch).toHaveValue('SE');
-        await recordSearch.press('6');
+        // macOS Electron can coalesce Playwright text input after the first Angular update.
+        await recordSearch.evaluate((input: HTMLInputElement, value: string) => {
+            input.value = value;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+        }, 'SE6');
         await expect(recordSearch).toHaveValue('SE6');
         const searchResultIdentifiers = reportPanel.locator(
             '.korean-fieldwork-report-handoff-list .korean-fieldwork-report-handoff-identifier'
