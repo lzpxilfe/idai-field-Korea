@@ -355,8 +355,11 @@ describe('usePouchDbDatastore', () => {
     const deferred = createDeferred();
     mockCreateDbDeferreds.set('fieldwork-stable', deferred);
 
-    const { result, rerender } = renderHook(
-      ({ onComplete }: { onComplete: () => void }) =>
+    const { result, rerender } = renderHook<
+      ReturnType<typeof usePouchDbDatastore>,
+      { onComplete: () => void }
+    >(
+      ({ onComplete }) =>
         usePouchDbDatastore('fieldwork-stable', undefined, onComplete),
       { initialProps: { onComplete: jest.fn() } }
     );

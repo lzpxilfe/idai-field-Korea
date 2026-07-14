@@ -348,22 +348,23 @@ describe('Korean fieldwork closeout summary', () => {
       qualityReview,
       closedReview,
     ] as any);
+    const qualityReviewResource = qualityReview.resource as Record<string, unknown>;
 
     const reviewedRecordUnit = getKoreanFieldworkRecordFieldValueSummary(
       'reviewedRecordUnit',
-      qualityReview.resource.reviewedRecordUnit
+      qualityReviewResource.reviewedRecordUnit
     );
     const reviewStage = getKoreanFieldworkRecordFieldValueSummary(
       'qualityReviewStage',
-      qualityReview.resource.qualityReviewStage
+      qualityReviewResource.qualityReviewStage
     );
     const correctionBasis = getKoreanFieldworkRecordFieldValueSummary(
       'qualityCorrectionBasis',
-      qualityReview.resource.qualityCorrectionBasis
+      qualityReviewResource.qualityCorrectionBasis
     );
     const reportFeedback = getKoreanFieldworkRecordFieldValueSummary(
       'reportEvaluationFeedback',
-      qualityReview.resource.reportEvaluationFeedback
+      qualityReviewResource.reportEvaluationFeedback
     );
 
     expect(summary.status).toBe('needsReview');
