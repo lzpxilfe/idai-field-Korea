@@ -31,6 +31,7 @@ import KoreanFieldworkDailyNotebookDigest from '@/components/Project/KoreanField
 import KoreanFieldworkDailyJournalCalendar from '@/components/Project/KoreanFieldworkDailyJournalCalendar';
 import KoreanFieldworkFieldNotePanel from '@/components/Project/KoreanFieldworkFieldNotePanel';
 import KoreanFieldworkEvidenceModal from '@/components/Project/KoreanFieldworkEvidenceModal';
+import KoreanFieldworkFeatureDrawingStatusPanel from '@/components/Project/KoreanFieldworkFeatureDrawingStatusPanel';
 import KoreanFieldworkFeaturePitLinePanel from '@/components/Project/KoreanFieldworkFeaturePitLinePanel';
 import KoreanFieldworkInvestigationModePanel from '@/components/Project/KoreanFieldworkInvestigationModePanel';
 import KoreanFieldworkNotebookLedger from '@/components/Project/KoreanFieldworkNotebookLedger';
@@ -1950,6 +1951,12 @@ export const RecordRow: React.FC<{
                 {evidenceChips.map((chip) => {
                   const canCreate = !!chip.createCategoryName
                     && allowedEvidenceCategories.has(chip.createCategoryName);
+                  const isCombinedPitChip = isFeatureRecord
+                    && chip.id === 'featureSegments';
+                  const isFeaturePhotoDirectionChip = isFeatureRecord
+                    && chip.id === 'photos';
+                  const isFeatureDrawingStatusChip = isFeatureRecord
+                    && chip.id === 'drawings';
                   const isPressable = chip.documents.length > 0 || canCreate;
                   const opensQuickSpotDirectly = canCreate
                     && chip.count === 0
@@ -1957,6 +1964,48 @@ export const RecordRow: React.FC<{
                       chip.id === 'finds'
                       || chip.id === 'samples'
                     );
+
+                  if (isCombinedPitChip) {
+                    return (
+                      <KoreanFieldworkFeaturePitLinePanel
+                        key={`${title}-${chip.id}`}
+                        allowedAddCategoryNames={allowedAddCategoryNames}
+                        document={document}
+                        documents={documents}
+                        onAddPitRecord={onAddEvidence}
+                        onAddSoilProfilePhoto={onAddEvidence}
+                        onOpenPitRecords={() => setActiveEvidenceChipId(chip.id)}
+                        onUpdateResourceFields={onUpdateResourceFields}
+                        pitRecordCount={chip.count}
+                      />
+                    );
+                  }
+
+                  if (isFeaturePhotoDirectionChip) {
+                    return (
+                      <KoreanFieldworkFeaturePitLinePanel
+                        key={`${title}-${chip.id}`}
+                        document={document}
+                        documents={documents}
+                        mode="photoDirection"
+                        onOpenPhotoRecords={() => setActiveEvidenceChipId(chip.id)}
+                        onUpdateResourceFields={onUpdateResourceFields}
+                        photoRecordCount={chip.count}
+                      />
+                    );
+                  }
+
+                  if (isFeatureDrawingStatusChip) {
+                    return (
+                      <KoreanFieldworkFeatureDrawingStatusPanel
+                        key={`${title}-${chip.id}`}
+                        document={document}
+                        drawingRecordCount={chip.count}
+                        onOpenDrawingRecords={() => setActiveEvidenceChipId(chip.id)}
+                        onUpdateResourceFields={onUpdateResourceFields}
+                      />
+                    );
+                  }
 
                   return (
                     <EvidenceChip
@@ -1995,15 +2044,6 @@ export const RecordRow: React.FC<{
                     onAddEvidence(document, action.categoryName);
                   }
                 }}
-              />
-            )}
-            {isFeatureRecord && (
-              <KoreanFieldworkFeaturePitLinePanel
-                allowedAddCategoryNames={allowedAddCategoryNames}
-                document={document}
-                documents={documents}
-                onAddSoilProfilePhoto={onAddEvidence}
-                onUpdateResourceFields={onUpdateResourceFields}
               />
             )}
           </View>

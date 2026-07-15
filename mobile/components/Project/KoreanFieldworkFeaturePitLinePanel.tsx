@@ -60,14 +60,25 @@ interface Props {
   allowedAddCategoryNames?: string[];
   document: Document;
   documents: readonly Document[];
+  mode?: 'pit' | 'photoDirection';
+  onAddPitRecord?: (parentDoc: Document, categoryName: string) => void;
   onAddSoilProfilePhoto?: (parentDoc: Document, categoryName: string) => void;
+  onOpenPhotoRecords?: () => void;
+  onOpenPitRecords?: () => void;
   onUpdateResourceFields: (updates: Record<string, unknown>) => void;
+  photoRecordCount?: number;
+  pitRecordCount?: number;
 }
 
 export const KOREAN_FIELDWORK_FEATURE_PIT_LINE_FIELDS = {
   line: 'featureSoilPitLine',
   lines: 'featureSoilPitLines',
   updatedAt: 'featureSoilPitLineUpdatedAt',
+} as const;
+
+export const KOREAN_FIELDWORK_FEATURE_PHOTO_DIRECTION_FIELDS = {
+  lines: 'featurePhotoDirections',
+  updatedAt: 'featurePhotoDirectionsUpdatedAt',
 } as const;
 
 const DEFAULT_CANVAS_SIZE = {
@@ -90,6 +101,7 @@ const VALID_SHAPES = new Set<FeatureLocationSketchShape>([
   'oval',
 ]);
 const TEXT = {
+  addPitRecord: '\ud53c\ud2b8 \ucd94\uac00',
   addSoilProfilePhoto: '\ud1a0\uce35\uc0ac\uc9c4 \ucd94\uac00',
   clear: '\uc9c0\uc6b0\uae30',
   connectedCount: '\uc5f0\uacb0\ub41c \ud1a0\uce35\uc0ac\uc9c4',
@@ -98,7 +110,15 @@ const TEXT = {
   feature: '\uc720\uad6c',
   lineCount: '\ud53c\ud2b8\uc120',
   noSketch: '\uc720\uad6c \uc2a4\ucf00\uce58 \uc5c6\uc74c',
+  photo: '\uc0ac\uc9c4',
+  photoDirectionHint:
+    '\ucd2c\uc601\ud55c \uc704\uce58\uc5d0\uc11c \uc0ac\uc9c4 \ub300\uc0c1 \ubc29\ud5a5\uc73c\ub85c \uc190\uac00\ub77d\uc744 \ub04c\uc5b4 \ud45c\uc2dc\ud558\uc138\uc694.',
+  photoDirectionPending: '\uc190\uac00\ub77d\uc744 \ub5bc\uba74 \ucd2c\uc601 \uc704\uce58\uc640 \ubc29\ud5a5\uc774 \uc800\uc7a5\ub429\ub2c8\ub2e4.',
+  photoDirectionReady: '\ucd2c\uc601 \uc704\uce58\ub97c \ub204\ub974\uace0 \ub300\uc0c1 \ubc29\ud5a5\uc73c\ub85c \ub04c\uc5b4\ubcf4\uc138\uc694.',
+  photoDirectionTitle: '\uc0ac\uc9c4 \uc704\uce58\u00b7\ubc29\ud5a5',
+  openPitRecords: '\ud53c\ud2b8 \uae30\ub85d \ubcf4\uae30',
   pendingHint: '\uc190\uac00\ub77d\uc744 \ub5bc\uba74 \ud604\uc7ac \uc704\uce58\uae4c\uc9c0 \uc9c1\uc120\uc774 \ucd94\uac00\ub429\ub2c8\ub2e4.',
+  pit: '\ud53c\ud2b8',
   readyHint: '\uc120\uc744 \uadf8\uc744 \uc2dc\uc791\uc810\uc744 \ub204\ub974\uc138\uc694.',
   title: '\ud53c\ud2b8\uc120',
   undo: '\ub9c8\uc9c0\ub9c9 \uc9c0\uc6b0\uae30',
@@ -108,8 +128,14 @@ const KoreanFieldworkFeaturePitLinePanel: React.FC<Props> = ({
   allowedAddCategoryNames = [],
   document,
   documents,
+  mode = 'pit',
+  onAddPitRecord,
   onAddSoilProfilePhoto,
+  onOpenPhotoRecords,
+  onOpenPitRecords,
   onUpdateResourceFields,
+  photoRecordCount = 0,
+  pitRecordCount,
 }) => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [canvasSize, setCanvasSize] = useState(DEFAULT_CANVAS_SIZE);
@@ -122,17 +148,19 @@ const KoreanFieldworkFeaturePitLinePanel: React.FC<Props> = ({
     ),
     [document.resource]
   );
-  const savedLines = useMemo(
-    () => normalizeFeatureSoilPitLines(
-      (document.resource as Record<string, unknown>)[
-        KOREAN_FIELDWORK_FEATURE_PIT_LINE_FIELDS.lines
-      ],
-      (document.resource as Record<string, unknown>)[
-        KOREAN_FIELDWORK_FEATURE_PIT_LINE_FIELDS.line
-      ]
-    ),
-    [document.resource]
-  );
+  const isPhotoDirectionMode = mode === 'photoDirection';
+  const savedLines = useMemo(() => {
+    const resource = document.resource as Record<string, unknown>;
+
+    return normalizeFeatureSoilPitLines(
+      resource[isPhotoDirectionMode
+        ? KOREAN_FIELDWORK_FEATURE_PHOTO_DIRECTION_FIELDS.lines
+        : KOREAN_FIELDWORK_FEATURE_PIT_LINE_FIELDS.lines],
+      isPhotoDirectionMode
+        ? undefined
+        : resource[KOREAN_FIELDWORK_FEATURE_PIT_LINE_FIELDS.line]
+    );
+  }, [document.resource, isPhotoDirectionMode]);
   const hasSavedLines = savedLines.length > 0;
   const canClearLine = hasSavedLines || !!pendingStartPoint;
   const relatedSoilProfilePhotoCount = useMemo(
@@ -145,9 +173,20 @@ const KoreanFieldworkFeaturePitLinePanel: React.FC<Props> = ({
   const canAddSoilProfilePhoto =
     allowedAddCategoryNames.includes(KOREAN_FIELDWORK_CATEGORIES.SOIL_PROFILE_PHOTO)
     && !!onAddSoilProfilePhoto;
-  const pitLineStatusText = pendingStartPoint
-    ? TEXT.pendingHint
-    : TEXT.readyHint;
+  const isCombinedPitControl = !isPhotoDirectionMode && pitRecordCount !== undefined;
+  const canAddPitRecord =
+    allowedAddCategoryNames.includes(KOREAN_FIELDWORK_CATEGORIES.FEATURE_SEGMENT)
+    && !!onAddPitRecord;
+  const photoChecklistCount = getPhotoChecklistCount(
+    (document.resource as Record<string, unknown>).featureInvestigationChecklist
+  );
+  const pitLineStatusText = isPhotoDirectionMode
+    ? pendingStartPoint
+      ? TEXT.photoDirectionPending
+      : TEXT.photoDirectionReady
+    : pendingStartPoint
+      ? TEXT.pendingHint
+      : TEXT.readyHint;
 
   if (document.resource.category !== KOREAN_FIELDWORK_CATEGORIES.FEATURE) {
     return null;
@@ -176,6 +215,10 @@ const KoreanFieldworkFeaturePitLinePanel: React.FC<Props> = ({
     setPendingStartPoint(undefined);
     setPendingEndPoint(undefined);
   };
+  const closeEditor = () => {
+    cancelPendingLine();
+    setIsEditorOpen(false);
+  };
   const finishLine = (event: GestureResponderEvent) => {
     const start = pendingStartPointRef.current;
     const end = getNormalizedPoint(event, canvasSize) ?? pendingEndPoint;
@@ -184,7 +227,12 @@ const KoreanFieldworkFeaturePitLinePanel: React.FC<Props> = ({
 
     saveLines([
       ...savedLines,
-      createFeatureSoilPitLine(start, end, savedLines.length),
+      createFeatureSoilPitLine(
+        start,
+        end,
+        savedLines.length,
+        isPhotoDirectionMode ? 'photo-direction' : 'soil-pit-line'
+      ),
     ]);
   };
   const saveLines = (lines: FeatureSoilPitLine[]) => {
@@ -195,7 +243,10 @@ const KoreanFieldworkFeaturePitLinePanel: React.FC<Props> = ({
       return {
         ...line,
         end: points[points.length - 1],
-        id: createFeatureSoilPitLineId(index),
+        id: createFeatureSoilPitLineId(
+          index,
+          isPhotoDirectionMode ? 'photo-direction' : 'soil-pit-line'
+        ),
         label: `${index + 1}`,
         points,
         start: points[0],
@@ -203,14 +254,19 @@ const KoreanFieldworkFeaturePitLinePanel: React.FC<Props> = ({
         version: 2 as const,
       };
     });
-    onUpdateResourceFields({
-      [KOREAN_FIELDWORK_FEATURE_PIT_LINE_FIELDS.lines]:
-        JSON.stringify(updatedLines),
-      [KOREAN_FIELDWORK_FEATURE_PIT_LINE_FIELDS.line]:
-        updatedLines[0] ? JSON.stringify(updatedLines[0]) : '',
-      [KOREAN_FIELDWORK_FEATURE_PIT_LINE_FIELDS.updatedAt]:
-        updatedAt,
-    });
+    onUpdateResourceFields(isPhotoDirectionMode
+      ? {
+        [KOREAN_FIELDWORK_FEATURE_PHOTO_DIRECTION_FIELDS.lines]:
+          JSON.stringify(updatedLines),
+        [KOREAN_FIELDWORK_FEATURE_PHOTO_DIRECTION_FIELDS.updatedAt]: updatedAt,
+      }
+      : {
+        [KOREAN_FIELDWORK_FEATURE_PIT_LINE_FIELDS.lines]:
+          JSON.stringify(updatedLines),
+        [KOREAN_FIELDWORK_FEATURE_PIT_LINE_FIELDS.line]:
+          updatedLines[0] ? JSON.stringify(updatedLines[0]) : '',
+        [KOREAN_FIELDWORK_FEATURE_PIT_LINE_FIELDS.updatedAt]: updatedAt,
+      });
   };
   const undoLastLine = () => {
     if (pendingStartPoint) {
@@ -228,29 +284,79 @@ const KoreanFieldworkFeaturePitLinePanel: React.FC<Props> = ({
 
   return (
     <>
-      <View style={styles.compactContainer} testID="featurePitLinePanel">
+      <View
+        style={[
+          styles.compactContainer,
+          (isCombinedPitControl || isPhotoDirectionMode)
+            && styles.combinedCompactContainer,
+        ]}
+        testID="featurePitLinePanel"
+      >
         <TouchableOpacity
-          accessibilityLabel={`${TEXT.title} ${savedLines.length}\uac1c`}
+          accessibilityLabel={isPhotoDirectionMode
+            ? `${TEXT.photoDirectionTitle}, ${photoChecklistCount}/3`
+            : isCombinedPitControl
+            ? `${TEXT.pit} ${pitRecordCount}\uac74, \ucd94\uac00\uc640 \uc704\uce58 \ud45c\uc2dc`
+            : `${TEXT.title} ${savedLines.length}\uac1c`}
           activeOpacity={0.84}
           onPress={() => setIsEditorOpen(true)}
-          style={styles.compactButton}
-          testID="featurePitLineOpen"
+          style={[
+            styles.compactButton,
+            (isCombinedPitControl || isPhotoDirectionMode)
+              && styles.combinedCompactButton,
+          ]}
+          testID={isPhotoDirectionMode
+            ? 'evidenceChip_photos'
+            : isCombinedPitControl
+            ? 'evidenceChip_featureSegments'
+            : 'featurePitLineOpen'}
         >
-          <MaterialIcons name="timeline" size={16} color="#344054" />
-          <Text style={styles.compactButtonText}>{TEXT.title}</Text>
-          <Text style={styles.compactCount} testID="featurePitLineCount">
-            {savedLines.length}
+          <MaterialIcons
+            name={isPhotoDirectionMode
+              ? 'photo-camera'
+              : isCombinedPitControl ? 'account-tree' : 'timeline'}
+            size={isCombinedPitControl || isPhotoDirectionMode ? 13 : 16}
+            color={isCombinedPitControl || isPhotoDirectionMode ? '#175cd3' : '#344054'}
+          />
+          <Text
+            style={[
+              styles.compactButtonText,
+              (isCombinedPitControl || isPhotoDirectionMode)
+                && styles.combinedCompactText,
+            ]}
+          >
+            {isPhotoDirectionMode
+              ? TEXT.photo
+              : isCombinedPitControl ? TEXT.pit : TEXT.title}
           </Text>
+          {isPhotoDirectionMode ? (
+            <Text style={[styles.compactCount, styles.combinedCompactCount]}>
+              {photoChecklistCount}/3
+            </Text>
+          ) : isCombinedPitControl ? (
+            <>
+              <Text
+                style={[styles.compactCount, styles.combinedCompactCount]}
+                testID="featurePitRecordCount"
+              >
+                {pitRecordCount}
+              </Text>
+              {canAddPitRecord && (
+                <MaterialIcons name="add" size={13} color="#175cd3" />
+              )}
+            </>
+          ) : (
+            <Text style={styles.compactCount} testID="featurePitLineCount">
+              {savedLines.length}
+            </Text>
+          )}
           <MaterialIcons name="chevron-right" size={17} color="#667085" />
         </TouchableOpacity>
       </View>
 
       <Modal
         animationType="slide"
-        onRequestClose={() => {
-          cancelPendingLine();
-          setIsEditorOpen(false);
-        }}
+        onRequestClose={closeEditor}
         presentationStyle="fullScreen"
         testID="featurePitLineModal"
         visible={isEditorOpen}
@@ -258,17 +364,32 @@ const KoreanFieldworkFeaturePitLinePanel: React.FC<Props> = ({
         <SafeAreaView style={styles.modalScreen}>
           <View style={styles.modalHeader}>
             <View style={styles.titleRow}>
-              <MaterialIcons name="timeline" size={19} color="#344054" />
-              <Text style={styles.modalTitle}>{TEXT.title}</Text>
-              <Text style={styles.compactCount}>{savedLines.length}</Text>
+              <MaterialIcons
+                name={isPhotoDirectionMode ? 'photo-camera' : 'timeline'}
+                size={19}
+                color="#344054"
+              />
+              <Text style={styles.modalTitle}>
+                {isPhotoDirectionMode
+                  ? TEXT.photoDirectionTitle
+                  : isCombinedPitControl ? TEXT.pit : TEXT.title}
+              </Text>
+              {isPhotoDirectionMode && (
+                <Text style={styles.modalMetric}>{photoChecklistCount}/3</Text>
+              )}
+              {isCombinedPitControl && (
+                <Text style={styles.modalMetric} testID="featurePitModalRecordCount">
+                  {pitRecordCount}
+                </Text>
+              )}
+              {!isCombinedPitControl && !isPhotoDirectionMode && (
+                <Text style={styles.compactCount}>{savedLines.length}</Text>
+              )}
             </View>
             <TouchableOpacity
               accessibilityLabel="\ub2eb\uae30"
               activeOpacity={0.84}
-              onPress={() => {
-                cancelPendingLine();
-                setIsEditorOpen(false);
-              }}
+              onPress={closeEditor}
               style={styles.modalCloseButton}
               testID="featurePitLineClose"
             >
@@ -279,17 +400,87 @@ const KoreanFieldworkFeaturePitLinePanel: React.FC<Props> = ({
           <View style={styles.container} testID="featurePitLineEditor">
             <View style={styles.headerRow}>
               <Text style={styles.countText}>
-                {TEXT.connectedCount} {relatedSoilProfilePhotoCount}
+                {isPhotoDirectionMode
+                  ? `\uc704\uce58 \ud45c\uc2dc ${savedLines.length}`
+                  : `${TEXT.connectedCount} ${relatedSoilProfilePhotoCount}`}
               </Text>
               <View style={styles.actionRow}>
-                <TouchableOpacity
+                {isPhotoDirectionMode && photoRecordCount > 0 && !!onOpenPhotoRecords && (
+                  <TouchableOpacity
+                    activeOpacity={0.86}
+                    accessibilityLabel={`\uae30\uc874 \uc0ac\uc9c4 ${photoRecordCount}\uac74 \ubcf4\uae30`}
+                    onPress={() => {
+                      closeEditor();
+                      onOpenPhotoRecords();
+                    }}
+                    style={styles.recordsButton}
+                    testID="featurePhotoRecordsOpen"
+                  >
+                    <MaterialIcons name="list" size={15} color="#344054" />
+                    <Text style={styles.recordsButtonText}>
+                      {TEXT.photo} {photoRecordCount}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                {isCombinedPitControl && (pitRecordCount ?? 0) > 0 && !!onOpenPitRecords && (
+                  <TouchableOpacity
+                    activeOpacity={0.86}
+                    accessibilityLabel={TEXT.openPitRecords}
+                    onPress={() => {
+                      closeEditor();
+                      onOpenPitRecords();
+                    }}
+                    style={styles.recordsButton}
+                    testID="featurePitRecordsOpen"
+                  >
+                    <MaterialIcons name="list" size={15} color="#344054" />
+                    <Text style={styles.recordsButtonText}>{TEXT.pit} {pitRecordCount}</Text>
+                  </TouchableOpacity>
+                )}
+                {isCombinedPitControl && (
+                  <TouchableOpacity
+                    activeOpacity={0.86}
+                    accessibilityLabel={TEXT.addPitRecord}
+                    disabled={!canAddPitRecord}
+                    onPress={() => {
+                      closeEditor();
+                      onAddPitRecord?.(
+                        document,
+                        KOREAN_FIELDWORK_CATEGORIES.FEATURE_SEGMENT
+                      );
+                    }}
+                    style={[
+                      styles.addButton,
+                      !canAddPitRecord && styles.addButtonDisabled,
+                    ]}
+                    testID="featurePitRecordAdd"
+                  >
+                    <MaterialIcons
+                      name="add"
+                      size={15}
+                      color={canAddPitRecord ? '#2f5f4a' : '#98a2b3'}
+                    />
+                    <Text
+                      style={[
+                        styles.addButtonText,
+                        !canAddPitRecord && styles.addButtonTextDisabled,
+                      ]}
+                    >
+                      {TEXT.addPitRecord}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                {!isPhotoDirectionMode && <TouchableOpacity
                   activeOpacity={0.86}
                   accessibilityLabel={TEXT.addSoilProfilePhoto}
                   disabled={!canAddSoilProfilePhoto}
-                  onPress={() => onAddSoilProfilePhoto?.(
-                    document,
-                    KOREAN_FIELDWORK_CATEGORIES.SOIL_PROFILE_PHOTO
-                  )}
+                  onPress={() => {
+                    closeEditor();
+                    onAddSoilProfilePhoto?.(
+                      document,
+                      KOREAN_FIELDWORK_CATEGORIES.SOIL_PROFILE_PHOTO
+                    );
+                  }}
                   style={[
                     styles.addButton,
                     !canAddSoilProfilePhoto && styles.addButtonDisabled,
@@ -309,7 +500,7 @@ const KoreanFieldworkFeaturePitLinePanel: React.FC<Props> = ({
                   >
                     {TEXT.addSoilProfilePhoto}
                   </Text>
-                </TouchableOpacity>
+                </TouchableOpacity>}
                 <TouchableOpacity
                   activeOpacity={0.86}
                   accessibilityLabel={TEXT.undo}
@@ -340,7 +531,9 @@ const KoreanFieldworkFeaturePitLinePanel: React.FC<Props> = ({
                 </TouchableOpacity>
               </View>
             </View>
-            <Text style={styles.hint}>{TEXT.drawHint}</Text>
+            <Text style={styles.hint}>
+              {isPhotoDirectionMode ? TEXT.photoDirectionHint : TEXT.drawHint}
+            </Text>
             <Text style={styles.pendingHint} testID="featurePitLinePendingHint">
               {pitLineStatusText}
             </Text>
@@ -376,19 +569,21 @@ const KoreanFieldworkFeaturePitLinePanel: React.FC<Props> = ({
                     {toLineSegments({
                       canvasSize,
                       closePath: false,
-                      color: '#2f5f4a',
+                      color: isPhotoDirectionMode ? '#175cd3' : '#2f5f4a',
                       keyPrefix: `feature-pit-line-${line.id}-${index}`,
                       points,
                       testID: 'featurePitLineSegment',
                       width: 4,
                     })}
                     <LineHandle
-                      label={line.label}
+                      icon={isPhotoDirectionMode ? 'photo-camera' : undefined}
+                      label={isPhotoDirectionMode ? undefined : line.label}
                       point={points[0]}
                       testID="featurePitLineStart"
                     />
                     <LineHandle
-                      label={line.label}
+                      icon={isPhotoDirectionMode ? 'arrow-forward' : undefined}
+                      label={isPhotoDirectionMode ? undefined : line.label}
                       point={points[points.length - 1]}
                       testID="featurePitLineEnd"
                     />
@@ -490,15 +685,17 @@ const renderFeatureSketch = (
 };
 
 const LineHandle: React.FC<{
+  icon?: keyof typeof MaterialIcons.glyphMap;
   label?: string;
   point: SketchPoint;
   testID: string;
-}> = ({ label, point, testID }) => (
+}> = ({ icon, label, point, testID }) => (
   <View
     pointerEvents="none"
     style={[styles.lineHandle, getPointPercentStyle(point)]}
     testID={testID}
   >
+    {icon && <MaterialIcons name={icon} size={11} color="#ffffff" />}
     {!!label && <Text style={styles.lineHandleText}>{label}</Text>}
   </View>
 );
@@ -556,13 +753,14 @@ const normalizeFeatureSoilPitLine = (
 const createFeatureSoilPitLine = (
   start: SketchPoint,
   end: SketchPoint,
-  index: number
+  index: number,
+  idPrefix = 'soil-pit-line'
 ): FeatureSoilPitLine => {
   const points = [start, end];
 
   return {
     end: points[points.length - 1],
-    id: createFeatureSoilPitLineId(index),
+    id: createFeatureSoilPitLineId(index, idPrefix),
     label: `${index + 1}`,
     points,
     start: points[0],
@@ -588,8 +786,24 @@ const normalizePitLinePoints = (
   return [fallbackStart, fallbackEnd];
 };
 
-const createFeatureSoilPitLineId = (index: number): string =>
-  `soil-pit-line-${index + 1}`;
+const createFeatureSoilPitLineId = (
+  index: number,
+  idPrefix = 'soil-pit-line'
+): string => `${idPrefix}-${index + 1}`;
+
+const getPhotoChecklistCount = (value: unknown): number => {
+  if (!Array.isArray(value)) return 0;
+
+  const photoSteps = new Set([
+    'preInvestigationPhotoTaken',
+    'inProgressPhotoTaken',
+    'completionPhotoTaken',
+  ]);
+
+  return value.filter((entry) =>
+    typeof entry === 'string' && photoSteps.has(entry)
+  ).length;
+};
 
 const getLineMidpoint = (line: FeatureSoilPitLine): SketchPoint => {
   const points = getPitLinePoints(line);
@@ -916,6 +1130,8 @@ const styles = StyleSheet.create({
   actionRow: {
     alignItems: 'center',
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
   },
   addButton: {
     alignItems: 'center',
@@ -967,6 +1183,30 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginHorizontal: 14,
     marginTop: 8,
+  },
+  combinedCompactContainer: {
+    marginBottom: 4,
+    marginHorizontal: 2,
+    marginTop: 0,
+  },
+  combinedCompactButton: {
+    backgroundColor: '#eff8ff',
+    borderColor: '#b2ddff',
+    height: 24,
+    paddingHorizontal: 6,
+  },
+  combinedCompactCount: {
+    backgroundColor: 'transparent',
+    color: '#175cd3',
+    marginLeft: 4,
+    minWidth: 0,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+  },
+  combinedCompactText: {
+    color: '#175cd3',
+    fontSize: 11,
+    marginLeft: 3,
   },
   compactButton: {
     alignItems: 'center',
@@ -1149,6 +1389,27 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '900',
     marginLeft: 6,
+  },
+  modalMetric: {
+    color: '#667085',
+    fontSize: 11,
+    fontWeight: '800',
+    marginLeft: 7,
+  },
+  recordsButton: {
+    alignItems: 'center',
+    borderColor: '#d0d5dd',
+    borderRadius: 5,
+    borderWidth: 1,
+    flexDirection: 'row',
+    minHeight: 32,
+    paddingHorizontal: 8,
+  },
+  recordsButtonText: {
+    color: '#344054',
+    fontSize: 11,
+    fontWeight: '900',
+    marginLeft: 4,
   },
   northBand: {
     alignItems: 'center',

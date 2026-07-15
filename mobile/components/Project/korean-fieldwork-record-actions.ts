@@ -283,11 +283,33 @@ const getMissingEvidenceAction = (
       && chip.count === 0
       && !!chip.createCategoryName
       && allowedAddCategories.has(chip.createCategoryName)
+      && shouldSuggestEvidenceChip(document, chip, evidenceChips)
     );
 
   if (!missingChip?.createCategoryName) return undefined;
 
   return createEvidenceAction(document, missingChip);
+};
+
+const shouldSuggestEvidenceChip = (
+  document: Document,
+  chip: ReturnType<typeof getKoreanFieldworkEvidenceChips>[number],
+  evidenceChips: ReturnType<typeof getKoreanFieldworkEvidenceChips>
+): boolean => {
+  if (document.resource.category !== C.FEATURE) return true;
+  if (chip.id !== 'soilProfilePhotos') return false;
+
+  const pitCount = evidenceChips.find((candidate) =>
+    candidate.id === 'featureSegments'
+  )?.count ?? 0;
+  if (pitCount > 0) return true;
+
+  const stage = getKoreanFieldworkFeaturePhotoProgress(
+    (document.resource as unknown as Record<string, unknown>)
+      .featureInvestigationChecklist
+  ).stage;
+
+  return stage === 'investigating' || stage === 'completed';
 };
 
 const getSoilProfilePhotoGapChip = (

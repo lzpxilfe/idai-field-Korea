@@ -23,6 +23,7 @@ interface Option {
 }
 
 interface Props {
+  allowFeature?: boolean;
   onUpdateResourceFields: (updates: Record<string, unknown>) => void;
   resource: EditableDrawingResource;
 }
@@ -82,10 +83,16 @@ const TEXT = {
 };
 
 const KoreanFieldworkDrawingSurveyPanel: React.FC<Props> = ({
+  allowFeature = false,
   onUpdateResourceFields,
   resource,
 }) => {
-  if (resource.category !== KOREAN_FIELDWORK_CATEGORIES.DRAWING) return null;
+  if (
+    resource.category !== KOREAN_FIELDWORK_CATEGORIES.DRAWING
+    && !(allowFeature && resource.category === KOREAN_FIELDWORK_CATEGORIES.FEATURE)
+  ) {
+    return null;
+  }
 
   const methods = getStringArray(resource[KOREAN_FIELDWORK_DRAWING_SURVEY_FIELDS.methods]);
   const devices = getStringArray(resource[KOREAN_FIELDWORK_DRAWING_SURVEY_FIELDS.devices]);

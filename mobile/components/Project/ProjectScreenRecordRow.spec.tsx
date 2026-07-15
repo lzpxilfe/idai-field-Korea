@@ -88,7 +88,7 @@ describe('ProjectScreen RecordRow', () => {
       </ConfigurationContext.Provider>
     );
 
-    fireEvent.press(getByTestId('featurePitLineOpen'));
+    fireEvent.press(getByTestId('evidenceChip_featureSegments'));
     const canvas = getByTestId('featurePitLineCanvas');
     fireEvent(canvas, 'layout', {
       nativeEvent: { layout: { height: 220, width: 320 } },
@@ -108,7 +108,7 @@ describe('ProjectScreen RecordRow', () => {
     }));
   });
 
-  it('keeps pit creation available after the first pit and shows the count', () => {
+  it('combines pit records and pit-line editing in one control', () => {
     const onAddEvidence = jest.fn();
     const feature = createFeature();
     const pit = createPit();
@@ -135,12 +135,17 @@ describe('ProjectScreen RecordRow', () => {
 
     fireEvent.press(getByTestId('evidenceChip_featureSegments'));
 
-    expect(getByTestId('evidenceManagerCount').props.children).toBe(1);
-    fireEvent.press(getByTestId('evidenceManagerAdd'));
+    expect(getByTestId('featurePitModalRecordCount').props.children).toBe(1);
+    expect(getByTestId('featurePitLineCanvas')).toBeTruthy();
+    fireEvent.press(getByTestId('featurePitRecordAdd'));
     expect(onAddEvidence).toHaveBeenCalledWith(
       feature,
       KOREAN_FIELDWORK_CATEGORIES.FEATURE_SEGMENT
     );
+
+    fireEvent.press(getByTestId('evidenceChip_featureSegments'));
+    fireEvent.press(getByTestId('featurePitRecordsOpen'));
+    expect(getByTestId('evidenceManagerCount').props.children).toBe(1);
   });
 
   it.each([

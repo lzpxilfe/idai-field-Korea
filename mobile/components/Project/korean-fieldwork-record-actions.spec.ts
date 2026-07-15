@@ -107,6 +107,27 @@ describe('Korean fieldwork record actions', () => {
     ]);
   });
 
+  it('keeps feature photo and drawing work in the feature workspace', () => {
+    const feature = createDoc('feature-1', C.FEATURE, '수혈 1', {}, {
+      featureInvestigationChecklist: ['preInvestigationPhotoTaken'],
+      fieldRecordQuality: ['immediateRecording'],
+      recordCreationTiming: 'duringFieldwork',
+    });
+
+    const summary = getKoreanFieldworkRecordActionSummary(
+      feature,
+      [feature],
+      [C.FEATURE_SEGMENT, C.SOIL_PROFILE_PHOTO, C.PHOTO]
+    );
+
+    expect(summary.actions.map((action) => action.id))
+      .not.toContain('create-soilProfilePhotos');
+    expect(summary.actions.map((action) => action.id))
+      .not.toContain('create-photos');
+    expect(summary.actions.map((action) => action.id))
+      .not.toContain('create-drawings');
+  });
+
   it('uses the latest photo milestone instead of evidence volume for progress', () => {
     const feature = createDoc('feature-1', C.FEATURE, '수혈 1', {}, {
       featureInvestigationChecklist: ['inProgressPhotoTaken'],

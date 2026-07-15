@@ -2,6 +2,7 @@ import { fireEvent, render } from '@testing-library/react-native';
 import { Document } from 'idai-field-core';
 import React from 'react';
 import KoreanFieldworkFeaturePitLinePanel, {
+  KOREAN_FIELDWORK_FEATURE_PHOTO_DIRECTION_FIELDS,
   KOREAN_FIELDWORK_FEATURE_PIT_LINE_FIELDS,
 } from './KoreanFieldworkFeaturePitLinePanel';
 import { KOREAN_FIELDWORK_CATEGORIES } from './korean-fieldwork-categories';
@@ -98,6 +99,47 @@ describe('KoreanFieldworkFeaturePitLinePanel', () => {
     expect(pitLine.version).toBe(2);
     expect(updates[KOREAN_FIELDWORK_FEATURE_PIT_LINE_FIELDS.updatedAt])
       .toEqual(pitLine.updatedAt);
+  });
+
+  it('stores a photo position and direction on the enlarged feature', () => {
+    const onUpdateResourceFields = jest.fn();
+    const { getByTestId } = render(
+      <KoreanFieldworkFeaturePitLinePanel
+        document={createDoc('feature-1', C.FEATURE, {
+          featureInvestigationChecklist: ['preInvestigationPhotoTaken'],
+        })}
+        documents={[]}
+        mode="photoDirection"
+        onUpdateResourceFields={onUpdateResourceFields}
+      />
+    );
+
+    fireEvent.press(getByTestId('evidenceChip_photos'));
+    const canvas = getByTestId('featurePitLineCanvas');
+    fireEvent(canvas, 'layout', {
+      nativeEvent: { layout: { height: 200, width: 400 } },
+    });
+    fireEvent(canvas, 'responderGrant', {
+      nativeEvent: { locationX: 80, locationY: 50 },
+    });
+    fireEvent(canvas, 'responderMove', {
+      nativeEvent: { locationX: 200, locationY: 100 },
+    });
+    fireEvent(canvas, 'responderRelease', {
+      nativeEvent: { locationX: 320, locationY: 150 },
+    });
+
+    const updates = onUpdateResourceFields.mock.calls[0][0];
+    const directions = JSON.parse(
+      updates[KOREAN_FIELDWORK_FEATURE_PHOTO_DIRECTION_FIELDS.lines]
+    );
+    expect(directions[0]).toMatchObject({
+      id: 'photo-direction-1',
+      start: { x: 20, y: 25 },
+      end: { x: 80, y: 75 },
+    });
+    expect(updates[KOREAN_FIELDWORK_FEATURE_PIT_LINE_FIELDS.lines])
+      .toBeUndefined();
   });
 
   it('keeps the pit line hint row mounted while choosing points', () => {
