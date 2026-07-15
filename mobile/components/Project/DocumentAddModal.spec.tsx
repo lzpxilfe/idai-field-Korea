@@ -455,7 +455,7 @@ describe('DocumentAddModal', () => {
     });
   });
 
-  it('shows the project boundary and previews polygon lines in a map-first tablet layout', async () => {
+  it('shows the project boundary in a continuous-scroll tablet layout', async () => {
     const parentDoc = {
       resource: {
         id: 'trench-1',
@@ -465,7 +465,7 @@ describe('DocumentAddModal', () => {
       },
     } as any;
 
-    const { getByTestId, queryByTestId } = render(
+    const { getByTestId } = render(
       <LabelsContext.Provider value={{ labels: new Labels(() => ['ko']) }}>
         <ConfigurationContext.Provider value={createConfig([
           createCategory(C.TRENCH),
@@ -497,60 +497,38 @@ describe('DocumentAddModal', () => {
     expect(getByTestId('featureSketchBackground_satellite').props.accessibilityState)
       .toMatchObject({ selected: true });
 
-    let canvas = getByTestId('featureLocationSketchCanvas');
-    let touchLayer = getByTestId('featureLocationSketchTouchLayer');
-    expect(StyleSheet.flatten(getByTestId('featureCreationLayout').props.style))
+    const canvas = getByTestId('featureLocationSketchCanvas');
+    const touchLayer = getByTestId('featureLocationSketchTouchLayer');
+    const creationLayout = getByTestId('featureCreationLayout');
+    expect(StyleSheet.flatten(creationLayout.props.style))
+      .toEqual(expect.objectContaining({ flex: 1 }));
+    expect(StyleSheet.flatten(creationLayout.props.contentContainerStyle))
       .toEqual(expect.objectContaining({
         flexDirection: 'column',
+        flexGrow: 1,
       }));
+    expect(creationLayout.props.scrollEnabled).toBe(true);
+    expect(creationLayout.props.nestedScrollEnabled).toBe(true);
+    expect(creationLayout.props.showsHorizontalScrollIndicator).toBe(false);
+    expect(creationLayout.props.showsVerticalScrollIndicator).toBe(true);
     expect(StyleSheet.flatten(getByTestId('featureCreationMapPane').props.style))
       .toEqual(expect.objectContaining({
-        flex: 1,
-        minHeight: 0,
+        height: expect.any(Number),
         minWidth: 0,
-    }));
+        overflow: 'hidden',
+      }));
     const formPaneStyle = StyleSheet.flatten(getByTestId('featureCreationFormPane').props.style);
     expect(formPaneStyle).toEqual(expect.objectContaining({ minWidth: 0 }));
-    expect(getByTestId('featureCreationFormPane').props.horizontal).toBe(false);
-    expect(getByTestId('featureCreationFormPane').props.scrollEnabled).toBe(true);
-    expect(getByTestId('featureCreationFormPane').props.showsHorizontalScrollIndicator)
-      .toBe(false);
-    expect(getByTestId('featureCreationFormPane').props.showsVerticalScrollIndicator)
-      .toBe(true);
-    expect(StyleSheet.flatten(
-      getByTestId('featureCreationFormPane').props.contentContainerStyle
-    )).toEqual(expect.objectContaining({
+    expect(formPaneStyle.maxHeight).toBeUndefined();
+    expect(formPaneStyle.minHeight).toBeUndefined();
+    expect(formPaneStyle).toEqual(expect.objectContaining({
       flexDirection: 'column',
     }));
 
-    fireEvent(getByTestId('featureCreationFormPane'), 'touchStart', {
-      nativeEvent: { pageY: 120 },
+    fireEvent.scroll(creationLayout, {
+      nativeEvent: { contentOffset: { y: 240 } },
     });
-    fireEvent(getByTestId('featureCreationFormPane'), 'touchMove', {
-      nativeEvent: { pageY: 96 },
-    });
-
-    expect(queryByTestId('featureLocationSketchCanvas')).toBeNull();
-    expect(getByTestId('featureLocationSketchExpandButton')).toBeTruthy();
-    expect(StyleSheet.flatten(getByTestId('featureCreationMapPane').props.style))
-      .toEqual(expect.objectContaining({
-        flex: 0,
-        height: 64,
-        minHeight: 64,
-      }));
-    expect(StyleSheet.flatten(getByTestId('featureCreationFormPane').props.style))
-      .toEqual(expect.objectContaining({
-        flex: 1,
-        flexGrow: 1,
-        minHeight: 0,
-      }));
-
-    fireEvent.press(getByTestId('featureLocationSketchExpandButton'));
-
-    expect(queryByTestId('featureLocationSketchExpandButton')).toBeNull();
     expect(getByTestId('featureLocationSketchCanvas')).toBeTruthy();
-    canvas = getByTestId('featureLocationSketchCanvas');
-    touchLayer = getByTestId('featureLocationSketchTouchLayer');
     expect(StyleSheet.flatten(getByTestId('featureLocationSketchPanel').props.style))
       .toEqual(expect.objectContaining({ flex: 1 }));
     expect(getByTestId('featureSketchPlacementBadge')).toBeTruthy();
