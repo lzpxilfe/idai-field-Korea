@@ -29,6 +29,8 @@ import KoreanFieldworkFindSpotPanel
 import KoreanFieldworkFreeDrawingPanel, {
   getKoreanFieldworkFreeDrawingConfig,
 } from '@/components/Project/KoreanFieldworkFreeDrawingPanel';
+import KoreanFieldworkPenMemoTranscriptionPanel
+  from '@/components/Project/KoreanFieldworkPenMemoTranscriptionPanel';
 import SoilProfileCameraButton, {
   FieldworkPhotoCaptureData,
   PhotoCameraButton,
@@ -308,21 +310,28 @@ const DocumentEdit: React.FC = () => {
         </View>
       }
       formFooter={freeDrawingConfig ? (
-        <KoreanFieldworkFreeDrawingPanel
-          initiallyFullscreen={shouldOpenFreeSketch}
-          onDrawingActiveChange={setIsFreeDrawingActive}
-          strokesValue={resource[freeDrawingConfig.strokesField]}
-          title={freeDrawingConfig.title}
-          onUpdateStrokes={(serializedStrokes) => {
-            const updates: Record<string, unknown> = {
-              [freeDrawingConfig.strokesField]: serializedStrokes,
-            };
-            if (freeDrawingConfig.updatedAtField) {
-              updates[freeDrawingConfig.updatedAtField] = new Date().toISOString();
-            }
-            applyResourceUpdates(updates);
-          }}
-        />
+        <View>
+          <KoreanFieldworkFreeDrawingPanel
+            initiallyFullscreen={shouldOpenFreeSketch}
+            onDrawingActiveChange={setIsFreeDrawingActive}
+            strokesValue={resource[freeDrawingConfig.strokesField]}
+            title={freeDrawingConfig.title}
+            writingGuides={resource.category === KOREAN_FIELDWORK_CATEGORIES.PEN_MEMO}
+            onUpdateStrokes={(serializedStrokes) => {
+              const updates: Record<string, unknown> = {
+                [freeDrawingConfig.strokesField]: serializedStrokes,
+              };
+              if (freeDrawingConfig.updatedAtField) {
+                updates[freeDrawingConfig.updatedAtField] = new Date().toISOString();
+              }
+              applyResourceUpdates(updates);
+            }}
+          />
+          <KoreanFieldworkPenMemoTranscriptionPanel
+            onUpdateResourceFields={applyResourceUpdates}
+            resource={resource as unknown as Record<string, unknown>}
+          />
+        </View>
       ) : undefined}
       isScrollEnabled={!isFreeDrawingActive}
       resource={resource}

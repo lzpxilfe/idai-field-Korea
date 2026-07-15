@@ -59,6 +59,7 @@ interface Props {
   onUpdateStrokes: (serializedStrokes: string) => void;
   strokesValue?: unknown;
   title?: string;
+  writingGuides?: boolean;
 }
 
 const DEFAULT_CANVAS_SIZE = {
@@ -102,7 +103,7 @@ export const getKoreanFieldworkFreeDrawingConfig = (
     case KOREAN_FIELDWORK_CATEGORIES.PEN_MEMO:
       return {
         strokesField: KOREAN_FIELDWORK_FREE_DRAWING_FIELDS.penMemoStrokes,
-        title: TEXT.title,
+        title: '펜 메모',
       };
     default:
       return undefined;
@@ -115,6 +116,7 @@ const KoreanFieldworkFreeDrawingPanel: React.FC<Props> = ({
   onUpdateStrokes,
   strokesValue,
   title = TEXT.title,
+  writingGuides = false,
 }) => {
   const strokes = useMemo(
     () => normalizeKoreanFieldworkHandwritingStrokes(strokesValue),
@@ -421,6 +423,10 @@ const KoreanFieldworkFreeDrawingPanel: React.FC<Props> = ({
         )}
       </View>
       <KoreanFieldworkFullscreenDrawingModal
+        background={writingGuides ? {
+          aspectRatio: 1.6,
+          writingGuides: true,
+        } : undefined}
         brushColor={brushColor}
         brushWidth={brushWidth}
         drawingTool={drawingTool}

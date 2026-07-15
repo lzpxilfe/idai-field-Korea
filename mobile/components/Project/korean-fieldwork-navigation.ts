@@ -72,6 +72,7 @@ export const pushKoreanFieldworkDocumentAdd = ({
     params: {
       parentDocId,
       categoryName,
+      ...(categoryName === 'PenMemo' ? { openFreeSketch: '1' } : {}),
       ...draftParams,
       ...(returnTarget ? getKoreanFieldworkReturnParam(returnTarget) : {}),
     },

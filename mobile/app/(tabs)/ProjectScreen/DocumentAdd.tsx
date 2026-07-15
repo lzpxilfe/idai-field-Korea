@@ -21,6 +21,7 @@ import SoilProfileCameraButton, {
   clearFieldworkImageUploadAudit,
 } from '@/components/Project/SoilProfileCameraButton';
 import KoreanFieldworkDraftContextPanel from '@/components/Project/KoreanFieldworkDraftContextPanel';
+import { KOREAN_FIELDWORK_CATEGORIES } from '@/components/Project/korean-fieldwork-categories';
 import KoreanFieldworkDrawingSurveyPanel
   from '@/components/Project/KoreanFieldworkDrawingSurveyPanel';
 import KoreanFieldworkFindSpotPanel
@@ -28,6 +29,8 @@ import KoreanFieldworkFindSpotPanel
 import KoreanFieldworkFreeDrawingPanel, {
   getKoreanFieldworkFreeDrawingConfig,
 } from '@/components/Project/KoreanFieldworkFreeDrawingPanel';
+import KoreanFieldworkPenMemoTranscriptionPanel
+  from '@/components/Project/KoreanFieldworkPenMemoTranscriptionPanel';
 import FieldworkPhotoAnnotationPanel, {
   FIELDWORK_PHOTO_ANNOTATION_FIELDS,
   FieldworkPhotoSamplePoint,
@@ -79,6 +82,7 @@ const DocumentAdd: React.FC = () => {
   const geometryConfidence = getParam(params.geometryConfidence);
   const geometrySource = getParam(params.geometrySource);
   const identifier = getParam(params.identifier);
+  const shouldOpenFreeSketch = getParam(params.openFreeSketch) === '1';
   const returnTarget = getKoreanFieldworkReturnTarget(params.returnTo);
   const shortDescription = getParam(params.shortDescription);
   const parentDoc = useDocument(repository, parentDocId);
@@ -310,20 +314,28 @@ const DocumentAdd: React.FC = () => {
         </View>
       }
       formFooter={freeDrawingConfig ? (
-        <KoreanFieldworkFreeDrawingPanel
-          onDrawingActiveChange={setIsFreeDrawingActive}
-          strokesValue={newResource[freeDrawingConfig.strokesField]}
-          title={freeDrawingConfig.title}
-          onUpdateStrokes={(serializedStrokes) => {
-            const updates: Record<string, unknown> = {
-              [freeDrawingConfig.strokesField]: serializedStrokes,
-            };
-            if (freeDrawingConfig.updatedAtField) {
-              updates[freeDrawingConfig.updatedAtField] = new Date().toISOString();
-            }
-            applyResourceUpdates(updates);
-          }}
-        />
+        <View>
+          <KoreanFieldworkFreeDrawingPanel
+            initiallyFullscreen={shouldOpenFreeSketch}
+            onDrawingActiveChange={setIsFreeDrawingActive}
+            strokesValue={newResource[freeDrawingConfig.strokesField]}
+            title={freeDrawingConfig.title}
+            writingGuides={categoryName === KOREAN_FIELDWORK_CATEGORIES.PEN_MEMO}
+            onUpdateStrokes={(serializedStrokes) => {
+              const updates: Record<string, unknown> = {
+                [freeDrawingConfig.strokesField]: serializedStrokes,
+              };
+              if (freeDrawingConfig.updatedAtField) {
+                updates[freeDrawingConfig.updatedAtField] = new Date().toISOString();
+              }
+              applyResourceUpdates(updates);
+            }}
+          />
+          <KoreanFieldworkPenMemoTranscriptionPanel
+            onUpdateResourceFields={applyResourceUpdates}
+            resource={newResource}
+          />
+        </View>
       ) : undefined}
       isScrollEnabled={!isFreeDrawingActive}
       resource={newResource}

@@ -36,6 +36,7 @@ export interface FieldworkFullscreenDrawingBackground {
   aspectRatio?: number;
   boundaryPoints?: { x: number; y: number }[];
   label?: string;
+  writingGuides?: boolean;
 }
 
 interface FullscreenDrawingCommand {
@@ -694,6 +695,20 @@ function drawStroke(stroke,fallbackColor,drawingContext){
   target.restore();
 }
 function drawBackground(){
+  if(background.writingGuides){
+    ctx.save();
+    ctx.strokeStyle='rgba(47,111,78,0.18)';
+    ctx.lineWidth=1;
+    for(let y=2000;y<maxCoordinate;y+=2000){
+      const start=toScreenPoint({x:0,y});
+      const end=toScreenPoint({x:maxCoordinate,y});
+      ctx.beginPath();
+      ctx.moveTo(start.x,start.y);
+      ctx.lineTo(end.x,end.y);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
   const points=Array.isArray(background.boundaryPoints)
     ? background.boundaryPoints.map(toScreenPoint)
     : [];

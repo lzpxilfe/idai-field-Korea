@@ -1796,8 +1796,14 @@ export const RecordRow: React.FC<{
     [config, document]
   );
   const allowedEvidenceCategories = useMemo(
-    () => new Set(allowedAddCategoryNames),
-    [allowedAddCategoryNames]
+    () => new Set([
+      ...allowedAddCategoryNames,
+      ...(document.resource.category === KOREAN_FIELDWORK_CATEGORIES.FEATURE
+        && config.getCategory(KOREAN_FIELDWORK_CATEGORIES.PEN_MEMO)
+        ? [KOREAN_FIELDWORK_CATEGORIES.PEN_MEMO]
+        : []),
+    ]),
+    [allowedAddCategoryNames, config, document.resource.category]
   );
   const actionSummary = useMemo(
     () => getKoreanFieldworkRecordActionSummary(
@@ -1963,6 +1969,7 @@ export const RecordRow: React.FC<{
                     && (
                       chip.id === 'finds'
                       || chip.id === 'samples'
+                      || chip.id === 'sketches'
                     );
 
                   if (isCombinedPitChip) {
@@ -2010,7 +2017,9 @@ export const RecordRow: React.FC<{
                   return (
                     <EvidenceChip
                       key={`${title}-${chip.id}`}
-                      chip={chip}
+                      chip={isFeatureRecord && chip.id === 'sketches'
+                        ? { ...chip, label: '메모' }
+                        : chip}
                       canCreate={canCreate}
                       disabled={!isPressable}
                       onPress={() => {

@@ -151,6 +151,7 @@ describe('ProjectScreen RecordRow', () => {
   it.each([
     ['finds', KOREAN_FIELDWORK_CATEGORIES.FIND],
     ['samples', KOREAN_FIELDWORK_CATEGORIES.SAMPLE],
+    ['sketches', KOREAN_FIELDWORK_CATEGORIES.PEN_MEMO],
   ])('opens the empty %s location flow without an extra add screen', (
     chipId,
     categoryName
@@ -229,7 +230,10 @@ const createConfiguration = (): ProjectConfiguration =>
   new ProjectConfiguration({
     categories: {},
     commonFields: {},
-    forms: [createCategory(KOREAN_FIELDWORK_CATEGORIES.FEATURE)],
+    forms: [
+      createCategory(KOREAN_FIELDWORK_CATEGORIES.FEATURE),
+      createCategory(KOREAN_FIELDWORK_CATEGORIES.PEN_MEMO),
+    ],
     projectLanguages: [],
     relations: [],
     valuelists: {},

@@ -84,6 +84,24 @@ describe('Korean fieldwork navigation helpers', () => {
     });
   });
 
+  it('opens a new pen memo directly in the full-screen writing canvas', () => {
+    pushKoreanFieldworkDocumentAdd({
+      categoryName: 'PenMemo',
+      parentDocId: 'feature-1',
+      returnTarget: KOREAN_FIELDWORK_RETURN_TARGETS.FIELD_BOARD,
+    });
+
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: '/ProjectScreen/DocumentAdd',
+      params: {
+        parentDocId: 'feature-1',
+        categoryName: 'PenMemo',
+        openFreeSketch: '1',
+        returnTo: 'fieldBoard',
+      },
+    });
+  });
+
   it('blocks the field board when no project has been created or opened', () => {
     expect(canOpenKoreanFieldworkProject({
       currentProject: '',
