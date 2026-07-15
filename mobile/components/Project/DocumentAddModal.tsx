@@ -16,6 +16,7 @@ import React, {
   useState,
 } from 'react';
 import {
+  Animated,
   GestureResponderEvent,
   LayoutChangeEvent,
   Modal,
@@ -183,6 +184,7 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
     initialCategoryName === KOREAN_FIELDWORK_CATEGORIES.FEATURE;
   const [isChoosingFeatureType, setIsChoosingFeatureType] =
     useState(isFeatureOnlyFlow);
+  const featureCreationScrollY = useRef(new Animated.Value(0)).current;
   const windowDimensions = useWindowDimensions();
   const isFeatureWideLayout =
     windowDimensions.width >= FEATURE_SKETCH_TABLET_WIDTH;
@@ -204,6 +206,11 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
     },
     [isFeatureWideLayout, windowDimensions.height]
   );
+  const featureMapTranslateY = featureCreationScrollY.interpolate({
+    extrapolate: 'clamp',
+    inputRange: [0, featureSketchCanvasHeight],
+    outputRange: [0, -featureSketchCanvasHeight],
+  });
   const [featureLocationShape, setFeatureLocationShape] =
     useState<FeatureLocationSketchShape>('polygon');
   const [featureSketchActiveTool, setFeatureSketchActiveTool] =
@@ -1372,42 +1379,50 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
     );
 
     return (
-      <ScrollView
-        contentContainerStyle={[
-          styles.featureCreationLayoutContent,
-          isFeatureWideLayout && styles.featureCreationLayoutContentWide,
-        ]}
-        keyboardShouldPersistTaps="handled"
-        nestedScrollEnabled={true}
-        scrollEnabled={true}
-        showsHorizontalScrollIndicator={false}
-        showsVerticalScrollIndicator={true}
-        style={styles.featureCreationLayout}
-        testID="featureCreationLayout"
-      >
-        <View
+      <View style={styles.featureCreationLayout} testID="featureCreationLayout">
+        <Animated.View
           style={[
             styles.featureCreationMapPane,
             isFeatureWideLayout && styles.featureCreationMapPaneWide,
-            { height: featureSketchCanvasHeight },
+            {
+              height: featureSketchCanvasHeight,
+              transform: [{ translateY: featureMapTranslateY }],
+            },
           ]}
           testID="featureCreationMapPane"
         >
           {renderFeatureLocationSketchPanel()}
-        </View>
-        <View
-          style={[
-            styles.featureCreationFormPane,
-            styles.featureCreationFormScrollerContent,
-            !isFeatureWideLayout && styles.featureCreationFormScrollerContentNarrow,
-            isFeatureWideLayout && styles.featureCreationFormPaneWide,
+        </Animated.View>
+        <Animated.ScrollView
+          contentContainerStyle={[
+            styles.featureCreationLayoutContent,
+            isFeatureWideLayout && styles.featureCreationLayoutContentWide,
+            { paddingTop: featureSketchCanvasHeight },
           ]}
-          testID="featureCreationFormPane"
+          keyboardShouldPersistTaps="handled"
+          onScroll={Animated.event(
+            [{ nativeEvent: { contentOffset: { y: featureCreationScrollY } } }],
+            { useNativeDriver: true }
+          )}
+          scrollEventThrottle={16}
+          showsHorizontalScrollIndicator={false}
+          showsVerticalScrollIndicator={true}
+          style={styles.featureCreationScroller}
+          testID="featureCreationScroller"
         >
-          <View style={[
-            styles.featureNamePanel,
-            isFeatureWideLayout && styles.featureNamePanelWide,
-          ]}>
+          <View
+            style={[
+              styles.featureCreationFormPane,
+              styles.featureCreationFormScrollerContent,
+              !isFeatureWideLayout && styles.featureCreationFormScrollerContentNarrow,
+              isFeatureWideLayout && styles.featureCreationFormPaneWide,
+            ]}
+            testID="featureCreationFormPane"
+          >
+            <View style={[
+              styles.featureNamePanel,
+              isFeatureWideLayout && styles.featureNamePanelWide,
+            ]}>
             <Input
               autoFocus
               isValid={true}
@@ -1570,8 +1585,9 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
               testID="featureCreateSubmit"
             />
           </View>
-        </View>
-      </ScrollView>
+          </View>
+        </Animated.ScrollView>
+      </View>
     );
   };
 
@@ -2796,6 +2812,9 @@ const styles = StyleSheet.create({
   featureCreationLayout: {
     flex: 1,
   },
+  featureCreationScroller: {
+    flex: 1,
+  },
   featureCreationLayoutContent: {
     flexGrow: 1,
     flexDirection: 'column',
@@ -2804,8 +2823,13 @@ const styles = StyleSheet.create({
     alignItems: 'stretch',
   },
   featureCreationMapPane: {
+    left: 0,
     minWidth: 0,
     overflow: 'hidden',
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    zIndex: 2,
   },
   featureCreationMapPaneWide: {
     marginRight: 0,

@@ -502,20 +502,24 @@ describe('DocumentAddModal', () => {
     const creationLayout = getByTestId('featureCreationLayout');
     expect(StyleSheet.flatten(creationLayout.props.style))
       .toEqual(expect.objectContaining({ flex: 1 }));
-    expect(StyleSheet.flatten(creationLayout.props.contentContainerStyle))
+    const creationScroller = getByTestId('featureCreationScroller');
+    expect(StyleSheet.flatten(creationScroller.props.contentContainerStyle))
       .toEqual(expect.objectContaining({
         flexDirection: 'column',
         flexGrow: 1,
+        paddingTop: expect.any(Number),
       }));
-    expect(creationLayout.props.scrollEnabled).toBe(true);
-    expect(creationLayout.props.nestedScrollEnabled).toBe(true);
-    expect(creationLayout.props.showsHorizontalScrollIndicator).toBe(false);
-    expect(creationLayout.props.showsVerticalScrollIndicator).toBe(true);
+    expect(creationScroller.props.onScroll).toEqual(expect.any(Function));
+    expect(creationScroller.props.scrollEventThrottle).toBe(16);
+    expect(creationScroller.props.showsHorizontalScrollIndicator).toBe(false);
+    expect(creationScroller.props.showsVerticalScrollIndicator).toBe(true);
     expect(StyleSheet.flatten(getByTestId('featureCreationMapPane').props.style))
       .toEqual(expect.objectContaining({
         height: expect.any(Number),
         minWidth: 0,
         overflow: 'hidden',
+        position: 'absolute',
+        zIndex: 2,
       }));
     const formPaneStyle = StyleSheet.flatten(getByTestId('featureCreationFormPane').props.style);
     expect(formPaneStyle).toEqual(expect.objectContaining({ minWidth: 0 }));
@@ -525,9 +529,6 @@ describe('DocumentAddModal', () => {
       flexDirection: 'column',
     }));
 
-    fireEvent.scroll(creationLayout, {
-      nativeEvent: { contentOffset: { y: 240 } },
-    });
     expect(getByTestId('featureLocationSketchCanvas')).toBeTruthy();
     expect(StyleSheet.flatten(getByTestId('featureLocationSketchPanel').props.style))
       .toEqual(expect.objectContaining({ flex: 1 }));
