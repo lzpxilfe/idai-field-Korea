@@ -1399,6 +1399,7 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
             isFeatureWideLayout && styles.featureCreationLayoutContentWide,
             { paddingTop: featureSketchCanvasHeight },
           ]}
+          keyboardDismissMode="on-drag"
           keyboardShouldPersistTaps="handled"
           onScroll={Animated.event(
             [{ nativeEvent: { contentOffset: { y: featureCreationScrollY } } }],
@@ -1410,6 +1411,16 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
           style={styles.featureCreationScroller}
           testID="featureCreationScroller"
         >
+          <View
+            pointerEvents="none"
+            style={styles.featureCreationScrollHandle}
+            testID="featureCreationScrollHandle"
+          >
+            <View style={styles.featureCreationScrollHandleBar} />
+            <Text style={styles.featureCreationScrollHandleText}>
+              위로 밀어 아래 내용 보기
+            </Text>
+          </View>
           <View
             style={[
               styles.featureCreationFormPane,
@@ -2814,6 +2825,28 @@ const styles = StyleSheet.create({
   },
   featureCreationScroller: {
     flex: 1,
+  },
+  featureCreationScrollHandle: {
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderBottomColor: '#e4e7ec',
+    borderBottomWidth: 1,
+    justifyContent: 'center',
+    minHeight: 52,
+    paddingVertical: 7,
+    width: '100%',
+  },
+  featureCreationScrollHandleBar: {
+    backgroundColor: '#98a2b3',
+    borderRadius: 999,
+    height: 4,
+    marginBottom: 5,
+    width: 54,
+  },
+  featureCreationScrollHandleText: {
+    color: '#667085',
+    fontSize: 13,
+    fontWeight: '600',
   },
   featureCreationLayoutContent: {
     flexGrow: 1,

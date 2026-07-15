@@ -465,7 +465,7 @@ describe('DocumentAddModal', () => {
       },
     } as any;
 
-    const { getByTestId } = render(
+    const { getByTestId, getByText } = render(
       <LabelsContext.Provider value={{ labels: new Labels(() => ['ko']) }}>
         <ConfigurationContext.Provider value={createConfig([
           createCategory(C.TRENCH),
@@ -510,9 +510,15 @@ describe('DocumentAddModal', () => {
         paddingTop: expect.any(Number),
       }));
     expect(creationScroller.props.onScroll).toEqual(expect.any(Function));
+    expect(creationScroller.props.keyboardDismissMode).toBe('on-drag');
     expect(creationScroller.props.scrollEventThrottle).toBe(16);
     expect(creationScroller.props.showsHorizontalScrollIndicator).toBe(false);
     expect(creationScroller.props.showsVerticalScrollIndicator).toBe(true);
+    const scrollHandle = getByTestId('featureCreationScrollHandle');
+    expect(scrollHandle.props.pointerEvents).toBe('none');
+    expect(StyleSheet.flatten(scrollHandle.props.style))
+      .toEqual(expect.objectContaining({ minHeight: 52 }));
+    expect(getByText('위로 밀어 아래 내용 보기')).toBeTruthy();
     expect(StyleSheet.flatten(getByTestId('featureCreationMapPane').props.style))
       .toEqual(expect.objectContaining({
         height: expect.any(Number),
