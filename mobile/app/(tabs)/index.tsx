@@ -13,6 +13,7 @@ import LoadProjectModal from '@/components/Home/LoadProjectModal';
 import { Href, router } from 'expo-router';
 import RecentProjects from '@/components/Home/RecentProjects';
 import { SAMPLE_PROJECT_ID } from '@/constants/sample-project';
+import { destroyPouchDbDatastore } from '@/hooks/use-pouchdb-datastore';
 
 interface HomeScreenProps {
   deleteProject?: (project: string) => void;
@@ -59,8 +60,7 @@ const Header: React.FC<{
 const BottomActions: React.FC<{
   onCreatePress: () => void;
   onLoadPress: () => void;
-  onTestPress: () => void;
-}> = ({ onCreatePress, onLoadPress, onTestPress }) => (
+}> = ({ onCreatePress, onLoadPress }) => (
   <View style={styles.bottomActionsContainer}>
     <Button
       icon={<Ionicons name="add-circle" size={16} />}
@@ -78,13 +78,6 @@ const BottomActions: React.FC<{
       variant="mellow"
       testID="load-project-button"
     />
-    <Button
-      icon={<Ionicons name="folder-open" size={16} />}
-      onPress={onTestPress}
-      title="테스트 프로젝트 열기"
-      style={styles.bottomActionButton}
-      testID="sample-project-button"
-    />
   </View>
 );
 
@@ -97,6 +90,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ deleteProject }) => {
   const [isProjectModalOpen, setIsProjectModalOpen] = useState<boolean>(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
   const [isLoadModalOpen, setIsLoadModalOpen] = useState<boolean>(false);
+
+  useEffect(() => {
+    void destroyPouchDbDatastore(SAMPLE_PROJECT_ID).catch((error) => {
+      console.warn('Failed to remove the legacy sample project database.', error);
+    });
+  }, []);
 
   useEffect(() => {
     setSelectedProject((currentProject) =>
@@ -112,7 +111,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ deleteProject }) => {
       setSelectedProject(project);
       preferences.setCurrentProject(project, languages, {
         ...(displayName ? { displayName } : {}),
-        includeInRecentProjects: project !== SAMPLE_PROJECT_ID,
+        includeInRecentProjects: true,
       });
       navigate('/ProjectScreen');
     },
@@ -135,7 +134,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ deleteProject }) => {
       setSelectedProject,
       deleteProject,
       preferences,
-      preferences.preferences.recentProjects,
     ]
   );
 
@@ -206,7 +204,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ deleteProject }) => {
         <BottomActions
           onCreatePress={() => setIsProjectModalOpen(true)}
           onLoadPress={() => setIsLoadModalOpen(true)}
-          onTestPress={() => openProject(SAMPLE_PROJECT_ID)}
         />
       </View>
     </SafeAreaView>

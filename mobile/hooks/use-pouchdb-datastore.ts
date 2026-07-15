@@ -123,7 +123,7 @@ export default usePouchDbDatastore;
 
 export const destroyPouchDbDatastore = async (project: string): Promise<void> => {
   const normalizedProject = project.trim();
-  if (!normalizedProject || isSampleProject(normalizedProject)) return;
+  if (!normalizedProject) return;
 
   const datastore = new PouchdbDatastore(
     (name: string) => new PouchDB(name),

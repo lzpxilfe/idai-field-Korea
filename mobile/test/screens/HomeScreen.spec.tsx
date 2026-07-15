@@ -11,6 +11,7 @@ import { PreferencesContext } from '@/contexts/preferences-context';
 import { UsePreferences } from '@/hooks/use-preferences';
 import { defaultMapSettings } from '@/components/Project/Map/map-settings';
 import { SAMPLE_PROJECT_ID } from '@/constants/sample-project';
+import { destroyPouchDbDatastore } from '@/hooks/use-pouchdb-datastore';
 
 const safeAreaInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 
@@ -23,7 +24,7 @@ jest.mock('expo-router', () => ({
 jest.mock('@/hooks/use-pouchdb-datastore', () => ({
   __esModule: true,
   default: jest.fn(),
-  destroyPouchDbDatastore: jest.fn(),
+  destroyPouchDbDatastore: jest.fn(() => Promise.resolve()),
 }));
 
 describe('HomeScreen', () => {
@@ -56,23 +57,15 @@ describe('HomeScreen', () => {
     expect(router.navigate).toHaveBeenCalledWith('/SettingsScreen');
   });
 
-  it('allows opening the sample project before the worker name is set', () => {
-    const setCurrentProject = jest.fn();
+  it('removes legacy sample data without exposing a sample project entry', () => {
     const preferences = createPreferencesContextValue({
       username: '',
       recentProjects: [],
-      setCurrentProject,
     });
-    const { getByTestId } = renderHomeScreen(preferences);
+    const { queryByTestId } = renderHomeScreen(preferences);
 
-    fireEvent.press(getByTestId('sample-project-button'));
-
-    expect(setCurrentProject).toHaveBeenCalledWith(
-      SAMPLE_PROJECT_ID,
-      undefined,
-      { includeInRecentProjects: false }
-    );
-    expect(router.navigate).toHaveBeenCalledWith('/ProjectScreen');
+    expect(queryByTestId('sample-project-button')).toBeNull();
+    expect(destroyPouchDbDatastore).toHaveBeenCalledWith(SAMPLE_PROJECT_ID);
   });
 
   it('allows opening recent projects before the worker name is set', () => {
