@@ -496,6 +496,15 @@ describe('DocumentAddModal', () => {
 
     expect(getByTestId('featureSketchBackground_satellite').props.accessibilityState)
       .toMatchObject({ selected: true });
+    const satelliteImage = getByTestId('featureSketchSatelliteTile_0');
+    expect(satelliteImage.props.source.uri).toContain(
+      'World_Imagery/MapServer/tile/'
+    );
+    fireEvent(satelliteImage, 'loadStart');
+    expect(getByText('위성지도 불러오는 중')).toBeTruthy();
+    fireEvent(satelliteImage, 'load');
+    expect(getByTestId('featureSketchSatelliteAttribution')).toBeTruthy();
+    expect(getByText('Tiles © Esri')).toBeTruthy();
 
     const canvas = getByTestId('featureLocationSketchCanvas');
     const touchLayer = getByTestId('featureLocationSketchTouchLayer');
@@ -513,7 +522,16 @@ describe('DocumentAddModal', () => {
     expect(creationScroller.props.keyboardDismissMode).toBe('on-drag');
     expect(creationScroller.props.scrollEventThrottle).toBe(16);
     expect(creationScroller.props.showsHorizontalScrollIndicator).toBe(false);
-    expect(creationScroller.props.showsVerticalScrollIndicator).toBe(true);
+    expect(creationScroller.props.showsVerticalScrollIndicator).toBe(false);
+    fireEvent(creationScroller, 'layout', {
+      nativeEvent: { layout: { height: 700, width: 800, x: 0, y: 0 } },
+    });
+    fireEvent(creationScroller, 'contentSizeChange', 800, 2100);
+    const scrollbar = getByTestId('featureCreationScrollbar');
+    expect(scrollbar.props.onResponderGrant).toEqual(expect.any(Function));
+    expect(scrollbar.props.onResponderMove).toEqual(expect.any(Function));
+    expect(StyleSheet.flatten(getByTestId('featureCreationScrollbarThumb').props.style))
+      .toEqual(expect.objectContaining({ height: expect.any(Number) }));
     const scrollHandle = getByTestId('featureCreationScrollHandle');
     expect(scrollHandle.props.pointerEvents).toBe('none');
     expect(StyleSheet.flatten(scrollHandle.props.style))

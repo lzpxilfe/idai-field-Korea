@@ -16,8 +16,10 @@ import React, {
   useState,
 } from 'react';
 import {
+  ActivityIndicator,
   Animated,
   GestureResponderEvent,
+  Image,
   LayoutChangeEvent,
   Modal,
   Pressable,
@@ -47,6 +49,10 @@ import {
   KOREAN_FIELDWORK_CATEGORIES,
 } from './korean-fieldwork-categories';
 import { canCreateKoreanFieldworkChildRecord } from './korean-fieldwork-child-records';
+import {
+  FEATURE_SKETCH_SATELLITE_ATTRIBUTION,
+  getFeatureSketchSatelliteTiles,
+} from './feature-sketch-satellite';
 import {
   getKoreanFieldworkFeatureInvestigationSteps,
   getKoreanFieldworkFeatureTypeOption,
@@ -185,6 +191,9 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
   const [isChoosingFeatureType, setIsChoosingFeatureType] =
     useState(isFeatureOnlyFlow);
   const featureCreationScrollY = useRef(new Animated.Value(0)).current;
+  const featureCreationScrollerRef = useRef<ScrollView>(null);
+  const [featureCreationViewportHeight, setFeatureCreationViewportHeight] = useState(0);
+  const [featureCreationContentHeight, setFeatureCreationContentHeight] = useState(0);
   const windowDimensions = useWindowDimensions();
   const isFeatureWideLayout =
     windowDimensions.width >= FEATURE_SKETCH_TABLET_WIDTH;
@@ -211,6 +220,33 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
     inputRange: [0, featureSketchCanvasHeight],
     outputRange: [0, -featureSketchCanvasHeight],
   });
+  const featureCreationScrollTrackHeight = Math.max(
+    0,
+    featureCreationViewportHeight - 20
+  );
+  const featureCreationMaxScroll = Math.max(
+    0,
+    featureCreationContentHeight - featureCreationViewportHeight
+  );
+  const featureCreationScrollThumbHeight = featureCreationScrollTrackHeight > 0
+    ? Math.min(
+      featureCreationScrollTrackHeight,
+      Math.max(
+        56,
+        featureCreationScrollTrackHeight
+          * (featureCreationViewportHeight / Math.max(featureCreationContentHeight, 1))
+      )
+    )
+    : 0;
+  const featureCreationScrollThumbTravel = Math.max(
+    0,
+    featureCreationScrollTrackHeight - featureCreationScrollThumbHeight
+  );
+  const featureCreationScrollThumbY = featureCreationScrollY.interpolate({
+    extrapolate: 'clamp',
+    inputRange: [0, Math.max(1, featureCreationMaxScroll)],
+    outputRange: [0, featureCreationScrollThumbTravel],
+  });
   const [featureLocationShape, setFeatureLocationShape] =
     useState<FeatureLocationSketchShape>('polygon');
   const [featureSketchActiveTool, setFeatureSketchActiveTool] =
@@ -228,6 +264,8 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
     useState(FEATURE_SKETCH_CANVAS_DEFAULT_SIZE);
   const [featureSketchBackground, setFeatureSketchBackground] =
     useState<FeatureSketchBackground>('white');
+  const [featureSketchSatelliteStatus, setFeatureSketchSatelliteStatus] =
+    useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
   const [featureLiveLocation, setFeatureLiveLocation] =
     useState<FeatureLiveLocation>();
   const [featureLiveLocationStatus, setFeatureLiveLocationStatus] =
@@ -261,9 +299,54 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
     () => getFeatureSketchBoundaryPoints(boundaryDraft),
     [boundaryDraft]
   );
+  const featureSketchSatelliteTiles = useMemo(
+    () => getFeatureSketchSatelliteTiles(boundaryDraft, featureLiveLocation),
+    [boundaryDraft, featureLiveLocation]
+  );
   const featureLiveLocationPoint = useMemo(
     () => getFeatureSketchPointFromLocation(featureLiveLocation, boundaryDraft),
     [boundaryDraft, featureLiveLocation]
+  );
+  const handleFeatureCreationScrollerLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      const nextHeight = event.nativeEvent.layout.height;
+      setFeatureCreationViewportHeight((currentHeight) =>
+        currentHeight === nextHeight ? currentHeight : nextHeight);
+    },
+    []
+  );
+  const handleFeatureCreationContentSizeChange = useCallback(
+    (_width: number, height: number) => {
+      setFeatureCreationContentHeight((currentHeight) =>
+        currentHeight === height ? currentHeight : height);
+    },
+    []
+  );
+  const scrollFeatureCreationFromRail = useCallback(
+    (event: GestureResponderEvent) => {
+      if (
+        featureCreationMaxScroll <= 0
+        || featureCreationScrollThumbTravel <= 0
+      ) {
+        return;
+      }
+
+      const thumbTop = clamp(
+        event.nativeEvent.locationY - (featureCreationScrollThumbHeight / 2),
+        0,
+        featureCreationScrollThumbTravel
+      );
+      featureCreationScrollerRef.current?.scrollTo({
+        animated: false,
+        y: featureCreationMaxScroll
+          * (thumbTop / featureCreationScrollThumbTravel),
+      });
+    },
+    [
+      featureCreationMaxScroll,
+      featureCreationScrollThumbHeight,
+      featureCreationScrollThumbTravel,
+    ]
   );
 
   const optionGroups = useMemo(
@@ -1041,16 +1124,54 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
       ]}
       testID="featureSketchFlatMapSurface"
     >
-      {featureSketchBackground === 'satellite' && (
-        <>
-          <View style={[styles.featureSketchSatelliteField, styles.featureSketchSatelliteFieldA]} />
-          <View style={[styles.featureSketchSatelliteField, styles.featureSketchSatelliteFieldB]} />
-          <View style={[styles.featureSketchSatelliteField, styles.featureSketchSatelliteFieldC]} />
-          <View style={[styles.featureSketchSatelliteRoad, styles.featureSketchSatelliteRoadA]} />
-          <View style={[styles.featureSketchSatelliteRoad, styles.featureSketchSatelliteRoadB]} />
-          <View style={[styles.featureSketchSatelliteTreeLine, styles.featureSketchSatelliteTreeLineA]} />
-          <View style={[styles.featureSketchSatelliteWater, styles.featureSketchSatelliteWaterA]} />
-        </>
+      {featureSketchBackground === 'satellite'
+        && featureSketchSatelliteTiles.map((tile, index) => (
+          <Image
+            key={tile.key}
+            onError={(event) => {
+              console.warn(
+                `Unable to load feature sketch satellite tile: ${event.nativeEvent.error}; `
+                + tile.uri
+              );
+              setFeatureSketchSatelliteStatus('error');
+            }}
+            onLoad={() => setFeatureSketchSatelliteStatus('loaded')}
+            onLoadStart={() => setFeatureSketchSatelliteStatus('loading')}
+            resizeMode="stretch"
+            source={{ uri: tile.uri }}
+            style={[
+              styles.featureSketchSatelliteImage,
+              {
+                height: `${tile.heightPercent}%`,
+                left: `${tile.leftPercent}%`,
+                top: `${tile.topPercent}%`,
+                width: `${tile.widthPercent}%`,
+              },
+            ]}
+            testID={`featureSketchSatelliteTile_${index}`}
+          />
+        ))}
+      {featureSketchBackground === 'satellite'
+        && (featureSketchSatelliteStatus !== 'loaded'
+          || featureSketchSatelliteTiles.length === 0) && (
+        <View style={styles.featureSketchSatelliteStatus}>
+          {featureSketchSatelliteStatus === 'error'
+            || featureSketchSatelliteTiles.length === 0 ? (
+            <>
+              <Ionicons name="cloud-offline-outline" size={20} color="#475467" />
+              <Text style={styles.featureSketchSatelliteStatusText}>
+                위성지도를 불러오지 못했습니다
+              </Text>
+            </>
+          ) : (
+            <>
+              <ActivityIndicator color="#175cd3" size="small" />
+              <Text style={styles.featureSketchSatelliteStatusText}>
+                위성지도 불러오는 중
+              </Text>
+            </>
+          )}
+        </View>
       )}
     </View>
   );
@@ -1187,6 +1308,18 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
       >
         {renderFeatureSketchMapSurface()}
         {renderFeatureSketchGrid()}
+        {featureSketchBackground === 'satellite'
+          && featureSketchSatelliteStatus === 'loaded' && (
+          <View
+            pointerEvents="none"
+            style={styles.featureSketchSatelliteAttribution}
+            testID="featureSketchSatelliteAttribution"
+          >
+            <Text style={styles.featureSketchSatelliteAttributionText}>
+              {FEATURE_SKETCH_SATELLITE_ATTRIBUTION}
+            </Text>
+          </View>
+        )}
         <View
           onMoveShouldSetResponder={() => true}
           onResponderGrant={previewFeatureSketchPoint}
@@ -1401,13 +1534,16 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
           ]}
           keyboardDismissMode="on-drag"
           keyboardShouldPersistTaps="handled"
+          onContentSizeChange={handleFeatureCreationContentSizeChange}
+          onLayout={handleFeatureCreationScrollerLayout}
           onScroll={Animated.event(
             [{ nativeEvent: { contentOffset: { y: featureCreationScrollY } } }],
             { useNativeDriver: true }
           )}
           scrollEventThrottle={16}
           showsHorizontalScrollIndicator={false}
-          showsVerticalScrollIndicator={true}
+          showsVerticalScrollIndicator={false}
+          ref={featureCreationScrollerRef}
           style={styles.featureCreationScroller}
           testID="featureCreationScroller"
         >
@@ -1598,6 +1734,31 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
           </View>
           </View>
         </Animated.ScrollView>
+        {featureCreationMaxScroll > 1 && (
+          <View
+            accessibilityLabel="유구 추가 내용 스크롤"
+            onMoveShouldSetResponder={() => true}
+            onResponderGrant={scrollFeatureCreationFromRail}
+            onResponderMove={scrollFeatureCreationFromRail}
+            onResponderTerminationRequest={() => false}
+            onStartShouldSetResponder={() => true}
+            style={styles.featureCreationScrollbar}
+            testID="featureCreationScrollbar"
+          >
+            <View pointerEvents="none" style={styles.featureCreationScrollbarTrack} />
+            <Animated.View
+              pointerEvents="none"
+              style={[
+                styles.featureCreationScrollbarThumb,
+                {
+                  height: featureCreationScrollThumbHeight,
+                  transform: [{ translateY: featureCreationScrollThumbY }],
+                },
+              ]}
+              testID="featureCreationScrollbarThumb"
+            />
+          </View>
+        )}
       </View>
     );
   };
@@ -2826,6 +2987,33 @@ const styles = StyleSheet.create({
   featureCreationScroller: {
     flex: 1,
   },
+  featureCreationScrollbar: {
+    alignItems: 'center',
+    bottom: 10,
+    justifyContent: 'flex-start',
+    position: 'absolute',
+    right: 0,
+    top: 10,
+    width: 30,
+    zIndex: 6,
+  },
+  featureCreationScrollbarTrack: {
+    backgroundColor: 'rgba(71, 84, 103, 0.2)',
+    borderRadius: 4,
+    bottom: 0,
+    position: 'absolute',
+    top: 0,
+    width: 6,
+  },
+  featureCreationScrollbarThumb: {
+    backgroundColor: '#667085',
+    borderColor: 'rgba(255, 255, 255, 0.92)',
+    borderRadius: 7,
+    borderWidth: 1,
+    position: 'absolute',
+    top: 0,
+    width: 14,
+  },
   featureCreationScrollHandle: {
     alignItems: 'center',
     backgroundColor: '#ffffff',
@@ -3055,75 +3243,39 @@ const styles = StyleSheet.create({
   featureSketchSatelliteMapSurface: {
     backgroundColor: '#f8faf7',
   },
+  featureSketchSatelliteImage: {
+    position: 'absolute',
+  },
+  featureSketchSatelliteStatus: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    backgroundColor: '#eef2f6',
+    justifyContent: 'center',
+  },
+  featureSketchSatelliteStatusText: {
+    color: '#475467',
+    fontSize: 13,
+    fontWeight: '700',
+    marginTop: 7,
+  },
+  featureSketchSatelliteAttribution: {
+    backgroundColor: 'rgba(255, 255, 255, 0.82)',
+    borderRadius: 3,
+    bottom: 92,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    position: 'absolute',
+    right: 38,
+    zIndex: 3,
+  },
+  featureSketchSatelliteAttributionText: {
+    color: '#344054',
+    fontSize: 9,
+    fontWeight: '600',
+  },
   featureSketchTouchLayer: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 1,
-  },
-  featureSketchSatelliteField: {
-    borderColor: 'rgba(52, 64, 84, 0.11)',
-    borderWidth: 1,
-    position: 'absolute',
-  },
-  featureSketchSatelliteFieldA: {
-    backgroundColor: '#dde9d3',
-    bottom: '50%',
-    left: 0,
-    right: '46%',
-    top: 0,
-  },
-  featureSketchSatelliteFieldB: {
-    backgroundColor: '#eee1c3',
-    bottom: 0,
-    left: 0,
-    right: '56%',
-    top: '50%',
-  },
-  featureSketchSatelliteFieldC: {
-    backgroundColor: '#d5e2dc',
-    bottom: 0,
-    left: '44%',
-    right: 0,
-    top: '34%',
-  },
-  featureSketchSatelliteRoad: {
-    backgroundColor: 'rgba(244, 247, 240, 0.9)',
-    borderColor: 'rgba(52, 64, 84, 0.16)',
-    borderWidth: 1,
-    position: 'absolute',
-  },
-  featureSketchSatelliteRoadA: {
-    bottom: '48%',
-    height: 14,
-    left: 0,
-    right: 0,
-  },
-  featureSketchSatelliteRoadB: {
-    bottom: 0,
-    left: '42%',
-    top: 0,
-    width: 14,
-  },
-  featureSketchSatelliteTreeLine: {
-    backgroundColor: 'rgba(91, 141, 98, 0.28)',
-    position: 'absolute',
-  },
-  featureSketchSatelliteTreeLineA: {
-    bottom: '48%',
-    height: 18,
-    left: 0,
-    right: 0,
-  },
-  featureSketchSatelliteWater: {
-    backgroundColor: 'rgba(143, 193, 216, 0.36)',
-    borderColor: 'rgba(52, 64, 84, 0.12)',
-    borderWidth: 1,
-    position: 'absolute',
-  },
-  featureSketchSatelliteWaterA: {
-    bottom: '18%',
-    height: '16%',
-    right: 0,
-    width: '22%',
   },
   featureSketchGridLine: {
     backgroundColor: 'rgba(52, 64, 84, 0.1)',
@@ -3354,7 +3506,7 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     flexWrap: 'wrap',
     position: 'absolute',
-    right: 12,
+    right: 34,
     top: 70,
     zIndex: 3,
   },
