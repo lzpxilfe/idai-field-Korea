@@ -65,6 +65,25 @@ describe('Korean fieldwork handwriting', () => {
     ]);
   });
 
+  it('preserves normalized S Pen pressure without changing legacy points', () => {
+    expect(normalizeKoreanFieldworkHandwritingStrokes({
+      version: 1,
+      strokes: [{
+        points: [
+          { pressure: 0.4567, x: 10, y: 20 },
+          { pressure: 5, x: 20, y: 30 },
+          { x: 30, y: 40 },
+        ],
+      }],
+    })).toEqual([{
+      points: [
+        { pressure: 0.457, x: 10, y: 20 },
+        { pressure: 1, x: 20, y: 30 },
+        { x: 30, y: 40 },
+      ],
+    }]);
+  });
+
   it('preserves valid stroke colors and drawing tools', () => {
     expect(normalizeKoreanFieldworkHandwritingStrokes({
       version: 1,

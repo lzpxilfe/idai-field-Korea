@@ -283,7 +283,10 @@ describe('KoreanFieldworkFreeDrawingPanel', () => {
     fireEvent.press(getByTestId('fieldworkFreeDrawingFullscreen'));
     const fullscreenCanvas = getByTestId('fieldworkFreeDrawingFullscreenCanvas');
     const html = fullscreenCanvas.props.source.html as string;
+    const script = html.match(/<script>([\s\S]+)<\/script>/)?.[1];
 
+    expect(script).toBeDefined();
+    expect(() => new Function(script as string)).not.toThrow();
     expect(html).toContain('const minPointDistance=32;');
     expect(html).toContain('const interpolatedPointSpacing=80;');
     expect(html).toContain(
@@ -292,6 +295,54 @@ describe('KoreanFieldworkFreeDrawingPanel', () => {
     expect(html).toContain(
       'if(!source||!Number.isFinite(source.clientX)||!Number.isFinite(source.clientY)) return undefined;'
     );
+    expect(html).toContain("canvas.addEventListener('pointerdown',startPointer");
+    expect(html).toContain('const palmRejectionAfterPenMs=700;');
+    expect(html).toContain('pressure:clamp(pressure,0,1)');
+    expect(getByTestId('fieldworkFreeDrawingFullscreenBrushTool_lasso'))
+      .toBeTruthy();
+    expect(getByTestId('fieldworkFreeDrawingFullscreenBrushTool_hand'))
+      .toBeTruthy();
+    expect(getByTestId('fieldworkFreeDrawingFullscreenResetViewport'))
+      .toBeTruthy();
+  });
+
+  it('undoes and redoes full-screen pen or lasso changes', () => {
+    const handleUpdateStrokes = jest.fn();
+    const { getByTestId } = render(
+      <KoreanFieldworkFreeDrawingPanel
+        onUpdateStrokes={handleUpdateStrokes}
+      />
+    );
+
+    fireEvent.press(getByTestId('fieldworkFreeDrawingFullscreen'));
+    fireEvent(getByTestId('fieldworkFreeDrawingFullscreenCanvas'), 'message', {
+      nativeEvent: {
+        data: JSON.stringify({
+          payload: [{
+            points: [
+              { pressure: 0.25, x: 100, y: 200 },
+              { pressure: 0.75, x: 300, y: 400 },
+            ],
+            tool: 'pen',
+            width: 5,
+          }],
+          type: 'strokes',
+        }),
+      },
+    });
+
+    fireEvent.press(getByTestId('fieldworkFreeDrawingFullscreenUndo'));
+    fireEvent.press(getByTestId('fieldworkFreeDrawingFullscreenRedo'));
+
+    expect(handleUpdateStrokes).toHaveBeenNthCalledWith(
+      2,
+      '{"version":1,"strokes":[]}'
+    );
+    expect(JSON.parse(handleUpdateStrokes.mock.calls[2][0]).strokes[0].points)
+      .toEqual([
+        { pressure: 0.25, x: 100, y: 200 },
+        { pressure: 0.75, x: 300, y: 400 },
+      ]);
   });
 
   it('can start directly in the full-screen sketch canvas', () => {

@@ -1,4 +1,5 @@
 export interface KoreanFieldworkHandwritingPoint {
+  pressure?: number;
   x: number;
   y: number;
 }
@@ -20,6 +21,8 @@ export interface KoreanFieldworkHandwritingPayload {
 const MAX_COORDINATE = 10000;
 const MIN_STROKE_WIDTH = 1;
 const MAX_STROKE_WIDTH = 24;
+const MIN_PRESSURE = 0;
+const MAX_PRESSURE = 1;
 const HEX_COLOR_PATTERN = /^#[0-9a-f]{6}$/i;
 
 export const normalizeKoreanFieldworkHandwritingStrokes = (
@@ -150,8 +153,23 @@ const normalizePoint = (
 
   const x = normalizeCoordinate(value.x);
   const y = normalizeCoordinate(value.y);
+  const pressure = normalizePressure(value.pressure);
 
-  return x === undefined || y === undefined ? undefined : { x, y };
+  return x === undefined || y === undefined
+    ? undefined
+    : {
+      ...(pressure !== undefined ? { pressure } : {}),
+      x,
+      y,
+    };
+};
+
+const normalizePressure = (value: unknown): number | undefined => {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
+
+  return Math.round(
+    Math.max(MIN_PRESSURE, Math.min(MAX_PRESSURE, value)) * 1000
+  ) / 1000;
 };
 
 const normalizeCoordinate = (value: unknown): number | undefined => {

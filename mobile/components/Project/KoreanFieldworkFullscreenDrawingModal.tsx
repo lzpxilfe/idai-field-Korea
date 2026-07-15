@@ -31,6 +31,10 @@ export const FIELDWORK_BRUSH_COLOR_OPTIONS = [
   '#2563eb',
 ] as const;
 export const DEFAULT_FIELDWORK_DRAWING_TOOL: KoreanFieldworkHandwritingTool = 'pen';
+export type FieldworkDrawingInteractionTool =
+  | KoreanFieldworkHandwritingTool
+  | 'hand'
+  | 'lasso';
 
 export interface FieldworkFullscreenDrawingBackground {
   aspectRatio?: number;
@@ -41,12 +45,17 @@ export interface FieldworkFullscreenDrawingBackground {
 
 interface FullscreenDrawingCommand {
   payload?: unknown;
-  type: 'setBrushStyle' | 'setBrushWidth' | 'setStrokes';
+  type:
+    | 'deleteSelection'
+    | 'resetViewport'
+    | 'setBrushStyle'
+    | 'setBrushWidth'
+    | 'setStrokes';
 }
 
 interface FullscreenDrawingMessage {
   payload?: unknown;
-  type: 'drawingActive' | 'ready' | 'strokes';
+  type: 'drawingActive' | 'ready' | 'selection' | 'strokes';
 }
 
 interface Props {
@@ -94,6 +103,9 @@ const KoreanFieldworkFullscreenDrawingModal: React.FC<Props> = ({
 }) => {
   const webViewRef = useRef<WebView>(null);
   const wasVisibleRef = useRef(false);
+  const currentStrokesRef = useRef<KoreanFieldworkHandwritingStroke[]>([]);
+  const undoHistoryRef = useRef<KoreanFieldworkHandwritingStroke[][]>([]);
+  const redoHistoryRef = useRef<KoreanFieldworkHandwritingStroke[][]>([]);
   const normalizedStrokes = useMemo(
     () => normalizeKoreanFieldworkHandwritingStrokes(strokes),
     [strokes]
@@ -101,10 +113,20 @@ const KoreanFieldworkFullscreenDrawingModal: React.FC<Props> = ({
   const [html, setHtml] = useState<string>();
   const [currentStrokes, setCurrentStrokes] =
     useState<KoreanFieldworkHandwritingStroke[]>(normalizedStrokes);
+  const [canRedo, setCanRedo] = useState(false);
+  const [interactionTool, setInteractionTool] =
+    useState<FieldworkDrawingInteractionTool>(drawingTool);
+  const [selectedStrokeCount, setSelectedStrokeCount] = useState(0);
 
   useEffect(() => {
     if (isVisible && !wasVisibleRef.current) {
       setCurrentStrokes(normalizedStrokes);
+      currentStrokesRef.current = normalizedStrokes;
+      undoHistoryRef.current = [];
+      redoHistoryRef.current = [];
+      setCanRedo(false);
+      setInteractionTool(drawingTool);
+      setSelectedStrokeCount(0);
       setHtml(buildFullscreenDrawingHtml({
         background,
         brushColor,
@@ -117,6 +139,7 @@ const KoreanFieldworkFullscreenDrawingModal: React.FC<Props> = ({
       setHtml(undefined);
       setCurrentStrokes(normalizedStrokes);
       onDrawingActiveChange?.(false);
+      setSelectedStrokeCount(0);
     }
     wasVisibleRef.current = isVisible;
   }, [
@@ -139,11 +162,11 @@ const KoreanFieldworkFullscreenDrawingModal: React.FC<Props> = ({
       type: 'setBrushStyle',
       payload: {
         color: brushColor,
-        tool: drawingTool,
+        tool: interactionTool,
         width: brushWidth,
       },
     });
-  }, [brushColor, brushWidth, drawingTool, isVisible, normalizedStrokes]);
+  }, [brushColor, brushWidth, interactionTool, isVisible, normalizedStrokes]);
 
   const postCommand = (command: FullscreenDrawingCommand) => {
     webViewRef.current?.postMessage(JSON.stringify(command));
@@ -152,16 +175,43 @@ const KoreanFieldworkFullscreenDrawingModal: React.FC<Props> = ({
     const normalizedNextStrokes = normalizeKoreanFieldworkHandwritingStrokes(
       nextStrokes
     );
+    currentStrokesRef.current = normalizedNextStrokes;
     setCurrentStrokes(normalizedNextStrokes);
     onUpdateStrokes(normalizedNextStrokes);
   };
-  const undoStroke = () => {
-    const nextStrokes = currentStrokes.slice(0, -1);
+  const recordStrokes = (nextStrokes: KoreanFieldworkHandwritingStroke[]) => {
+    undoHistoryRef.current.push(currentStrokesRef.current);
+    redoHistoryRef.current = [];
+    setCanRedo(false);
     updateStrokes(nextStrokes);
+  };
+  const undoStroke = () => {
+    const fallbackHistory = currentStrokesRef.current.length > 0
+      ? [currentStrokesRef.current.slice(0, -1)]
+      : [];
+    const nextStrokes = undoHistoryRef.current.pop() ?? fallbackHistory[0];
+    if (!nextStrokes) return;
+
+    redoHistoryRef.current.push(currentStrokesRef.current);
+    updateStrokes(nextStrokes);
+    setCanRedo(true);
+    setSelectedStrokeCount(0);
+    postCommand({ type: 'setStrokes', payload: nextStrokes });
+  };
+  const redoStroke = () => {
+    const nextStrokes = redoHistoryRef.current.pop();
+    if (!nextStrokes) return;
+
+    undoHistoryRef.current.push(currentStrokesRef.current);
+    updateStrokes(nextStrokes);
+    setCanRedo(redoHistoryRef.current.length > 0);
+    setSelectedStrokeCount(0);
     postCommand({ type: 'setStrokes', payload: nextStrokes });
   };
   const clearStrokes = () => {
-    updateStrokes([]);
+    if (currentStrokesRef.current.length === 0) return;
+    recordStrokes([]);
+    setSelectedStrokeCount(0);
     postCommand({ type: 'setStrokes', payload: [] });
   };
   const handleMessage = (event: WebViewMessageEvent) => {
@@ -173,8 +223,16 @@ const KoreanFieldworkFullscreenDrawingModal: React.FC<Props> = ({
       return;
     }
 
+    if (message.type === 'selection') {
+      const payload = message.payload as { count?: unknown } | undefined;
+      setSelectedStrokeCount(
+        typeof payload?.count === 'number' ? Math.max(0, payload.count) : 0
+      );
+      return;
+    }
+
     if (message.type === 'strokes') {
-      updateStrokes(normalizeKoreanFieldworkHandwritingStrokes(message.payload));
+      recordStrokes(normalizeKoreanFieldworkHandwritingStrokes(message.payload));
     }
   };
 
@@ -198,6 +256,27 @@ const KoreanFieldworkFullscreenDrawingModal: React.FC<Props> = ({
               testID={`${testIDPrefix}FullscreenUndo`}
             />
             <IconButton
+              icon="redo"
+              isDisabled={!canRedo}
+              onPress={redoStroke}
+              testID={`${testIDPrefix}FullscreenRedo`}
+            />
+            {selectedStrokeCount > 0 && (
+              <IconButton
+                icon="delete-sweep"
+                isDanger
+                isDisabled={false}
+                onPress={() => postCommand({ type: 'deleteSelection' })}
+                testID={`${testIDPrefix}FullscreenDeleteSelection`}
+              />
+            )}
+            <IconButton
+              icon="center-focus-strong"
+              isDisabled={false}
+              onPress={() => postCommand({ type: 'resetViewport' })}
+              testID={`${testIDPrefix}FullscreenResetViewport`}
+            />
+            <IconButton
               icon="delete-outline"
               isDanger
               isDisabled={currentStrokes.length === 0}
@@ -213,12 +292,18 @@ const KoreanFieldworkFullscreenDrawingModal: React.FC<Props> = ({
           </View>
         </View>
         <KoreanFieldworkBrushControls
+          activeInteractionTool={interactionTool}
           brushColor={brushColor}
           brushWidth={brushWidth}
           drawingTool={drawingTool}
           onSelectBrushColor={onBrushColorChange}
           onSelectBrushWidth={onBrushWidthChange}
-          onSelectDrawingTool={onDrawingToolChange}
+          onSelectAdvancedTool={setInteractionTool}
+          onSelectDrawingTool={(tool) => {
+            setInteractionTool(tool);
+            onDrawingToolChange?.(tool);
+          }}
+          showAdvancedTools
           testIDPrefix={`${testIDPrefix}FullscreenBrush`}
         />
         {html && (
@@ -241,29 +326,35 @@ const KoreanFieldworkFullscreenDrawingModal: React.FC<Props> = ({
 };
 
 export const KoreanFieldworkBrushControls: React.FC<{
+  activeInteractionTool?: FieldworkDrawingInteractionTool;
   brushColor?: string;
   brushWidth: number;
   drawingTool?: KoreanFieldworkHandwritingTool;
   isDisabled?: boolean;
+  onSelectAdvancedTool?: (tool: 'hand' | 'lasso') => void;
   onSelectBrushColor?: (color: string) => void;
   onSelectBrushWidth: (width: number) => void;
   onSelectDrawingTool?: (tool: KoreanFieldworkHandwritingTool) => void;
+  showAdvancedTools?: boolean;
   testIDPrefix: string;
 }> = ({
+  activeInteractionTool,
   brushColor = DEFAULT_FIELDWORK_BRUSH_COLOR,
   brushWidth,
   drawingTool = DEFAULT_FIELDWORK_DRAWING_TOOL,
   isDisabled = false,
+  onSelectAdvancedTool,
   onSelectBrushColor,
   onSelectBrushWidth,
   onSelectDrawingTool,
+  showAdvancedTools = false,
   testIDPrefix,
 }) => (
   <View style={styles.brushRow}>
     {!!onSelectDrawingTool && (
       <View style={styles.toolGroup}>
         {(['pen', 'eraser'] as const).map((tool) => {
-          const isSelected = drawingTool === tool;
+          const isSelected = (activeInteractionTool ?? drawingTool) === tool;
 
           return (
             <TouchableOpacity
@@ -281,6 +372,36 @@ export const KoreanFieldworkBrushControls: React.FC<{
             >
               <MaterialIcons
                 name={tool === 'pen' ? 'edit' : 'backspace'}
+                size={16}
+                color={isDisabled ? '#98a2b3' : isSelected ? '#027a48' : '#475467'}
+              />
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    )}
+    {showAdvancedTools && !!onSelectAdvancedTool && (
+      <View style={styles.toolGroup}>
+        {(['lasso', 'hand'] as const).map((tool) => {
+          const isSelected = activeInteractionTool === tool;
+
+          return (
+            <TouchableOpacity
+              accessibilityLabel={tool === 'lasso' ? '올가미 선택' : '화면 이동'}
+              accessibilityState={{ selected: isSelected }}
+              activeOpacity={0.86}
+              disabled={isDisabled}
+              key={tool}
+              onPress={() => onSelectAdvancedTool(tool)}
+              style={[
+                styles.toolOption,
+                isSelected && styles.toolOptionSelected,
+                isDisabled && styles.brushOptionDisabled,
+              ]}
+              testID={`${testIDPrefix}Tool_${tool}`}
+            >
+              <MaterialIcons
+                name={tool === 'lasso' ? 'gesture' : 'pan-tool'}
                 size={16}
                 color={isDisabled ? '#98a2b3' : isSelected ? '#027a48' : '#475467'}
               />
@@ -401,6 +522,7 @@ const parseFullscreenDrawingMessage = (
     if (
       parsedValue.type === 'drawingActive'
       || parsedValue.type === 'ready'
+      || parsedValue.type === 'selection'
       || parsedValue.type === 'strokes'
     ) {
       return {
@@ -458,10 +580,15 @@ const strokeCtx=strokeCanvas.getContext('2d');
 let strokes=Array.isArray(state.strokes)?state.strokes:[];
 let brushWidth=state.brushWidth||5;
 let brushColor=isHexColor(state.brushColor)?state.brushColor:'#111827';
-let drawingTool=state.drawingTool==='eraser'?'eraser':'pen';
+let drawingTool=normalizeDrawingTool(state.drawingTool);
 let activeStroke=null;
+let activePointers=new Map();
 let gesture=null;
 let isDrawing=false;
+let lassoPoints=[];
+let selectedIndices=[];
+let selectionMove=null;
+let lastPenInteractionAt=0;
 let renderQueued=false;
 let pixelRatio=1;
 const maxCoordinate=state.maxCoordinate||10000;
@@ -471,6 +598,8 @@ const releasePointMinDistance=${FULLSCREEN_DRAWING_RELEASE_POINT_MIN_DISTANCE};
 const interpolatedPointSpacing=${FULLSCREEN_DRAWING_INTERPOLATED_POINT_SPACING};
 const maxInterpolatedPointsPerMove=${FULLSCREEN_DRAWING_MAX_INTERPOLATED_POINTS_PER_MOVE};
 let viewport={offsetX:0,offsetY:0,scale:1};
+const palmRejectionAfterPenMs=700;
+const palmContactSize=34;
 function post(type,payload){
   if(window.ReactNativeWebView){
     window.ReactNativeWebView.postMessage(JSON.stringify({type,payload}));
@@ -534,92 +663,205 @@ function screenToNormalized(point){
   if(base.x<frame.left||base.x>frame.left+frame.width||base.y<frame.top||base.y>frame.top+frame.height){
     return undefined;
   }
-  return {
+  const normalized={
     x:clamp(Math.round(((base.x-frame.left)/frame.width)*maxCoordinate),0,maxCoordinate),
     y:clamp(Math.round(((base.y-frame.top)/frame.height)*maxCoordinate),0,maxCoordinate)
   };
+  if(Number.isFinite(point.pressure)) normalized.pressure=clamp(point.pressure,0,1);
+  return normalized;
 }
 function getEventPoint(event){
   const source=event.touches&&event.touches.length?event.touches[0]:event.changedTouches&&event.changedTouches.length?event.changedTouches[0]:event;
   if(!source||!Number.isFinite(source.clientX)||!Number.isFinite(source.clientY)) return undefined;
   const rect=canvas.getBoundingClientRect();
-  return {x:source.clientX-rect.left,y:source.clientY-rect.top};
+  const pressure=Number.isFinite(source.pressure)&&source.pressure>0
+    ? source.pressure
+    : Number.isFinite(source.force)&&source.force>0
+      ? source.force
+      : source.pointerType==='pen'?0.5:undefined;
+  return {
+    x:source.clientX-rect.left,
+    y:source.clientY-rect.top,
+    ...(Number.isFinite(pressure)?{pressure:clamp(pressure,0,1)}:{})
+  };
 }
 function getTouchPoint(touch){
   if(!touch||!Number.isFinite(touch.clientX)||!Number.isFinite(touch.clientY)) return undefined;
   const rect=canvas.getBoundingClientRect();
   return {x:touch.clientX-rect.left,y:touch.clientY-rect.top};
 }
-function startGesture(event){
-  const first=getTouchPoint(event.touches[0]);
-  const second=getTouchPoint(event.touches[1]);
-  if(!first||!second) return;
-  gesture={
+function getActiveTouchPointers(){
+  return Array.from(activePointers.values()).filter((pointer)=>pointer.pointerType==='touch');
+}
+function startGestureFromPointers(){
+  const touches=getActiveTouchPointers();
+  if(touches.length===0){gesture=null;return;}
+  const first=touches[0];
+  const second=touches[1];
+  gesture=second?{
     center:getMidpoint(first,second),
     distance:getPixelDistance(first,second),
+    kind:'pinch',
+    offsetX:viewport.offsetX,
+    offsetY:viewport.offsetY,
+    scale:viewport.scale
+  }:{
+    center:first,
+    distance:1,
+    kind:'pan',
     offsetX:viewport.offsetX,
     offsetY:viewport.offsetY,
     scale:viewport.scale
   };
-  activeStroke=null;
-  isDrawing=false;
-  post('drawingActive',false);
   requestRender();
 }
-function updateGesture(event){
-  if(!gesture||!event.touches||event.touches.length<2) return;
-  const first=getTouchPoint(event.touches[0]);
-  const second=getTouchPoint(event.touches[1]);
-  if(!first||!second) return;
-  const center=getMidpoint(first,second);
-  const nextScale=clamp(
-    gesture.scale*(getPixelDistance(first,second)/Math.max(gesture.distance,1)),
-    1,
-    6
+function updateGestureFromPointers(){
+  if(!gesture) return;
+  const touches=getActiveTouchPointers();
+  if(touches.length===0){gesture=null;return;}
+  const first=touches[0];
+  const second=touches[1];
+  if(second&&gesture.kind!=='pinch'){
+    startGestureFromPointers();
+    return;
+  }
+  if(!second&&gesture.kind==='pinch'){
+    startGestureFromPointers();
+    return;
+  }
+  if(second){
+    const center=getMidpoint(first,second);
+    const nextScale=clamp(
+      gesture.scale*(getPixelDistance(first,second)/Math.max(gesture.distance,1)),
+      1,
+      6
+    );
+    viewport={
+      offsetX:gesture.offsetX+(center.x-gesture.center.x),
+      offsetY:gesture.offsetY+(center.y-gesture.center.y),
+      scale:nextScale
+    };
+  }else{
+    viewport={
+      offsetX:gesture.offsetX+(first.x-gesture.center.x),
+      offsetY:gesture.offsetY+(first.y-gesture.center.y),
+      scale:gesture.scale
+    };
+  }
+  requestRender();
+}
+function isPalmPointer(event){
+  return event.pointerType==='touch'&&(
+    Math.max(Number(event.width)||0,Number(event.height)||0)>=palmContactSize
+    || Date.now()-lastPenInteractionAt<palmRejectionAfterPenMs
   );
-  viewport={
-    offsetX:gesture.offsetX+(center.x-gesture.center.x),
-    offsetY:gesture.offsetY+(center.y-gesture.center.y),
-    scale:nextScale
-  };
-  requestRender();
 }
-function endGesture(event){
-  if(event.touches&&event.touches.length>=2){
-    updateGesture(event);
-    return;
-  }
-  gesture=null;
-}
-function start(event){
+function startPointer(event){
   event.preventDefault();
-  if(event.touches&&event.touches.length>=2){
-    startGesture(event);
+  const screenPoint=getEventPoint(event);
+  if(!screenPoint) return;
+  if(event.pointerType==='touch'){
+    if(isPalmPointer(event)) return;
+    activePointers.set(event.pointerId,{...screenPoint,pointerType:'touch'});
+    startGestureFromPointers();
     return;
   }
-  const point=screenToNormalized(getEventPoint(event));
+  if(event.pointerType==='pen') lastPenInteractionAt=Date.now();
+  canvas.setPointerCapture&&canvas.setPointerCapture(event.pointerId);
+  if(drawingTool==='hand'){
+    gesture={
+      center:screenPoint,
+      distance:1,
+      kind:'directPan',
+      offsetX:viewport.offsetX,
+      offsetY:viewport.offsetY,
+      pointerId:event.pointerId,
+      scale:viewport.scale
+    };
+    return;
+  }
+  const point=screenToNormalized(screenPoint);
   if(!point) return;
+  if(drawingTool==='lasso'){
+    if(selectedIndices.length>0&&isPointInSelection(point)){
+      selectionMove={lastPoint:point};
+    }else{
+      selectedIndices=[];
+      postSelection();
+      lassoPoints=[point];
+    }
+    post('drawingActive',true);
+    requestRender();
+    return;
+  }
   activeStroke={color:brushColor,points:[point],tool:drawingTool,width:brushWidth};
   isDrawing=true;
   post('drawingActive',true);
   requestRender();
 }
-function move(event){
-  if(gesture||event.touches&&event.touches.length>=2){
+function movePointer(event){
+  const screenPoint=getEventPoint(event);
+  if(!screenPoint) return;
+  if(event.pointerType==='touch'){
+    if(!activePointers.has(event.pointerId)) return;
     event.preventDefault();
-    if(event.touches&&event.touches.length>=2) updateGesture(event);
+    activePointers.set(event.pointerId,{...screenPoint,pointerType:'touch'});
+    updateGestureFromPointers();
+    return;
+  }
+  if(event.pointerType==='pen') lastPenInteractionAt=Date.now();
+  if(gesture&&gesture.kind==='directPan'&&gesture.pointerId===event.pointerId){
+    event.preventDefault();
+    viewport={
+      offsetX:gesture.offsetX+(screenPoint.x-gesture.center.x),
+      offsetY:gesture.offsetY+(screenPoint.y-gesture.center.y),
+      scale:gesture.scale
+    };
+    requestRender();
+    return;
+  }
+  const point=screenToNormalized(screenPoint);
+  if(!point) return;
+  if(drawingTool==='lasso'){
+    event.preventDefault();
+    if(selectionMove){
+      moveSelectedStrokes(point.x-selectionMove.lastPoint.x,point.y-selectionMove.lastPoint.y);
+      selectionMove.lastPoint=point;
+    }else if(lassoPoints.length>0&&distance(lassoPoints[lassoPoints.length-1],point)>=minPointDistance){
+      lassoPoints.push(point);
+    }
+    requestRender();
     return;
   }
   if(!isDrawing||!activeStroke) return;
   event.preventDefault();
-  const point=screenToNormalized(getEventPoint(event));
-  if(!point) return;
   appendActiveStrokePoint(point,minPointDistance);
 }
-function end(event){
-  if(gesture){
+function endPointer(event){
+  if(event.pointerType==='touch'){
+    if(activePointers.has(event.pointerId)){
+      event.preventDefault();
+      activePointers.delete(event.pointerId);
+      startGestureFromPointers();
+    }
+    return;
+  }
+  if(event.pointerType==='pen') lastPenInteractionAt=Date.now();
+  if(gesture&&gesture.kind==='directPan'&&gesture.pointerId===event.pointerId){
+    gesture=null;
+    return;
+  }
+  if(drawingTool==='lasso'){
     event.preventDefault();
-    endGesture(event);
+    if(selectionMove){
+      selectionMove=null;
+      post('strokes',strokes);
+    }else if(lassoPoints.length>=3){
+      selectStrokesInLasso();
+    }
+    lassoPoints=[];
+    post('drawingActive',false);
+    requestRender();
     return;
   }
   if(!isDrawing||!activeStroke) return;
@@ -632,6 +874,82 @@ function end(event){
   post('drawingActive',false);
   post('strokes',strokes);
   requestRender();
+}
+function getStrokeBounds(stroke){
+  if(!stroke||!Array.isArray(stroke.points)||stroke.points.length===0) return undefined;
+  const xs=stroke.points.map((point)=>point.x);
+  const ys=stroke.points.map((point)=>point.y);
+  return {
+    maxX:Math.max(...xs),maxY:Math.max(...ys),
+    minX:Math.min(...xs),minY:Math.min(...ys)
+  };
+}
+function getSelectionBounds(){
+  const bounds=selectedIndices
+    .map((index)=>getStrokeBounds(strokes[index]))
+    .filter(Boolean);
+  if(bounds.length===0) return undefined;
+  return {
+    maxX:Math.max(...bounds.map((value)=>value.maxX)),
+    maxY:Math.max(...bounds.map((value)=>value.maxY)),
+    minX:Math.min(...bounds.map((value)=>value.minX)),
+    minY:Math.min(...bounds.map((value)=>value.minY))
+  };
+}
+function isPointInSelection(point){
+  const bounds=getSelectionBounds();
+  return !!bounds
+    && point.x>=bounds.minX&&point.x<=bounds.maxX
+    && point.y>=bounds.minY&&point.y<=bounds.maxY;
+}
+function pointInPolygon(point,polygon){
+  let inside=false;
+  for(let index=0,previous=polygon.length-1;index<polygon.length;previous=index++){
+    const currentPoint=polygon[index];
+    const previousPoint=polygon[previous];
+    const denominator=previousPoint.y-currentPoint.y;
+    const intersects=((currentPoint.y>point.y)!==(previousPoint.y>point.y))
+      && point.x<(previousPoint.x-currentPoint.x)*(point.y-currentPoint.y)
+      /denominator+currentPoint.x;
+    if(intersects) inside=!inside;
+  }
+  return inside;
+}
+function selectStrokesInLasso(){
+  selectedIndices=strokes.reduce((indices,stroke,index)=>{
+    const bounds=getStrokeBounds(stroke);
+    if(!bounds) return indices;
+    const center={x:(bounds.minX+bounds.maxX)/2,y:(bounds.minY+bounds.maxY)/2};
+    if(pointInPolygon(center,lassoPoints)||stroke.points.some((point)=>pointInPolygon(point,lassoPoints))){
+      indices.push(index);
+    }
+    return indices;
+  },[]);
+  postSelection();
+}
+function moveSelectedStrokes(deltaX,deltaY){
+  if(!Number.isFinite(deltaX)||!Number.isFinite(deltaY)) return;
+  const selected=new Set(selectedIndices);
+  strokes=strokes.map((stroke,index)=>selected.has(index)?{
+    ...stroke,
+    points:stroke.points.map((point)=>({
+      ...point,
+      x:clamp(Math.round(point.x+deltaX),0,maxCoordinate),
+      y:clamp(Math.round(point.y+deltaY),0,maxCoordinate)
+    }))
+  }:stroke);
+}
+function deleteSelection(){
+  if(selectedIndices.length===0) return;
+  const selected=new Set(selectedIndices);
+  strokes=strokes.filter((stroke,index)=>!selected.has(index));
+  selectedIndices=[];
+  postSelection();
+  post('strokes',strokes);
+  requestRender();
+}
+function postSelection(){
+  post('selection',{count:selectedIndices.length});
 }
 function appendActiveStrokePoint(point,minDistance){
   if(!activeStroke) return;
@@ -651,10 +969,20 @@ function interpolatePoints(start,end){
   const points=[];
   for(let index=1;index<=steps;index+=1){
     const progress=index/steps;
-    points.push({
+    const point={
       x:Math.round(start.x+((end.x-start.x)*progress)),
       y:Math.round(start.y+((end.y-start.y)*progress))
-    });
+    };
+    if(Number.isFinite(start.pressure)||Number.isFinite(end.pressure)){
+      const startPressure=Number.isFinite(start.pressure)?start.pressure:0.5;
+      const endPressure=Number.isFinite(end.pressure)?end.pressure:startPressure;
+      point.pressure=clamp(
+        startPressure+((endPressure-startPressure)*progress),
+        0,
+        1
+      );
+    }
+    points.push(point);
   }
   return points;
 }
@@ -679,20 +1007,40 @@ function drawStroke(stroke,fallbackColor,drawingContext){
     target.restore();
     return;
   }
-  const points=stroke.points.map(toScreenPoint);
-  target.beginPath();
-  target.moveTo(points[0].x,points[0].y);
-  for(let index=1;index<points.length-1;index+=1){
-    const midpoint={
-      x:(points[index].x+points[index+1].x)/2,
-      y:(points[index].y+points[index+1].y)/2
-    };
-    target.quadraticCurveTo(points[index].x,points[index].y,midpoint.x,midpoint.y);
+  const points=stroke.points.map((point)=>({...toScreenPoint(point),pressure:point.pressure}));
+  const hasPressure=!isEraser&&stroke.points.some((point)=>Number.isFinite(point.pressure));
+  if(!hasPressure){
+    target.beginPath();
+    target.moveTo(points[0].x,points[0].y);
+    for(let index=1;index<points.length-1;index+=1){
+      const midpoint={
+        x:(points[index].x+points[index+1].x)/2,
+        y:(points[index].y+points[index+1].y)/2
+      };
+      target.quadraticCurveTo(points[index].x,points[index].y,midpoint.x,midpoint.y);
+    }
+    const lastPoint=points[points.length-1];
+    target.lineTo(lastPoint.x,lastPoint.y);
+    target.stroke();
+    target.restore();
+    return;
   }
-  const lastPoint=points[points.length-1];
-  target.lineTo(lastPoint.x,lastPoint.y);
-  target.stroke();
+  for(let index=1;index<points.length;index+=1){
+    const previous=points[index-1];
+    const point=points[index];
+    const pressure=isEraser?0.5:getAveragePressure(previous.pressure,point.pressure);
+    target.lineWidth=width*(0.68+(pressure*0.64));
+    target.beginPath();
+    target.moveTo(previous.x,previous.y);
+    target.lineTo(point.x,point.y);
+    target.stroke();
+  }
   target.restore();
+}
+function getAveragePressure(first,second){
+  const firstPressure=Number.isFinite(first)?clamp(first,0,1):0.5;
+  const secondPressure=Number.isFinite(second)?clamp(second,0,1):firstPressure;
+  return (firstPressure+secondPressure)/2;
 }
 function drawBackground(){
   if(background.writingGuides){
@@ -735,6 +1083,32 @@ function drawBackground(){
   }
   ctx.restore();
 }
+function drawSelectionOverlay(){
+  ctx.save();
+  ctx.strokeStyle='#027a48';
+  ctx.fillStyle='rgba(2,122,72,0.08)';
+  ctx.lineWidth=1.5;
+  ctx.setLineDash([7,5]);
+  if(lassoPoints.length>1){
+    const points=lassoPoints.map(toScreenPoint);
+    ctx.beginPath();
+    ctx.moveTo(points[0].x,points[0].y);
+    points.slice(1).forEach((point)=>ctx.lineTo(point.x,point.y));
+    ctx.stroke();
+  }
+  const bounds=getSelectionBounds();
+  if(bounds){
+    const start=toScreenPoint({x:bounds.minX,y:bounds.minY});
+    const end=toScreenPoint({x:bounds.maxX,y:bounds.maxY});
+    const left=Math.min(start.x,end.x)-7;
+    const top=Math.min(start.y,end.y)-7;
+    const width=Math.abs(end.x-start.x)+14;
+    const height=Math.abs(end.y-start.y)+14;
+    ctx.fillRect(left,top,width,height);
+    ctx.strokeRect(left,top,width,height);
+  }
+  ctx.restore();
+}
 function render(){
   renderQueued=false;
   const size=getCssSize();
@@ -747,6 +1121,7 @@ function render(){
   strokes.forEach((stroke)=>drawStroke(stroke,'#111827',strokeCtx));
   if(activeStroke) drawStroke(activeStroke,'#111827',strokeCtx);
   ctx.drawImage(strokeCanvas,0,0,size.width,size.height);
+  drawSelectionOverlay();
 }
 function requestRender(){
   if(renderQueued) return;
@@ -764,12 +1139,30 @@ function handleCommand(event){
     const payload=command.payload||{};
     brushWidth=Math.max(1,Math.min(24,Number(payload.width)||brushWidth));
     brushColor=isHexColor(payload.color)?payload.color:brushColor;
-    drawingTool=payload.tool==='eraser'?'eraser':'pen';
+    drawingTool=normalizeDrawingTool(payload.tool);
+    if(drawingTool!=='lasso'){
+      selectedIndices=[];
+      lassoPoints=[];
+      postSelection();
+      requestRender();
+    }
     return;
   }
   if(command.type==='setStrokes'){
     strokes=Array.isArray(command.payload)?command.payload:[];
     activeStroke=null;
+    selectedIndices=[];
+    lassoPoints=[];
+    postSelection();
+    requestRender();
+    return;
+  }
+  if(command.type==='deleteSelection'){
+    deleteSelection();
+    return;
+  }
+  if(command.type==='resetViewport'){
+    viewport={offsetX:0,offsetY:0,scale:1};
     requestRender();
   }
 }
@@ -785,16 +1178,16 @@ function getPixelDistance(a,b){
 function clamp(value,min,max){
   return Math.max(min,Math.min(max,value));
 }
+function normalizeDrawingTool(value){
+  return value==='eraser'||value==='lasso'||value==='hand'?value:'pen';
+}
 function isHexColor(value){
   return typeof value==='string'&&/^#[0-9a-f]{6}$/i.test(value);
 }
-canvas.addEventListener('touchstart',start,{passive:false});
-canvas.addEventListener('touchmove',move,{passive:false});
-canvas.addEventListener('touchend',end,{passive:false});
-canvas.addEventListener('touchcancel',end,{passive:false});
-canvas.addEventListener('mousedown',start);
-canvas.addEventListener('mousemove',move);
-window.addEventListener('mouseup',end);
+canvas.addEventListener('pointerdown',startPointer,{passive:false});
+canvas.addEventListener('pointermove',movePointer,{passive:false});
+canvas.addEventListener('pointerup',endPointer,{passive:false});
+canvas.addEventListener('pointercancel',endPointer,{passive:false});
 window.addEventListener('message',handleCommand);
 document.addEventListener('message',handleCommand);
 window.addEventListener('resize',resize);
