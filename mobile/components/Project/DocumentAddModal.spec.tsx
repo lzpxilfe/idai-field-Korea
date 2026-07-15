@@ -523,8 +523,11 @@ describe('DocumentAddModal', () => {
       flexDirection: 'column',
     }));
 
-    fireEvent.scroll(getByTestId('featureCreationFormPane'), {
-      nativeEvent: { contentOffset: { y: 48 } },
+    fireEvent(getByTestId('featureCreationFormPane'), 'touchStart', {
+      nativeEvent: { pageY: 120 },
+    });
+    fireEvent(getByTestId('featureCreationFormPane'), 'touchMove', {
+      nativeEvent: { pageY: 96 },
     });
 
     expect(queryByTestId('featureLocationSketchCanvas')).toBeNull();

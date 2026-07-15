@@ -184,6 +184,7 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
   const [isChoosingFeatureType, setIsChoosingFeatureType] =
     useState(isFeatureOnlyFlow);
   const [isFeatureFormExpanded, setIsFeatureFormExpanded] = useState(false);
+  const featureFormSwipeStartYRef = useRef<number>();
   const windowDimensions = useWindowDimensions();
   const isFeatureWideLayout =
     windowDimensions.width >= FEATURE_SKETCH_TABLET_WIDTH;
@@ -1423,13 +1424,32 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
           ]}
           horizontal={false}
           keyboardShouldPersistTaps="handled"
-          onScroll={({ nativeEvent }) => {
-            if (isFeatureWideLayout && nativeEvent.contentOffset.y > 8) {
+          onScrollBeginDrag={() => {
+            if (isFeatureWideLayout) setIsFeatureFormExpanded(true);
+          }}
+          onTouchCancel={() => {
+            featureFormSwipeStartYRef.current = undefined;
+          }}
+          onTouchEnd={() => {
+            featureFormSwipeStartYRef.current = undefined;
+          }}
+          onTouchMove={({ nativeEvent }) => {
+            const startY = featureFormSwipeStartYRef.current;
+            if (
+              isFeatureWideLayout
+              && startY !== undefined
+              && startY - nativeEvent.pageY > 12
+            ) {
+              featureFormSwipeStartYRef.current = undefined;
               setIsFeatureFormExpanded(true);
             }
           }}
+          onTouchStart={({ nativeEvent }) => {
+            if (isFeatureWideLayout) {
+              featureFormSwipeStartYRef.current = nativeEvent.pageY;
+            }
+          }}
           scrollEnabled={true}
-          scrollEventThrottle={16}
           showsHorizontalScrollIndicator={false}
           showsVerticalScrollIndicator={true}
           style={[
