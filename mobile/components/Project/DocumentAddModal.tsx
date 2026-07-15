@@ -183,6 +183,7 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
     initialCategoryName === KOREAN_FIELDWORK_CATEGORIES.FEATURE;
   const [isChoosingFeatureType, setIsChoosingFeatureType] =
     useState(isFeatureOnlyFlow);
+  const [isFeatureFormExpanded, setIsFeatureFormExpanded] = useState(false);
   const windowDimensions = useWindowDimensions();
   const isFeatureWideLayout =
     windowDimensions.width >= FEATURE_SKETCH_TABLET_WIDTH;
@@ -440,6 +441,7 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
     setFeatureIdentifier('');
     setFeatureMeasurementValues({});
     resetFeatureLocationSketch();
+    setIsFeatureFormExpanded(false);
     setIsChoosingFeatureType(true);
   };
 
@@ -451,6 +453,7 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
 
     setExpandedFeatureGuideType(undefined);
     resetFeatureLocationSketch();
+    setIsFeatureFormExpanded(false);
     setIsChoosingFeatureType(false);
   };
 
@@ -1383,10 +1386,35 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
           style={[
             styles.featureCreationMapPane,
             isFeatureWideLayout && styles.featureCreationMapPaneWide,
+            isFeatureWideLayout
+              && isFeatureFormExpanded
+              && styles.featureCreationMapPaneCollapsed,
           ]}
           testID="featureCreationMapPane"
         >
-          {renderFeatureLocationSketchPanel()}
+          {isFeatureWideLayout && isFeatureFormExpanded ? (
+            <TouchableOpacity
+              accessibilityHint="유구 위치를 지정할 수 있도록 지도를 크게 엽니다"
+              accessibilityLabel="유구 위치 지도 펼치기"
+              accessibilityRole="button"
+              onPress={() => setIsFeatureFormExpanded(false)}
+              style={styles.featureLocationCollapsedButton}
+              testID="featureLocationSketchExpandButton"
+            >
+              <View style={styles.featureLocationCollapsedCopy}>
+                <Ionicons color="#2f6f4e" name="map-outline" size={22} />
+                <View style={styles.featureLocationCollapsedText}>
+                  <Text style={styles.featureLocationCollapsedTitle}>
+                    유구 위치 지도
+                  </Text>
+                  <Text style={styles.featureLocationCollapsedDetail}>
+                    눌러서 지도를 펼치고 위치 찍기
+                  </Text>
+                </View>
+              </View>
+              <Ionicons color="#2f6f4e" name="chevron-up" size={22} />
+            </TouchableOpacity>
+          ) : renderFeatureLocationSketchPanel()}
         </View>
         <ScrollView
           contentContainerStyle={[
@@ -1395,12 +1423,21 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
           ]}
           horizontal={false}
           keyboardShouldPersistTaps="handled"
+          onScroll={({ nativeEvent }) => {
+            if (isFeatureWideLayout && nativeEvent.contentOffset.y > 8) {
+              setIsFeatureFormExpanded(true);
+            }
+          }}
           scrollEnabled={true}
+          scrollEventThrottle={16}
           showsHorizontalScrollIndicator={false}
           showsVerticalScrollIndicator={true}
           style={[
             styles.featureCreationFormPane,
             isFeatureWideLayout && styles.featureCreationFormPaneWide,
+            isFeatureWideLayout
+              && isFeatureFormExpanded
+              && styles.featureCreationFormPaneExpanded,
           ]}
           testID="featureCreationFormPane"
         >
@@ -2820,6 +2857,11 @@ const styles = StyleSheet.create({
     minHeight: 0,
     minWidth: 0,
   },
+  featureCreationMapPaneCollapsed: {
+    flex: 0,
+    height: 64,
+    minHeight: 64,
+  },
   featureCreationFormPane: {
     minWidth: 0,
   },
@@ -2836,6 +2878,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingTop: 10,
     width: '100%',
+  },
+  featureCreationFormPaneExpanded: {
+    flex: 1,
+    flexGrow: 1,
+    maxHeight: '100%',
+    minHeight: 0,
   },
   featureCreationFormScrollerContent: {
     alignItems: 'stretch',
@@ -2911,6 +2959,33 @@ const styles = StyleSheet.create({
   },
   featureLocationPanelWide: {
     minHeight: 440,
+  },
+  featureLocationCollapsedButton: {
+    alignItems: 'center',
+    backgroundColor: '#f3f8f4',
+    borderBottomColor: '#b8c4d0',
+    borderBottomWidth: 1,
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+  },
+  featureLocationCollapsedCopy: {
+    alignItems: 'center',
+    flexDirection: 'row',
+  },
+  featureLocationCollapsedText: {
+    marginLeft: 10,
+  },
+  featureLocationCollapsedTitle: {
+    color: '#1f2937',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  featureLocationCollapsedDetail: {
+    color: '#526272',
+    fontSize: 12,
+    marginTop: 2,
   },
   featureLocationHeader: {
     alignItems: 'flex-start',
