@@ -2,13 +2,16 @@
 const { getDefaultConfig } = require('@expo/metro-config');
 const exclusionList = require('metro-config/src/defaults/exclusionList');
 const { mergeConfig } = require('metro-config');
+const fs = require('fs');
 const path = require('path');
 
 const defaultConfig = getDefaultConfig(__dirname);
+const mobileNodeModulesDir = path.resolve(__dirname, 'node_modules');
+const mobileNodeModulesRealDir = fs.realpathSync(mobileNodeModulesDir);
 const resolveFromMobileRoot = (moduleName) =>
     path.resolve(__dirname, moduleName.replace(/^@\//, ''));
 const resolveFromMobileNodeModules = (moduleName) =>
-    path.resolve(__dirname, 'node_modules', moduleName);
+    path.resolve(mobileNodeModulesRealDir, moduleName);
 const corePackageDir = path.resolve(__dirname, '../core');
 const corePackageEntryFile = path.resolve(corePackageDir, 'index.ts');
 const emptyCoreTestModule = path.resolve(__dirname, 'shims/empty-core-test-module.js');
@@ -19,6 +22,7 @@ const corePackageEntryFiles = [
 ].map((filePath) => path.normalize(filePath).toLowerCase());
 
 const forcedMobileModules = [
+    'expo-router',
     'react',
     'react-native',
     '@react-native',
@@ -81,7 +85,7 @@ const customConfig = {
             return context.resolveRequest(context, moduleName, platform);
         },
         nodeModulesPaths: [
-            path.resolve(__dirname, 'node_modules')
+            mobileNodeModulesDir
         ],
         extraNodeModules: {
             'idai-field-core': path.resolve(__dirname, '../core'),

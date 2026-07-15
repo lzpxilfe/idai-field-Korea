@@ -3,6 +3,7 @@ param(
     [string]$DeviceSerial,
     [int]$Port = 8081,
     [switch]$NoLaunch,
+    [switch]$ClearCache,
     [switch]$CheckOnly,
     [switch]$Help
 )
@@ -16,6 +17,7 @@ $coreDir = Join-Path $repoDir 'core'
 $mobileDir = Join-Path $repoDir 'mobile'
 $androidDir = Join-Path $mobileDir 'android'
 $packageName = 'kr.idai.fieldmobile'
+$script:devRoot = $null
 
 function Show-Usage {
     Write-Host '현장 기록 Android tablet launcher'
@@ -24,13 +26,129 @@ function Show-Usage {
     Write-Host '  .\run-idai-field-tablet-ko.ps1                 # Run an installed development build over USB'
     Write-Host '  .\run-idai-field-tablet-ko.ps1 -InstallDebug   # Build and install the debug APK, then run Metro'
     Write-Host '  .\run-idai-field-tablet-ko.ps1 -NoLaunch       # Start Metro only'
+    Write-Host '  .\run-idai-field-tablet-ko.ps1 -ClearCache     # Rebuild the Metro cache when it is stale'
     Write-Host '  .\run-idai-field-tablet-ko.ps1 -CheckOnly      # Check local runtime'
     Write-Host ''
     Write-Host 'Expo Go is not used. This app needs a development build or APK because it uses native modules.'
 }
 
+function Resolve-DevRoot {
+    $candidates = @()
+    if ($env:IDAI_FIELD_DEV_ROOT) { $candidates += $env:IDAI_FIELD_DEV_ROOT }
+    if (Test-Path 'G:\') { $candidates += 'G:\idai-field-dev' }
+    if (Test-Path 'H:\') { $candidates += 'H:\idai-field-dev' }
+
+    foreach ($candidate in ($candidates | Select-Object -Unique)) {
+        try {
+            New-Item -ItemType Directory -Force -Path $candidate | Out-Null
+            return (Resolve-Path -LiteralPath $candidate).Path
+        } catch {}
+    }
+
+    throw 'G: or H: development storage is required. Connect a project drive and try again.'
+}
+
+function Ensure-DirectoryJunction {
+    param(
+        [string]$LinkPath,
+        [string]$TargetPath
+    )
+
+    if (Test-Path -LiteralPath $LinkPath) { return }
+    New-Item -ItemType Directory -Force -Path $TargetPath | Out-Null
+    New-Item -ItemType Junction -Path $LinkPath -Target $TargetPath | Out-Null
+}
+
+function Initialize-DevStorage {
+    param([string]$DevRoot)
+
+    $cacheDir = Join-Path $DevRoot 'npm-cache'
+    $gradleDir = Join-Path $DevRoot 'gradle'
+    $tempDir = Join-Path $DevRoot 'temp'
+    foreach ($path in @($cacheDir, $gradleDir, $tempDir)) {
+        New-Item -ItemType Directory -Force -Path $path | Out-Null
+    }
+
+    $env:IDAI_FIELD_DEV_ROOT = $DevRoot
+    $env:IDAI_FIELD_ANDROID_WORKDIR = if (Test-Path 'G:\') {
+        'G:\idai-field-android'
+    } else {
+        'H:\idai-field-android'
+    }
+    $env:npm_config_cache = $cacheDir
+    $env:GRADLE_USER_HOME = $gradleDir
+    $env:TEMP = $tempDir
+    $env:TMP = $tempDir
+
+    Ensure-DirectoryJunction `
+        -LinkPath (Join-Path $mobileDir 'node_modules') `
+        -TargetPath (Join-Path $DevRoot 'deps\mobile-node_modules')
+    Ensure-DirectoryJunction `
+        -LinkPath (Join-Path $androidDir '.gradle') `
+        -TargetPath (Join-Path $DevRoot 'android\project-gradle')
+    Ensure-DirectoryJunction `
+        -LinkPath (Join-Path $androidDir 'build') `
+        -TargetPath (Join-Path $DevRoot 'android\root-build')
+    Ensure-DirectoryJunction `
+        -LinkPath (Join-Path $androidDir 'app\build') `
+        -TargetPath (Join-Path $DevRoot 'android\app-build')
+    Ensure-DirectoryJunction `
+        -LinkPath (Join-Path $androidDir 'app\.cxx') `
+        -TargetPath (Join-Path $DevRoot 'android\app-cxx')
+    Ensure-DirectoryJunction `
+        -LinkPath (Join-Path $repoDir 'dist') `
+        -TargetPath (Join-Path $DevRoot 'android\dist')
+}
+
 function Resolve-NodeDir {
     $candidateDirs = @()
+
+    $requiredNodeVersion = (Get-Content -LiteralPath (Join-Path $mobileDir '.nvmrc') -Raw).Trim()
+    $runtimeDirectoryName = "node-v$requiredNodeVersion-win-x64"
+    $directRuntimeRoots = @()
+    if ($script:devRoot) {
+        $directRuntimeRoots += Join-Path $script:devRoot 'runtimes\codex'
+    }
+    if ($env:USERPROFILE) {
+        $directRuntimeRoots += Join-Path $env:USERPROFILE '.codex\runtimes'
+    }
+    if ($env:CODEX_HOME) {
+        $directRuntimeRoots += Join-Path $env:CODEX_HOME 'runtimes'
+    }
+    foreach ($runtimeRoot in ($directRuntimeRoots | Select-Object -Unique)) {
+        $directCandidate = Join-Path $runtimeRoot $runtimeDirectoryName
+        if ((Test-Path -LiteralPath (Join-Path $directCandidate 'node.exe')) -and
+            (Test-Path -LiteralPath (Join-Path $directCandidate 'npm.cmd'))) {
+            return $directCandidate
+        }
+    }
+
+    if ($script:devRoot) {
+        $devRuntimeRoot = Join-Path $script:devRoot 'runtimes'
+        if (Test-Path -LiteralPath $devRuntimeRoot) {
+            $candidateDirs += Get-ChildItem -LiteralPath $devRuntimeRoot -Recurse -Filter npm.cmd -ErrorAction SilentlyContinue |
+                Sort-Object LastWriteTime -Descending |
+                ForEach-Object { $_.DirectoryName }
+        }
+    }
+
+    if ($env:USERPROFILE) {
+        $userCodexRuntimeRoot = Join-Path $env:USERPROFILE '.codex\runtimes'
+        if (Test-Path -LiteralPath $userCodexRuntimeRoot) {
+            $candidateDirs += Get-ChildItem -LiteralPath $userCodexRuntimeRoot -Recurse -Filter npm.cmd -ErrorAction SilentlyContinue |
+                Sort-Object LastWriteTime -Descending |
+                ForEach-Object { $_.DirectoryName }
+        }
+    }
+
+    if ($env:CODEX_HOME) {
+        $codexHomeRuntimeRoot = Join-Path $env:CODEX_HOME 'runtimes'
+        if (Test-Path -LiteralPath $codexHomeRuntimeRoot) {
+            $candidateDirs += Get-ChildItem -LiteralPath $codexHomeRuntimeRoot -Recurse -Filter npm.cmd -ErrorAction SilentlyContinue |
+                Sort-Object LastWriteTime -Descending |
+                ForEach-Object { $_.DirectoryName }
+        }
+    }
 
     if ($env:LOCALAPPDATA) {
         $codexRuntimeRoot = Join-Path $env:LOCALAPPDATA 'OpenAI\Codex\runtimes'
@@ -266,6 +384,8 @@ if ($Help) {
 }
 
 try {
+    $script:devRoot = Resolve-DevRoot
+    Initialize-DevStorage -DevRoot $script:devRoot
     $nodeDir = Resolve-NodeDir
 
     if (-not (Test-Path -LiteralPath (Join-Path $mobileDir 'package.json'))) {
@@ -277,9 +397,12 @@ try {
 
     if ($CheckOnly) {
         $adb = Resolve-Adb
-        $devices = Get-ConnectedDevices -Adb $adb
+        $devices = @(Get-ConnectedDevices -Adb $adb)
         Write-Host 'Tablet launcher check passed.'
         Write-Host "Node/npm runtime: $nodeDir"
+        Write-Host "Development storage: $script:devRoot"
+        Write-Host "npm cache: $env:npm_config_cache"
+        Write-Host "Gradle home: $env:GRADLE_USER_HOME"
         Write-Host "Mobile app: $mobileDir"
         Write-Host "adb: $adb"
         if ($devices.Count -gt 0) {
@@ -314,7 +437,7 @@ try {
     Assert-CoreDistAssetsReady
 
     $adb = Resolve-Adb
-    $devices = Get-ConnectedDevices -Adb $adb
+    $devices = @(Get-ConnectedDevices -Adb $adb)
     $serial = Select-Device -Devices $devices -Serial $DeviceSerial
 
     Write-Host "Configuring USB port forwarding: tcp:$Port"
@@ -328,7 +451,9 @@ try {
 
     Write-Host 'Starting the Metro development server.'
     Set-Location -LiteralPath $mobileDir
-    & npx expo start --dev-client --host localhost --port $Port --clear
+    $expoArgs = @('expo', 'start', '--dev-client', '--host', 'localhost', '--port', $Port)
+    if ($ClearCache) { $expoArgs += '--clear' }
+    & npx @expoArgs
 } catch {
     Write-Host ''
     Write-Host "Tablet startup failed: $($_.Exception.Message)"

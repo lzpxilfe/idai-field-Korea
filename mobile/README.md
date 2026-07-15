@@ -94,10 +94,19 @@ To build a fresh APK and only download it, use `BUILD_AND_DOWNLOAD_TABLET_APK.cm
 
 For USB development on an installed development build:
 
-```powershell
-.\run-idai-field-tablet-ko.ps1 -InstallDebug
-.\run-idai-field-tablet-ko.ps1
+```bat
+START_TABLET_LIVE.cmd --install-debug
+START_TABLET_LIVE.cmd
 ```
+
+The first command builds and installs `kr.idai.fieldmobile.debug` beside the normal
+field app, preserving the normal app and its data. The second command reuses that
+development client, configures `adb reverse`, starts Metro, and opens it on the
+connected tablet. Saved JavaScript and TypeScript changes use Fast Refresh. Add
+`--clear` only when the Metro cache is stale, or `--check` to inspect the USB setup.
+
+Development caches and Android outputs use `IDAI_FIELD_DEV_ROOT`. On the current
+development computer this is `H:\idai-field-dev`, keeping the large files off C:.
 
 Korean installation notes for field users are in
 [`docs/korean-fieldwork/android-tablet-install.ko.md`](../docs/korean-fieldwork/android-tablet-install.ko.md).

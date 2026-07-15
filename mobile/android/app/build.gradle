@@ -179,6 +179,10 @@ android {
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
+            // Keep the live-development client beside the normal field app so
+            // installing it never replaces or clears the tablet's field data.
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-dev"
         }
         release {
             if (hasReleaseSigningConfig) signingConfig signingConfigs.release
