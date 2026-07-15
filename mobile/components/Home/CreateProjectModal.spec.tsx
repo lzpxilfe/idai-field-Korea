@@ -330,7 +330,8 @@ describe('CreateProjectModal', () => {
     await waitFor(() => {
       expect(handleProjectCreated).toHaveBeenCalledWith(
         'bandabi',
-        KOREAN_FIELDWORK_PROJECT_LANGUAGES
+        KOREAN_FIELDWORK_PROJECT_LANGUAGES,
+        undefined
       );
     });
     await expect(AsyncStorage.getItem(
@@ -379,7 +380,8 @@ describe('CreateProjectModal', () => {
     await waitFor(() => {
       expect(handleProjectCreated).toHaveBeenCalledWith(
         'fieldwork-2',
-        KOREAN_FIELDWORK_PROJECT_LANGUAGES
+        KOREAN_FIELDWORK_PROJECT_LANGUAGES,
+        undefined
       );
     });
   });
@@ -403,7 +405,8 @@ describe('CreateProjectModal', () => {
     await waitFor(() => {
       expect(handleProjectCreated).toHaveBeenCalledWith(
         'area-2026',
-        KOREAN_FIELDWORK_PROJECT_LANGUAGES
+        KOREAN_FIELDWORK_PROJECT_LANGUAGES,
+        undefined
       );
     });
     expect(handleProjectCreated).not.toHaveBeenCalledWith(

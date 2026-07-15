@@ -152,6 +152,12 @@ describe('useFieldworkImageSync', () => {
       status: 201,
     });
     const document = createDocument('photo-1', 'Photo', {
+      digitalSourcePreservation: [
+        'originalPhoto',
+        'originalImage',
+        'webOrServerBackup',
+        'backupVerified',
+      ],
       fieldworkPhotoUri: 'file:///tablet/photos/photo-1.jpg',
     });
     const repository = {

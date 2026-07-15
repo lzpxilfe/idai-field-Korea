@@ -27,6 +27,11 @@ interface UseFieldworkImageSyncConfig {
   syncStatus?: SyncStatus;
 }
 
+interface FieldworkImageSyncConnection {
+  password: string;
+  url: string;
+}
+
 export interface FieldworkImageSyncItem extends FieldworkImageSyncTarget {
   document: Document;
   uploadUrl: string;
@@ -78,18 +83,6 @@ const SYNC_READY_STATUSES = new Set<SyncStatus>([
 const DEFAULT_RETRY_DELAY_MS = 30000;
 const defaultGetUploadedAt = (): string => new Date().toISOString();
 const FIELDWORK_IMAGE_UPLOAD_STATUS_UPLOADED = 'uploaded';
-const FIELDWORK_IMAGE_UPLOAD_FIELDS = [
-  'fieldworkImageUploadStatus',
-  'fieldworkImageUploadedAt',
-  'fieldworkImageUploadedUri',
-  'fieldworkImageUploadTarget',
-  'fieldworkImageUploadedProject',
-  'fieldworkImageUploadedSizeBytes',
-  'fieldworkImageUploadedMd5',
-  'fieldworkImageStoredSizeBytes',
-  'fieldworkImageStoredMd5',
-  'fieldworkImageStoredSha256',
-];
 
 const useFieldworkImageSync = ({
   documents,
@@ -104,6 +97,9 @@ const useFieldworkImageSync = ({
   const inFlight = useRef(false);
   const pendingRun = useRef<(() => void) | undefined>();
   const isMounted = useRef(true);
+  const projectConnected = projectSettings?.connected;
+  const projectPassword = projectSettings?.password;
+  const projectUrl = projectSettings?.url;
 
   useEffect(() => () => {
     isMounted.current = false;
@@ -113,9 +109,9 @@ const useFieldworkImageSync = ({
   useEffect(() => {
     if (
       !project
-      || !projectSettings?.connected
-      || !projectSettings.url
-      || !projectSettings.password
+      || !projectConnected
+      || !projectUrl
+      || !projectPassword
       || !syncStatus
       || !SYNC_READY_STATUSES.has(syncStatus)
     ) {
@@ -140,13 +136,13 @@ const useFieldworkImageSync = ({
         for (const target of collectFieldworkImageSyncItems(
           documents,
           project,
-          projectSettings.url
+          projectUrl
         )) {
           if (isCancelled) return;
 
           const key = getFieldworkImageSyncKey(
             project,
-            projectSettings.url,
+            projectUrl,
             target
           );
           let currentUploadMetadata: FieldworkImageUploadResult | undefined;
@@ -156,7 +152,7 @@ const useFieldworkImageSync = ({
             } catch (error) {
               console.error(
                 `Failed to inspect fieldwork image ${target.resourceId}:`,
-                getFieldworkImageUploadErrorMessage(error, projectSettings.password)
+                getFieldworkImageUploadErrorMessage(error, projectPassword)
               );
               continue;
             }
@@ -185,7 +181,11 @@ const useFieldworkImageSync = ({
             (
               !uploadAuditRecorded
               || uploadAuditMetadataMismatched
-              || isServerUploadMetadataMissing(target.document)
+              || isServerUploadMetadataMissingOrMismatched(
+                target.document,
+                target,
+                currentUploadMetadata
+              )
             )
             && !uploadedResults.current.has(key)
           ) {
@@ -193,7 +193,10 @@ const useFieldworkImageSync = ({
             try {
               const uploadResult = await uploadFieldworkImage({
                 project,
-                projectSettings,
+                projectSettings: {
+                  password: projectPassword,
+                  url: projectUrl,
+                },
                 target,
               });
               if (isMounted.current) uploadedResults.current.set(key, uploadResult);
@@ -201,7 +204,7 @@ const useFieldworkImageSync = ({
             } catch (error) {
               console.error(
                 `Failed to upload fieldwork image ${target.resourceId}:`,
-                getFieldworkImageUploadErrorMessage(error, projectSettings.password)
+                getFieldworkImageUploadErrorMessage(error, projectPassword)
               );
               continue;
             }
@@ -219,7 +222,7 @@ const useFieldworkImageSync = ({
             } catch (error) {
               console.error(
                 `Failed to inspect fieldwork image ${target.resourceId}:`,
-                getFieldworkImageUploadErrorMessage(error, projectSettings.password)
+                getFieldworkImageUploadErrorMessage(error, projectPassword)
               );
               continue;
             }
@@ -241,7 +244,7 @@ const useFieldworkImageSync = ({
             } catch (error) {
               console.error(
                 `Failed to record fieldwork image upload ${target.resourceId}:`,
-                getFieldworkImageUploadErrorMessage(error, projectSettings.password)
+                getFieldworkImageUploadErrorMessage(error, projectPassword)
               );
             }
           }
@@ -273,9 +276,9 @@ const useFieldworkImageSync = ({
     documents,
     getUploadedAt,
     project,
-    projectSettings?.connected,
-    projectSettings?.password,
-    projectSettings?.url,
+    projectConnected,
+    projectPassword,
+    projectUrl,
     repository,
     retryDelayMs,
     syncStatus,
@@ -305,7 +308,12 @@ export const recordFieldworkImageUpload = async ({
     return latestDocument;
   }
 
-  if (isFieldworkImageUploadRecordComplete(latestDocument, project, target, target)) {
+  if (isFieldworkImageUploadRecordComplete(
+    latestDocument,
+    project,
+    target,
+    target
+  )) {
     return latestDocument;
   }
 
@@ -350,9 +358,10 @@ export const getFieldworkImageUploadRecordUpdates = (
   };
 
   return {
-    digitalSourcePreservation: mergeUniqueStringValues(
+    digitalSourcePreservation: mergeDigitalSourcePreservationUploadValues(
       resource.digitalSourcePreservation,
-      getDigitalSourcePreservationUploadValues(target.category, uploadResult)
+      target.category,
+      uploadResult
     ),
     fieldworkImageUploadStatus: FIELDWORK_IMAGE_UPLOAD_STATUS_UPLOADED,
     fieldworkImageUploadedAt: existingUploadedAt ?? uploadedAt,
@@ -377,7 +386,7 @@ export const uploadFieldworkImage = async ({
   target,
 }: {
   project: string;
-  projectSettings: ProjectSettings;
+  projectSettings: FieldworkImageSyncConnection;
   target: FieldworkImageSyncTarget;
 }): Promise<FieldworkImageUploadResult> => {
   const uploadMetadata = await getFieldworkImageUploadMetadata(target);
@@ -604,9 +613,21 @@ const hasServerStoredMetadata = (document: Document): boolean => {
     && !!getStringValue(resource.fieldworkImageStoredSha256);
 };
 
-const isServerUploadMetadataMissing = (
-  document: Document
-): boolean => !hasServerStoredMetadata(document);
+const isServerUploadMetadataMissingOrMismatched = (
+  document: Document,
+  target: Pick<FieldworkImageSyncItem, 'uri'>,
+  currentUploadMetadata?: FieldworkImageUploadResult
+): boolean => {
+  if (!hasServerStoredMetadata(document)) return true;
+
+  const storedResult = getDocumentUploadResult(document);
+  if (!target.uri.startsWith('file://')) return false;
+
+  return !isFieldworkImageBackupVerified({
+    ...storedResult,
+    ...currentUploadMetadata,
+  });
+};
 
 const getFieldworkImageSyncKey = (
   project: string,
@@ -739,15 +760,22 @@ const hasDigitalSourcePreservationUploadValues = (
     .every((requiredValue) => value.includes(requiredValue));
 };
 
-const mergeUniqueStringValues = (
+const mergeDigitalSourcePreservationUploadValues = (
   existingValue: unknown,
-  nextValues: string[]
+  category: string,
+  uploadResult: FieldworkImageUploadResult
 ): string[] => {
   const existingValues = Array.isArray(existingValue)
     ? existingValue.filter((value): value is string => typeof value === 'string')
     : [];
+  const retainedValues = isFieldworkImageBackupVerified(uploadResult)
+    ? existingValues
+    : existingValues.filter((value) => value !== 'backupVerified');
 
-  return Array.from(new Set([...existingValues, ...nextValues]));
+  return Array.from(new Set([
+    ...retainedValues,
+    ...getDigitalSourcePreservationUploadValues(category, uploadResult),
+  ]));
 };
 
 const isUploadableLocalUri = (uri: string | undefined): uri is string =>
