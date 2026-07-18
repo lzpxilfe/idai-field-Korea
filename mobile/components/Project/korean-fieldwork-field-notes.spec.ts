@@ -17,6 +17,7 @@ import {
   getKoreanFieldworkFieldNoteReportPreview,
   getKoreanFieldworkFieldNoteRecordUpdates,
   getKoreanFieldworkDailyNotebookDigest,
+  getKoreanFieldworkDailyLogTimeline,
   getKoreanFieldworkNotebookEntries,
   getKoreanFieldworkNotebookContinuationSeed,
   getKoreanFieldworkDailyLogAppendUpdates,
@@ -700,6 +701,65 @@ describe('korean-fieldwork-field-notes', () => {
     expect(digest.nextWorkEntries.map((entry) => entry.id)).toEqual(['memo-1']);
     expect(digest.evidenceMissingEntries.map((entry) => entry.id)).toEqual([
       'memo-1',
+    ]);
+  });
+
+  it('sorts recent daily logs by field date and keeps same-day order stable', () => {
+    const olderLog = createDoc('daily-log-old', C.DAILY_LOG, '6월 21일 일지', {
+      date: '2026-06-21',
+      description: '오전에 토층 정리를 완료함.',
+    });
+    const sameDayFirst = createDoc(
+      'daily-log-same-first',
+      C.DAILY_LOG,
+      '6월 23일 A 일지',
+      {
+        date: '2026-06-23',
+        description: '오전에 유구 윤곽을 확인함.',
+      }
+    );
+    const sameDaySecond = createDoc(
+      'daily-log-same-second',
+      C.DAILY_LOG,
+      '6월 23일 B 일지',
+      {
+        date: '2026-06-23',
+        diaryAbstract: '오후에 단면 사진을 촬영함.',
+      }
+    );
+    const newestEmptyLog = createDoc(
+      'daily-log-empty',
+      C.DAILY_LOG,
+      '6월 24일 일지',
+      { date: '2026-06-24' }
+    );
+    const unrelated = createDoc('feature-1', C.FEATURE, '수혈 1');
+
+    const timeline = getKoreanFieldworkDailyLogTimeline([
+      olderLog,
+      sameDayFirst,
+      unrelated,
+      sameDaySecond,
+      newestEmptyLog,
+    ]);
+
+    expect(timeline.map((item) => item.document.resource.id)).toEqual([
+      'daily-log-empty',
+      'daily-log-same-first',
+      'daily-log-same-second',
+      'daily-log-old',
+    ]);
+    expect(timeline.map((item) => item.dateLabel)).toEqual([
+      '2026-06-24',
+      '2026-06-23',
+      '2026-06-23',
+      '2026-06-21',
+    ]);
+    expect(timeline.map((item) => item.detail)).toEqual([
+      '일지 내용 미입력',
+      '오전에 유구 윤곽을 확인함.',
+      '오후에 단면 사진을 촬영함.',
+      '오전에 토층 정리를 완료함.',
     ]);
   });
 

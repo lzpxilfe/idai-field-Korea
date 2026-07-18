@@ -18,12 +18,20 @@ korean-fieldwork-quick-record-panel {
   }
 
   .korean-fieldwork-quick-record-section {
+    border-top: 1px solid #d9eadf;
     margin-top: 10px;
+    padding-top: 10px;
+  }
 
-    &.secondary {
-      border-top: 1px solid #d9eadf;
-      padding-top: 10px;
-    }
+  .korean-fieldwork-quick-record-section-title {
+    color: #176b3a;
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 7px;
+  }
+
+  .korean-fieldwork-quick-record-field + .korean-fieldwork-quick-record-field {
+    margin-top: 8px;
   }
 
   .korean-fieldwork-quick-record-label {
@@ -57,13 +65,4 @@ korean-fieldwork-quick-record-panel {
     }
   }
 
-  .korean-fieldwork-quick-record-secondary-toggle {
-    background: transparent;
-    border: 1px solid #96c7a7;
-    border-radius: 14px;
-    color: #176b3a;
-    font-size: 13px;
-    margin-top: 12px;
-    padding: 5px 10px;
-  }
 }

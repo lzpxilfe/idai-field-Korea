@@ -66,7 +66,7 @@ const KoreanFieldworkQuickRecordPanel: React.FC<KoreanFieldworkQuickRecordPanelP
   onUpdateResourceFields,
 }) => {
   const [showDetailedChecklist, setShowDetailedChecklist] = useState(false);
-  const [showSecondaryFields, setShowSecondaryFields] = useState(false);
+  const [showTimingEditor, setShowTimingEditor] = useState(false);
   const availability = useMemo(
     () => getKoreanFieldworkQuickRecordAvailability(
       category,
@@ -185,6 +185,12 @@ const KoreanFieldworkQuickRecordPanel: React.FC<KoreanFieldworkQuickRecordPanelP
   const observationValue = observationFieldName
     ? getTextValue(resource, observationFieldName)
     : '';
+  const timingValue = getSingleValue(resource, FIELDWORK_QUICK_FIELDS.timing)[0];
+  const timingLabel = getQuickOptionLabel(
+    TIMING_QUICK_OPTIONS,
+    timingValue,
+    '자동 설정 전'
+  );
   const observationPlaceholder = getKoreanFieldworkFeatureObservationPlaceholder(
     category,
     resource
@@ -226,28 +232,8 @@ const KoreanFieldworkQuickRecordPanel: React.FC<KoreanFieldworkQuickRecordPanelP
       : '',
     shortAxisOrientationValue,
   });
-  const hasPrimarySections =
-    availability.period
-    || availability.featureType
-    || featureMeasurementGroups.length > 0
-    || featureAttributeGroups.length > 0
-    || !!observationFieldName
-    || availability.axisOrientation
-    || availability.checklist;
   const showManualFeatureStatus = availability.featureStatus
     && !isFeaturePhotoWorkflow;
-  const hasSecondarySections =
-    showManualFeatureStatus
-    || availability.quality
-    || availability.verification
-    || availability.timing;
-  const secondarySectionCount = [
-    showManualFeatureStatus,
-    availability.quality,
-    availability.verification,
-    availability.timing,
-  ].filter(Boolean).length;
-  const shouldShowSecondaryFields = !hasPrimarySections || showSecondaryFields;
 
   if (!hasKoreanFieldworkQuickRecordActions(availability) && !observationFieldName) return null;
 
@@ -385,6 +371,46 @@ const KoreanFieldworkQuickRecordPanel: React.FC<KoreanFieldworkQuickRecordPanelP
             )}
             style={[styles.textInput, styles.observationInput]}
           />
+          {availability.quality && (
+            <View style={styles.inlineRecordCharacter}>
+              <Text style={styles.inlineRecordCharacterLabel}>기록 성격</Text>
+              <OptionRow
+                options={QUALITY_QUICK_OPTIONS}
+                activeValues={getStringArrayFieldValues(
+                  resource,
+                  FIELDWORK_QUICK_FIELDS.quality
+                )}
+                onPress={(value) => onUpdateResourceField(
+                  FIELDWORK_QUICK_FIELDS.quality,
+                  toggleStringArrayFieldValue(
+                    resource,
+                    FIELDWORK_QUICK_FIELDS.quality,
+                    value
+                  )
+                )}
+              />
+            </View>
+          )}
+        </QuickSection>
+      )}
+
+      {!observationFieldName && availability.quality && (
+        <QuickSection title="기록 성격">
+          <OptionRow
+            options={QUALITY_QUICK_OPTIONS}
+            activeValues={getStringArrayFieldValues(
+              resource,
+              FIELDWORK_QUICK_FIELDS.quality
+            )}
+            onPress={(value) => onUpdateResourceField(
+              FIELDWORK_QUICK_FIELDS.quality,
+              toggleStringArrayFieldValue(
+                resource,
+                FIELDWORK_QUICK_FIELDS.quality,
+                value
+              )
+            )}
+          />
         </QuickSection>
       )}
 
@@ -447,6 +473,23 @@ const KoreanFieldworkQuickRecordPanel: React.FC<KoreanFieldworkQuickRecordPanelP
               testIDPrefix="quickRecordOrientationEnd"
             />
           </View>
+        </QuickSection>
+      )}
+
+      {showManualFeatureStatus && (
+        <QuickSection title="조사 진행">
+          <OptionRow
+            options={FEATURE_STATUS_QUICK_OPTIONS}
+            activeValues={getSingleValue(
+              resource,
+              FIELDWORK_QUICK_FIELDS.featureStatus
+            )}
+            onPress={(value) => onUpdateResourceField(
+              FIELDWORK_QUICK_FIELDS.featureStatus,
+              value
+            )}
+            singleChoice
+          />
         </QuickSection>
       )}
 
@@ -522,87 +565,52 @@ const KoreanFieldworkQuickRecordPanel: React.FC<KoreanFieldworkQuickRecordPanelP
         </QuickSection>
       ))}
 
-      {hasPrimarySections && hasSecondarySections && (
-        <TouchableOpacity
-          activeOpacity={0.84}
-          onPress={() => setShowSecondaryFields((current) => !current)}
-          style={styles.secondaryToggle}
-          testID="quickRecordToggleSecondaryFields"
-        >
-          <View style={styles.secondaryToggleTitleRow}>
-            <MaterialIcons name="tune" size={16} color="#475467" />
-            <Text style={styles.secondaryToggleText}>
-              {showSecondaryFields
-                ? '현장 보조판 접기'
-                : `현장 보조판 보기 (${secondarySectionCount})`}
-            </Text>
-          </View>
-          <MaterialIcons
-            name={showSecondaryFields ? 'expand-less' : 'expand-more'}
-            size={19}
-            color="#475467"
+      {availability.verification && (
+        <QuickSection title="확인·마감">
+          <OptionRow
+            options={VERIFICATION_QUICK_OPTIONS}
+            activeValues={getSingleValue(
+              resource,
+              FIELDWORK_QUICK_FIELDS.verification
+            )}
+            onPress={(value) => onUpdateResourceField(
+              FIELDWORK_QUICK_FIELDS.verification,
+              value
+            )}
+            singleChoice
           />
-        </TouchableOpacity>
+        </QuickSection>
       )}
 
-      {shouldShowSecondaryFields && (
-        <>
-          {showManualFeatureStatus && (
-            <QuickSection title="유구 진행">
-              <OptionRow
-                options={FEATURE_STATUS_QUICK_OPTIONS}
-                activeValues={getSingleValue(
-                  resource,
-                  FIELDWORK_QUICK_FIELDS.featureStatus
-                )}
-                onPress={(value) => onUpdateResourceField(
-                  FIELDWORK_QUICK_FIELDS.featureStatus,
-                  value
-                )}
-                singleChoice
+      {availability.timing && (
+        <View style={styles.timingSection}>
+          <TouchableOpacity
+            accessibilityLabel={`기록 시점 ${timingLabel}`}
+            activeOpacity={0.84}
+            onPress={() => setShowTimingEditor((current) => !current)}
+            style={styles.timingToggle}
+            testID="quickRecordToggleTimingEditor"
+          >
+            <View style={styles.timingSummary}>
+              <MaterialIcons name="schedule" size={16} color="#475467" />
+              <Text style={styles.timingSummaryLabel}>기록 시점</Text>
+              <Text style={styles.timingSummaryValue} testID="quickRecordTimingValue">
+                {timingLabel}
+              </Text>
+            </View>
+            <View style={styles.timingEditAction}>
+              <Text style={styles.timingEditActionText}>
+                {showTimingEditor ? '닫기' : '기록 시점 수정'}
+              </Text>
+              <MaterialIcons
+                name={showTimingEditor ? 'expand-less' : 'expand-more'}
+                size={18}
+                color="#475467"
               />
-            </QuickSection>
-          )}
-
-          {availability.quality && (
-            <QuickSection title="기록 구분">
-              <OptionRow
-                options={QUALITY_QUICK_OPTIONS}
-                activeValues={getStringArrayFieldValues(
-                  resource,
-                  FIELDWORK_QUICK_FIELDS.quality
-                )}
-                onPress={(value) => onUpdateResourceField(
-                  FIELDWORK_QUICK_FIELDS.quality,
-                  toggleStringArrayFieldValue(
-                    resource,
-                    FIELDWORK_QUICK_FIELDS.quality,
-                    value
-                  )
-                )}
-              />
-            </QuickSection>
-          )}
-
-          {availability.verification && (
-            <QuickSection title="확인 상태">
-              <OptionRow
-                options={VERIFICATION_QUICK_OPTIONS}
-                activeValues={getSingleValue(
-                  resource,
-                  FIELDWORK_QUICK_FIELDS.verification
-                )}
-                onPress={(value) => onUpdateResourceField(
-                  FIELDWORK_QUICK_FIELDS.verification,
-                  value
-                )}
-                singleChoice
-              />
-            </QuickSection>
-          )}
-
-          {availability.timing && (
-            <QuickSection title="기록 시점">
+            </View>
+          </TouchableOpacity>
+          {showTimingEditor && (
+            <View style={styles.timingEditor}>
               <OptionRow
                 options={TIMING_QUICK_OPTIONS}
                 activeValues={getSingleValue(resource, FIELDWORK_QUICK_FIELDS.timing)}
@@ -612,9 +620,9 @@ const KoreanFieldworkQuickRecordPanel: React.FC<KoreanFieldworkQuickRecordPanelP
                 )}
                 singleChoice
               />
-            </QuickSection>
+            </View>
           )}
-        </>
+        </View>
       )}
     </View>
   );
@@ -817,6 +825,14 @@ const getSingleValue = (
 
   return typeof fieldValue === 'string' ? [fieldValue] : [];
 };
+
+const getQuickOptionLabel = (
+  options: readonly KoreanFieldworkQuickOption[],
+  value: string | undefined,
+  fallback: string
+): string => value
+  ? options.find((option) => option.value === value)?.label ?? value
+  : fallback;
 
 const getStaleFeatureAttributeClears = (
   category: CategoryForm,
@@ -1040,7 +1056,22 @@ const styles = StyleSheet.create({
   detailChecklist: {
     marginTop: 3,
   },
-  secondaryToggle: {
+  inlineRecordCharacter: {
+    borderTopColor: '#d0d5dd',
+    borderTopWidth: 1,
+    marginTop: 9,
+    paddingTop: 8,
+  },
+  inlineRecordCharacterLabel: {
+    color: '#475467',
+    fontSize: 11,
+    fontWeight: '900',
+    marginBottom: 5,
+  },
+  timingSection: {
+    marginTop: 9,
+  },
+  timingToggle: {
     alignItems: 'center',
     backgroundColor: 'white',
     borderColor: '#d0d5dd',
@@ -1052,15 +1083,34 @@ const styles = StyleSheet.create({
     minHeight: 36,
     paddingHorizontal: 9,
   },
-  secondaryToggleTitleRow: {
+  timingSummary: {
     alignItems: 'center',
     flexDirection: 'row',
   },
-  secondaryToggleText: {
+  timingSummaryLabel: {
     color: '#475467',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '900',
     marginLeft: 5,
+  },
+  timingSummaryValue: {
+    color: '#175cd3',
+    fontSize: 11,
+    fontWeight: '900',
+    marginLeft: 6,
+  },
+  timingEditAction: {
+    alignItems: 'center',
+    flexDirection: 'row',
+  },
+  timingEditActionText: {
+    color: '#475467',
+    fontSize: 11,
+    fontWeight: '900',
+    marginRight: 2,
+  },
+  timingEditor: {
+    marginTop: 6,
   },
   optionRow: {
     paddingRight: 8,

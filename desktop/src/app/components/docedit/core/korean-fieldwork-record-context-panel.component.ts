@@ -359,6 +359,17 @@ const DAILY_LOG_CATEGORY_NAME = 'DailyLog';
 const DAILY_LOG_BOUNDARY_MEMO_IMPORTED_AT_FIELD = 'dailyLogBoundaryMemoImportedAt';
 const DAILY_LOG_BOUNDARY_MEMO_STROKES_FIELD = 'dailyLogBoundaryMemoStrokes';
 const DAILY_LOG_BOUNDARY_MEMO_UPDATED_AT_FIELD = 'dailyLogBoundaryMemoUpdatedAt';
+const DAILY_LOG_WORK_MEMO_UPDATED_AT_FIELD = 'dailyLogWorkMemoUpdatedAt';
+
+const createDailyJournalAbstract = (value: string): string|undefined => {
+
+    const normalizedValue = value.replace(/\s+/g, ' ').trim();
+    if (!normalizedValue) return undefined;
+
+    return normalizedValue.length <= 120
+        ? normalizedValue
+        : `${normalizedValue.slice(0, 117)}...`;
+};
 
 const FEATURE_RECORDING_STATUS_LABELS: Readonly<Record<string, ContextChip>> = {
     candidate: { label: '조사 전', tone: 'warning' },
@@ -1229,6 +1240,38 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
 
     public hasDailyJournalSummary = () =>
         this.getDailyJournalSummary() !== undefined;
+
+
+    public isDailyJournalDocument = () =>
+        this.document?.resource?.category === DAILY_LOG_CATEGORY_NAME;
+
+
+    public canEditDailyJournalNarrative = () =>
+        this.isDailyJournalDocument() && this.isEditableTextField('description');
+
+
+    public getDailyJournalNarrative(): string {
+
+        if (!this.isDailyJournalDocument()) return '';
+
+        const value = this.document.resource.description;
+
+        return typeof value === 'string' ? value : '';
+    }
+
+
+    public setDailyJournalNarrative(value: string) {
+
+        if (!this.canEditDailyJournalNarrative()) return;
+
+        const normalizedValue = value.replace(/\r\n/g, '\n');
+        if (this.getDailyJournalNarrative() === normalizedValue) return;
+
+        this.document.resource.description = normalizedValue;
+        this.document.resource.diaryAbstract = createDailyJournalAbstract(normalizedValue);
+        this.document.resource[DAILY_LOG_WORK_MEMO_UPDATED_AT_FIELD] = new Date().toISOString();
+        this.onChanged.emit();
+    }
 
 
     public getDailyJournalSummary(): KoreanFieldworkDailyJournalSummary|undefined {

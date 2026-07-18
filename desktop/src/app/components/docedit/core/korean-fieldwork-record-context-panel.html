@@ -567,6 +567,23 @@
         </svg>
     </div>
 
+    <div *ngIf="canEditDailyJournalNarrative()"
+         class="korean-fieldwork-record-context-daily-narrative">
+        <div class="korean-fieldwork-record-context-daily-narrative-title">
+            <span class="mdi mdi-notebook-edit-outline"></span>
+            <span>그날의 일지</span>
+        </div>
+        <div class="korean-fieldwork-record-context-daily-narrative-hint">
+            그날 진행한 조사, 발견한 내용, 변경 사항과 현장 상황을 자유롭게 기록합니다.
+        </div>
+        <textarea class="form-control korean-fieldwork-record-context-daily-narrative-input"
+                  rows="7"
+                  [value]="getDailyJournalNarrative()"
+                  placeholder="예: 동쪽 확장 구간 표토를 제거하고 원형 수혈 2기의 윤곽을 확인했다. 오후에는 우천으로 북쪽 구간 작업을 중단했다."
+                  aria-label="그날의 조사일지"
+                  (input)="setDailyJournalNarrative($any($event.target).value)"></textarea>
+    </div>
+
     <div *ngIf="getDailyJournalSummary() as dailyJournalSummary"
          class="korean-fieldwork-record-context-daily-summary">
         <div class="korean-fieldwork-record-context-daily-summary-title">

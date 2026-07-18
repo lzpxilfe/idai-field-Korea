@@ -241,6 +241,10 @@ const DocumentsList: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<FilterId>('all');
   const [activeWorkspaceTab, setActiveWorkspaceTab] =
     useState<FieldworkWorkspaceTabId>('records');
+  const [selectedJournalDate, setSelectedJournalDate] =
+    useState(() => new Date());
+  const [selectedJournalDailyLogId, setSelectedJournalDailyLogId] =
+    useState<string>();
   const [query, setQuery] = useState('');
   const [addModalParent, setAddModalParent] = useState<Document>();
   const [addModalInitialCategoryName, setAddModalInitialCategoryName] =
@@ -273,7 +277,7 @@ const DocumentsList: React.FC = () => {
     parentDocument: Document;
     resource: NewResource;
   }>();
-  const now = useMemo(() => new Date(), []);
+  const [now, setNow] = useState(() => new Date());
   const routeParams = useGlobalSearchParams();
   const resetToOverviewKey = getStringRouteParam(
     routeParams[KOREAN_FIELDWORK_FIELD_BOARD_RESET_PARAM]
@@ -302,8 +306,25 @@ const DocumentsList: React.FC = () => {
     });
   }, [persistedDocuments]);
   useEffect(() => {
+    let midnightTimer: ReturnType<typeof setTimeout>;
+    const scheduleNextDayRefresh = () => {
+      const currentDate = new Date();
+      const nextDay = new Date(currentDate);
+      nextDay.setHours(24, 0, 1, 0);
+      midnightTimer = setTimeout(() => {
+        setNow(new Date());
+        scheduleNextDayRefresh();
+      }, Math.max(1000, nextDay.getTime() - currentDate.getTime()));
+    };
+
+    scheduleNextDayRefresh();
+    return () => clearTimeout(midnightTimer);
+  }, []);
+  useEffect(() => {
     setLocallyCreatedDocuments([]);
     setQuickFindSpotRequest(undefined);
+    setSelectedJournalDate(new Date());
+    setSelectedJournalDailyLogId(undefined);
   }, [projectId]);
   const {
     investigationModeId: loadedInvestigationModeId,
@@ -723,13 +744,27 @@ const DocumentsList: React.FC = () => {
     selectedFieldNoteOperation
     ?? actionTargets.primaryOperation
     ?? fallbackOperationDocument;
+  const explicitlySelectedJournalDailyLog = useMemo(
+    () => selectedJournalDailyLogId
+      ? documents.find((document) =>
+        document.resource.id === selectedJournalDailyLogId
+        && document.resource.category === KOREAN_FIELDWORK_CATEGORIES.DAILY_LOG)
+      : undefined,
+    [documents, selectedJournalDailyLogId]
+  );
   const journalDailyLog = useMemo(
-    () => getKoreanFieldworkDailyLogForOperation(
-      journalOperationDocument,
+    () => explicitlySelectedJournalDailyLog
+      ?? getKoreanFieldworkDailyLogForOperation(
+        journalOperationDocument,
+        documents,
+        selectedJournalDate
+      ),
+    [
       documents,
-      now
-    ) ?? actionTargets.dailyLog,
-    [actionTargets.dailyLog, documents, journalOperationDocument, now]
+      explicitlySelectedJournalDailyLog,
+      journalOperationDocument,
+      selectedJournalDate,
+    ]
   );
   const journalOperationAllowedCategoryNames = useMemo(
     () => journalOperationDocument
@@ -760,6 +795,9 @@ const DocumentsList: React.FC = () => {
     document: Document,
     options?: { expand?: boolean; toggle?: boolean }
   ) => {
+    if (document.resource.category !== KOREAN_FIELDWORK_CATEGORIES.DAILY_LOG) {
+      setSelectedJournalDailyLogId(undefined);
+    }
     if (options?.toggle && selectedWorkbenchDocumentId === document.resource.id) {
       setSelectedWorkbenchDocumentId(undefined);
       setIsSelectedWorkbenchExpanded(false);
@@ -1013,17 +1051,32 @@ const DocumentsList: React.FC = () => {
       const draft = createKoreanFieldworkDailyLogDraft(
         journalOperationDocument,
         journalOperationDocument,
-        '오늘 작업일지 시작',
+        '',
         config,
-        now
+        selectedJournalDate
       );
-      await repository.create({
+      const isSameDayRecord = isSameCalendarDate(selectedJournalDate, now);
+      const createdDocument = await repository.create({
         ...draft,
         resource: {
           ...draft.resource,
+          description: '',
+          diaryAbstract: '',
+          ...(!isSameDayRecord
+            ? {
+              dailyLogEvidenceRole: undefined,
+              dailyLogReview: undefined,
+            }
+            : {}),
           ...updates,
         },
       });
+      setLocallyCreatedDocuments((current) => [
+        ...current.filter((document) =>
+          document.resource.id !== createdDocument.resource.id),
+        createdDocument,
+      ]);
+      setSelectedJournalDailyLogId(createdDocument.resource.id);
     } catch (error) {
       showToast(
         ToastType.Error,
@@ -1034,9 +1087,19 @@ const DocumentsList: React.FC = () => {
       setIsSavingDailyJournal(false);
     }
   };
-  const createDailyJournalLog = () => saveDailyJournalFields({});
+  const createDailyJournalLog = () => saveDailyJournalFields({
+    description: '',
+    diaryAbstract: '',
+  });
   const openDailyJournalLog = (dailyLog: Document) => {
+    setSelectedJournalDailyLogId(dailyLog.resource.id);
+    const dailyLogDate = getCalendarDateFromDailyLog(dailyLog);
+    if (dailyLogDate) setSelectedJournalDate(dailyLogDate);
     selectWorkbenchDocument(dailyLog, { expand: true });
+  };
+  const selectDailyJournalDate = (date: Date) => {
+    setSelectedJournalDailyLogId(undefined);
+    setSelectedJournalDate(date);
   };
   const runQuickAction = (action?: KoreanFieldworkPriorityTaskAction) => {
     if (!action) return;
@@ -1206,8 +1269,11 @@ const DocumentsList: React.FC = () => {
             dailyLog={journalDailyLog}
             isSaving={isSavingDailyJournal}
             now={now}
+            selectedDate={selectedJournalDate}
+            today={now}
             onCreateDailyLog={createDailyJournalLog}
             onOpenDailyLog={openDailyJournalLog}
+            onSelectDate={selectDailyJournalDate}
             onUpdateDailyLog={saveDailyJournalFields}
           />
         </>
@@ -1270,9 +1336,8 @@ const DocumentsList: React.FC = () => {
           <>
             <KoreanFieldworkDailyNotebookDigest
               documents={userVisibleDocuments}
-              now={now}
-              onOpenDailyLog={(document) =>
-                selectWorkbenchDocument(document, { expand: true })}
+              now={selectedJournalDate}
+              onOpenDailyLog={openDailyJournalLog}
               onOpenEntryDocument={selectWorkbenchDocument}
             />
             <KoreanFieldworkNotebookLedger
@@ -1429,6 +1494,58 @@ const removeDocumentIdSet = (
 const getStringRouteParam = (
   param: string | string[] | undefined
 ): string | undefined => Array.isArray(param) ? param[0] : param;
+
+const isSameCalendarDate = (dateA: Date, dateB: Date): boolean =>
+  dateA.getFullYear() === dateB.getFullYear()
+  && dateA.getMonth() === dateB.getMonth()
+  && dateA.getDate() === dateB.getDate();
+
+const getCalendarDateFromResource = (value: unknown): Date | undefined => {
+  if (typeof value !== 'string') return undefined;
+
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+  if (!match) return undefined;
+
+  const date = new Date(
+    Number(match[1]),
+    Number(match[2]) - 1,
+    Number(match[3]),
+    12
+  );
+
+  if (
+    Number.isNaN(date.getTime())
+    || date.getFullYear() !== Number(match[1])
+    || date.getMonth() !== Number(match[2]) - 1
+    || date.getDate() !== Number(match[3])
+  ) return undefined;
+
+  return date;
+};
+
+const getCalendarDateFromDailyLog = (
+  dailyLog: Document
+): Date | undefined => {
+  const resourceDate = getCalendarDateFromResource(dailyLog.resource.date);
+  if (resourceDate) return resourceDate;
+
+  const createdDate = dailyLog.created?.date;
+  const date = createdDate instanceof Date
+    ? new Date(createdDate)
+    : typeof createdDate === 'string'
+      ? new Date(createdDate)
+      : undefined;
+
+  if (!date || Number.isNaN(date.getTime())) return undefined;
+
+  const koreaDate = new Date(date.getTime() + 9 * 60 * 60 * 1000);
+  return new Date(
+    koreaDate.getUTCFullYear(),
+    koreaDate.getUTCMonth(),
+    koreaDate.getUTCDate(),
+    12
+  );
+};
 
 const FieldworkFlowPanel: React.FC<{
   boundaryDetail: string;

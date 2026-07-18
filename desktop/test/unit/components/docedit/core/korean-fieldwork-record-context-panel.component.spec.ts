@@ -1171,7 +1171,7 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
         expect(summary.contentLabel).toBe('내용 제토 진행 · 작업구역 · 안전 문제');
         expect(summary.evidenceRoleLabel).toBe('근거 당일 사실기록');
         expect(summary.reviewLabel).toBe('검토 당일 작성 · 검토자 확인');
-        expect(summary.workMemoLabel).toBe('작업 메모 동쪽 확장 구간 표토 제거 후 원형 수혈 2기 윤곽 확인.');
+        expect(summary.workMemoLabel).toBe('그날의 일지 동쪽 확장 구간 표토 제거 후 원형 수혈 2기 윤곽 확인.');
         expect(summary.boundaryMemoLabel).toBe('경계 메모 없음');
         expect(summary.boundaryMemoImportedAtLabel).toBe('경계 가져옴 2026-06-30');
         expect(summary.workMemoUpdatedAtLabel).toBe('작업일지 수정 2026-06-30');
@@ -1179,6 +1179,56 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
         expect(summary.hasBoundaryMemo).toBe(false);
         expect(summary.hasWorkMemo).toBe(true);
         expect(summary.hasLogClassification).toBe(true);
+    });
+
+
+    it('edits the dated journal narrative directly in the desktop record context', () => {
+
+        const dailyLog = createDocument('daily-log-1', 'DailyLog', '2026-06-30 일지', {}, {
+            description: '오전 표토 제거.'
+        });
+        const component = createComponent({
+            find: jest.fn().mockResolvedValue({ documents: [dailyLog] })
+        });
+        const handleChanged = jest.fn();
+        component.onChanged.subscribe(handleChanged);
+        component.document = dailyLog as any;
+        component.fieldDefinitions = [textField('description', '그날의 일지')] as any;
+
+        expect(component.isDailyJournalDocument()).toBe(true);
+        expect(component.canEditDailyJournalNarrative()).toBe(true);
+        expect(component.getDailyJournalNarrative()).toBe('오전 표토 제거.');
+
+        component.setDailyJournalNarrative('오전 표토 제거.\r\n오후 수혈 2기 윤곽 확인.');
+
+        expect(dailyLog.resource.description).toBe(
+            '오전 표토 제거.\n오후 수혈 2기 윤곽 확인.'
+        );
+        expect(dailyLog.resource.diaryAbstract).toBe(
+            '오전 표토 제거. 오후 수혈 2기 윤곽 확인.'
+        );
+        expect(dailyLog.resource.dailyLogWorkMemoUpdatedAt).toEqual(expect.any(String));
+        expect(handleChanged).toHaveBeenCalledTimes(1);
+    });
+
+
+    it('respects the configured description field before editing a daily journal', () => {
+
+        const dailyLog = createDocument('daily-log-1', 'DailyLog', '2026-06-30 일지', {}, {
+            description: '기존 일지'
+        });
+        const component = createComponent();
+        const handleChanged = jest.fn();
+        component.onChanged.subscribe(handleChanged);
+        component.document = dailyLog as any;
+        component.fieldDefinitions = [] as any;
+
+        expect(component.canEditDailyJournalNarrative()).toBe(false);
+
+        component.setDailyJournalNarrative('설정을 우회한 변경');
+
+        expect(dailyLog.resource.description).toBe('기존 일지');
+        expect(handleChanged).not.toHaveBeenCalled();
     });
 
 
@@ -1193,6 +1243,10 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
         );
 
         expect(template).toContain('getDailyJournalSummary() as dailyJournalSummary');
+        expect(template).toContain('canEditDailyJournalNarrative()');
+        expect(template).toContain('그날의 일지');
+        expect(template).toContain('aria-label="그날의 조사일지"');
+        expect(template).toContain('setDailyJournalNarrative');
         expect(template).toContain('작업일지 요약');
         expect(template).toContain('dailyJournalSummary.personnelLabel');
         expect(template).toContain('dailyJournalSummary.safetyLabel');

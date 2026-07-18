@@ -83,11 +83,44 @@ describe('KoreanFieldworkQuickRecordPanelComponent', () => {
     });
 
 
-    it('keeps period and feature type out of the minimum record flow', () => {
+    it('keeps period and feature type out of the investigation progress flow', () => {
 
-        expect(component.primaryFieldNames).toEqual([
+        expect(component.progressFieldNames).toEqual([
             'featureRecordingStatus',
             'featureInvestigationChecklist'
         ]);
+    });
+
+
+    it('organizes record fields by fieldwork meaning without a secondary state group', () => {
+
+        expect(component.fieldSections.map(section => ({
+            id: section.id,
+            title: section.title,
+            fieldNames: section.fieldNames
+        }))).toEqual([
+            {
+                id: 'progress',
+                title: '조사 진행',
+                fieldNames: ['featureRecordingStatus', 'featureInvestigationChecklist']
+            },
+            {
+                id: 'recordCharacter',
+                title: '기록 성격',
+                fieldNames: ['fieldRecordQuality']
+            },
+            {
+                id: 'verification',
+                title: '확인·마감',
+                fieldNames: ['verificationState']
+            },
+            {
+                id: 'timing',
+                title: '기록 시점 수정',
+                fieldNames: ['recordCreationTiming']
+            }
+        ]);
+        expect((component as any).secondaryFieldNames).toBeUndefined();
+        expect((component as any).showSecondaryFields).toBeUndefined();
     });
 });

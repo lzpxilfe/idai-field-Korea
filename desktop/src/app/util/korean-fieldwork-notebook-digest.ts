@@ -877,7 +877,7 @@ function getDailyJournalWorkMemoLabel(document: Document): string {
         .join(' / ');
     if (!preview) return '';
 
-    return `작업 메모 ${truncateDailyJournalPreview(preview, 120)}`;
+    return `그날의 일지 ${truncateDailyJournalPreview(preview, 120)}`;
 }
 
 

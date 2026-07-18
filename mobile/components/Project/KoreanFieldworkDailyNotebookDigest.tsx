@@ -8,7 +8,9 @@ import {
   View,
 } from 'react-native';
 import {
+  getKoreanFieldworkDailyLogTimeline,
   getKoreanFieldworkDailyNotebookDigest,
+  KoreanFieldworkDailyLogTimelineItem,
   KoreanFieldworkNotebookEntry,
 } from './korean-fieldwork-field-notes';
 
@@ -37,15 +39,26 @@ const KoreanFieldworkDailyNotebookDigest: React.FC<
     ),
     [documents, maxEntries, now]
   );
+  const dailyLogTimeline = useMemo(
+    () => getKoreanFieldworkDailyLogTimeline(documents),
+    [documents]
+  );
+  const previousDailyLogs = dailyLogTimeline.filter((item) =>
+    item.document.resource.id !== digest.primaryDailyLog?.resource.id
+  );
 
-  if (!digest.primaryDailyLog && digest.entries.length === 0) return null;
+  if (
+    !digest.primaryDailyLog
+    && digest.entries.length === 0
+    && dailyLogTimeline.length === 0
+  ) return null;
 
   return (
     <View style={styles.container} testID="fieldDailyNotebookDigest">
       <View style={styles.headerRow}>
         <View style={styles.titleRow}>
           <MaterialIcons name="event-note" size={18} color="#175cd3" />
-          <Text style={styles.title}>오늘 조사일지</Text>
+          <Text style={styles.title}>날짜별 조사일지</Text>
         </View>
         <Text style={styles.dateLabel}>{digest.dateLabel}</Text>
       </View>
@@ -88,9 +101,48 @@ const KoreanFieldworkDailyNotebookDigest: React.FC<
           onOpenEntryDocument={onOpenEntryDocument}
         />
       ))}
+
+      {previousDailyLogs.length > 0 && (
+        <View style={styles.timelineSection}>
+          <Text style={styles.timelineTitle}>최근 날짜별 일지</Text>
+          {previousDailyLogs.map((item) => (
+            <DailyLogTimelineRow
+              item={item}
+              key={item.document.resource.id}
+              onOpenDailyLog={onOpenDailyLog}
+            />
+          ))}
+        </View>
+      )}
     </View>
   );
 };
+
+const DailyLogTimelineRow: React.FC<{
+  item: KoreanFieldworkDailyLogTimelineItem;
+  onOpenDailyLog?: (document: Document) => void;
+}> = ({ item, onOpenDailyLog }) => (
+  <TouchableOpacity
+    activeOpacity={0.86}
+    onPress={() => onOpenDailyLog?.(item.document)}
+    style={styles.timelineRow}
+    testID={`fieldDailyNotebookDigestTimeline_${item.document.resource.id}`}
+  >
+    <View style={styles.timelineDate}>
+      <MaterialIcons name="calendar-today" size={14} color="#175cd3" />
+      <Text style={styles.timelineDateLabel}>{item.dateLabel}</Text>
+    </View>
+    <View style={styles.timelineText}>
+      <Text style={styles.timelineItemTitle} numberOfLines={1}>
+        {item.document.resource.identifier || '조사일지'}
+      </Text>
+      <Text style={styles.timelineDetail} numberOfLines={2}>
+        {item.detail}
+      </Text>
+    </View>
+    <MaterialIcons name="chevron-right" size={18} color="#667085" />
+  </TouchableOpacity>
+);
 
 const DigestMetric: React.FC<{
   label: string;
@@ -287,6 +339,49 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     gap: 6,
+  },
+  timelineDate: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 5,
+    minWidth: 102,
+  },
+  timelineDateLabel: {
+    color: '#175cd3',
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  timelineDetail: {
+    color: '#667085',
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  timelineItemTitle: {
+    color: '#344054',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  timelineRow: {
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    borderColor: '#e4e7ec',
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 8,
+    padding: 10,
+  },
+  timelineSection: {
+    gap: 8,
+  },
+  timelineText: {
+    flex: 1,
+    gap: 2,
+  },
+  timelineTitle: {
+    color: '#344054',
+    fontSize: 13,
+    fontWeight: '800',
   },
 });
 

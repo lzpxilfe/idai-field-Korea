@@ -1449,7 +1449,7 @@ function getFieldRecordQualityReviewDetailSummary(document: Document): string|un
 function getDailyLogWorkMemoLabel(document: Document): string|undefined {
 
     return getLabeledEvidenceValue(
-        '\uc791\uc5c5 \uba54\ubaa8',
+        '\uadf8\ub0a0\uc758 \uc77c\uc9c0',
         truncatePrintableText(getPrintableValue(document.resource.description), 240)
     );
 }

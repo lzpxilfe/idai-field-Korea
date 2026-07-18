@@ -58,7 +58,10 @@ interface KoreanFieldworkDailyJournalCalendarProps {
   now?: Date;
   onCreateDailyLog: () => Promise<void> | void;
   onOpenDailyLog?: (dailyLog: Document) => void;
+  onSelectDate?: (date: Date) => void;
   onUpdateDailyLog: (updates: Record<string, unknown>) => Promise<void> | void;
+  selectedDate?: Date;
+  today?: Date;
 }
 
 const MAX_COORDINATE = 10000;
@@ -77,6 +80,8 @@ const PLAN_PADDING_RATIO = 0.08;
 const BOUNDARY_MEMO_STROKE_COLOR = '#f97316';
 const BOUNDARY_MEMO_ERASER_COLOR = '#ffffff';
 const FIELD = KOREAN_FIELDWORK_DAILY_JOURNAL_FIELDS;
+const WORK_MEMO_PLACEHOLDER =
+  '오늘 진행한 조사, 발견한 내용, 현장 상황과 내일 이어서 할 일을 적습니다.';
 
 const KoreanFieldworkDailyJournalCalendar: React.FC<
   KoreanFieldworkDailyJournalCalendarProps
@@ -89,15 +94,37 @@ const KoreanFieldworkDailyJournalCalendar: React.FC<
   now = new Date(),
   onCreateDailyLog,
   onOpenDailyLog,
+  onSelectDate,
   onUpdateDailyLog,
+  selectedDate,
+  today,
 }) => {
+  const effectiveToday = today ?? now;
+  const effectiveSelectedDate = selectedDate ?? effectiveToday;
+  const selectedDateKey = formatDateKey(effectiveSelectedDate);
+  const todayKey = formatDateKey(effectiveToday);
+  const [visibleWeekDate, setVisibleWeekDate] =
+    useState(() => new Date(effectiveSelectedDate));
   const [personnelDraft, setPersonnelDraft] =
     useState(getPersonnelDraft(dailyLog));
+  const [workMemoDraft, setWorkMemoDraft] =
+    useState(getStringField(dailyLog, FIELD.workMemo));
+  const [isWorkMemoDirty, setIsWorkMemoDirty] = useState(false);
   const [saveStatus, setSaveStatus] =
     useState<'saved'|'saving'|'error'|undefined>();
-  const dayItems = useMemo(() => getCalendarWeek(now), [now]);
+  const visibleWeekKey = formatDateKey(visibleWeekDate);
+  const dayItems = useMemo(
+    () => getCalendarWeek(
+      visibleWeekDate,
+      effectiveToday,
+      effectiveSelectedDate
+    ),
+    [selectedDateKey, todayKey, visibleWeekKey]
+  );
   const personnelSummary = getPersonnelSummary(dailyLog);
   const hasDailyLog = !!dailyLog;
+  const savedWorkMemo = getStringField(dailyLog, FIELD.workMemo);
+  const hasSavedWorkMemo = savedWorkMemo.length > 0;
   const safetyPhotoDone = getBooleanField(dailyLog, FIELD.safetyEducationPhoto);
   const safetyStretchingDone = getBooleanField(
     dailyLog,
@@ -112,18 +139,35 @@ const KoreanFieldworkDailyJournalCalendar: React.FC<
     setPersonnelDraft(getPersonnelDraft(dailyLog));
   }, [dailyLog]);
 
-  const saveUpdates = async (updates: Record<string, unknown>) => {
-    if (!canEdit) return;
+  useEffect(() => {
+    setWorkMemoDraft(getStringField(dailyLog, FIELD.workMemo));
+    setIsWorkMemoDirty(false);
+    setSaveStatus(undefined);
+  }, [dailyLog?.resource.id, selectedDateKey]);
+
+  useEffect(() => {
+    setVisibleWeekDate(new Date(effectiveSelectedDate));
+  }, [selectedDateKey]);
+
+  const saveUpdates = async (
+    updates: Record<string, unknown>,
+    options: { updateWorkMemoTimestamp?: boolean } = {}
+  ): Promise<boolean> => {
+    if (!canEdit) return false;
 
     try {
       setSaveStatus('saving');
       await onUpdateDailyLog({
         ...updates,
-        [FIELD.workMemoUpdatedAt]: new Date().toISOString(),
+        ...(options.updateWorkMemoTimestamp
+          ? { [FIELD.workMemoUpdatedAt]: new Date().toISOString() }
+          : {}),
       });
       setSaveStatus('saved');
+      return true;
     } catch {
       setSaveStatus('error');
+      return false;
     }
   };
   const savePersonnel = () => {
@@ -150,6 +194,23 @@ const KoreanFieldworkDailyJournalCalendar: React.FC<
   const toggleSafety = (fieldName: string, currentValue: boolean) => {
     saveUpdates({ [fieldName]: !currentValue });
   };
+  const updateWorkMemoDraft = (value: string) => {
+    setWorkMemoDraft(value);
+    setIsWorkMemoDirty(normalizeText(value) !== savedWorkMemo);
+  };
+  const saveWorkMemo = async () => {
+    if (!canEdit || isSaving || !isWorkMemoDirty) return;
+
+    const normalizedWorkMemo = normalizeText(workMemoDraft);
+    const wasSaved = await saveUpdates(
+      {
+        [FIELD.workMemo]: normalizedWorkMemo || undefined,
+        diaryAbstract: createDiaryAbstract(normalizedWorkMemo),
+      },
+      { updateWorkMemoTimestamp: true }
+    );
+    if (wasSaved) setIsWorkMemoDirty(false);
+  };
   const updateBoundaryStrokes = (serializedStrokes: string) => {
     saveUpdates({
       [FIELD.boundaryMemoImportedAt]: boundaryDraft
@@ -169,7 +230,9 @@ const KoreanFieldworkDailyJournalCalendar: React.FC<
             <MaterialIcons name="calendar-month" size={18} color="#175cd3" />
             <Text style={styles.title}>작업일지</Text>
           </View>
-          <Text style={styles.dateText}>{formatFullDate(now)}</Text>
+          <Text style={styles.dateText} testID="dailyJournalSelectedDateLabel">
+            {formatFullDate(effectiveSelectedDate)}
+          </Text>
         </View>
         {hasDailyLog ? (
           <TouchableOpacity
@@ -209,17 +272,49 @@ const KoreanFieldworkDailyJournalCalendar: React.FC<
         )}
       </View>
 
+      <View style={styles.weekNavigationRow}>
+        <TouchableOpacity
+          accessibilityLabel="이전 주"
+          activeOpacity={0.86}
+          onPress={() => setVisibleWeekDate((date) => addDays(date, -7))}
+          style={styles.weekNavigationButton}
+          testID="dailyJournalPreviousWeek"
+        >
+          <MaterialIcons name="chevron-left" size={20} color="#475467" />
+        </TouchableOpacity>
+        <Text style={styles.weekRangeLabel}>{formatWeekRange(dayItems)}</Text>
+        <TouchableOpacity
+          accessibilityLabel="다음 주"
+          activeOpacity={0.86}
+          onPress={() => setVisibleWeekDate((date) => addDays(date, 7))}
+          style={styles.weekNavigationButton}
+          testID="dailyJournalNextWeek"
+        >
+          <MaterialIcons name="chevron-right" size={20} color="#475467" />
+        </TouchableOpacity>
+      </View>
+
       <View style={styles.weekRow}>
         {dayItems.map((day) => (
-          <View
+          <TouchableOpacity
+            accessibilityHint={day.isToday ? '오늘' : undefined}
+            accessibilityLabel={`${formatFullDate(day.date)} 일지 선택`}
+            accessibilityState={{ selected: day.isSelected }}
+            activeOpacity={0.86}
             key={day.key}
-            style={[styles.dayCell, day.isToday && styles.dayCellToday]}
+            onPress={() => onSelectDate?.(new Date(day.date))}
+            style={[
+              styles.dayCell,
+              day.isToday && styles.dayCellToday,
+              day.isSelected && styles.dayCellSelected,
+            ]}
             testID={`dailyJournalDay_${day.key}`}
           >
             <Text
               style={[
                 styles.dayWeekday,
                 day.isToday && styles.dayTextToday,
+                day.isSelected && styles.dayTextSelected,
               ]}
             >
               {day.weekday}
@@ -228,11 +323,22 @@ const KoreanFieldworkDailyJournalCalendar: React.FC<
               style={[
                 styles.dayNumber,
                 day.isToday && styles.dayTextToday,
+                day.isSelected && styles.dayTextSelected,
               ]}
             >
               {day.day}
             </Text>
-          </View>
+            {day.isToday && (
+              <Text
+                style={[
+                  styles.todayBadge,
+                  day.isSelected && styles.todayBadgeSelected,
+                ]}
+              >
+                오늘
+              </Text>
+            )}
+          </TouchableOpacity>
         ))}
       </View>
 
@@ -366,6 +472,58 @@ const KoreanFieldworkDailyJournalCalendar: React.FC<
             />
           </View>
         </View>
+      </View>
+
+      <View style={styles.workMemoSection}>
+        <View style={styles.fieldHeaderRow}>
+          <View style={styles.workMemoHeading}>
+            <Text style={styles.fieldLabel}>그날의 일지</Text>
+            <Text
+              style={[
+                styles.workMemoState,
+                isWorkMemoDirty && styles.workMemoStateDirty,
+              ]}
+              testID="dailyJournalWorkMemoState"
+            >
+              {getWorkMemoStateText(
+                hasSavedWorkMemo,
+                isWorkMemoDirty,
+                saveStatus
+              )}
+            </Text>
+          </View>
+          <TouchableOpacity
+            activeOpacity={0.86}
+            disabled={!canEdit || isSaving || !isWorkMemoDirty}
+            onPress={saveWorkMemo}
+            style={[
+              styles.smallButton,
+              (!canEdit || isSaving || !isWorkMemoDirty)
+                && styles.disabledButton,
+            ]}
+            testID="dailyJournalWorkMemoSave"
+          >
+            <Text
+              style={[
+                styles.smallButtonText,
+                (!canEdit || isSaving || !isWorkMemoDirty)
+                  && styles.disabledButtonText,
+              ]}
+            >
+              저장
+            </Text>
+          </TouchableOpacity>
+        </View>
+        <TextInput
+          editable={canEdit && !isSaving}
+          multiline
+          onChangeText={updateWorkMemoDraft}
+          placeholder={WORK_MEMO_PLACEHOLDER}
+          style={styles.workMemoInput}
+          testID="dailyJournalWorkMemoInput"
+          textAlignVertical="top"
+          value={workMemoDraft}
+        />
       </View>
 
       <BoundaryMemoCanvas
@@ -784,8 +942,21 @@ const IconButton: React.FC<{
   </TouchableOpacity>
 );
 
-const getCalendarWeek = (date: Date) => {
-  const start = new Date(date);
+interface CalendarDayItem {
+  date: Date;
+  day: string;
+  isSelected: boolean;
+  isToday: boolean;
+  key: string;
+  weekday: string;
+}
+
+const getCalendarWeek = (
+  visibleDate: Date,
+  today: Date,
+  selectedDate: Date
+): CalendarDayItem[] => {
+  const start = new Date(visibleDate);
   const mondayOffset = (start.getDay() + 6) % 7;
   start.setDate(start.getDate() - mondayOffset);
   start.setHours(0, 0, 0, 0);
@@ -795,12 +966,38 @@ const getCalendarWeek = (date: Date) => {
     day.setDate(start.getDate() + index);
 
     return {
+      date: day,
       day: String(day.getDate()),
-      isToday: isSameDate(day, date),
+      isSelected: isSameDate(day, selectedDate),
+      isToday: isSameDate(day, today),
       key: formatDateKey(day),
       weekday,
     };
   });
+};
+
+const addDays = (date: Date, amount: number): Date => {
+  const nextDate = new Date(date);
+  nextDate.setDate(nextDate.getDate() + amount);
+  return nextDate;
+};
+
+const formatWeekRange = (dayItems: CalendarDayItem[]): string => {
+  const firstDay = dayItems[0]?.date;
+  const lastDay = dayItems[dayItems.length - 1]?.date;
+  if (!firstDay || !lastDay) return '';
+
+  if (firstDay.getFullYear() !== lastDay.getFullYear()) {
+    return `${firstDay.getFullYear()}. ${firstDay.getMonth() + 1}. ${
+      firstDay.getDate()
+    }. - ${lastDay.getFullYear()}. ${lastDay.getMonth() + 1}. ${
+      lastDay.getDate()
+    }.`;
+  }
+
+  return `${firstDay.getFullYear()}. ${firstDay.getMonth() + 1}. ${
+    firstDay.getDate()
+  }. - ${lastDay.getMonth() + 1}. ${lastDay.getDate()}.`;
 };
 
 const isSameDate = (dateA: Date, dateB: Date): boolean =>
@@ -873,6 +1070,14 @@ const normalizeCount = (value: string): number | undefined => {
 };
 
 const normalizeText = (value: string): string => value.trim();
+
+const createDiaryAbstract = (value: string): string | undefined => {
+  const normalizedValue = value.replace(/\s+/g, ' ').trim();
+  if (!normalizedValue) return undefined;
+  if (normalizedValue.length <= 120) return normalizedValue;
+
+  return `${normalizedValue.slice(0, 117)}...`;
+};
 
 const countToText = (value: number | undefined): string =>
   value === undefined ? '' : String(value);
@@ -1373,6 +1578,19 @@ const getSaveStatusText = (
   }
 };
 
+const getWorkMemoStateText = (
+  hasSavedWorkMemo: boolean,
+  isDirty: boolean,
+  saveStatus: 'saved'|'saving'|'error'|undefined
+): string => {
+  if (saveStatus === 'saving') return '저장 중';
+  if (saveStatus === 'error') return '저장 실패 · 다시 확인';
+  if (isDirty) return hasSavedWorkMemo ? '수정 중 · 저장 필요' : '작성 중 · 저장 필요';
+  if (hasSavedWorkMemo) return '저장된 일지';
+
+  return '새 일지 작성';
+};
+
 const styles = StyleSheet.create({
   container: {
     backgroundColor: 'white',
@@ -1431,9 +1649,30 @@ const styles = StyleSheet.create({
   disabledButtonText: {
     color: '#98a2b3',
   },
+  weekNavigationRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 12,
+  },
+  weekNavigationButton: {
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    borderColor: '#d0d5dd',
+    borderRadius: 6,
+    borderWidth: 1,
+    height: 34,
+    justifyContent: 'center',
+    width: 38,
+  },
+  weekRangeLabel: {
+    color: '#475467',
+    fontSize: 12,
+    fontWeight: '900',
+  },
   weekRow: {
     flexDirection: 'row',
-    marginTop: 12,
+    marginTop: 8,
   },
   dayCell: {
     alignItems: 'center',
@@ -1443,10 +1682,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     flex: 1,
     marginRight: 5,
-    minHeight: 48,
+    minHeight: 58,
     justifyContent: 'center',
   },
   dayCellToday: {
+    backgroundColor: '#eff8ff',
+    borderColor: '#175cd3',
+  },
+  dayCellSelected: {
     backgroundColor: '#175cd3',
     borderColor: '#175cd3',
   },
@@ -1462,7 +1705,19 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   dayTextToday: {
+    color: '#175cd3',
+  },
+  dayTextSelected: {
     color: 'white',
+  },
+  todayBadge: {
+    color: '#175cd3',
+    fontSize: 8,
+    fontWeight: '900',
+    marginTop: 1,
+  },
+  todayBadgeSelected: {
+    color: '#d1e9ff',
   },
   summaryRow: {
     flexDirection: 'row',
@@ -1570,6 +1825,38 @@ const styles = StyleSheet.create({
     color: '#175cd3',
     fontSize: 12,
     fontWeight: '900',
+  },
+  workMemoSection: {
+    borderTopColor: '#eaecf0',
+    borderTopWidth: 1,
+    marginTop: 12,
+    paddingTop: 12,
+  },
+  workMemoHeading: {
+    flex: 1,
+    minWidth: 0,
+  },
+  workMemoState: {
+    color: '#667085',
+    fontSize: 10,
+    fontWeight: '800',
+    marginTop: 2,
+  },
+  workMemoStateDirty: {
+    color: '#b54708',
+  },
+  workMemoInput: {
+    backgroundColor: '#ffffff',
+    borderColor: '#d0d5dd',
+    borderRadius: 6,
+    borderWidth: 1,
+    color: '#101828',
+    fontSize: 14,
+    lineHeight: 21,
+    marginTop: 8,
+    minHeight: 132,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
   },
   safetyWrap: {
     flex: 1,

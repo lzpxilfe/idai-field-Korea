@@ -15,7 +15,7 @@ const C = KOREAN_FIELDWORK_CATEGORIES;
 describe('KoreanFieldworkQuickRecordPanel', () => {
   it('renders fieldwork quick checks and updates multi-value fields', () => {
     const handleUpdateResourceField = jest.fn();
-    const { getByTestId, getByText, queryByText } = render(
+    const { getByTestId, getByText, queryByTestId, queryByText } = render(
       <KoreanFieldworkQuickRecordPanel
         category={createCategoryForm([
           FIELDWORK_QUICK_FIELDS.checklist,
@@ -38,19 +38,16 @@ describe('KoreanFieldworkQuickRecordPanel', () => {
     expect(getByText('현장 최소 기록')).toBeTruthy();
     expect(getByText('조사 사진')).toBeTruthy();
     expect(getByText('사진 1/3')).toBeTruthy();
-    expect(getByText('현장 보조판 보기 (3)')).toBeTruthy();
-    expect(queryByText('유구 진행')).toBeNull();
+    expect(getByText('기록 성격')).toBeTruthy();
+    expect(getByText('확인·마감')).toBeTruthy();
+    expect(getByTestId('quickRecordTimingValue').props.children).toBe('추가 기록');
+    expect(queryByTestId('quickRecordToggleSecondaryFields')).toBeNull();
+    expect(queryByText(/현장 보조판/)).toBeNull();
     expect(queryByText('토층사진')).toBeNull();
 
     fireEvent.press(getByTestId('quickRecordToggleDetailedChecklist'));
 
     expect(getByText('토층사진')).toBeTruthy();
-
-    fireEvent.press(getByTestId('quickRecordToggleSecondaryFields'));
-
-    expect(queryByText('유구 진행')).toBeNull();
-    expect(getByText('기록 구분')).toBeTruthy();
-    expect(getByText('확인 상태')).toBeTruthy();
 
     fireEvent.press(getByTestId('quickRecordOption_completionPhotoTaken'));
     fireEvent.press(getByTestId('quickRecordOption_immediateRecording'));
@@ -280,16 +277,19 @@ describe('KoreanFieldworkQuickRecordPanel', () => {
         category={createCategoryForm([
           FIELDWORK_QUICK_FIELDS.period,
           'description',
+          FIELDWORK_QUICK_FIELDS.quality,
         ])}
         resource={createResource(C.FEATURE, {
           period: 'undated',
           description: '평면 윤곽 확인 중',
+          fieldRecordQuality: [],
         })}
         onUpdateResourceField={handleUpdateResourceField}
       />
     );
 
     expect(getByText('야장 메모')).toBeTruthy();
+    expect(getByText('기록 성격')).toBeTruthy();
 
     fireEvent.changeText(
       getByTestId('quickRecordInput_description'),
@@ -477,6 +477,7 @@ describe('KoreanFieldworkQuickRecordPanel', () => {
       />
     );
 
+    expect(getByText('조사 진행')).toBeTruthy();
     expect(getByText('피트 토층도')).toBeTruthy();
     expect(queryByText('유물 수습')).toBeNull();
 
@@ -554,6 +555,9 @@ describe('KoreanFieldworkQuickRecordPanel', () => {
       />
     );
 
+    expect(getByTestId('quickRecordTimingValue').props.children).toBe('추가 기록');
+
+    fireEvent.press(getByTestId('quickRecordToggleTimingEditor'));
     fireEvent.press(getByTestId('quickRecordOption_sameDayFieldRecord'));
 
     expect(handleUpdateResourceField).toHaveBeenNthCalledWith(

@@ -93,19 +93,146 @@ describe('KoreanFieldworkDailyJournalCalendar', () => {
     expect(handleCreateDailyLog).toHaveBeenCalled();
   });
 
-  it('does not expose a duplicate text memo editor inside the journal panel', () => {
-    const { queryByTestId } = render(
+  it('saves the written daily journal and its 120-character abstract', async () => {
+    const handleUpdateDailyLog = jest.fn();
+    const longJournalText = '가'.repeat(130);
+    const { getByTestId, getByText } = render(
       <KoreanFieldworkDailyJournalCalendar
         canEdit
-        dailyLog={createDailyLog() as any}
+        dailyLog={createDailyLog({
+          [FIELD.workMemo]: '기존 일지',
+        }) as any}
         now={new Date('2026-06-30T09:00:00+09:00')}
         onCreateDailyLog={jest.fn()}
-        onUpdateDailyLog={jest.fn()}
+        onUpdateDailyLog={handleUpdateDailyLog}
       />
     );
 
-    expect(queryByTestId('dailyJournalWorkMemoInput')).toBeNull();
-    expect(queryByTestId('dailyJournalWorkMemoSave')).toBeNull();
+    fireEvent.changeText(getByTestId('dailyJournalWorkMemoInput'), longJournalText);
+
+    expect(getByText('수정 중 · 저장 필요')).toBeTruthy();
+
+    fireEvent.press(getByTestId('dailyJournalWorkMemoSave'));
+
+    await waitFor(() => {
+      expect(handleUpdateDailyLog).toHaveBeenCalledWith(expect.objectContaining({
+        [FIELD.workMemo]: longJournalText,
+        [FIELD.workMemoUpdatedAt]: expect.any(String),
+        diaryAbstract: `${'가'.repeat(117)}...`,
+      }));
+    });
+  });
+
+  it('saves a new daily journal even before the daily log exists', async () => {
+    const handleUpdateDailyLog = jest.fn();
+    const { getByTestId, getByText } = render(
+      <KoreanFieldworkDailyJournalCalendar
+        canEdit
+        now={new Date('2026-06-30T09:00:00+09:00')}
+        onCreateDailyLog={jest.fn()}
+        onUpdateDailyLog={handleUpdateDailyLog}
+      />
+    );
+
+    expect(getByText('새 일지 작성')).toBeTruthy();
+
+    fireEvent.changeText(
+      getByTestId('dailyJournalWorkMemoInput'),
+      '서쪽 구역 제토 중 원형 윤곽을 확인했다.'
+    );
+    fireEvent.press(getByTestId('dailyJournalWorkMemoSave'));
+
+    await waitFor(() => {
+      expect(handleUpdateDailyLog).toHaveBeenCalledWith(expect.objectContaining({
+        [FIELD.workMemo]: '서쪽 구역 제토 중 원형 윤곽을 확인했다.',
+        diaryAbstract: '서쪽 구역 제토 중 원형 윤곽을 확인했다.',
+      }));
+    });
+  });
+
+  it('keeps an unsaved journal draft when the same log receives other updates', () => {
+    const props = {
+      canEdit: true,
+      now: new Date('2026-06-30T09:00:00+09:00'),
+      onCreateDailyLog: jest.fn(),
+      onUpdateDailyLog: jest.fn(),
+    };
+    const { getByTestId, rerender } = render(
+      <KoreanFieldworkDailyJournalCalendar
+        {...props}
+        dailyLog={createDailyLog({
+          [FIELD.workMemo]: '저장된 일지',
+        }) as any}
+      />
+    );
+
+    fireEvent.changeText(
+      getByTestId('dailyJournalWorkMemoInput'),
+      '아직 저장하지 않은 현장 기록'
+    );
+
+    rerender(
+      <KoreanFieldworkDailyJournalCalendar
+        {...props}
+        dailyLog={createDailyLog({
+          [FIELD.investigatorCount]: 3,
+          [FIELD.workMemo]: '저장된 일지',
+        }) as any}
+      />
+    );
+
+    expect(getByTestId('dailyJournalWorkMemoInput').props.value)
+      .toBe('아직 저장하지 않은 현장 기록');
+  });
+
+  it('selects a controlled journal date and distinguishes it from today', () => {
+    const handleSelectDate = jest.fn();
+    const { getByTestId, getByText } = render(
+      <KoreanFieldworkDailyJournalCalendar
+        canEdit
+        onCreateDailyLog={jest.fn()}
+        onSelectDate={handleSelectDate}
+        onUpdateDailyLog={jest.fn()}
+        selectedDate={new Date('2026-06-30T12:00:00+09:00')}
+        today={new Date('2026-07-02T12:00:00+09:00')}
+      />
+    );
+
+    expect(getByTestId('dailyJournalDay_2026-06-30').props.accessibilityState)
+      .toEqual({ selected: true });
+    expect(getByTestId('dailyJournalDay_2026-07-02').props.accessibilityState)
+      .toEqual({ selected: false });
+    expect(getByTestId('dailyJournalDay_2026-07-02').props.accessibilityHint)
+      .toBe('오늘');
+    expect(getByText('2026년 6월 30일')).toBeTruthy();
+
+    fireEvent.press(getByTestId('dailyJournalDay_2026-07-01'));
+
+    expect(handleSelectDate).toHaveBeenCalledTimes(1);
+    expect(formatTestDate(handleSelectDate.mock.calls[0][0])).toBe('2026-07-01');
+  });
+
+  it('moves the visible calendar backward and forward by one week', () => {
+    const { getByTestId, queryByTestId } = render(
+      <KoreanFieldworkDailyJournalCalendar
+        canEdit
+        onCreateDailyLog={jest.fn()}
+        onUpdateDailyLog={jest.fn()}
+        selectedDate={new Date('2026-06-30T12:00:00+09:00')}
+        today={new Date('2026-06-30T12:00:00+09:00')}
+      />
+    );
+
+    expect(getByTestId('dailyJournalDay_2026-06-29')).toBeTruthy();
+
+    fireEvent.press(getByTestId('dailyJournalNextWeek'));
+
+    expect(queryByTestId('dailyJournalDay_2026-06-29')).toBeNull();
+    expect(getByTestId('dailyJournalDay_2026-07-06')).toBeTruthy();
+
+    fireEvent.press(getByTestId('dailyJournalPreviousWeek'));
+
+    expect(getByTestId('dailyJournalDay_2026-06-29')).toBeTruthy();
   });
 
   it('projects the journal boundary as a vertical plan without stretching axes independently', () => {
@@ -295,3 +422,9 @@ const createDailyLog = (
     ...extraResource,
   },
 });
+
+const formatTestDate = (date: Date): string => [
+  date.getFullYear(),
+  String(date.getMonth() + 1).padStart(2, '0'),
+  String(date.getDate()).padStart(2, '0'),
+].join('-');

@@ -426,7 +426,7 @@ describe('Korean fieldwork report handoff', () => {
         expect(detailText)
             .toContain('\uac80\ud1a0: \ub2f9\uc77c \uc791\uc131 \u00b7 \uac80\ud1a0\uc790 \ud655\uc778');
         expect(detailText)
-            .toContain('작업 메모: 동쪽 확장 구간 표토 제거 후 원형 수혈 2기 윤곽 확인.');
+            .toContain('그날의 일지: 동쪽 확장 구간 표토 제거 후 원형 수혈 2기 윤곽 확인.');
         expect(detailText)
             .toContain('\uc791\uc5c5\uc77c\uc9c0 \uacbd\uacc4 \uba54\ubaa8: \uc788\uc74c');
         expect(detailText)
@@ -436,7 +436,7 @@ describe('Korean fieldwork report handoff', () => {
         expect(detailText)
             .toContain('\uc791\uc5c5\uc77c\uc9c0 \uc218\uc815: 2026-06-30');
         expect(dailyLogItem?.copyText)
-            .toContain('작업 메모: 동쪽 확장 구간 표토 제거 후 원형 수혈 2기 윤곽 확인.');
+            .toContain('그날의 일지: 동쪽 확장 구간 표토 제거 후 원형 수혈 2기 윤곽 확인.');
         expect(dailyLogItem?.copyText)
             .toContain('\uc791\uc5c5\uc77c\uc9c0 \uacbd\uacc4 \uba54\ubaa8: \uc788\uc74c');
         expect(dailyLogItem?.copyText)

@@ -155,6 +155,12 @@ export interface KoreanFieldworkDailyNotebookDigest {
   evidenceMissingEntries: KoreanFieldworkNotebookEntry[];
 }
 
+export interface KoreanFieldworkDailyLogTimelineItem {
+  document: Document;
+  dateLabel: string;
+  detail: string;
+}
+
 interface KoreanFieldworkNotebookEntryWithSortKey
   extends KoreanFieldworkNotebookEntry {
   sortKey: number;
@@ -425,6 +431,32 @@ export const getKoreanFieldworkDailyNotebookDigest = (
     ),
   };
 };
+
+export const getKoreanFieldworkDailyLogTimeline = (
+  documents: Document[],
+  limit = 7
+): KoreanFieldworkDailyLogTimelineItem[] => documents
+  .map((document, sourceIndex) => ({
+    document,
+    sourceIndex,
+    dateLabel: getDailyLogTimelineDateLabel(document),
+  }))
+  .filter((item) =>
+    item.document.resource.category === C.DAILY_LOG
+    && item.dateLabel.length > 0
+  )
+  .sort((itemA, itemB) => {
+    const dateComparison = itemB.dateLabel.localeCompare(itemA.dateLabel);
+    return dateComparison !== 0
+      ? dateComparison
+      : itemA.sourceIndex - itemB.sourceIndex;
+  })
+  .slice(0, Math.max(0, limit))
+  .map(({ document, dateLabel }) => ({
+    document,
+    dateLabel,
+    detail: getDailyLogTimelineDetail(document),
+  }));
 
 export const getKoreanFieldworkFieldNoteChecklist = (
   input: KoreanFieldworkFieldNoteInput
@@ -1615,6 +1647,19 @@ const getFieldNoteHistoryDateLabel = (document: Document): string => {
   const timestamp = getTimestamp(document);
   return timestamp > 0 ? formatDate(new Date(timestamp)) : '';
 };
+
+const getDailyLogTimelineDateLabel = (document: Document): string => {
+  const date = getStringField(document, 'date');
+  if (/^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
+
+  const timestamp = getTimestamp(document);
+  return timestamp > 0 ? formatDate(new Date(timestamp)) : '';
+};
+
+const getDailyLogTimelineDetail = (document: Document): string =>
+  getStringField(document, 'description')
+  || getStringField(document, 'diaryAbstract')
+  || '일지 내용 미입력';
 
 const isDocumentDate = (
   document: Document,

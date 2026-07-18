@@ -15,16 +15,41 @@ const FIELD_LABEL_OVERRIDES: { [fieldName: string]: string } = {
     [QUICK_RECORD_FIELDS.featureRecordingStatus]: '유구 진행'
 };
 
-const PRIMARY_FIELD_NAMES: readonly string[] = [
+const PROGRESS_FIELD_NAMES: readonly string[] = [
     QUICK_RECORD_FIELDS.featureRecordingStatus,
     QUICK_RECORD_FIELDS.checklist
 ];
 
-const SECONDARY_FIELD_NAMES: readonly string[] = [
-    QUICK_RECORD_FIELDS.fieldRecordQuality,
-    QUICK_RECORD_FIELDS.verificationState,
-    QUICK_RECORD_FIELDS.recordCreationTiming
+interface KoreanFieldworkQuickRecordSection {
+    id: string;
+    title: string;
+    fieldNames: readonly string[];
+}
+
+const FIELD_SECTIONS: readonly KoreanFieldworkQuickRecordSection[] = [
+    {
+        id: 'progress',
+        title: '조사 진행',
+        fieldNames: PROGRESS_FIELD_NAMES
+    },
+    {
+        id: 'recordCharacter',
+        title: '기록 성격',
+        fieldNames: [QUICK_RECORD_FIELDS.fieldRecordQuality]
+    },
+    {
+        id: 'verification',
+        title: '확인·마감',
+        fieldNames: [QUICK_RECORD_FIELDS.verificationState]
+    },
+    {
+        id: 'timing',
+        title: '기록 시점 수정',
+        fieldNames: [QUICK_RECORD_FIELDS.recordCreationTiming]
+    }
 ];
+
+const ALL_FIELD_NAMES = FIELD_SECTIONS.flatMap(section => section.fieldNames);
 
 
 @Component({
@@ -39,9 +64,8 @@ export class KoreanFieldworkQuickRecordPanelComponent implements OnChanges {
 
     @Output() onChanged: EventEmitter<void> = new EventEmitter<void>();
 
-    public showSecondaryFields: boolean = false;
-    public readonly primaryFieldNames = PRIMARY_FIELD_NAMES;
-    public readonly secondaryFieldNames = SECONDARY_FIELD_NAMES;
+    public readonly fieldSections = FIELD_SECTIONS;
+    public readonly progressFieldNames = PROGRESS_FIELD_NAMES;
 
     private valuelists: { [fieldName: string]: Valuelist } = {};
 
@@ -58,20 +82,20 @@ export class KoreanFieldworkQuickRecordPanelComponent implements OnChanges {
 
     public shouldShow(): boolean {
 
-        return this.getVisiblePrimaryFieldNames().length > 0
-            || this.getVisibleSecondaryFieldNames().length > 0;
+        return this.getVisibleSections().length > 0;
     }
 
 
-    public getVisiblePrimaryFieldNames = () =>
-        this.primaryFieldNames.filter(fieldName => this.canRenderField(fieldName));
+    public getVisibleSections = () =>
+        this.fieldSections.filter(section => this.getVisibleFieldNames(section).length > 0);
 
 
-    public getVisibleSecondaryFieldNames = () =>
-        this.secondaryFieldNames.filter(fieldName => this.canRenderField(fieldName));
+    public getVisibleFieldNames = (section: KoreanFieldworkQuickRecordSection) =>
+        section.fieldNames.filter(fieldName => this.canRenderField(fieldName));
 
 
-    public getSecondaryFieldCount = () => this.getVisibleSecondaryFieldNames().length;
+    public shouldShowFieldLabel = (section: KoreanFieldworkQuickRecordSection) =>
+        this.getVisibleFieldNames(section).length > 1;
 
 
     public getFieldLabel(fieldName: string): string {
@@ -144,7 +168,7 @@ export class KoreanFieldworkQuickRecordPanelComponent implements OnChanges {
 
         const projectDocument = await this.datastore.get('project');
 
-        for (const fieldName of [...PRIMARY_FIELD_NAMES, ...SECONDARY_FIELD_NAMES]) {
+        for (const fieldName of ALL_FIELD_NAMES) {
             const field = this.getField(fieldName);
             if (!field || !this.isSupportedField(field)) continue;
 
