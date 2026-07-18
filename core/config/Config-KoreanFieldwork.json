@@ -1806,7 +1806,10 @@
         "referenceVectorFileName",
         "referenceVectorCoordinateSystem",
         "referenceVectorLineCount",
-        "referenceVectorCoordinateCount"
+        "referenceVectorCoordinateCount",
+        "siteOverviewSketchStrokes",
+        "siteOverviewSketchUpdatedAt",
+        "siteOverviewSketchCoordinateSpace"
       ],
       "fields": {
         "isRecordedIn": {
@@ -1862,6 +1865,17 @@
         },
         "referenceVectorCoordinateCount": {
           "inputType": "unsignedInt",
+          "constraintIndexed": true
+        },
+        "siteOverviewSketchStrokes": {
+          "inputType": "text"
+        },
+        "siteOverviewSketchUpdatedAt": {
+          "inputType": "input",
+          "constraintIndexed": true
+        },
+        "siteOverviewSketchCoordinateSpace": {
+          "inputType": "input",
           "constraintIndexed": true
         },
         "fieldRecordQuality": {

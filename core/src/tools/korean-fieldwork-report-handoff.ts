@@ -386,6 +386,7 @@ const DETAIL_FIELDS: DetailFieldDefinition[] = [
             'featureLocationSketch',
             'findSpotItems',
             'featureFreeDrawingStrokes',
+            'siteOverviewSketchStrokes',
             'featureSoilPitLines',
             'featureSoilPitLine',
             'surveyBoundaryAccuracy',
@@ -457,6 +458,7 @@ const SUMMARY_FIELDS = [
     'featureGeometryRevisionNote',
     'featureLocationSketch',
     'featureFreeDrawingStrokes',
+    'siteOverviewSketchStrokes',
     'featureSoilPitLines',
     'featureSoilPitLine',
     'dailyLogContent',
@@ -1149,6 +1151,10 @@ function getSummaryFieldValue(document: Document, fieldName: string): string|und
         return getStrokeEvidenceLabel('\uc790\uc720 \uc2a4\ucf00\uce58', document.resource.featureFreeDrawingStrokes);
     }
 
+    if (fieldName === 'siteOverviewSketchStrokes') {
+        return getStrokeEvidenceLabel('\uc720\uc801 \uc804\uccb4 \uc57d\ub3c4', document.resource.siteOverviewSketchStrokes);
+    }
+
     if (fieldName === 'featureSoilPitLine' || fieldName === 'featureSoilPitLines') {
         return getKoreanFieldworkFeaturePitLineSummaryLabel(document.resource);
     }
@@ -1327,6 +1333,7 @@ function getLocationDrawingDetailSummary(document: Document): string|undefined {
         ].map(fieldName => getHandoffPrintableFieldValue(document.resource, fieldName)),
         getStrokeEvidenceLabel('\uc704\uce58 \uc57d\ub3c4', document.resource.featureLocationSketch),
         getStrokeEvidenceLabel('\uc790\uc720 \uc2a4\ucf00\uce58', document.resource.featureFreeDrawingStrokes),
+        getStrokeEvidenceLabel('\uc720\uc801 \uc804\uccb4 \uc57d\ub3c4', document.resource.siteOverviewSketchStrokes),
         getKoreanFieldworkFeaturePitLineSummaryLabel(document.resource)
     ].filter((value): value is string => !!value).join(', ') || undefined;
 }

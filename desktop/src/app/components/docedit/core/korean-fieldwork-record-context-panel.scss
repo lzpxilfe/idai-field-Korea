@@ -581,6 +581,34 @@ korean-fieldwork-record-context-panel {
     }
   }
 
+  .korean-fieldwork-record-context-free-drawing.site-overview {
+    .korean-fieldwork-record-context-free-drawing-title {
+      color: #1849a9;
+    }
+
+    .korean-fieldwork-record-context-free-drawing-summary {
+      background: #eff8ff;
+      border-color: #b2ddff;
+      color: #175cd3;
+    }
+
+    .korean-fieldwork-record-context-free-drawing-svg {
+      background: #f8fafc;
+
+      .site-overview-boundary-frame {
+        fill: #ffffff;
+        stroke: #84adff;
+        stroke-dasharray: 4 3;
+        stroke-width: 1.1;
+      }
+
+      .site-overview-sketch {
+        stroke: #c2410c;
+        stroke-width: 2.6;
+      }
+    }
+  }
+
   .korean-fieldwork-record-context-daily-summary {
     border-top: 1px solid #e4e7ec;
     display: grid;

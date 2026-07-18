@@ -58,6 +58,10 @@ const featureRows = [
       'mobile/components/Project/Map/kakao-satellite-picker-html.ts',
       'mobile/components/Project/Map/korean-fieldwork-map-provider-status.ts',
       'mobile/components/Project/Map/korean-fieldwork-map-start-panel.ts',
+      'mobile/components/Project/KoreanFieldworkSiteOverviewMap.tsx',
+      'mobile/components/Project/korean-fieldwork-project-boundary.ts',
+      'mobile/hooks/use-fieldwork-map-layer-images.ts',
+      'mobile/hooks/use-mapdata.ts',
       'mobile/hooks/use-preferences.ts',
       'mobile/models/preferences.ts'
     ],
@@ -80,6 +84,10 @@ const featureRows = [
       'mobile/components/Project/Map/kakao-satellite-picker-html.spec.ts',
       'mobile/components/Project/Map/korean-fieldwork-map-provider-status.spec.ts',
       'mobile/components/Project/Map/korean-fieldwork-map-start-panel.spec.ts',
+      'mobile/components/Project/KoreanFieldworkSiteOverviewMap.spec.tsx',
+      'mobile/components/Project/korean-fieldwork-project-boundary.spec.ts',
+      'mobile/hooks/use-fieldwork-map-layer-images.spec.ts',
+      'mobile/hooks/use-mapdata.spec.ts',
       'mobile/hooks/use-preferences.spec.ts'
     ],
     desktopTests: [
@@ -542,12 +550,14 @@ const classifiedSupportSourceGroups = [
       'mobile/components/Project/KoreanFieldworkDraftPresetPanel.tsx',
       'mobile/components/Project/KoreanFieldworkDrawingSurveyPanel.tsx',
       'mobile/components/Project/KoreanFieldworkEvidenceModal.tsx',
+      'mobile/components/Project/KoreanFieldworkFeatureDrawingStatusPanel.tsx',
       'mobile/components/Project/KoreanFieldworkFeatureMeasurementFields.tsx',
       'mobile/components/Project/KoreanFieldworkFeaturePitLinePanel.tsx',
       'mobile/components/Project/KoreanFieldworkFindSpotPanel.tsx',
       'mobile/components/Project/KoreanFieldworkFullscreenDrawingModal.tsx',
       'mobile/components/Project/KoreanFieldworkHierarchyBoard.tsx',
       'mobile/components/Project/KoreanFieldworkNarrativeAssistPanel.tsx',
+      'mobile/components/Project/KoreanFieldworkPenMemoTranscriptionPanel.tsx',
       'mobile/components/Project/KoreanFieldworkQuickFindSpotModal.tsx',
       'mobile/components/Project/KoreanFieldworkRecordActionPanel.tsx',
       'mobile/components/Project/KoreanFieldworkRecordContextPanel.tsx',
@@ -1254,15 +1264,18 @@ function validateGuidedFeatureDraftDefaults() {
       || !tabletAddModalText.includes('minimumHeight = isFeatureWideLayout ? 440 : 460')
       || !tabletAddModalText.includes('maximumHeight = isFeatureWideLayout ? 860 : 760')
       || !tabletAddModalText.includes('featureLocationPanelWide')
-      || !tabletAddModalText.includes('featureCreationLayoutWide')
+      || !tabletAddModalText.includes('featureCreationLayoutContentWide')
       || !tabletAddModalText.includes("flexDirection: 'column'")
       || !tabletAddModalText.includes('featureCreationFormPaneWide')
       || !tabletAddModalText.includes('featureNamePanelWide')
       || !tabletAddModalText.includes('featureTypeGridWide')
-      || !tabletAddModalText.includes('minHeight: 0')
-      || !tabletAddModalText.includes('maxHeight: 352')
+      || !tabletAddModalText.includes('featureCreationScroller')
+      || !tabletAddModalText.includes('featureCreationScrollbarThumb')
+      || !tabletAddModalText.includes('featureCreationScrollHandle')
       || !tabletAddModalSpecText.includes('StyleSheet.flatten')
-      || !tabletAddModalSpecText.includes('map-first tablet layout')
+      || !tabletAddModalSpecText.includes('continuous-scroll tablet layout')
+      || !tabletAddModalSpecText.includes('creationScroller.props.onScroll')
+      || !tabletAddModalSpecText.includes('featureCreationScrollbarThumb')
       || !tabletAddModalSpecText.includes('canvas.props.onStartShouldSetResponder')
       || !tabletAddModalSpecText.includes('featureLocationSketchTouchLayer')
       || tabletAddModalText.includes('지도처럼 위에서 보기')

@@ -16,6 +16,7 @@ import {
   View,
 } from 'react-native';
 import useMapData from '@/hooks/use-mapdata';
+import useFieldworkMapLayerImages from '@/hooks/use-fieldwork-map-layer-images';
 import { DocumentRepository } from '@/repositories/document-repository';
 import { ConfigurationContext } from '@/contexts/configuration-context';
 import { PreferencesContext } from '@/contexts/preferences-context';
@@ -144,6 +145,12 @@ const Map: React.FC<MapProps> = (props) => {
     updateDoc,
   ] = useMapData(props.repository, props.selectedDocumentIds, screen, {
     focusMode: props.focusMode ?? 'selectedDocuments',
+  });
+  const currentProject = preferences.preferences.currentProject;
+  const hydratedLayerDocuments = useFieldworkMapLayerImages({
+    documents: layerDocuments,
+    project: currentProject,
+    projectSettings: preferences.preferences.projects?.[currentProject],
   });
 
   const setHighlightedDocFromId = useCallback(
@@ -702,7 +709,7 @@ const Map: React.FC<MapProps> = (props) => {
           updateDoc={updateDoc}
           selectParentId={onParentIdSelected}
           editDocument={props.editDocument}
-          layerDocuments={layerDocuments}
+          layerDocuments={hydratedLayerDocuments}
           focusMapOnDocumentId={focusMapOnDocumentId}
         />
       )}

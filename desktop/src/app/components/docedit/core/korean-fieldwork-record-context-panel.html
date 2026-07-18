@@ -512,6 +512,35 @@
         </div>
     </div>
 
+    <div *ngIf="getSiteOverviewSketchPreview() as siteOverviewSketchPreview"
+         class="korean-fieldwork-record-context-free-drawing site-overview">
+        <div class="korean-fieldwork-record-context-free-drawing-title">
+            <span class="mdi mdi-map-marker-path"></span>
+            <span>공용 유적 전체 약도</span>
+            <span class="korean-fieldwork-record-context-free-drawing-summary">
+                {{siteOverviewSketchPreview.summary}}
+            </span>
+            <span *ngIf="siteOverviewSketchPreview.updatedAt"
+                  class="korean-fieldwork-record-context-free-drawing-updated">
+                {{siteOverviewSketchPreview.updatedAt}}
+            </span>
+        </div>
+        <svg class="korean-fieldwork-record-context-free-drawing-svg"
+             [attr.viewBox]="siteOverviewSketchPreview.viewBox"
+             role="img"
+             aria-label="태블릿과 데스크톱 공용 유적 전체 약도">
+            <path class="site-overview-boundary-frame"
+                  d="M 18 8 H 102 V 64 H 18 Z"></path>
+            <path *ngIf="siteOverviewSketchPreview.path"
+                  class="site-overview-sketch"
+                  [attr.d]="siteOverviewSketchPreview.path"></path>
+            <text *ngIf="siteOverviewSketchPreview.emptyLabel"
+                  x="60"
+                  y="37"
+                  text-anchor="middle">{{siteOverviewSketchPreview.emptyLabel}}</text>
+        </svg>
+    </div>
+
     <div *ngIf="getFeatureFreeDrawingPreview() as freeDrawingPreview"
          class="korean-fieldwork-record-context-free-drawing">
         <div class="korean-fieldwork-record-context-free-drawing-title">

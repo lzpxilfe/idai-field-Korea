@@ -270,6 +270,28 @@ describe('Korean fieldwork report handoff', () => {
     });
 
 
+    it('summarizes the shared site overview sketch without dumping its stroke JSON', () => {
+
+        const handoff = makeKoreanFieldworkReportHandoff([
+            makeDocument('boundary-1', 'SurveyBoundary', {
+                identifier: 'site-boundary',
+                siteOverviewSketchStrokes:
+                    '{"version":1,"strokes":[{"points":[{"x":1000,"y":2000},{"x":9000,"y":8000}]}]}',
+                siteOverviewSketchUpdatedAt: '2026-07-18T09:30:00.000Z',
+                siteOverviewSketchCoordinateSpace: 'boundaryNormalized10000V1'
+            })
+        ] as any);
+
+        const boundaryItem = handoff.items.find(item => item.documentId === 'boundary-1');
+
+        expect(boundaryItem?.summary).toBe('유적 전체 약도: 있음');
+        expect(boundaryItem?.details.join('\n')).toContain('위치/도면: 유적 전체 약도: 있음');
+        expect(boundaryItem?.copyText).toContain('유적 전체 약도: 있음');
+        expect(boundaryItem?.copyText).not.toContain('boundaryNormalized10000V1');
+        expect(boundaryItem?.copyText).not.toContain('"strokes"');
+    });
+
+
     it('carries tablet straight pit lines into HWP copy blocks without dumping tablet JSON', () => {
 
         const handoff = makeKoreanFieldworkReportHandoff([

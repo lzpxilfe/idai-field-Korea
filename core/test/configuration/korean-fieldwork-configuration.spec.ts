@@ -489,12 +489,18 @@ describe('KoreanFieldwork project configuration', () => {
         expect(surveyBoundaryForm.fields.referenceVectorCoordinateSystem.inputType).toBe('input');
         expect(surveyBoundaryForm.fields.referenceVectorLineCount.inputType).toBe('unsignedInt');
         expect(surveyBoundaryForm.fields.referenceVectorCoordinateCount.inputType).toBe('unsignedInt');
+        expect(surveyBoundaryForm.fields.siteOverviewSketchStrokes.inputType).toBe('text');
+        expect(surveyBoundaryForm.fields.siteOverviewSketchUpdatedAt.inputType).toBe('input');
+        expect(surveyBoundaryForm.fields.siteOverviewSketchCoordinateSpace.inputType).toBe('input');
         expect(surveyBoundaryForm.hidden).toEqual(jasmine.arrayContaining([
             'referenceVectorGeometry',
             'referenceVectorFileName',
             'referenceVectorCoordinateSystem',
             'referenceVectorLineCount',
-            'referenceVectorCoordinateCount'
+            'referenceVectorCoordinateCount',
+            'siteOverviewSketchStrokes',
+            'siteOverviewSketchUpdatedAt',
+            'siteOverviewSketchCoordinateSpace'
         ]));
         expect(surveyBoundaryForm.valuelists.surveyBoundaryType)
             .toBe('KoreanFieldwork-surveyBoundaryType');
@@ -548,6 +554,10 @@ describe('KoreanFieldwork project configuration', () => {
             .values.googleRoadmap.label).toBe('Google Maps road map');
         expect(languages.ko.categories.SurveyBoundary.label).toBe('조사경계');
         expect(languages.en.categories.SurveyBoundary.label).toBe('Survey boundary');
+        expect(languages.ko.categories.SurveyBoundary.fields.siteOverviewSketchStrokes.label)
+            .toBe('공용 유적 전체 약도 JSON');
+        expect(languages.en.categories.SurveyBoundary.fields.siteOverviewSketchCoordinateSpace.label)
+            .toBe('Shared site overview sketch coordinate space');
     });
 
 

@@ -3,7 +3,7 @@ param(
     [string]$DeviceSerial,
     [switch]$FromLatestArtifact,
     [switch]$BuildLatestArtifact,
-    [string]$Repo = 'lzpxilfe/idai-field',
+    [string]$Repo = 'lzpxilfe/idai-field-Korea',
     [string]$ArtifactName = 'idai-field-mobile-android-apk',
     [string]$ArtifactRef = 'master',
     [int]$ArtifactTimeoutMinutes = 90,

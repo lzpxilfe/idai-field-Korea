@@ -660,6 +660,15 @@
         "referenceBasemapNote": {
           "label": "Reference basemap note"
         },
+        "siteOverviewSketchStrokes": {
+          "label": "Shared site overview sketch JSON"
+        },
+        "siteOverviewSketchUpdatedAt": {
+          "label": "Shared site overview sketch updated at"
+        },
+        "siteOverviewSketchCoordinateSpace": {
+          "label": "Shared site overview sketch coordinate space"
+        },
         "fieldRecordQuality": {
           "label": "Field record quality"
         },

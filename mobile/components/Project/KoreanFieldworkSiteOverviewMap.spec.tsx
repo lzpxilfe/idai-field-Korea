@@ -1,4 +1,4 @@
-import { fireEvent, render } from '@testing-library/react-native';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { Document } from 'idai-field-core';
 import React from 'react';
 import { StyleSheet } from 'react-native';
@@ -287,7 +287,279 @@ describe('KoreanFieldworkSiteOverviewMap', () => {
       'top'
     )).toBeCloseTo(59);
   });
+
+  it('uses synced feature geometry when a legacy feature has no location sketch', () => {
+    const boundary = createDocument(C.SURVEY_BOUNDARY, 'boundary-1', {
+      geometry: {
+        type: 'Polygon',
+        coordinates: [[
+          [126.1, 36.1],
+          [126.3, 36.1],
+          [126.3, 36.3],
+          [126.1, 36.3],
+          [126.1, 36.1],
+        ]],
+      },
+    });
+    const feature = createDocument(C.FEATURE, 'feature-geometry', {
+      geometry: { type: 'Point', coordinates: [126.2, 36.2] },
+      identifier: '좌표 유구',
+    });
+
+    const { getByTestId, getByText } = render(
+      <KoreanFieldworkSiteOverviewMap documents={[boundary, feature]} />
+    );
+
+    expect(getByTestId('siteOverviewFeatureShape_feature-geometry_0'))
+      .toBeTruthy();
+    expect(getByText('좌표 유구')).toBeTruthy();
+  });
+
+  it('shows an online satellite background without storing provider tile bytes', () => {
+    const boundary = createDocument(C.SURVEY_BOUNDARY, 'boundary-1', {
+      geometry: {
+        type: 'LineString',
+        coordinates: [
+          [126.1, 36.1],
+          [126.3, 36.1],
+          [126.3, 36.3],
+          [126.1, 36.3],
+          [126.1, 36.1],
+        ],
+      },
+    });
+    const { getAllByTestId, getByTestId, getByText, queryByTestId } = render(
+      <KoreanFieldworkSiteOverviewMap documents={[boundary]} />
+    );
+
+    const tiles = getAllByTestId('siteOverviewSatelliteTile');
+    expect(tiles.length).toBeGreaterThan(0);
+    expect(getByText('위성')).toBeTruthy();
+    tiles.forEach((tile, index) => fireEvent(tile, index === 0 ? 'load' : 'error'));
+    expect(getByText('일부 위성 타일이 누락되었습니다. 네트워크를 확인해 주세요.'))
+      .toBeTruthy();
+    expect(getByText('Tiles © Esri')).toBeTruthy();
+
+    fireEvent.press(getByTestId('siteOverviewBackgroundToggle'));
+
+    expect(queryByTestId('siteOverviewSatelliteTile')).toBeNull();
+    expect(getByText('약도')).toBeTruthy();
+  });
+
+  it('renders and updates the project-wide sketch stored on the survey boundary', async () => {
+    const onUpdateSiteSketch = jest.fn().mockResolvedValue(undefined);
+    const boundary = createDocument(C.SURVEY_BOUNDARY, 'boundary-1', {
+      geometry: {
+        type: 'LineString',
+        coordinates: [
+          [126.1, 36.1],
+          [126.3, 36.1],
+          [126.3, 36.3],
+          [126.1, 36.3],
+          [126.1, 36.1],
+        ],
+      },
+      siteOverviewSketchStrokes: JSON.stringify({
+        version: 1,
+        strokes: [{
+          color: '#dc2626',
+          points: [{ x: 2000, y: 2000 }, { x: 7000, y: 7000 }],
+          tool: 'pen',
+          width: 8,
+        }],
+      }),
+    });
+    const { getByTestId, getByText } = render(
+      <KoreanFieldworkSiteOverviewMap
+        documents={[boundary]}
+        onUpdateSiteSketch={onUpdateSiteSketch}
+      />
+    );
+
+    expect(getByTestId('siteOverviewSketchLine')).toBeTruthy();
+    fireEvent.press(getByTestId('siteOverviewOpenSketch'));
+    expect(getByText('유적 전체 공용 약도')).toBeTruthy();
+
+    fireEvent(getByTestId('siteOverviewSketchFullscreenCanvas'), 'message', {
+      nativeEvent: {
+        data: JSON.stringify({
+          type: 'strokes',
+          payload: [{
+            points: [{ x: 3000, y: 3000 }, { x: 8000, y: 8000 }],
+            tool: 'pen',
+            width: 5,
+          }],
+        }),
+      },
+    });
+
+    await waitFor(() => expect(onUpdateSiteSketch).toHaveBeenCalledWith(
+      'boundary-1',
+      expect.stringContaining('"version":1'),
+      expect.any(String)
+    ));
+    await waitFor(() => expect(getByText('저장 완료')).toBeTruthy());
+  });
+
+  it('waits for every queued sketch save before closing and keeps the latest state', async () => {
+    const firstSave = createDeferred();
+    const secondSave = createDeferred();
+    const onUpdateSiteSketch = jest.fn()
+      .mockReturnValueOnce(firstSave.promise)
+      .mockReturnValueOnce(secondSave.promise);
+    const boundary = createDocument(C.SURVEY_BOUNDARY, 'boundary-1', {
+      geometry: {
+        type: 'LineString',
+        coordinates: [
+          [126.1, 36.1],
+          [126.3, 36.1],
+          [126.3, 36.3],
+          [126.1, 36.3],
+          [126.1, 36.1],
+        ],
+      },
+    });
+    const { getByTestId, getByText, queryByText } = render(
+      <KoreanFieldworkSiteOverviewMap
+        documents={[boundary]}
+        onUpdateSiteSketch={onUpdateSiteSketch}
+      />
+    );
+    const canvasMessage = (x: number) => ({
+      nativeEvent: {
+        data: JSON.stringify({
+          type: 'strokes',
+          payload: [{
+            points: [{ x, y: x }, { x: x + 1000, y: x + 1000 }],
+            tool: 'pen',
+            width: 5,
+          }],
+        }),
+      },
+    });
+
+    fireEvent.press(getByTestId('siteOverviewOpenSketch'));
+    fireEvent(
+      getByTestId('siteOverviewSketchFullscreenCanvas'),
+      'message',
+      canvasMessage(2000)
+    );
+    await waitFor(() => expect(onUpdateSiteSketch).toHaveBeenCalledTimes(1));
+    fireEvent(
+      getByTestId('siteOverviewSketchFullscreenCanvas'),
+      'message',
+      canvasMessage(4000)
+    );
+
+    fireEvent.press(getByTestId('siteOverviewSketchFullscreenClose'));
+
+    expect(getByText('유적 전체 공용 약도')).toBeTruthy();
+    expect(getByText('저장 마무리 중…')).toBeTruthy();
+    expect(onUpdateSiteSketch).toHaveBeenCalledTimes(1);
+
+    firstSave.resolve();
+    await waitFor(() => expect(onUpdateSiteSketch).toHaveBeenCalledTimes(2));
+    expect(onUpdateSiteSketch.mock.calls[1][1]).toContain('4000');
+    expect(getByText('유적 전체 공용 약도')).toBeTruthy();
+
+    secondSave.resolve();
+    await waitFor(() => expect(queryByText('유적 전체 공용 약도')).toBeNull());
+  }, 15000);
+
+  it('keeps the sketch open after a save failure without leaking a rejection', async () => {
+    const onUpdateSiteSketch = jest.fn().mockRejectedValue(
+      new Error('offline')
+    );
+    const boundary = createDocument(C.SURVEY_BOUNDARY, 'boundary-1', {
+      geometry: {
+        type: 'LineString',
+        coordinates: [
+          [126.1, 36.1],
+          [126.3, 36.1],
+          [126.3, 36.3],
+          [126.1, 36.3],
+          [126.1, 36.1],
+        ],
+      },
+    });
+    const { getByTestId, getByText } = render(
+      <KoreanFieldworkSiteOverviewMap
+        documents={[boundary]}
+        onUpdateSiteSketch={onUpdateSiteSketch}
+      />
+    );
+
+    fireEvent.press(getByTestId('siteOverviewOpenSketch'));
+    fireEvent(getByTestId('siteOverviewSketchFullscreenCanvas'), 'message', {
+      nativeEvent: {
+        data: JSON.stringify({
+          type: 'strokes',
+          payload: [{
+            points: [{ x: 3000, y: 3000 }, { x: 8000, y: 8000 }],
+            tool: 'pen',
+            width: 5,
+          }],
+        }),
+      },
+    });
+
+    await waitFor(() => {
+      expect(getByText('저장 실패 · 화면 유지 중')).toBeTruthy();
+    });
+    fireEvent.press(getByTestId('siteOverviewSketchFullscreenClose'));
+
+    await waitFor(() => {
+      expect(getByText('유적 전체 공용 약도')).toBeTruthy();
+      expect(getByText('저장 실패 · 화면 유지 중')).toBeTruthy();
+    });
+  });
+
+  it('applies saved eraser gestures when showing the shared sketch overlay', () => {
+    const boundary = createDocument(C.SURVEY_BOUNDARY, 'boundary-1', {
+      geometry: {
+        type: 'LineString',
+        coordinates: [
+          [126.1, 36.1],
+          [126.3, 36.1],
+          [126.3, 36.3],
+          [126.1, 36.3],
+          [126.1, 36.1],
+        ],
+      },
+      siteOverviewSketchStrokes: JSON.stringify({
+        version: 1,
+        strokes: [
+          {
+            points: [{ x: 2000, y: 5000 }, { x: 8000, y: 5000 }],
+            tool: 'pen',
+            width: 8,
+          },
+          {
+            points: [{ x: 5000, y: 2000 }, { x: 5000, y: 8000 }],
+            tool: 'eraser',
+            width: 12,
+          },
+        ],
+      }),
+    });
+    const { queryByTestId } = render(
+      <KoreanFieldworkSiteOverviewMap documents={[boundary]} />
+    );
+
+    expect(queryByTestId('siteOverviewSketchLine')).toBeNull();
+  });
 });
+
+const createDeferred = () => {
+  let reject!: (reason?: unknown) => void;
+  let resolve!: () => void;
+  const promise = new Promise<void>((promiseResolve, promiseReject) => {
+    resolve = promiseResolve;
+    reject = promiseReject;
+  });
+
+  return { promise, reject, resolve };
+};
 
 const getScaleFromStyle = (style: unknown): number => {
   const flattened = StyleSheet.flatten(style) as {

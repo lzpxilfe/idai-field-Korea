@@ -57,7 +57,28 @@ interface KoreanFieldworkPenMemoPoint {
 
 interface KoreanFieldworkPenMemoStroke {
     points: KoreanFieldworkPenMemoPoint[];
+    tool?: 'eraser'|'pen';
+    width?: number;
 }
+
+interface KoreanFieldworkPenMemoSegment {
+    end: KoreanFieldworkPenMemoPoint;
+    start: KoreanFieldworkPenMemoPoint;
+    width: number;
+}
+
+interface KoreanFieldworkPenMemoInterval {
+    end: number;
+    start: number;
+}
+
+const NORMALIZED_SKETCH_CANVAS_WIDTH = 960;
+const DEFAULT_PEN_MEMO_STROKE_WIDTH = 5;
+const MAX_PEN_MEMO_STROKE_WIDTH = 24;
+const MAX_NORMALIZED_PREVIEW_SOURCE_SEGMENTS = 6000;
+const MAX_NORMALIZED_PREVIEW_VISIBLE_SEGMENTS = 8000;
+const MAX_NORMALIZED_PREVIEW_ERASER_CHECKS = 250000;
+const NORMALIZED_PREVIEW_INTERVAL_EPSILON = 0.000001;
 
 export interface KoreanFieldworkPenMemoTranscriptionSummary {
     document: Document;
@@ -526,13 +547,32 @@ export function getPenMemoSketchSummaryLabel(value: unknown): string {
 }
 
 
-export function getPenMemoSketchPreview(value: unknown): KoreanFieldworkPenMemoSketchPreview|undefined {
+export function getPenMemoSketchPreview(
+        value: unknown,
+        options: {
+            normalizedCanvasAspectRatio?: number;
+            preserveNormalizedCanvas?: boolean;
+        } = {}
+): KoreanFieldworkPenMemoSketchPreview|undefined {
 
     const strokes = getPenMemoStrokes(value);
-    if (strokes.length === 0) return undefined;
+    const drawableStrokes = strokes.filter(stroke => stroke.tool !== 'eraser');
+    if (drawableStrokes.length === 0) return undefined;
 
-    const points = strokes.flatMap(stroke => stroke.points);
-    const bounds = getPointBounds(points);
+    const normalizedCanvasAspectRatio = options.preserveNormalizedCanvas
+        ? Math.max(0.05, Math.min(20, options.normalizedCanvasAspectRatio ?? 1))
+        : 1;
+    const visibleNormalizedSegments = options.preserveNormalizedCanvas
+        ? getVisibleNormalizedCanvasSegments(strokes, normalizedCanvasAspectRatio)
+        : [];
+    if (options.preserveNormalizedCanvas && visibleNormalizedSegments.length === 0) {
+        return undefined;
+    }
+
+    const points = drawableStrokes.flatMap(stroke => stroke.points);
+    const bounds = options.preserveNormalizedCanvas
+        ? { minX: 0, minY: 0, maxX: 10000, maxY: 10000 }
+        : getPointBounds(points);
     const previewWidth = 120;
     const previewHeight = 72;
     const padding = 8;
@@ -540,19 +580,33 @@ export function getPenMemoSketchPreview(value: unknown): KoreanFieldworkPenMemoS
     const drawableHeight = previewHeight - (padding * 2);
     const sourceWidth = Math.max(1, bounds.maxX - bounds.minX);
     const sourceHeight = Math.max(1, bounds.maxY - bounds.minY);
-    const scale = Math.min(drawableWidth / sourceWidth, drawableHeight / sourceHeight);
-    const scaledWidth = sourceWidth * scale;
-    const scaledHeight = sourceHeight * scale;
+    const scale = Math.min(
+        drawableWidth / (sourceWidth * normalizedCanvasAspectRatio),
+        drawableHeight / sourceHeight
+    );
+    const scaleX = scale * normalizedCanvasAspectRatio;
+    const scaleY = scale;
+    const scaledWidth = sourceWidth * scaleX;
+    const scaledHeight = sourceHeight * scaleY;
     const offsetX = padding + ((drawableWidth - scaledWidth) / 2);
     const offsetY = padding + ((drawableHeight - scaledHeight) / 2);
     const toPreviewPoint = (point: KoreanFieldworkPenMemoPoint) => ({
-        x: roundPreviewCoordinate(offsetX + ((point.x - bounds.minX) * scale)),
-        y: roundPreviewCoordinate(offsetY + ((point.y - bounds.minY) * scale))
+        x: roundPreviewCoordinate(offsetX + ((point.x - bounds.minX) * scaleX)),
+        y: roundPreviewCoordinate(offsetY + ((point.y - bounds.minY) * scaleY))
     });
-    const path = strokes
-        .map(stroke => getPreviewStrokePath(stroke.points.map(toPreviewPoint)))
-        .filter(strokePath => strokePath.length > 0)
-        .join(' ');
+    const path = options.preserveNormalizedCanvas
+        ? visibleNormalizedSegments
+            .map(segment => getPreviewStrokePath(
+                isSamePenMemoPoint(segment.start, segment.end)
+                    ? [toPreviewPoint(segment.start)]
+                    : [toPreviewPoint(segment.start), toPreviewPoint(segment.end)]
+            ))
+            .filter(strokePath => strokePath.length > 0)
+            .join(' ')
+        : drawableStrokes
+            .map(stroke => getPreviewStrokePath(stroke.points.map(toPreviewPoint)))
+            .filter(strokePath => strokePath.length > 0)
+            .join(' ');
 
     if (!path) return undefined;
 
@@ -614,9 +668,360 @@ function getParsedPenMemoStrokes(value: unknown): KoreanFieldworkPenMemoStroke[]
     if (!Array.isArray(strokesValue)) return [];
 
     return strokesValue
-        .map(getStrokePoints)
-        .filter(points => points.length > 0)
-        .map(points => ({ points }));
+        .map(stroke => ({
+            points: getStrokePoints(stroke),
+            tool: isRecord(stroke) && stroke.tool === 'eraser'
+                ? 'eraser' as const
+                : 'pen' as const,
+            width: getPenMemoStrokeWidth(stroke)
+        }))
+        .filter(stroke => stroke.points.length > 0);
+}
+
+
+function getVisibleNormalizedCanvasSegments(
+        strokes: KoreanFieldworkPenMemoStroke[],
+        aspectRatio: number
+): KoreanFieldworkPenMemoSegment[] {
+
+    let visibleSegments: KoreanFieldworkPenMemoSegment[] = [];
+    let sourceSegmentCount = 0;
+    let eraserCheckCount = 0;
+
+    for (const stroke of strokes) {
+        const remainingSourceSegments = MAX_NORMALIZED_PREVIEW_SOURCE_SEGMENTS - sourceSegmentCount;
+        if (remainingSourceSegments <= 0) break;
+
+        const strokeSegments = getPenMemoStrokeSegments(stroke, remainingSourceSegments);
+        sourceSegmentCount += strokeSegments.length;
+
+        if (stroke.tool !== 'eraser') {
+            visibleSegments.push(...strokeSegments.slice(
+                0,
+                MAX_NORMALIZED_PREVIEW_VISIBLE_SEGMENTS - visibleSegments.length
+            ));
+            continue;
+        }
+
+        const erasedSegments: KoreanFieldworkPenMemoSegment[] = [];
+        for (const visibleSegment of visibleSegments) {
+            if (erasedSegments.length >= MAX_NORMALIZED_PREVIEW_VISIBLE_SEGMENTS) break;
+
+            const remainingEraserChecks = MAX_NORMALIZED_PREVIEW_ERASER_CHECKS - eraserCheckCount;
+            if (remainingEraserChecks <= 0) {
+                erasedSegments.push(visibleSegment);
+                continue;
+            }
+
+            const checkedEraserSegments = strokeSegments.slice(0, remainingEraserChecks);
+            eraserCheckCount += checkedEraserSegments.length;
+            erasedSegments.push(...getNormalizedCanvasSegmentFragments(
+                visibleSegment,
+                checkedEraserSegments,
+                aspectRatio
+            ).slice(0, MAX_NORMALIZED_PREVIEW_VISIBLE_SEGMENTS - erasedSegments.length));
+        }
+        visibleSegments = erasedSegments;
+    }
+
+    return visibleSegments;
+}
+
+
+function getPenMemoStrokeSegments(
+        stroke: KoreanFieldworkPenMemoStroke,
+        limit: number = Number.POSITIVE_INFINITY
+): KoreanFieldworkPenMemoSegment[] {
+
+    if (limit <= 0) return [];
+
+    if (stroke.points.length === 1) {
+        return [{
+            start: stroke.points[0],
+            end: stroke.points[0],
+            width: stroke.width ?? DEFAULT_PEN_MEMO_STROKE_WIDTH
+        }];
+    }
+
+    return stroke.points.slice(0, Math.min(stroke.points.length - 1, limit)).map((point, index) => ({
+        start: point,
+        end: stroke.points[index + 1],
+        width: stroke.width ?? DEFAULT_PEN_MEMO_STROKE_WIDTH
+    }));
+}
+
+
+function getNormalizedCanvasSegmentFragments(
+        segment: KoreanFieldworkPenMemoSegment,
+        eraserSegments: KoreanFieldworkPenMemoSegment[],
+        aspectRatio: number
+): KoreanFieldworkPenMemoSegment[] {
+
+    const erasedIntervals = eraserSegments.flatMap(eraserSegment =>
+        getNormalizedCanvasEraserIntervals(segment, eraserSegment, aspectRatio)
+    );
+    const visibleIntervals = getVisiblePenMemoIntervals(erasedIntervals);
+
+    return visibleIntervals.map(interval => ({
+        start: interpolatePenMemoPoint(segment.start, segment.end, interval.start),
+        end: interpolatePenMemoPoint(segment.start, segment.end, interval.end),
+        width: segment.width
+    }));
+}
+
+
+function toNormalizedCanvasPixel(
+        point: KoreanFieldworkPenMemoPoint,
+        aspectRatio: number
+): KoreanFieldworkPenMemoPoint {
+
+    return {
+        x: (point.x / 10000) * NORMALIZED_SKETCH_CANVAS_WIDTH,
+        y: (point.y / 10000) * (NORMALIZED_SKETCH_CANVAS_WIDTH / aspectRatio)
+    };
+}
+
+
+function getNormalizedCanvasEraserIntervals(
+        penSegment: KoreanFieldworkPenMemoSegment,
+        eraserSegment: KoreanFieldworkPenMemoSegment,
+        aspectRatio: number
+): KoreanFieldworkPenMemoInterval[] {
+
+    const penStart = toNormalizedCanvasPixel(penSegment.start, aspectRatio);
+    const penEnd = toNormalizedCanvasPixel(penSegment.end, aspectRatio);
+    const eraserStart = toNormalizedCanvasPixel(eraserSegment.start, aspectRatio);
+    const eraserEnd = toNormalizedCanvasPixel(eraserSegment.end, aspectRatio);
+    const radius = (penSegment.width + eraserSegment.width) / 2;
+    const intervals = [
+        getPenMemoCircleIntersectionInterval(penStart, penEnd, eraserStart, radius),
+        getPenMemoCircleIntersectionInterval(penStart, penEnd, eraserEnd, radius),
+        getPenMemoEraserBodyIntersectionInterval(
+            penStart,
+            penEnd,
+            eraserStart,
+            eraserEnd,
+            radius
+        )
+    ].filter((interval): interval is KoreanFieldworkPenMemoInterval => !!interval);
+
+    return mergePenMemoIntervals(intervals);
+}
+
+
+function getPenMemoCircleIntersectionInterval(
+        lineStart: KoreanFieldworkPenMemoPoint,
+        lineEnd: KoreanFieldworkPenMemoPoint,
+        center: KoreanFieldworkPenMemoPoint,
+        radius: number
+): KoreanFieldworkPenMemoInterval|undefined {
+
+    const direction = subtractPenMemoPoints(lineEnd, lineStart);
+    const relativeStart = subtractPenMemoPoints(lineStart, center);
+    const quadratic = dotPenMemoPoints(direction, direction);
+    if (quadratic <= NORMALIZED_PREVIEW_INTERVAL_EPSILON) {
+        return dotPenMemoPoints(relativeStart, relativeStart) <= radius ** 2
+            ? { start: 0, end: 1 }
+            : undefined;
+    }
+
+    const linear = 2 * dotPenMemoPoints(relativeStart, direction);
+    const constant = dotPenMemoPoints(relativeStart, relativeStart) - (radius ** 2);
+    const discriminant = (linear ** 2) - (4 * quadratic * constant);
+    if (discriminant < 0) return undefined;
+
+    const root = Math.sqrt(Math.max(0, discriminant));
+
+    return clampPenMemoInterval({
+        start: (-linear - root) / (2 * quadratic),
+        end: (-linear + root) / (2 * quadratic)
+    });
+}
+
+
+function getPenMemoEraserBodyIntersectionInterval(
+        lineStart: KoreanFieldworkPenMemoPoint,
+        lineEnd: KoreanFieldworkPenMemoPoint,
+        eraserStart: KoreanFieldworkPenMemoPoint,
+        eraserEnd: KoreanFieldworkPenMemoPoint,
+        radius: number
+): KoreanFieldworkPenMemoInterval|undefined {
+
+    const lineDirection = subtractPenMemoPoints(lineEnd, lineStart);
+    const eraserDirection = subtractPenMemoPoints(eraserEnd, eraserStart);
+    const eraserLengthSquared = dotPenMemoPoints(eraserDirection, eraserDirection);
+    if (eraserLengthSquared <= NORMALIZED_PREVIEW_INTERVAL_EPSILON) return undefined;
+
+    const relativeStart = subtractPenMemoPoints(lineStart, eraserStart);
+    const projectionInterval = getPenMemoLinearValueInterval(
+        dotPenMemoPoints(relativeStart, eraserDirection) / eraserLengthSquared,
+        dotPenMemoPoints(lineDirection, eraserDirection) / eraserLengthSquared,
+        0,
+        1
+    );
+    const eraserLength = Math.sqrt(eraserLengthSquared);
+    const distanceInterval = getPenMemoLinearValueInterval(
+        crossPenMemoPoints(eraserDirection, relativeStart) / eraserLength,
+        crossPenMemoPoints(eraserDirection, lineDirection) / eraserLength,
+        -radius,
+        radius
+    );
+
+    return projectionInterval && distanceInterval
+        ? intersectPenMemoIntervals(projectionInterval, distanceInterval)
+        : undefined;
+}
+
+
+function getPenMemoLinearValueInterval(
+        startValue: number,
+        change: number,
+        minValue: number,
+        maxValue: number
+): KoreanFieldworkPenMemoInterval|undefined {
+
+    if (Math.abs(change) <= NORMALIZED_PREVIEW_INTERVAL_EPSILON) {
+        return startValue >= minValue && startValue <= maxValue
+            ? { start: 0, end: 1 }
+            : undefined;
+    }
+
+    const first = (minValue - startValue) / change;
+    const second = (maxValue - startValue) / change;
+
+    return clampPenMemoInterval({
+        start: Math.min(first, second),
+        end: Math.max(first, second)
+    });
+}
+
+
+function getVisiblePenMemoIntervals(
+        erasedIntervals: KoreanFieldworkPenMemoInterval[]
+): KoreanFieldworkPenMemoInterval[] {
+
+    const mergedIntervals = mergePenMemoIntervals(erasedIntervals);
+    const visibleIntervals: KoreanFieldworkPenMemoInterval[] = [];
+    let cursor = 0;
+
+    for (const interval of mergedIntervals) {
+        if (interval.start - cursor > NORMALIZED_PREVIEW_INTERVAL_EPSILON) {
+            visibleIntervals.push({ start: cursor, end: interval.start });
+        }
+        cursor = Math.max(cursor, interval.end);
+    }
+    if (1 - cursor > NORMALIZED_PREVIEW_INTERVAL_EPSILON) {
+        visibleIntervals.push({ start: cursor, end: 1 });
+    }
+
+    return visibleIntervals;
+}
+
+
+function mergePenMemoIntervals(
+        intervals: KoreanFieldworkPenMemoInterval[]
+): KoreanFieldworkPenMemoInterval[] {
+
+    const sortedIntervals = intervals
+        .map(clampPenMemoInterval)
+        .filter((interval): interval is KoreanFieldworkPenMemoInterval => !!interval)
+        .sort((first, second) => first.start - second.start);
+    const mergedIntervals: KoreanFieldworkPenMemoInterval[] = [];
+
+    for (const interval of sortedIntervals) {
+        const previous = mergedIntervals[mergedIntervals.length - 1];
+        if (!previous || interval.start > previous.end + NORMALIZED_PREVIEW_INTERVAL_EPSILON) {
+            mergedIntervals.push({ ...interval });
+        } else {
+            previous.end = Math.max(previous.end, interval.end);
+        }
+    }
+
+    return mergedIntervals;
+}
+
+
+function intersectPenMemoIntervals(
+        first: KoreanFieldworkPenMemoInterval,
+        second: KoreanFieldworkPenMemoInterval
+): KoreanFieldworkPenMemoInterval|undefined {
+
+    return clampPenMemoInterval({
+        start: Math.max(first.start, second.start),
+        end: Math.min(first.end, second.end)
+    });
+}
+
+
+function clampPenMemoInterval(
+        interval: KoreanFieldworkPenMemoInterval
+): KoreanFieldworkPenMemoInterval|undefined {
+
+    const start = Math.max(0, interval.start);
+    const end = Math.min(1, interval.end);
+
+    return end >= start ? { start, end } : undefined;
+}
+
+
+function interpolatePenMemoPoint(
+        start: KoreanFieldworkPenMemoPoint,
+        end: KoreanFieldworkPenMemoPoint,
+        ratio: number
+): KoreanFieldworkPenMemoPoint {
+
+    return {
+        x: start.x + ((end.x - start.x) * ratio),
+        y: start.y + ((end.y - start.y) * ratio)
+    };
+}
+
+
+function subtractPenMemoPoints(
+        first: KoreanFieldworkPenMemoPoint,
+        second: KoreanFieldworkPenMemoPoint
+): KoreanFieldworkPenMemoPoint {
+
+    return { x: first.x - second.x, y: first.y - second.y };
+}
+
+
+function dotPenMemoPoints(
+        first: KoreanFieldworkPenMemoPoint,
+        second: KoreanFieldworkPenMemoPoint
+): number {
+
+    return (first.x * second.x) + (first.y * second.y);
+}
+
+
+function crossPenMemoPoints(
+        first: KoreanFieldworkPenMemoPoint,
+        second: KoreanFieldworkPenMemoPoint
+): number {
+
+    return (first.x * second.y) - (first.y * second.x);
+}
+
+
+function getPenMemoStrokeWidth(stroke: unknown): number {
+
+    const width = isRecord(stroke)
+        && typeof stroke.width === 'number'
+        && Number.isFinite(stroke.width)
+        ? stroke.width
+        : DEFAULT_PEN_MEMO_STROKE_WIDTH;
+
+    return Math.max(1, Math.min(MAX_PEN_MEMO_STROKE_WIDTH, width));
+}
+
+
+function isSamePenMemoPoint(
+        first: KoreanFieldworkPenMemoPoint,
+        second: KoreanFieldworkPenMemoPoint
+): boolean {
+
+    return first.x === second.x && first.y === second.y;
 }
 
 

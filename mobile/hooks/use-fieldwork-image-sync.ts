@@ -10,6 +10,7 @@ import * as FileSystem from 'expo-file-system';
 import { useEffect, useRef } from 'react';
 import { ProjectSettings } from '@/models/preferences';
 import type { DocumentRepository } from '@/repositories/document-repository';
+import { hydrateFieldworkMapLayerImages } from './use-fieldwork-map-layer-images';
 
 export interface FieldworkImageSyncTarget {
   resourceId: string;
@@ -38,6 +39,7 @@ export interface FieldworkImageSyncItem extends FieldworkImageSyncTarget {
 }
 
 export interface FieldworkImageUploadResult {
+  localModificationTime?: number;
   uploadedSizeBytes?: number;
   uploadedMd5?: string;
   storedSizeBytes?: number;
@@ -62,6 +64,13 @@ const DIRECT_FIELDWORK_PHOTO_CATEGORIES = [
 ];
 
 const SYNCABLE_PHOTO_URI_FIELDS: Record<string, string[]> = {
+  AerialMapLayer: [
+    'aerialLayerImageUri',
+    'imageUri',
+    'fileUri',
+    'localImageUri',
+    'uri',
+  ],
   Image: ['imageUri', 'fieldworkPhotoUri', 'fileUri'],
   Photo: ['fieldworkPhotoUri', 'imageUri', 'fileUri'],
   Drawing: ['fieldworkPhotoUri', 'imageUri', 'fileUri'],
@@ -94,6 +103,7 @@ const useFieldworkImageSync = ({
   syncStatus,
 }: UseFieldworkImageSyncConfig): void => {
   const uploadedResults = useRef<Map<string, FieldworkImageUploadResult>>(new Map());
+  const verifiedUnverifiableContentUris = useRef<Set<string>>(new Set());
   const inFlight = useRef(false);
   const pendingRun = useRef<(() => void) | undefined>();
   const isMounted = useRef(true);
@@ -105,6 +115,30 @@ const useFieldworkImageSync = ({
     isMounted.current = false;
     pendingRun.current = undefined;
   }, []);
+
+  useEffect(() => {
+    if (!project) return;
+
+    const aerialMapLayers = documents.filter(
+      (document) => document.resource.category === 'AerialMapLayer'
+    );
+    if (aerialMapLayers.length === 0) return;
+
+    const connection = projectConnected && projectPassword && projectUrl
+      ? { password: projectPassword, url: projectUrl }
+      : undefined;
+
+    void hydrateFieldworkMapLayerImages({
+      connection,
+      documents: aerialMapLayers,
+      project,
+    }).catch((error) => {
+      console.error(
+        'Failed to prefetch fieldwork map layers:',
+        getFieldworkImageUploadErrorMessage(error, projectPassword)
+      );
+    });
+  }, [documents, project, projectConnected, projectPassword, projectUrl]);
 
   useEffect(() => {
     if (
@@ -146,10 +180,30 @@ const useFieldworkImageSync = ({
             target
           );
           let currentUploadMetadata: FieldworkImageUploadResult | undefined;
-          if (target.uri.startsWith('file://')) {
+          if (
+            target.uri.startsWith('file://')
+            || (
+              target.category === 'AerialMapLayer'
+              && target.uri.startsWith('content://')
+            )
+          ) {
             try {
-              currentUploadMetadata = await getFieldworkImageUploadMetadata(target);
+              currentUploadMetadata = await getFieldworkImageUploadMetadata(
+                target,
+                target.category === 'AerialMapLayer'
+              );
             } catch (error) {
+              if (
+                target.category === 'AerialMapLayer'
+                && isFieldworkImageUploadRecordComplete(
+                  target.document,
+                  project,
+                  target
+                )
+              ) {
+                continue;
+              }
+
               console.error(
                 `Failed to inspect fieldwork image ${target.resourceId}:`,
                 getFieldworkImageUploadErrorMessage(error, projectPassword)
@@ -162,18 +216,38 @@ const useFieldworkImageSync = ({
             project,
             target
           );
-          const uploadAuditMetadataMismatched = isLocalUploadMetadataMismatched(
-            target.document,
-            currentUploadMetadata
+          const hasUnverifiableContentUri =
+            target.category === 'AerialMapLayer'
+            && target.uri.startsWith('content://')
+            && !!currentUploadMetadata
+            && !currentUploadMetadata.uploadedMd5
+            && currentUploadMetadata.localModificationTime === undefined;
+          const contentUriVerificationKey = getContentUriVerificationKey(
+            key,
+            target.document
           );
+          const requiresSessionContentUriVerification =
+            hasUnverifiableContentUri
+            && !verifiedUnverifiableContentUris.current.has(
+              contentUriVerificationKey
+            );
+          const uploadAuditMetadataMismatched =
+            isLocalUploadMetadataMismatched(
+              target.document,
+              currentUploadMetadata
+            )
+            || requiresSessionContentUriVerification;
           if (uploadAuditMetadataMismatched) uploadedResults.current.delete(key);
 
-          if (isFieldworkImageUploadRecordComplete(
-            target.document,
-            project,
-            target,
-            currentUploadMetadata
-          )) {
+          if (
+            !uploadAuditMetadataMismatched
+            && isFieldworkImageUploadRecordComplete(
+              target.document,
+              project,
+              target,
+              currentUploadMetadata
+            )
+          ) {
             continue;
           }
 
@@ -200,6 +274,11 @@ const useFieldworkImageSync = ({
                 target,
               });
               if (isMounted.current) uploadedResults.current.set(key, uploadResult);
+              if (requiresSessionContentUriVerification) {
+                verifiedUnverifiableContentUris.current.add(
+                  contentUriVerificationKey
+                );
+              }
               pendingUploads -= 1;
             } catch (error) {
               console.error(
@@ -231,7 +310,7 @@ const useFieldworkImageSync = ({
           if (repository) {
             pendingUploadRecords += 1;
             try {
-              await recordFieldworkImageUpload({
+              const recordedDocument = await recordFieldworkImageUpload({
                 getUploadedAt,
                 project,
                 repository,
@@ -240,6 +319,11 @@ const useFieldworkImageSync = ({
                   ...uploadedResults.current.get(key),
                 },
               });
+              if (hasUnverifiableContentUri) {
+                verifiedUnverifiableContentUris.current.add(
+                  getContentUriVerificationKey(key, recordedDocument)
+                );
+              }
               pendingUploadRecords -= 1;
             } catch (error) {
               console.error(
@@ -308,12 +392,18 @@ export const recordFieldworkImageUpload = async ({
     return latestDocument;
   }
 
-  if (isFieldworkImageUploadRecordComplete(
-    latestDocument,
-    project,
-    target,
-    target
-  )) {
+  const hasFreshServerStoredResult = typeof target.storedSizeBytes === 'number'
+    || !!target.storedMd5
+    || !!target.storedSha256;
+  if (
+    !hasFreshServerStoredResult
+    && isFieldworkImageUploadRecordComplete(
+      latestDocument,
+      project,
+      target,
+      target
+    )
+  ) {
     return latestDocument;
   }
 
@@ -324,12 +414,17 @@ export const recordFieldworkImageUpload = async ({
     getUploadedAt()
   );
 
+  const updatedResource: Record<string, unknown> = {
+    ...latestDocument.resource,
+    ...updates,
+  };
+  if (target.category === 'AerialMapLayer') {
+    delete updatedResource.fieldworkImageUploadedUri;
+  }
+
   return repository.update({
     ...latestDocument,
-    resource: {
-      ...latestDocument.resource,
-      ...updates,
-    },
+    resource: updatedResource as Document['resource'],
   });
 };
 
@@ -365,7 +460,9 @@ export const getFieldworkImageUploadRecordUpdates = (
     ),
     fieldworkImageUploadStatus: FIELDWORK_IMAGE_UPLOAD_STATUS_UPLOADED,
     fieldworkImageUploadedAt: existingUploadedAt ?? uploadedAt,
-    fieldworkImageUploadedUri: target.uri,
+    ...(target.category === 'AerialMapLayer'
+      ? {}
+      : { fieldworkImageUploadedUri: target.uri }),
     fieldworkImageUploadTarget: target.uploadUrl,
     fieldworkImageUploadedProject: project,
     ...(typeof target.uploadedSizeBytes === 'number'
@@ -389,7 +486,10 @@ export const uploadFieldworkImage = async ({
   projectSettings: FieldworkImageSyncConnection;
   target: FieldworkImageSyncTarget;
 }): Promise<FieldworkImageUploadResult> => {
-  const uploadMetadata = await getFieldworkImageUploadMetadata(target);
+  const uploadMetadata = await getFieldworkImageUploadMetadata(
+    target,
+    target.category === 'AerialMapLayer'
+  );
 
   const result = await FileSystem.uploadAsync(
     buildFieldworkImageUploadUrl(projectSettings.url, project, target.resourceId),
@@ -415,16 +515,32 @@ export const uploadFieldworkImage = async ({
 };
 
 export const getFieldworkImageUploadMetadata = async (
-  target: Pick<FieldworkImageSyncTarget, 'uri'>
+  target: Pick<FieldworkImageSyncTarget, 'uri'>,
+  inspectContentUri = false
 ): Promise<FieldworkImageUploadResult> => {
-  if (!target.uri.startsWith('file://')) return {};
+  if (
+    !target.uri.startsWith('file://')
+    && !(inspectContentUri && target.uri.startsWith('content://'))
+  ) {
+    return {};
+  }
 
-  const fileInfo = await FileSystem.getInfoAsync(target.uri, { md5: true });
+  let fileInfo;
+  try {
+    fileInfo = await FileSystem.getInfoAsync(target.uri, { md5: true });
+  } catch (error) {
+    if (!inspectContentUri || !target.uri.startsWith('content://')) throw error;
+    fileInfo = await FileSystem.getInfoAsync(target.uri);
+  }
   if (!fileInfo.exists || fileInfo.isDirectory) {
     throw new Error(`Local image file is not available: ${target.uri}`);
   }
 
   return {
+    localModificationTime: typeof fileInfo.modificationTime === 'number'
+      && fileInfo.modificationTime > 0
+      ? fileInfo.modificationTime
+      : undefined,
     uploadedSizeBytes: typeof fileInfo.size === 'number'
       ? fileInfo.size
       : undefined,
@@ -545,12 +661,15 @@ const isFieldworkImageUploadRecordComplete = (
 const isFieldworkImageUploadAuditRecorded = (
   document: Document,
   project: string,
-  target: Pick<FieldworkImageSyncItem, 'uri'|'uploadUrl'>
+  target: Pick<FieldworkImageSyncItem, 'category'|'uri'|'uploadUrl'>
 ): boolean => {
   const resource = document.resource as Record<string, unknown>;
 
   return resource.fieldworkImageUploadStatus === FIELDWORK_IMAGE_UPLOAD_STATUS_UPLOADED
-    && resource.fieldworkImageUploadedUri === target.uri
+    && (
+      target.category === 'AerialMapLayer'
+      || resource.fieldworkImageUploadedUri === target.uri
+    )
     && resource.fieldworkImageUploadTarget === target.uploadUrl
     && resource.fieldworkImageUploadedProject === project;
 };
@@ -640,6 +759,11 @@ const getFieldworkImageSyncKey = (
     target.resourceId,
     target.uri,
   ].join('\u001f');
+
+const getContentUriVerificationKey = (
+  syncKey: string,
+  document: Document
+): string => `${syncKey}\u001fsource-rev:${document._rev ?? 'unversioned'}`;
 
 const getStringValue = (value: unknown): string | undefined =>
   typeof value === 'string' && value.trim().length > 0
@@ -736,16 +860,49 @@ const isLocalUploadMetadataMismatched = (
     ?? getStringValue(resource.fieldworkImageStoredMd5);
   const recordedSize = getNumberValue(resource.fieldworkImageUploadedSizeBytes)
     ?? getNumberValue(resource.fieldworkImageStoredSizeBytes);
+  const uploadedAt = getStringValue(resource.fieldworkImageUploadedAt);
+  const hasComparableModificationTime =
+    currentUploadMetadata.localModificationTime !== undefined
+    && !!uploadedAt
+    && Number.isFinite(Date.parse(uploadedAt));
+  const localFileIsNewer = currentUploadMetadata.localModificationTime !== undefined
+    && uploadedAt !== undefined
+    && isModificationTimeAfterUpload(
+      currentUploadMetadata.localModificationTime,
+      uploadedAt
+    );
 
-  return (
+  const checksumMismatched = (
     !!currentUploadMetadata.uploadedMd5
     && !!recordedMd5
     && currentUploadMetadata.uploadedMd5.toLowerCase() !== recordedMd5.toLowerCase()
-  ) || (
+    && (!hasComparableModificationTime || localFileIsNewer)
+  );
+  const sizeMismatched = (
     typeof currentUploadMetadata.uploadedSizeBytes === 'number'
     && recordedSize !== undefined
     && currentUploadMetadata.uploadedSizeBytes !== recordedSize
+    && (!hasComparableModificationTime || localFileIsNewer)
   );
+  const modificationTimeMismatched = (
+    !currentUploadMetadata.uploadedMd5
+    && localFileIsNewer
+  );
+
+  return checksumMismatched || sizeMismatched || modificationTimeMismatched;
+};
+
+const isModificationTimeAfterUpload = (
+  modificationTime: number,
+  uploadedAt: string
+): boolean => {
+  const uploadedAtMs = Date.parse(uploadedAt);
+  if (!Number.isFinite(uploadedAtMs)) return false;
+
+  const modificationTimeMs = modificationTime > 1_000_000_000_000
+    ? modificationTime
+    : modificationTime * 1000;
+  return modificationTimeMs > uploadedAtMs;
 };
 
 const hasDigitalSourcePreservationUploadValues = (

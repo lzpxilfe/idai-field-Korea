@@ -40,6 +40,15 @@ export interface FieldworkFullscreenDrawingBackground {
   aspectRatio?: number;
   boundaryPoints?: { x: number; y: number }[];
   label?: string;
+  satelliteAttribution?: string;
+  satelliteTiles?: {
+    heightPercent: number;
+    key: string;
+    leftPercent: number;
+    topPercent: number;
+    uri: string;
+    widthPercent: number;
+  }[];
   writingGuides?: boolean;
 }
 
@@ -63,6 +72,7 @@ interface Props {
   brushColor?: string;
   brushWidth: number;
   drawingTool?: KoreanFieldworkHandwritingTool;
+  isCloseDisabled?: boolean;
   isVisible: boolean;
   onBrushColorChange?: (color: string) => void;
   onBrushWidthChange: (width: number) => void;
@@ -71,6 +81,8 @@ interface Props {
   onDrawingToolChange?: (tool: KoreanFieldworkHandwritingTool) => void;
   onUpdateStrokes: (strokes: KoreanFieldworkHandwritingStroke[]) => void;
   strokes: KoreanFieldworkHandwritingStroke[];
+  statusText?: string;
+  statusTone?: 'error' | 'neutral' | 'success';
   testIDPrefix: string;
   title: string;
 }
@@ -90,6 +102,7 @@ const KoreanFieldworkFullscreenDrawingModal: React.FC<Props> = ({
   brushColor = DEFAULT_FIELDWORK_BRUSH_COLOR,
   brushWidth,
   drawingTool = DEFAULT_FIELDWORK_DRAWING_TOOL,
+  isCloseDisabled = false,
   isVisible,
   onBrushColorChange,
   onBrushWidthChange,
@@ -98,6 +111,8 @@ const KoreanFieldworkFullscreenDrawingModal: React.FC<Props> = ({
   onDrawingToolChange,
   onUpdateStrokes,
   strokes,
+  statusText,
+  statusTone = 'neutral',
   testIDPrefix,
   title,
 }) => {
@@ -247,6 +262,38 @@ const KoreanFieldworkFullscreenDrawingModal: React.FC<Props> = ({
           <View style={styles.fullscreenTitleRow}>
             <MaterialIcons name="gesture" size={18} color="#111827" />
             <Text style={styles.fullscreenTitle}>{title}</Text>
+            {!!statusText && (
+              <View
+                accessibilityLiveRegion="polite"
+                style={[
+                  styles.statusPill,
+                  statusTone === 'error' && styles.statusPillError,
+                  statusTone === 'success' && styles.statusPillSuccess,
+                ]}
+                testID={`${testIDPrefix}FullscreenStatus`}
+              >
+                <MaterialIcons
+                  name={statusTone === 'error'
+                    ? 'error-outline'
+                    : statusTone === 'success'
+                      ? 'check-circle-outline'
+                      : 'sync'}
+                  size={14}
+                  color={statusTone === 'error'
+                    ? '#b42318'
+                    : statusTone === 'success'
+                      ? '#027a48'
+                      : '#344054'}
+                />
+                <Text style={[
+                  styles.statusText,
+                  statusTone === 'error' && styles.statusTextError,
+                  statusTone === 'success' && styles.statusTextSuccess,
+                ]}>
+                  {statusText}
+                </Text>
+              </View>
+            )}
           </View>
           <View style={styles.fullscreenActions}>
             <IconButton
@@ -285,7 +332,7 @@ const KoreanFieldworkFullscreenDrawingModal: React.FC<Props> = ({
             />
             <IconButton
               icon="close"
-              isDisabled={false}
+              isDisabled={isCloseDisabled}
               onPress={onClose}
               testID={`${testIDPrefix}FullscreenClose`}
             />
@@ -593,6 +640,15 @@ let renderQueued=false;
 let pixelRatio=1;
 const maxCoordinate=state.maxCoordinate||10000;
 const background=state.background||{};
+const satelliteTiles=(Array.isArray(background.satelliteTiles)
+  ?background.satelliteTiles:[]).map((tile)=>{
+    const image=new Image();
+    const entry={...tile,image,loaded:false};
+    image.onload=()=>{entry.loaded=true;requestRender();};
+    image.onerror=()=>{entry.loaded=false;requestRender();};
+    image.src=tile.uri;
+    return entry;
+  });
 const minPointDistance=${FULLSCREEN_DRAWING_MIN_POINT_DISTANCE};
 const releasePointMinDistance=${FULLSCREEN_DRAWING_RELEASE_POINT_MIN_DISTANCE};
 const interpolatedPointSpacing=${FULLSCREEN_DRAWING_INTERPOLATED_POINT_SPACING};
@@ -1043,6 +1099,29 @@ function getAveragePressure(first,second){
   return (firstPressure+secondPressure)/2;
 }
 function drawBackground(){
+  if(satelliteTiles.length>0){
+    ctx.save();
+    ctx.globalAlpha=0.82;
+    satelliteTiles.forEach((tile)=>{
+      if(!tile.loaded) return;
+      const start=toScreenPoint({
+        x:tile.leftPercent*maxCoordinate/100,
+        y:tile.topPercent*maxCoordinate/100
+      });
+      const end=toScreenPoint({
+        x:(tile.leftPercent+tile.widthPercent)*maxCoordinate/100,
+        y:(tile.topPercent+tile.heightPercent)*maxCoordinate/100
+      });
+      ctx.drawImage(
+        tile.image,
+        Math.min(start.x,end.x),
+        Math.min(start.y,end.y),
+        Math.abs(end.x-start.x),
+        Math.abs(end.y-start.y)
+      );
+    });
+    ctx.restore();
+  }
   if(background.writingGuides){
     ctx.save();
     ctx.strokeStyle='rgba(47,111,78,0.18)';
@@ -1106,6 +1185,16 @@ function drawSelectionOverlay(){
     const height=Math.abs(end.y-start.y)+14;
     ctx.fillRect(left,top,width,height);
     ctx.strokeRect(left,top,width,height);
+  }
+  if(background.satelliteAttribution&&satelliteTiles.length>0){
+    const size=getCssSize();
+    ctx.setLineDash([]);
+    ctx.font='600 10px sans-serif';
+    const textWidth=ctx.measureText(background.satelliteAttribution).width;
+    ctx.fillStyle='rgba(15,23,42,0.72)';
+    ctx.fillRect(7,size.height-25,textWidth+10,18);
+    ctx.fillStyle='#ffffff';
+    ctx.fillText(background.satelliteAttribution,12,size.height-12);
   }
   ctx.restore();
 }
@@ -1231,6 +1320,33 @@ const styles = StyleSheet.create({
   fullscreenActions: {
     alignItems: 'center',
     flexDirection: 'row',
+  },
+  statusPill: {
+    alignItems: 'center',
+    backgroundColor: '#f2f4f7',
+    borderRadius: 12,
+    flexDirection: 'row',
+    marginLeft: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+  },
+  statusPillError: {
+    backgroundColor: '#fef3f2',
+  },
+  statusPillSuccess: {
+    backgroundColor: '#ecfdf3',
+  },
+  statusText: {
+    color: '#344054',
+    fontSize: 11,
+    fontWeight: '800',
+    marginLeft: 3,
+  },
+  statusTextError: {
+    color: '#b42318',
+  },
+  statusTextSuccess: {
+    color: '#027a48',
   },
   fullscreenCanvas: {
     flex: 1,

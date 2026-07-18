@@ -666,6 +666,15 @@
         "referenceBasemapNote": {
           "label": "참고 배경지도 메모"
         },
+        "siteOverviewSketchStrokes": {
+          "label": "공용 유적 전체 약도 JSON"
+        },
+        "siteOverviewSketchUpdatedAt": {
+          "label": "공용 유적 전체 약도 수정 시각"
+        },
+        "siteOverviewSketchCoordinateSpace": {
+          "label": "공용 유적 전체 약도 좌표 공간"
+        },
         "fieldRecordQuality": {
           "label": "기록 메모"
         },

@@ -5,6 +5,7 @@ import {
 } from '@testing-library/react-native';
 import * as FileSystem from 'expo-file-system';
 import { SyncStatus, base64Encode } from 'idai-field-core';
+import { hydrateFieldworkMapLayerImages } from './use-fieldwork-map-layer-images';
 import useFieldworkImageSync, {
   buildFieldworkImageUploadUrl,
   collectFieldworkImageSyncTargets,
@@ -21,6 +22,10 @@ jest.mock('expo-file-system', () => ({
   },
   getInfoAsync: jest.fn(),
   uploadAsync: jest.fn(),
+}));
+
+jest.mock('./use-fieldwork-map-layer-images', () => ({
+  hydrateFieldworkMapLayerImages: jest.fn(() => Promise.resolve([])),
 }));
 
 describe('useFieldworkImageSync', () => {
@@ -47,6 +52,7 @@ describe('useFieldworkImageSync', () => {
       }),
       status: 201,
     });
+    (hydrateFieldworkMapLayerImages as jest.Mock).mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -140,6 +146,44 @@ describe('useFieldworkImageSync', () => {
         fieldworkImageStoredSha256: 'server-sha256',
       }),
     }));
+  });
+
+  it('completes an aerial audit without persisting its URI or re-uploading', async () => {
+    const document = createDocument('aerial-layer-1', 'AerialMapLayer', {
+      aerialLayerImageUri: 'file:///tablet/maps/site-orthomosaic.jpg',
+      fieldworkImageUploadedUri: 'file:///another-device/maps/old.jpg',
+    });
+    const repository = {
+      get: jest.fn().mockResolvedValue(document),
+      update: jest.fn(async (doc) => doc),
+    };
+
+    const { rerender } = renderHook(
+      ({ documents }) => useFieldworkImageSync({
+        documents,
+        getUploadedAt: () => '2026-07-18T01:02:03.000Z',
+        project: 'fieldwork',
+        projectSettings,
+        repository,
+        syncStatus: SyncStatus.InSync,
+      }),
+      { initialProps: { documents: [document] as any } }
+    );
+
+    await waitFor(() => expect(repository.update).toHaveBeenCalledTimes(1));
+    const updatedDocument = repository.update.mock.calls[0][0];
+    expect(updatedDocument.resource.aerialLayerImageUri)
+      .toBe('file:///tablet/maps/site-orthomosaic.jpg');
+    expect(updatedDocument.resource.fieldworkImageUploadedUri).toBeUndefined();
+
+    repository.get.mockResolvedValue(updatedDocument);
+    rerender({ documents: [updatedDocument] as any });
+    await waitFor(() => {
+      expect(hydrateFieldworkMapLayerImages).toHaveBeenCalledTimes(2);
+    });
+
+    expect(FileSystem.uploadAsync).toHaveBeenCalledTimes(1);
+    expect(repository.update).toHaveBeenCalledTimes(1);
   });
 
   it('does not mark uploads as backupVerified when server metadata differs from the local original', async () => {
@@ -893,6 +937,9 @@ describe('useFieldworkImageSync', () => {
       createDocument('feature-1', 'Feature', {
         fieldworkPhotoUri: 'file:///tablet/photos/feature-1.jpg',
       }),
+      createDocument('aerial-layer-1', 'AerialMapLayer', {
+        aerialLayerImageUri: 'file:///tablet/maps/site-orthomosaic.jpg',
+      }),
     ] as any)).toEqual([
       {
         category: 'Photo',
@@ -914,7 +961,396 @@ describe('useFieldworkImageSync', () => {
         resourceId: 'feature-1',
         uri: 'file:///tablet/photos/feature-1.jpg',
       },
+      {
+        category: 'AerialMapLayer',
+        resourceId: 'aerial-layer-1',
+        uri: 'file:///tablet/maps/site-orthomosaic.jpg',
+      },
     ]);
+  });
+
+  it('prefetches synced aerial map layers before the map screen is opened', async () => {
+    const aerialLayer = createDocument('aerial-layer-1', 'AerialMapLayer', {
+      fieldworkImageStoredMd5: 'server-md5',
+    });
+
+    renderHook(() => useFieldworkImageSync({
+      documents: [aerialLayer] as any,
+      project: 'fieldwork',
+      projectSettings,
+    }));
+
+    await waitFor(() => {
+      expect(hydrateFieldworkMapLayerImages).toHaveBeenCalledWith({
+        connection: {
+          password: 'field-secret',
+          url: 'https://field.example/db',
+        },
+        documents: [aerialLayer],
+        project: 'fieldwork',
+      });
+    });
+    expect(FileSystem.uploadAsync).not.toHaveBeenCalled();
+  });
+
+  it('does not re-upload a synced foreign-device aerial URI with a complete server audit', async () => {
+    const aerialLayer = createDocument('aerial-layer-1', 'AerialMapLayer', {
+      aerialLayerImageUri: 'file:///desktop/maps/site-orthomosaic.jpg',
+      digitalSourcePreservation: [
+        'originalPhoto',
+        'originalImage',
+        'webOrServerBackup',
+        'backupVerified',
+      ],
+      fieldworkImageUploadStatus: 'uploaded',
+      fieldworkImageUploadedAt: '2026-07-18T01:02:03.000Z',
+      fieldworkImageUploadTarget:
+        'https://field.example/files/fieldwork/aerial-layer-1?type=original_image',
+      fieldworkImageUploadedProject: 'fieldwork',
+      fieldworkImageUploadedSizeBytes: 481516,
+      fieldworkImageUploadedMd5: 'server-md5',
+      fieldworkImageStoredSizeBytes: 481516,
+      fieldworkImageStoredMd5: 'server-md5',
+      fieldworkImageStoredSha256: 'server-sha256',
+    });
+
+    (FileSystem.getInfoAsync as jest.Mock).mockResolvedValue({ exists: false });
+    const { rerender } = renderHook(
+      ({ documents }) => useFieldworkImageSync({
+        documents,
+        project: 'fieldwork',
+        projectSettings,
+        syncStatus: SyncStatus.InSync,
+      }),
+      { initialProps: { documents: [aerialLayer] as any } }
+    );
+
+    await waitFor(() => {
+      expect(hydrateFieldworkMapLayerImages).toHaveBeenCalled();
+    });
+    rerender({ documents: [{ ...aerialLayer }] as any });
+
+    expect(FileSystem.getInfoAsync).toHaveBeenCalledWith(
+      'file:///desktop/maps/site-orthomosaic.jpg',
+      { md5: true }
+    );
+    expect(FileSystem.uploadAsync).not.toHaveBeenCalled();
+  });
+
+  it('does not overwrite a newer server original with an older local aerial file', async () => {
+    const aerialLayer = createDocument('aerial-layer-stale', 'AerialMapLayer', {
+      aerialLayerImageUri: 'file:///tablet/maps/stale-orthomosaic.jpg',
+      digitalSourcePreservation: [
+        'originalPhoto',
+        'originalImage',
+        'webOrServerBackup',
+        'backupVerified',
+      ],
+      fieldworkImageUploadStatus: 'uploaded',
+      fieldworkImageUploadedAt: '2026-07-18T02:00:00.000Z',
+      fieldworkImageUploadTarget:
+        'https://field.example/files/fieldwork/aerial-layer-stale?type=original_image',
+      fieldworkImageUploadedProject: 'fieldwork',
+      fieldworkImageUploadedSizeBytes: 100,
+      fieldworkImageUploadedMd5: 'server-md5',
+      fieldworkImageStoredSizeBytes: 100,
+      fieldworkImageStoredMd5: 'server-md5',
+      fieldworkImageStoredSha256: 'server-sha256',
+    });
+    (FileSystem.getInfoAsync as jest.Mock).mockResolvedValue({
+      exists: true,
+      isDirectory: false,
+      md5: 'stale-local-md5',
+      modificationTime: Date.parse('2026-07-18T01:00:00.000Z') / 1000,
+      size: 100,
+    });
+
+    renderHook(() => useFieldworkImageSync({
+      documents: [aerialLayer] as any,
+      project: 'fieldwork',
+      projectSettings,
+      syncStatus: SyncStatus.InSync,
+    }));
+
+    await waitFor(() => {
+      expect(FileSystem.getInfoAsync).toHaveBeenCalledWith(
+        'file:///tablet/maps/stale-orthomosaic.jpg',
+        { md5: true }
+      );
+    });
+    expect(FileSystem.uploadAsync).not.toHaveBeenCalled();
+  });
+
+  it('re-uploads an aerial original replaced on this device', async () => {
+    const aerialLayer = createDocument('aerial-layer-1', 'AerialMapLayer', {
+      aerialLayerImageUri: 'file:///tablet/maps/replaced.jpg',
+      digitalSourcePreservation: [
+        'originalPhoto',
+        'originalImage',
+        'webOrServerBackup',
+        'backupVerified',
+      ],
+      fieldworkImageUploadStatus: 'uploaded',
+      fieldworkImageUploadedAt: '2026-07-18T01:02:03.000Z',
+      fieldworkImageUploadTarget:
+        'https://field.example/files/fieldwork/aerial-layer-1?type=original_image',
+      fieldworkImageUploadedProject: 'fieldwork',
+      fieldworkImageUploadedSizeBytes: 100,
+      fieldworkImageUploadedMd5: 'old-md5',
+      fieldworkImageStoredSizeBytes: 100,
+      fieldworkImageStoredMd5: 'old-md5',
+      fieldworkImageStoredSha256: 'old-sha256',
+    });
+    (FileSystem.getInfoAsync as jest.Mock).mockResolvedValue({
+      exists: true,
+      isDirectory: false,
+      md5: 'new-md5',
+      size: 200,
+    });
+
+    renderHook(() => useFieldworkImageSync({
+      documents: [aerialLayer] as any,
+      project: 'fieldwork',
+      projectSettings,
+      syncStatus: SyncStatus.InSync,
+    }));
+
+    await waitFor(() => {
+      expect(FileSystem.uploadAsync).toHaveBeenCalledWith(
+        'https://field.example/files/fieldwork/aerial-layer-1?type=original_image',
+        'file:///tablet/maps/replaced.jpg',
+        expect.any(Object)
+      );
+    });
+  });
+
+  it('re-uploads a replaced aerial content URI when device metadata changed', async () => {
+    const aerialLayer = createDocument('aerial-layer-1', 'AerialMapLayer', {
+      aerialLayerImageUri: 'content://tablet/maps/replaced-orthomosaic',
+      digitalSourcePreservation: [
+        'originalPhoto',
+        'originalImage',
+        'webOrServerBackup',
+      ],
+      fieldworkImageUploadStatus: 'uploaded',
+      fieldworkImageUploadedAt: '2026-07-18T01:02:03.000Z',
+      fieldworkImageUploadTarget:
+        'https://field.example/files/fieldwork/aerial-layer-1?type=original_image',
+      fieldworkImageUploadedProject: 'fieldwork',
+      fieldworkImageUploadedSizeBytes: 100,
+      fieldworkImageStoredSizeBytes: 100,
+      fieldworkImageStoredMd5: 'old-md5',
+      fieldworkImageStoredSha256: 'old-sha256',
+    });
+    (FileSystem.getInfoAsync as jest.Mock).mockResolvedValue({
+      exists: true,
+      isDirectory: false,
+      size: 200,
+    });
+
+    renderHook(() => useFieldworkImageSync({
+      documents: [aerialLayer] as any,
+      project: 'fieldwork',
+      projectSettings,
+      syncStatus: SyncStatus.InSync,
+    }));
+
+    await waitFor(() => {
+      expect(FileSystem.uploadAsync).toHaveBeenCalledWith(
+        'https://field.example/files/fieldwork/aerial-layer-1?type=original_image',
+        'content://tablet/maps/replaced-orthomosaic',
+        expect.any(Object)
+      );
+    });
+  });
+
+  it('re-uploads a same-size aerial content URI when its modification time is newer', async () => {
+    const aerialLayer = createDocument('aerial-layer-modified', 'AerialMapLayer', {
+      aerialLayerImageUri: 'content://tablet/maps/same-uri-orthomosaic',
+      digitalSourcePreservation: [
+        'originalPhoto',
+        'originalImage',
+        'webOrServerBackup',
+      ],
+      fieldworkImageUploadStatus: 'uploaded',
+      fieldworkImageUploadedAt: '2026-07-18T01:02:03.000Z',
+      fieldworkImageUploadTarget:
+        'https://field.example/files/fieldwork/aerial-layer-modified?type=original_image',
+      fieldworkImageUploadedProject: 'fieldwork',
+      fieldworkImageUploadedSizeBytes: 100,
+      fieldworkImageStoredSizeBytes: 100,
+      fieldworkImageStoredMd5: 'old-md5',
+      fieldworkImageStoredSha256: 'old-sha256',
+    });
+    (FileSystem.getInfoAsync as jest.Mock).mockResolvedValue({
+      exists: true,
+      isDirectory: false,
+      modificationTime: Date.parse('2026-07-18T02:00:00.000Z') / 1000,
+      size: 100,
+    });
+
+    renderHook(() => useFieldworkImageSync({
+      documents: [aerialLayer] as any,
+      project: 'fieldwork',
+      projectSettings,
+      syncStatus: SyncStatus.InSync,
+    }));
+
+    await waitFor(() => {
+      expect(FileSystem.uploadAsync).toHaveBeenCalledWith(
+        'https://field.example/files/fieldwork/aerial-layer-modified?type=original_image',
+        'content://tablet/maps/same-uri-orthomosaic',
+        expect.any(Object)
+      );
+    });
+  });
+
+  it('revalidates an unverifiable aerial content URI once per mounted app session', async () => {
+    const aerialLayer = createDocument('aerial-layer-unverifiable', 'AerialMapLayer', {
+      aerialLayerImageUri: 'content://tablet/maps/provider-stable-uri',
+      digitalSourcePreservation: [
+        'originalPhoto',
+        'originalImage',
+        'webOrServerBackup',
+      ],
+      fieldworkImageUploadStatus: 'uploaded',
+      fieldworkImageUploadedAt: '2026-07-18T01:02:03.000Z',
+      fieldworkImageUploadTarget:
+        'https://field.example/files/fieldwork/aerial-layer-unverifiable?type=original_image',
+      fieldworkImageUploadedProject: 'fieldwork',
+      fieldworkImageUploadedSizeBytes: 100,
+      fieldworkImageStoredSizeBytes: 100,
+      fieldworkImageStoredMd5: 'old-md5',
+      fieldworkImageStoredSha256: 'old-sha256',
+    });
+    (FileSystem.getInfoAsync as jest.Mock).mockImplementation(
+      async (_uri, options) => {
+        if (options?.md5) throw new Error('provider does not support MD5');
+        return {
+          exists: true,
+          isDirectory: false,
+          size: 100,
+        };
+      }
+    );
+    const { rerender } = renderHook(
+      ({ documents }) => useFieldworkImageSync({
+        documents,
+        project: 'fieldwork',
+        projectSettings,
+        syncStatus: SyncStatus.InSync,
+      }),
+      { initialProps: { documents: [aerialLayer] as any } }
+    );
+
+    await waitFor(() => {
+      expect(FileSystem.uploadAsync).toHaveBeenCalledTimes(1);
+    });
+
+    rerender({ documents: [{ ...aerialLayer }] as any });
+    rerender({ documents: [{ ...aerialLayer }] as any });
+    await waitFor(() => {
+      expect(hydrateFieldworkMapLayerImages).toHaveBeenCalledTimes(3);
+    });
+
+    expect(FileSystem.uploadAsync).toHaveBeenCalledTimes(1);
+  });
+
+  it('revalidates an unverifiable content URI once for each source revision', async () => {
+    let latestDocument = {
+      ...createDocument('aerial-layer-revisioned', 'AerialMapLayer', {
+        aerialLayerImageUri: 'content://tablet/maps/revisioned-provider-uri',
+        digitalSourcePreservation: [
+          'originalPhoto',
+          'originalImage',
+          'webOrServerBackup',
+        ],
+        fieldworkImageUploadStatus: 'uploaded',
+        fieldworkImageUploadedAt: '2026-07-18T01:02:03.000Z',
+        fieldworkImageUploadTarget:
+          'https://field.example/files/fieldwork/aerial-layer-revisioned?type=original_image',
+        fieldworkImageUploadedProject: 'fieldwork',
+        fieldworkImageUploadedSizeBytes: 100,
+        fieldworkImageStoredSizeBytes: 100,
+        fieldworkImageStoredMd5: 'old-md5',
+        fieldworkImageStoredSha256: 'old-sha256',
+      }),
+      _rev: '1-source',
+    };
+    const repository = {
+      get: jest.fn(async () => latestDocument),
+      update: jest.fn(async (document) => {
+        latestDocument = {
+          ...document,
+          _rev: document._rev === '1-source' ? '2-audit' : '4-audit',
+        };
+        return latestDocument;
+      }),
+    };
+    (FileSystem.getInfoAsync as jest.Mock).mockResolvedValue({
+      exists: true,
+      isDirectory: false,
+      size: 100,
+    });
+    const { rerender } = renderHook(
+      ({ documents }) => useFieldworkImageSync({
+        documents,
+        project: 'fieldwork',
+        projectSettings,
+        repository: repository as any,
+        syncStatus: SyncStatus.InSync,
+      }),
+      { initialProps: { documents: [latestDocument] as any } }
+    );
+
+    await waitFor(() => {
+      expect(repository.update).toHaveBeenCalledTimes(1);
+    });
+    expect(FileSystem.uploadAsync).toHaveBeenCalledTimes(1);
+    expect(latestDocument._rev).toBe('2-audit');
+
+    rerender({ documents: [latestDocument] as any });
+    await waitFor(() => {
+      expect(hydrateFieldworkMapLayerImages).toHaveBeenCalledTimes(2);
+    });
+    expect(FileSystem.uploadAsync).toHaveBeenCalledTimes(1);
+
+    latestDocument = { ...latestDocument, _rev: '3-user-edit' };
+    rerender({ documents: [latestDocument] as any });
+    await waitFor(() => {
+      expect(repository.update).toHaveBeenCalledTimes(2);
+    });
+    expect(FileSystem.uploadAsync).toHaveBeenCalledTimes(2);
+    expect(latestDocument._rev).toBe('4-audit');
+
+    rerender({ documents: [latestDocument] as any });
+    await waitFor(() => {
+      expect(hydrateFieldworkMapLayerImages).toHaveBeenCalledTimes(4);
+    });
+    expect(FileSystem.uploadAsync).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not persist a device-local URI in a new aerial upload audit', () => {
+    const updates = getFieldworkImageUploadRecordUpdates(
+      createDocument('aerial-layer-1', 'AerialMapLayer', {}) as any,
+      'fieldwork',
+      {
+        category: 'AerialMapLayer',
+        uri: 'content://tablet/maps/site-orthomosaic.jpg',
+        uploadUrl:
+          'https://field.example/files/fieldwork/aerial-layer-1?type=original_image',
+        storedMd5: 'server-md5',
+        storedSha256: 'server-sha256',
+        storedSizeBytes: 481516,
+      },
+      '2026-07-18T01:02:03.000Z'
+    );
+
+    expect(updates).not.toHaveProperty('fieldworkImageUploadedUri');
+    expect(updates).toEqual(expect.objectContaining({
+      fieldworkImageUploadedProject: 'fieldwork',
+      fieldworkImageStoredMd5: 'server-md5',
+    }));
   });
 
   it('uses drawing-specific preservation values for uploaded drawings', () => {

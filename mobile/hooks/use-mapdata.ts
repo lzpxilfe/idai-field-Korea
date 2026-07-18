@@ -134,6 +134,28 @@ const useMapData = (
     setUpdateDoc({ document, status: 'updated' });
   }, []);
 
+  const upsertLayerDocument = useCallback((document: Document) => {
+    if (!isUsableDocument(document)) return;
+
+    setLayerDocuments((currentDocuments) => {
+      const documentIndex = currentDocuments.findIndex(
+        (currentDocument) => currentDocument.resource.id === document.resource.id
+      );
+
+      if (!isMapLayerDocument(document)) {
+        return documentIndex < 0
+          ? currentDocuments
+          : currentDocuments.filter((_, index) => index !== documentIndex);
+      }
+
+      if (documentIndex < 0) return [...currentDocuments, document];
+
+      return currentDocuments.map((currentDocument, index) =>
+        index === documentIndex ? document : currentDocument
+      );
+    });
+  }, []);
+
   const removeGeoDocument = useCallback((document: Document) => {
     if (!isUsableDocument(document)) return;
 
@@ -143,6 +165,16 @@ const useMapData = (
       )
     );
     setUpdateDoc({ document, status: 'deleted' });
+  }, []);
+
+  const removeLayerDocument = useCallback((document: Document) => {
+    if (!isUsableDocument(document)) return;
+
+    setLayerDocuments((currentDocuments) =>
+      currentDocuments.filter(
+        (currentDocument) => currentDocument.resource.id !== document.resource.id
+      )
+    );
   }, []);
 
   const getDocumentsGeometryBoundings = (
@@ -209,19 +241,24 @@ const useMapData = (
       )
       .catch((err) => console.log('Document not found. Error:', err));
 
+    const handleChangedDocument = (document: Document) => {
+      upsertGeoDocument(document);
+      upsertLayerDocument(document);
+    };
+
     const localChangedSubscription = repository
       .changed()
-      .subscribe(upsertGeoDocument);
+      .subscribe(handleChangedDocument);
 
     const remoteChangedSubscription = repository
       .remoteChanged()
-      .subscribe((changeInfo) => upsertGeoDocument(changeInfo.document));
+      .subscribe((changeInfo) => handleChangedDocument(changeInfo.document));
 
     return () => {
       localChangedSubscription.unsubscribe();
       remoteChangedSubscription.unsubscribe();
     };
-  }, [repository, upsertGeoDocument]);
+  }, [repository, upsertGeoDocument, upsertLayerDocument]);
 
   useEffect(
     () => {
@@ -238,9 +275,12 @@ const useMapData = (
   useEffect(() => {
     const deletedSubscription = repository
       .deleted()
-      .subscribe(removeGeoDocument);
+      .subscribe((document) => {
+        removeGeoDocument(document);
+        removeLayerDocument(document);
+      });
     return () => deletedSubscription.unsubscribe();
-  }, [repository, removeGeoDocument]);
+  }, [repository, removeGeoDocument, removeLayerDocument]);
 
   useEffect(
     () =>
@@ -285,6 +325,16 @@ export default useMapData;
 
 const hasGeoreference = (document: Document | null | undefined): document is Document =>
   isUsableDocument(document) && !!document.resource.georeference;
+
+const isMapLayerDocument = (
+  document: Document | null | undefined
+): document is Document => {
+  if (!hasGeoreference(document)) return false;
+
+  const relations = document.resource.relations as Record<string, unknown> | undefined;
+  return document.resource.category === 'AerialMapLayer'
+    || !!relations?.isMapLayerOf;
+};
 
 const isUsableDocument = (document: Document | null | undefined): document is Document =>
   !!document?.resource;

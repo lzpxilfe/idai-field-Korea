@@ -19,7 +19,10 @@ import Button from '@/components/common/Button';
 import DocumentAddModal from './DocumentAddModal';
 import DocumentRemoveModal from './DocumentRemoveModal';
 import KoreanFieldworkTodayBoard from './KoreanFieldworkTodayBoard';
-import KoreanFieldworkSiteOverviewMap from './KoreanFieldworkSiteOverviewMap';
+import KoreanFieldworkSiteOverviewMap, {
+  SITE_OVERVIEW_SKETCH_COORDINATE_SPACE,
+  SITE_OVERVIEW_SKETCH_FIELDS,
+} from './KoreanFieldworkSiteOverviewMap';
 import BoundaryFileImportModal from './Map/BoundaryFileImportModal';
 import {
   importDxfReferenceFileFromPath,
@@ -218,6 +221,32 @@ const DocumentsMap: React.FC<DocumentsMapProps> = ({
     setIsDxfReferenceImportOpen(false);
   };
 
+  const updateSiteOverviewSketch = useCallback(async (
+    surveyBoundaryId: string,
+    serializedStrokes: string,
+    updatedAt: string
+  ) => {
+    try {
+      const latestBoundary = await repository.get(surveyBoundaryId);
+      await repository.update({
+        ...latestBoundary,
+        resource: {
+          ...latestBoundary.resource,
+          [SITE_OVERVIEW_SKETCH_FIELDS.coordinateSpace]:
+            SITE_OVERVIEW_SKETCH_COORDINATE_SPACE,
+          [SITE_OVERVIEW_SKETCH_FIELDS.strokes]: serializedStrokes,
+          [SITE_OVERVIEW_SKETCH_FIELDS.updatedAt]: updatedAt,
+        },
+      });
+    } catch (error) {
+      showToast(
+        ToastType.Error,
+        `유적 전체 약도를 저장하지 못했습니다: ${String(error)}`
+      );
+      throw error;
+    }
+  }, [repository, showToast]);
+
   if (isSiteOverviewMap) {
     return (
       <>
@@ -233,6 +262,7 @@ const DocumentsMap: React.FC<DocumentsMapProps> = ({
           onImportDxfReference={() => setIsDxfReferenceImportOpen(true)}
           onOpenFeature={(document) =>
             handleEditDocument(document.resource.id, document.resource.category)}
+          onUpdateSiteSketch={updateSiteOverviewSketch}
         />
       </>
     );

@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import DocumentsMap from '@/components/Project/DocumentsMap';
@@ -8,19 +8,33 @@ import {
 import type {
   KoreanFieldworkProjectBoundaryDraft,
 } from '@/components/Project/korean-fieldwork-investigation-mode';
+import {
+  getKoreanFieldworkProjectBoundaryDraftFromSurveyBoundaries,
+} from '@/components/Project/korean-fieldwork-project-boundary';
 import { ProjectContext } from '@/contexts/project-context';
 import { PreferencesContext } from '@/contexts/preferences-context';
 import useKoreanFieldworkProjectSetupDefaults from '@/hooks/use-korean-fieldwork-project-setup-defaults';
 
 const DocumentMapContainer: React.FC = () => {
-  const { repository, relationsManager, syncStatus, setQ, onParentSelected } =
-    useContext(ProjectContext);
+  const {
+    allDocuments,
+    repository,
+    relationsManager,
+    syncStatus,
+    setQ,
+    onParentSelected,
+  } = useContext(ProjectContext);
   const preferencesContext = useContext(PreferencesContext);
   const projectId = preferencesContext.preferences.currentProject;
   const { investigationModeId, boundarySummary } =
     useKoreanFieldworkProjectSetupDefaults(projectId, repository);
   const [boundaryDraft, setBoundaryDraft] =
     useState<KoreanFieldworkProjectBoundaryDraft>();
+  const effectiveBoundaryDraft = useMemo(
+    () => boundaryDraft
+      ?? getKoreanFieldworkProjectBoundaryDraftFromSurveyBoundaries(allDocuments),
+    [allDocuments, boundaryDraft]
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -58,7 +72,7 @@ const DocumentMapContainer: React.FC = () => {
       selectParent={onParentSelected}
       investigationModeId={investigationModeId}
       boundarySummary={boundarySummary}
-      boundaryDraft={boundaryDraft}
+      boundaryDraft={effectiveBoundaryDraft}
     />
   );
 };

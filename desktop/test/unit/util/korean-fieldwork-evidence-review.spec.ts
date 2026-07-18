@@ -140,6 +140,53 @@ describe('korean-fieldwork-evidence-review', () => {
     });
 
 
+    it('preserves boundary-normalized tablet sketch positions for shared site overviews', () => {
+
+        const preview = getPenMemoSketchPreview(JSON.stringify({
+            version: 1,
+            strokes: [
+                { points: [{ x: 1000, y: 2000 }, { x: 9000, y: 8000 }] }
+            ]
+        }), {
+            normalizedCanvasAspectRatio: 1.5,
+            preserveNormalizedCanvas: true
+        });
+
+        expect(preview).toEqual({
+            label: '스케치 메모 1획 2점',
+            path: 'M 26.4 19.2 L 93.6 52.8',
+            viewBox: '0 0 120 72'
+        });
+    });
+
+
+    it('clips only the erased portion of a long tablet pen segment in the desktop preview', () => {
+
+        const preview = getPenMemoSketchPreview(JSON.stringify({
+            version: 1,
+            strokes: [
+                {
+                    points: [{ x: 2000, y: 5000 }, { x: 8000, y: 5000 }],
+                    tool: 'pen',
+                    width: 8
+                },
+                {
+                    points: [{ x: 5000, y: 3000 }, { x: 5000, y: 7000 }],
+                    tool: 'eraser',
+                    width: 12
+                }
+            ]
+        }), {
+            normalizedCanvasAspectRatio: 1.5,
+            preserveNormalizedCanvas: true
+        });
+
+        expect(preview?.path).toBe(
+            'M 34.8 36 L 59.1 36 M 60.9 36 L 85.2 36'
+        );
+    });
+
+
     it('summarizes tablet photo annotations for desktop review panels', () => {
 
         const photoStrokes = '{"version":1,"strokes":[{"points":[{"x":1000,"y":1000},{"x":5000,"y":5000}]}]}';

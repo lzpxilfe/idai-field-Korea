@@ -235,6 +235,8 @@ function getMobileFieldworkTestPaths() {
     /SettingsScreen\.spec\.tsx$/,
     /sync-url-validation\.spec\.ts$/,
     /use-fieldwork-image-sync\.spec\.ts$/,
+    /use-fieldwork-map-layer-images\.spec\.ts$/,
+    /use-mapdata\.spec\.ts$/,
     /use-search\.spec\.ts$/,
     /use-sync\.spec\.ts$/,
     /use-preferences\.spec\.ts$/,

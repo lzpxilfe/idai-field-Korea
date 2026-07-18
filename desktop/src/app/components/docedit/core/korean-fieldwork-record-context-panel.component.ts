@@ -110,7 +110,7 @@ interface EvidenceInsight {
     tone: 'info'|'warning';
 }
 
-type FeatureSketchShape = 'point'|'polygon'|'rectangle'|'oval';
+type FeatureSketchShape = 'point'|'polygon'|'rectangle'|'circle'|'oval';
 
 interface FeatureSketchPoint {
     x: number;
@@ -295,6 +295,9 @@ const KOREAN_FIELDWORK_CONTEXT_FIELDS = [
     'surveyBoundaryAccuracy',
     'surveyBoundaryNote',
     'surveyBoundarySource',
+    'siteOverviewSketchCoordinateSpace',
+    'siteOverviewSketchStrokes',
+    'siteOverviewSketchUpdatedAt',
     'verificationState'
 ];
 
@@ -335,7 +338,7 @@ const NOTEBOOK_APPEND_TARGET_FIELDS = ['description', 'featureChecklistNote', 'i
 const FEATURE_CATEGORY_NAME = 'Feature';
 const SURVEY_BOUNDARY_CATEGORY_NAME = 'SurveyBoundary';
 const FIELD_RECORD_QUALITY_REVIEW_CATEGORY_NAME = 'FieldRecordQualityReview';
-const FEATURE_SKETCH_SHAPES = new Set<FeatureSketchShape>(['point', 'polygon', 'rectangle', 'oval']);
+const FEATURE_SKETCH_SHAPES = new Set<FeatureSketchShape>(['point', 'polygon', 'rectangle', 'circle', 'oval']);
 const FEATURE_SKETCH_VIEWBOX = '0 0 120 80';
 const FEATURE_SKETCH_WIDTH = 120;
 const FEATURE_SKETCH_HEIGHT = 80;
@@ -347,6 +350,8 @@ const SOIL_COLOR_SAMPLE_MARKER_RADIUS = 4;
 const FEATURE_GEOMETRY_EDIT_STATUS_FIELD = 'featureGeometryEditStatus';
 const FEATURE_FREE_DRAWING_STROKES_FIELD = 'featureFreeDrawingStrokes';
 const FEATURE_FREE_DRAWING_UPDATED_AT_FIELD = 'featureFreeDrawingUpdatedAt';
+const SITE_OVERVIEW_SKETCH_STROKES_FIELD = 'siteOverviewSketchStrokes';
+const SITE_OVERVIEW_SKETCH_UPDATED_AT_FIELD = 'siteOverviewSketchUpdatedAt';
 const FEATURE_PIT_LINE_UPDATED_AT_FIELD = 'featureSoilPitLineUpdatedAt';
 const FIND_SPOT_CATEGORIES = new Set<string>(['Find', 'FindCollection', 'Sample']);
 const FIND_SPOT_UPDATED_AT_FIELD = 'findSpotItemsUpdatedAt';
@@ -1134,6 +1139,42 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
             path: preview.path,
             summary: this.getFeatureFreeDrawingSummary(),
             updatedAt: this.getFeatureFreeDrawingUpdatedAtLabel(),
+            viewBox: preview.viewBox
+        };
+    }
+
+
+    public hasSiteOverviewSketchPreview = () =>
+        this.getSiteOverviewSketchPreview() !== undefined;
+
+
+    public getSiteOverviewSketchPreview(): FeatureFreeDrawingPreview|undefined {
+
+        if (this.document?.resource?.category !== SURVEY_BOUNDARY_CATEGORY_NAME) return undefined;
+
+        const strokes = this.document.resource[SITE_OVERVIEW_SKETCH_STROKES_FIELD];
+        const preview = getPenMemoSketchPreview(strokes, {
+            normalizedCanvasAspectRatio: 1.5,
+            preserveNormalizedCanvas: true
+        });
+        if (!preview) {
+            return {
+                emptyLabel: '공용 전체 약도 없음',
+                summary: '유적 전체 약도 없음',
+                updatedAt: this.getDateFieldLabel(SITE_OVERVIEW_SKETCH_UPDATED_AT_FIELD),
+                viewBox: '0 0 120 72'
+            };
+        }
+
+        const summaryLabel = getPenMemoSketchSummaryLabel(strokes);
+
+        return {
+            path: preview.path,
+            summary: summaryLabel
+                .replace(/^스케치 메모/, '유적 전체 약도')
+                .replace('/', ' ')
+                .replace(/\.$/, ''),
+            updatedAt: this.getDateFieldLabel(SITE_OVERVIEW_SKETCH_UPDATED_AT_FIELD),
             viewBox: preview.viewBox
         };
     }
@@ -2809,7 +2850,7 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
             center,
             points: shape === 'polygon' ? points : (points.length > 0 ? points : [center]),
             rotation: this.normalizeNumber(rawValue.rotation, 0),
-            scale: this.clamp(this.normalizeNumber(rawValue.scale, 100), 40, 220),
+            scale: this.clamp(this.normalizeNumber(rawValue.scale, 100), 8, 240),
             shape
         };
     }
@@ -2864,18 +2905,26 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
             viewBox: FEATURE_SKETCH_VIEWBOX
         };
 
-        if (sketch.shape === 'rectangle' || sketch.shape === 'oval') {
+        if (sketch.shape === 'rectangle' || sketch.shape === 'circle' || sketch.shape === 'oval') {
             const center = locationPreview
                 ? this.projectFeatureSketchPoint(sketch.center)
                 : { x: FEATURE_SKETCH_WIDTH / 2, y: FEATURE_SKETCH_HEIGHT / 2 };
             const scale = sketch.scale / 100;
-            const width = this.clamp((locationPreview ? 30 : 58) * scale, locationPreview ? 18 : 32, locationPreview ? 52 : 92);
-            const height = this.clamp((locationPreview ? 22 : 38) * scale, locationPreview ? 14 : 24, locationPreview ? 42 : 62);
+            const width = this.clamp(
+                (locationPreview ? 30 : 58) * scale,
+                locationPreview ? 2 : 4,
+                sketch.shape === 'circle' ? (locationPreview ? 42 : 62) : (locationPreview ? 52 : 92)
+            );
+            const height = sketch.shape === 'circle'
+                ? width
+                : this.clamp((locationPreview ? 22 : 38) * scale,
+                    locationPreview ? 2 : 3,
+                    locationPreview ? 42 : 62);
             const transform = sketch.rotation
                 ? `rotate(${sketch.rotation} ${this.roundSvg(center.x)} ${this.roundSvg(center.y)})`
                 : undefined;
 
-            if (sketch.shape === 'oval') {
+            if (sketch.shape === 'oval' || sketch.shape === 'circle') {
                 preview.ellipse = {
                     cx: this.roundSvg(center.x),
                     cy: this.roundSvg(center.y),
@@ -3129,6 +3178,7 @@ export class KoreanFieldworkRecordContextPanelComponent implements OnChanges {
 
         if (sketch.shape === 'polygon') return `점 연결 ${sketch.points.length}점`;
         if (sketch.shape === 'rectangle') return `사각형 · 중심 ${this.formatSketchPoint(sketch.center)}`;
+        if (sketch.shape === 'circle') return `원 · 중심 ${this.formatSketchPoint(sketch.center)}`;
         if (sketch.shape === 'oval') return `타원 · 중심 ${this.formatSketchPoint(sketch.center)}`;
         return `점 · ${this.formatSketchPoint(sketch.center)}`;
     }

@@ -1,9 +1,11 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { Document } from 'idai-field-core';
-import React, { useMemo, useRef, useState } from 'react';
-import type { DimensionValue, ViewStyle } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import type { DimensionValue, ImageStyle, ViewStyle } from 'react-native';
 import {
+  ActivityIndicator,
   GestureResponderEvent,
+  Image,
   LayoutChangeEvent,
   StyleSheet,
   Text,
@@ -24,6 +26,22 @@ import {
   projectMapCoordinateToWgs84,
   REFERENCE_VECTOR_FIELDS,
 } from './Map/korean-fieldwork-drafts';
+import {
+  FEATURE_SKETCH_SATELLITE_ATTRIBUTION,
+  FeatureSketchSatelliteTile,
+  getFeatureSketchSatelliteTiles,
+} from './feature-sketch-satellite';
+import {
+  KoreanFieldworkHandwritingStroke,
+  KoreanFieldworkHandwritingTool,
+  normalizeKoreanFieldworkHandwritingStrokes,
+  serializeKoreanFieldworkHandwriting,
+} from './korean-fieldwork-handwriting';
+import KoreanFieldworkFullscreenDrawingModal, {
+  DEFAULT_FIELDWORK_BRUSH_COLOR,
+  DEFAULT_FIELDWORK_BRUSH_WIDTH,
+  DEFAULT_FIELDWORK_DRAWING_TOOL,
+} from './KoreanFieldworkFullscreenDrawingModal';
 
 type FeatureLocationSketchShape =
   'point' | 'polygon' | 'rectangle' | 'circle' | 'oval';
@@ -102,7 +120,15 @@ interface Props {
   documents: readonly Document[];
   onImportDxfReference?: () => void;
   onOpenFeature?: (document: Document) => void;
+  onUpdateSiteSketch?: (
+    surveyBoundaryId: string,
+    serializedStrokes: string,
+    updatedAt: string
+  ) => Promise<void> | void;
 }
+
+type SiteOverviewBackground = 'plan' | 'satellite';
+type SiteOverviewSketchSaveStatus = 'error' | 'idle' | 'saved' | 'saving';
 
 const CANVAS_DEFAULT_SIZE: CanvasSize = {
   height: 640,
@@ -119,6 +145,7 @@ const FEATURE_LABEL_HEIGHT = 38;
 const FEATURE_HIT_TARGET_MIN_SIZE = 48;
 const EARTH_RADIUS_METERS = 6371008.8;
 const MAX_REFERENCE_SEGMENTS = 1600;
+const MAX_SITE_OVERVIEW_SKETCH_SEGMENTS = 420;
 const SITE_OVERVIEW_MIN_SCALE = 1;
 const SITE_OVERVIEW_MAX_SCALE = 5;
 const SITE_OVERVIEW_DEFAULT_VIEWPORT: SiteOverviewViewport = {
@@ -126,6 +153,13 @@ const SITE_OVERVIEW_DEFAULT_VIEWPORT: SiteOverviewViewport = {
   offsetY: 0,
   scale: 1,
 };
+export const SITE_OVERVIEW_SKETCH_FIELDS = {
+  coordinateSpace: 'siteOverviewSketchCoordinateSpace',
+  strokes: 'siteOverviewSketchStrokes',
+  updatedAt: 'siteOverviewSketchUpdatedAt',
+} as const;
+export const SITE_OVERVIEW_SKETCH_COORDINATE_SPACE =
+  'boundaryNormalized10000V1';
 const VALID_FEATURE_SHAPES = new Set<FeatureLocationSketchShape>([
   'point',
   'polygon',
@@ -139,12 +173,32 @@ const KoreanFieldworkSiteOverviewMap: React.FC<Props> = ({
   documents,
   onImportDxfReference,
   onOpenFeature,
+  onUpdateSiteSketch,
 }) => {
   const [canvasSize, setCanvasSize] = useState(CANVAS_DEFAULT_SIZE);
+  const [backgroundMode, setBackgroundMode] =
+    useState<SiteOverviewBackground>('satellite');
+  const [brushColor, setBrushColor] = useState(DEFAULT_FIELDWORK_BRUSH_COLOR);
+  const [brushWidth, setBrushWidth] = useState(DEFAULT_FIELDWORK_BRUSH_WIDTH);
   const [distanceFeatureIds, setDistanceFeatureIds] = useState<string[]>([]);
+  const [drawingTool, setDrawingTool] =
+    useState<KoreanFieldworkHandwritingTool>(DEFAULT_FIELDWORK_DRAWING_TOOL);
   const [isDistanceMeasurementActive, setIsDistanceMeasurementActive] =
     useState(false);
+  const [isSiteSketchOpen, setIsSiteSketchOpen] = useState(false);
+  const [isSiteSketchClosing, setIsSiteSketchClosing] = useState(false);
+  const [siteSketchSaveStatus, setSiteSketchSaveStatus] =
+    useState<SiteOverviewSketchSaveStatus>('idle');
+  const [satelliteStatus, setSatelliteStatus] =
+    useState<'error' | 'loaded' | 'loading' | 'partial'>('loading');
   const [viewport, setViewport] = useState(SITE_OVERVIEW_DEFAULT_VIEWPORT);
+  const hasSelectedBackgroundRef = useRef(false);
+  const failedSatelliteTileKeysRef = useRef<Set<string>>(new Set());
+  const loadedSatelliteTileKeysRef = useRef<Set<string>>(new Set());
+  const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const saveSequenceRef = useRef(0);
+  const saveStatusRef = useRef<SiteOverviewSketchSaveStatus>('idle');
+  const isSiteSketchClosingRef = useRef(false);
   const pinchGestureRef = useRef<SiteOverviewPinchGesture>();
   const panGestureRef = useRef<SiteOverviewPanGesture>();
   const boundaryProjection = useMemo(
@@ -152,9 +206,54 @@ const KoreanFieldworkSiteOverviewMap: React.FC<Props> = ({
     [boundaryDraft, canvasSize, documents]
   );
   const boundaryPoints = boundaryProjection.points;
+  const siteSketchProjection = useMemo(
+    () => getSurveyBoundaryProjection(
+      documents,
+      boundaryDraft,
+      CANVAS_DEFAULT_SIZE
+    ),
+    [boundaryDraft, documents]
+  );
+  const surveyBoundaryDocument = useMemo(
+    () => getPrimarySurveyBoundaryDocument(documents),
+    [documents]
+  );
+  const satelliteBoundary = useMemo(
+    () => getSiteOverviewSatelliteBoundary(
+      surveyBoundaryDocument,
+      boundaryDraft
+    ),
+    [boundaryDraft, surveyBoundaryDocument]
+  );
+  const satelliteTiles = useMemo(
+    () => getFeatureSketchSatelliteTiles(satelliteBoundary),
+    [satelliteBoundary]
+  );
+  const projectedSatelliteTiles = useMemo(
+    () => projectSatelliteTilesToOverviewFrame(
+      satelliteTiles,
+      boundaryProjection.frame
+    ),
+    [boundaryProjection.frame, satelliteTiles]
+  );
+  const siteSketchSatelliteTiles = useMemo(
+    () => projectSatelliteTilesToOverviewFrame(
+      satelliteTiles,
+      siteSketchProjection.frame
+    ),
+    [satelliteTiles, siteSketchProjection.frame]
+  );
+  const storedSiteSketchStrokes = useMemo(
+    () => normalizeKoreanFieldworkHandwritingStrokes(
+      surveyBoundaryDocument?.resource[SITE_OVERVIEW_SKETCH_FIELDS.strokes]
+    ),
+    [surveyBoundaryDocument]
+  );
+  const [siteSketchStrokes, setSiteSketchStrokes] =
+    useState<KoreanFieldworkHandwritingStroke[]>(storedSiteSketchStrokes);
   const features = useMemo(
-    () => getSiteOverviewFeatures(documents, boundaryProjection.frame),
-    [boundaryProjection.frame, documents]
+    () => getSiteOverviewFeatures(documents, boundaryProjection),
+    [boundaryProjection, documents]
   );
   const referenceLines = useMemo(
     () => getSiteOverviewReferenceLines(documents, boundaryProjection),
@@ -179,6 +278,93 @@ const KoreanFieldworkSiteOverviewMap: React.FC<Props> = ({
     () => normalizeSiteOverviewViewport(viewport, canvasSize),
     [canvasSize, viewport]
   );
+
+  useEffect(() => {
+    if (!isSiteSketchOpen) setSiteSketchStrokes(storedSiteSketchStrokes);
+  }, [isSiteSketchOpen, storedSiteSketchStrokes]);
+
+  useEffect(() => {
+    if (backgroundMode === 'satellite' && satelliteTiles.length === 0) {
+      setBackgroundMode('plan');
+    } else if (
+      satelliteTiles.length > 0
+      && !hasSelectedBackgroundRef.current
+      && backgroundMode !== 'satellite'
+    ) {
+      setBackgroundMode('satellite');
+    }
+  }, [backgroundMode, satelliteTiles.length]);
+
+  useEffect(() => {
+    loadedSatelliteTileKeysRef.current = new Set();
+    failedSatelliteTileKeysRef.current = new Set();
+    setSatelliteStatus(satelliteTiles.length > 0 ? 'loading' : 'error');
+  }, [satelliteTiles]);
+
+  const markSatelliteTileSettled = (key: string, didLoad: boolean) => {
+    const loadedKeys = loadedSatelliteTileKeysRef.current;
+    const failedKeys = failedSatelliteTileKeysRef.current;
+    loadedKeys.delete(key);
+    failedKeys.delete(key);
+    (didLoad ? loadedKeys : failedKeys).add(key);
+    if (loadedKeys.size + failedKeys.size < satelliteTiles.length) return;
+    setSatelliteStatus(loadedKeys.size === 0
+      ? 'error'
+      : failedKeys.size > 0
+        ? 'partial'
+        : 'loaded');
+  };
+
+  const updateSiteSketch = (nextStrokes: KoreanFieldworkHandwritingStroke[]) => {
+    const normalizedStrokes = normalizeKoreanFieldworkHandwritingStrokes(nextStrokes);
+    setSiteSketchStrokes(normalizedStrokes);
+    if (!surveyBoundaryDocument || !onUpdateSiteSketch) return;
+
+    const serializedStrokes = serializeKoreanFieldworkHandwriting(normalizedStrokes);
+    const updatedAt = new Date().toISOString();
+    const saveSequence = saveSequenceRef.current + 1;
+    saveSequenceRef.current = saveSequence;
+    saveStatusRef.current = 'saving';
+    setSiteSketchSaveStatus('saving');
+    saveQueueRef.current = saveQueueRef.current.then(async () => {
+      try {
+        await onUpdateSiteSketch(
+          surveyBoundaryDocument.resource.id,
+          serializedStrokes,
+          updatedAt
+        );
+        if (saveSequenceRef.current === saveSequence) {
+          saveStatusRef.current = 'saved';
+          setSiteSketchSaveStatus('saved');
+        }
+      } catch {
+        if (saveSequenceRef.current === saveSequence) {
+          saveStatusRef.current = 'error';
+          setSiteSketchSaveStatus('error');
+        }
+      }
+    });
+  };
+
+  const closeSiteSketch = async () => {
+    if (isSiteSketchClosingRef.current) return;
+
+    isSiteSketchClosingRef.current = true;
+    setIsSiteSketchClosing(true);
+    try {
+      let pendingSave = saveQueueRef.current;
+      while (true) {
+        await pendingSave;
+        if (pendingSave === saveQueueRef.current) break;
+        pendingSave = saveQueueRef.current;
+      }
+
+      if (saveStatusRef.current !== 'error') setIsSiteSketchOpen(false);
+    } finally {
+      isSiteSketchClosingRef.current = false;
+      setIsSiteSketchClosing(false);
+    }
+  };
 
   const handleCanvasLayout = (event: LayoutChangeEvent) => {
     const { height, width } = event.nativeEvent.layout;
@@ -302,6 +488,60 @@ const KoreanFieldworkSiteOverviewMap: React.FC<Props> = ({
             조사 경계 {boundaryPoints.length >= 3 ? 1 : 0} · 유구 {features.length}
           </Text>
           <TouchableOpacity
+            accessibilityLabel={backgroundMode === 'satellite'
+              ? '약도 배경으로 전환'
+              : '위성지도 배경으로 전환'}
+            accessibilityState={{
+              disabled: satelliteTiles.length === 0,
+              selected: backgroundMode === 'satellite',
+            }}
+            activeOpacity={0.84}
+            disabled={satelliteTiles.length === 0}
+            onPress={() => {
+              hasSelectedBackgroundRef.current = true;
+              setBackgroundMode((current) =>
+                current === 'satellite' ? 'plan' : 'satellite');
+            }}
+            style={[
+              styles.headerToolButton,
+              backgroundMode === 'satellite' && styles.headerToolButtonActive,
+              satelliteTiles.length === 0 && styles.headerButtonDisabled,
+            ]}
+            testID="siteOverviewBackgroundToggle"
+          >
+            <MaterialIcons
+              name={backgroundMode === 'satellite' ? 'satellite-alt' : 'grid-on'}
+              size={17}
+              color="#f8fafc"
+            />
+            <Text style={styles.headerToolButtonText}>
+              {backgroundMode === 'satellite' ? '위성' : '약도'}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            accessibilityLabel="유적 전체 공용 약도 열기"
+            accessibilityState={{
+              disabled: !surveyBoundaryDocument || !onUpdateSiteSketch,
+            }}
+            activeOpacity={0.84}
+            disabled={!surveyBoundaryDocument || !onUpdateSiteSketch}
+            onPress={() => setIsSiteSketchOpen(true)}
+            style={[
+              styles.headerToolButton,
+              siteSketchStrokes.length > 0 && styles.siteSketchButtonActive,
+              (!surveyBoundaryDocument || !onUpdateSiteSketch)
+                && styles.headerButtonDisabled,
+            ]}
+            testID="siteOverviewOpenSketch"
+          >
+            <MaterialIcons name="draw" size={17} color="#f8fafc" />
+            <Text style={styles.headerToolButtonText}>
+              전체 약도{siteSketchStrokes.length > 0
+                ? ` ${siteSketchStrokes.length}`
+                : ''}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
             accessibilityLabel="유구 중심 간 거리 측정"
             accessibilityState={{
               disabled: !canMeasureDistances,
@@ -352,10 +592,10 @@ const KoreanFieldworkSiteOverviewMap: React.FC<Props> = ({
             !event || getTouchCount(event) >= 2}
           style={styles.canvas}
           testID="siteOverviewCanvas"
-        >
-          <View style={styles.northBand}>
-            <Text style={styles.northText}>N</Text>
-          </View>
+          >
+            <View style={styles.northBand}>
+              <Text style={styles.northText}>N</Text>
+            </View>
           <View
             pointerEvents="box-none"
             style={[
@@ -364,6 +604,17 @@ const KoreanFieldworkSiteOverviewMap: React.FC<Props> = ({
             ]}
             testID="siteOverviewMapContent"
           >
+            {backgroundMode === 'satellite' && projectedSatelliteTiles.map((tile) => (
+              <Image
+                key={tile.key}
+                onError={() => markSatelliteTileSettled(tile.key, false)}
+                onLoad={() => markSatelliteTileSettled(tile.key, true)}
+                resizeMode="stretch"
+                source={{ uri: tile.uri }}
+                style={getSatelliteTileStyle(tile)}
+                testID="siteOverviewSatelliteTile"
+              />
+            ))}
             <View style={styles.gridVertical} />
             <View style={styles.gridHorizontal} />
             {referenceLines.flatMap((line, index) => toLineSegments({
@@ -399,6 +650,12 @@ const KoreanFieldworkSiteOverviewMap: React.FC<Props> = ({
             ) : (
               <EmptyOverlay text="조사 경계 없음" />
             )}
+            <SiteSketchOverlay
+              canvasSize={canvasSize}
+              currentFrame={boundaryProjection.frame}
+              siteSketchFrame={siteSketchProjection.frame}
+              strokes={siteSketchStrokes}
+            />
             {isDistanceMeasurementActive
               && distanceStartFeature
               && distanceEndFeature
@@ -436,6 +693,34 @@ const KoreanFieldworkSiteOverviewMap: React.FC<Props> = ({
               <EmptyOverlay text="추가된 유구 없음" />
             )}
           </View>
+          {backgroundMode === 'satellite' && satelliteStatus === 'loading' && (
+            <View pointerEvents="none" style={styles.satelliteLoading}>
+              <ActivityIndicator color="#ffffff" size="small" />
+              <Text style={styles.satelliteLoadingText}>위성지도 불러오는 중</Text>
+            </View>
+          )}
+          {backgroundMode === 'satellite' && satelliteStatus === 'error' && (
+            <View pointerEvents="none" style={styles.satelliteError}>
+              <MaterialIcons name="cloud-off" size={18} color="#ffffff" />
+              <Text style={styles.satelliteErrorText}>
+                위성지도를 불러오지 못했습니다. 약도 배경은 계속 사용할 수 있습니다.
+              </Text>
+            </View>
+          )}
+          {backgroundMode === 'satellite' && satelliteStatus === 'partial' && (
+            <View pointerEvents="none" style={styles.satellitePartial}>
+              <MaterialIcons name="warning-amber" size={17} color="#ffffff" />
+              <Text style={styles.satellitePartialText}>
+                일부 위성 타일이 누락되었습니다. 네트워크를 확인해 주세요.
+              </Text>
+            </View>
+          )}
+          {backgroundMode === 'satellite'
+            && (satelliteStatus === 'loaded' || satelliteStatus === 'partial') && (
+            <Text style={styles.satelliteAttribution}>
+              {FEATURE_SKETCH_SATELLITE_ATTRIBUTION}
+            </Text>
+          )}
           {isDistanceMeasurementActive && (
             <DistanceMeasurementPanel
               distanceMeters={distanceMeters}
@@ -459,8 +744,58 @@ const KoreanFieldworkSiteOverviewMap: React.FC<Props> = ({
           )}
         </View>
       </View>
+      <KoreanFieldworkFullscreenDrawingModal
+        background={{
+          aspectRatio: getCanvasAspectRatio(CANVAS_DEFAULT_SIZE),
+          boundaryPoints: siteSketchProjection.points.map((point) => ({
+            x: point.x * 100,
+            y: point.y * 100,
+          })),
+          label: '조사 경계 · 데스크톱과 공유되는 유적 전체 약도',
+          ...(backgroundMode === 'satellite' && siteSketchSatelliteTiles.length > 0
+            ? {
+              satelliteAttribution: FEATURE_SKETCH_SATELLITE_ATTRIBUTION,
+              satelliteTiles: siteSketchSatelliteTiles,
+            }
+            : {}),
+        }}
+        brushColor={brushColor}
+        brushWidth={brushWidth}
+        drawingTool={drawingTool}
+        isCloseDisabled={isSiteSketchClosing}
+        isVisible={isSiteSketchOpen}
+        onBrushColorChange={setBrushColor}
+        onBrushWidthChange={setBrushWidth}
+        onClose={() => void closeSiteSketch()}
+        onDrawingToolChange={setDrawingTool}
+        onUpdateStrokes={updateSiteSketch}
+        statusText={getSiteSketchSaveStatusText(
+          siteSketchSaveStatus,
+          isSiteSketchClosing
+        )}
+        statusTone={siteSketchSaveStatus === 'error'
+          ? 'error'
+          : siteSketchSaveStatus === 'saved'
+            ? 'success'
+            : 'neutral'}
+        strokes={siteSketchStrokes}
+        testIDPrefix="siteOverviewSketch"
+        title="유적 전체 공용 약도"
+      />
     </View>
   );
+};
+
+const getSiteSketchSaveStatusText = (
+  status: SiteOverviewSketchSaveStatus,
+  isClosing: boolean
+): string | undefined => {
+  if (status === 'saving') {
+    return isClosing ? '저장 마무리 중…' : '저장 중…';
+  }
+  if (status === 'saved') return '저장 완료';
+  if (status === 'error') return '저장 실패 · 화면 유지 중';
+  return undefined;
 };
 
 const FeatureOverlay: React.FC<{
@@ -529,6 +864,81 @@ const FeatureOverlay: React.FC<{
           </Text>
         </View>
       )}
+    </>
+  );
+};
+
+interface SiteSketchInkSegment {
+  color: string;
+  end: SketchPoint;
+  key: string;
+  start: SketchPoint;
+  width: number;
+}
+
+const SiteSketchOverlay: React.FC<{
+  canvasSize: CanvasSize;
+  currentFrame?: SketchFrame;
+  siteSketchFrame?: SketchFrame;
+  strokes: readonly KoreanFieldworkHandwritingStroke[];
+}> = ({ canvasSize, currentFrame, siteSketchFrame, strokes }) => {
+  const segments = useMemo(
+    () => getVisibleSiteSketchInkSegments(strokes).map((segment) => ({
+      ...segment,
+      end: projectSiteSketchPointToCurrentFrame(
+        segment.end,
+        siteSketchFrame,
+        currentFrame
+      ),
+      start: projectSiteSketchPointToCurrentFrame(
+        segment.start,
+        siteSketchFrame,
+        currentFrame
+      ),
+    })),
+    [currentFrame, siteSketchFrame, strokes]
+  );
+  const lineWidthScale = Math.min(
+    canvasSize.width / CANVAS_DEFAULT_SIZE.width,
+    canvasSize.height / CANVAS_DEFAULT_SIZE.height
+  );
+
+  return (
+    <>
+      {segments.map((segment) => {
+        const start = denormalizePoint(segment.start, canvasSize);
+        const end = denormalizePoint(segment.end, canvasSize);
+        if (start.x === end.x && start.y === end.y) {
+          return (
+            <View
+              key={segment.key}
+              pointerEvents="none"
+              style={{
+                backgroundColor: segment.color,
+                borderRadius: segment.width,
+                height: Math.max(1, segment.width * lineWidthScale),
+                left: start.x - (Math.max(1, segment.width * lineWidthScale) / 2),
+                position: 'absolute',
+                top: start.y - (Math.max(1, segment.width * lineWidthScale) / 2),
+                width: Math.max(1, segment.width * lineWidthScale),
+              }}
+              testID="siteOverviewSketchLine"
+            />
+          );
+        }
+
+        return (
+          <SketchLineSegment
+            color={segment.color}
+            end={end}
+            key={segment.key}
+            opacity={0.94}
+            start={start}
+            testID="siteOverviewSketchLine"
+            width={Math.max(1, segment.width * lineWidthScale)}
+          />
+        );
+      })}
     </>
   );
 };
@@ -777,7 +1187,7 @@ const normalizeTouchPoint = (
 
 const getSiteOverviewFeatures = (
   documents: readonly Document[],
-  boundaryFrame?: SketchFrame
+  boundaryProjection: BoundaryProjection
 ): SiteOverviewFeature[] =>
   documents
     .filter((document) =>
@@ -786,7 +1196,10 @@ const getSiteOverviewFeatures = (
       const resource = document.resource as Record<string, unknown>;
       const sketch = normalizeFeatureLocationSketch(
         resource.featureLocationSketch,
-        boundaryFrame
+        boundaryProjection.frame
+      ) ?? normalizeFeatureGeometrySketch(
+        resource.geometry,
+        boundaryProjection
       );
       if (!sketch) return undefined;
       const typeLabel = getKoreanFieldworkFeatureTypeLabel(resource.featureType);
@@ -988,6 +1401,50 @@ const normalizeFeatureLocationSketch = (
   };
 };
 
+const normalizeFeatureGeometrySketch = (
+  value: unknown,
+  boundaryProjection: BoundaryProjection
+): FeatureLocationSketch | undefined => {
+  const rawGeometry = typeof value === 'string' ? parseJsonObject(value) : value;
+  if (!isRecord(rawGeometry)) return undefined;
+
+  let coordinatePairs: number[][] = [];
+  let shape: FeatureLocationSketchShape = 'point';
+  if (rawGeometry.type === 'Point') {
+    coordinatePairs = getNumericCoordinatePairs([rawGeometry.coordinates]);
+  } else if (rawGeometry.type === 'LineString') {
+    coordinatePairs = getNumericCoordinatePairs(rawGeometry.coordinates);
+    shape = coordinatePairs.length > 1 ? 'polygon' : 'point';
+  } else if (
+    rawGeometry.type === 'Polygon'
+    && Array.isArray(rawGeometry.coordinates)
+  ) {
+    coordinatePairs = getOpenCoordinatePairs(
+      getNumericCoordinatePairs(rawGeometry.coordinates[0])
+    );
+    shape = coordinatePairs.length > 1 ? 'polygon' : 'point';
+  }
+  if (coordinatePairs.length === 0) return undefined;
+  const { coordinateBounds, frame } = boundaryProjection;
+  if (!coordinateBounds || !frame) return undefined;
+
+  const points = coordinatePairs.map((coordinate) =>
+    projectCoordinateToBoundaryFrame(coordinate, coordinateBounds, frame));
+  const center = {
+    x: points.reduce((sum, point) => sum + point.x, 0) / points.length,
+    y: points.reduce((sum, point) => sum + point.y, 0) / points.length,
+  };
+
+  return {
+    center,
+    isClosed: rawGeometry.type === 'Polygon',
+    points,
+    rotation: 0,
+    scale: 100,
+    shape,
+  };
+};
+
 const getSurveyBoundaryProjection = (
   documents: readonly Document[],
   boundaryDraft: KoreanFieldworkProjectBoundaryDraft | undefined,
@@ -1009,6 +1466,75 @@ const getSurveyBoundaryProjection = (
     canvasSize
   );
 };
+
+const getPrimarySurveyBoundaryDocument = (
+  documents: readonly Document[]
+): Document | undefined => {
+  const boundaryDocuments = documents.filter((candidate) =>
+    candidate.resource.category === KOREAN_FIELDWORK_CATEGORIES.SURVEY_BOUNDARY);
+
+  return boundaryDocuments.find((candidate) =>
+    getBoundaryCoordinatePairs(candidate.resource.geometry).length >= 3)
+    ?? boundaryDocuments[0];
+};
+
+const getSiteOverviewSatelliteBoundary = (
+  surveyBoundaryDocument: Document | undefined,
+  boundaryDraft: KoreanFieldworkProjectBoundaryDraft | undefined
+): KoreanFieldworkProjectBoundaryDraft | undefined => {
+  if (boundaryDraft && boundaryDraft.coordinates.length >= 3) {
+    return boundaryDraft;
+  }
+
+  const coordinatePairs = getOpenCoordinatePairs(
+    getBoundaryCoordinatePairs(surveyBoundaryDocument?.resource.geometry)
+  );
+  if (coordinatePairs.length < 3 || !areWgs84CoordinatePairs(coordinatePairs)) {
+    return undefined;
+  }
+
+  return {
+    coordinates: coordinatePairs.map(([longitude, latitude]) => ({
+      latitude,
+      longitude,
+    })),
+  };
+};
+
+const projectSatelliteTilesToOverviewFrame = (
+  tiles: readonly FeatureSketchSatelliteTile[],
+  frame?: SketchFrame
+): FeatureSketchSatelliteTile[] => {
+  if (!frame) return [];
+
+  const drawablePercent = 100 - (BOUNDARY_PADDING * 2);
+  const paddedFrameWidth = frame.width * (100 / drawablePercent);
+  const paddedFrameHeight = frame.height * (100 / drawablePercent);
+  const paddedFrameLeft = frame.minX
+    - (frame.width * (BOUNDARY_PADDING / drawablePercent));
+  const paddedFrameTop = frame.minY
+    - (frame.height * (BOUNDARY_PADDING / drawablePercent));
+
+  return tiles.map((tile) => ({
+    ...tile,
+    heightPercent: paddedFrameHeight * (tile.heightPercent / 100),
+    leftPercent: paddedFrameLeft
+      + (paddedFrameWidth * (tile.leftPercent / 100)),
+    topPercent: paddedFrameTop
+      + (paddedFrameHeight * (tile.topPercent / 100)),
+    widthPercent: paddedFrameWidth * (tile.widthPercent / 100),
+  }));
+};
+
+const getSatelliteTileStyle = (
+  tile: FeatureSketchSatelliteTile
+): ImageStyle => ({
+  height: toPercent(tile.heightPercent),
+  left: toPercent(tile.leftPercent),
+  position: 'absolute',
+  top: toPercent(tile.topPercent),
+  width: toPercent(tile.widthPercent),
+});
 
 const getBoundaryDraftCoordinatePairs = (
   boundaryDraft?: KoreanFieldworkProjectBoundaryDraft
@@ -1172,6 +1698,190 @@ const getOpenCoordinatePairs = (coordinatePairs: number[][]): number[][] => {
   return first[0] === last[0] && first[1] === last[1]
     ? coordinatePairs.slice(0, -1)
     : coordinatePairs;
+};
+
+const getVisibleSiteSketchInkSegments = (
+  strokes: readonly KoreanFieldworkHandwritingStroke[]
+): SiteSketchInkSegment[] => {
+  let inkSegments: SiteSketchInkSegment[] = [];
+  const rawSegmentCount = strokes.reduce(
+    (count, stroke) => count + Math.max(1, stroke.points.length - 1),
+    0
+  );
+  const pointStride = Math.max(
+    1,
+    Math.ceil(rawSegmentCount / MAX_SITE_OVERVIEW_SKETCH_SEGMENTS)
+  );
+
+  strokes.forEach((stroke, strokeIndex) => {
+    const sampledPoints = pointStride === 1
+      ? stroke.points
+      : stroke.points.filter((_, index) =>
+        index === 0
+        || index === stroke.points.length - 1
+        || index % pointStride === 0);
+    const points = sampledPoints.map((point) => ({
+      x: point.x / 100,
+      y: point.y / 100,
+    }));
+    if (points.length === 0) return;
+    const width = clamp(
+      stroke.width ?? DEFAULT_FIELDWORK_BRUSH_WIDTH,
+      1,
+      24
+    );
+    const pointPairs = getSiteSketchPointPairs(points);
+
+    if (stroke.tool === 'eraser') {
+      inkSegments = inkSegments.filter((inkSegment) =>
+        !pointPairs.some(([start, end]) => isSiteSketchSegmentErased(
+          inkSegment,
+          start,
+          end,
+          width
+        )));
+      return;
+    }
+
+    inkSegments.push(...pointPairs.map(([start, end], segmentIndex) => ({
+      color: stroke.color ?? DEFAULT_FIELDWORK_BRUSH_COLOR,
+      end,
+      key: `site-sketch-${strokeIndex}-${segmentIndex}`,
+      start,
+      width,
+    })));
+  });
+
+  if (inkSegments.length <= MAX_SITE_OVERVIEW_SKETCH_SEGMENTS) {
+    return inkSegments;
+  }
+
+  const segmentStride = Math.ceil(
+    inkSegments.length / MAX_SITE_OVERVIEW_SKETCH_SEGMENTS
+  );
+  return inkSegments.filter((_, index) => index % segmentStride === 0);
+};
+
+const getSiteSketchPointPairs = (
+  points: readonly SketchPoint[]
+): [SketchPoint, SketchPoint][] => {
+  if (points.length === 1) return [[points[0], points[0]]];
+
+  return points.slice(0, -1).map((point, index) => [
+    point,
+    points[index + 1],
+  ]);
+};
+
+const isSiteSketchSegmentErased = (
+  inkSegment: SiteSketchInkSegment,
+  eraserStart: SketchPoint,
+  eraserEnd: SketchPoint,
+  eraserWidth: number
+): boolean => {
+  const distance = getLineSegmentDistance(
+    toCanonicalSiteSketchPixel(inkSegment.start),
+    toCanonicalSiteSketchPixel(inkSegment.end),
+    toCanonicalSiteSketchPixel(eraserStart),
+    toCanonicalSiteSketchPixel(eraserEnd)
+  );
+
+  return distance <= ((inkSegment.width + eraserWidth) / 2);
+};
+
+const toCanonicalSiteSketchPixel = (point: SketchPoint): PixelPoint => ({
+  x: (point.x / 100) * CANVAS_DEFAULT_SIZE.width,
+  y: (point.y / 100) * CANVAS_DEFAULT_SIZE.height,
+});
+
+const getLineSegmentDistance = (
+  firstStart: PixelPoint,
+  firstEnd: PixelPoint,
+  secondStart: PixelPoint,
+  secondEnd: PixelPoint
+): number => {
+  if (doLineSegmentsIntersect(firstStart, firstEnd, secondStart, secondEnd)) {
+    return 0;
+  }
+
+  return Math.min(
+    getPointToLineSegmentDistance(firstStart, secondStart, secondEnd),
+    getPointToLineSegmentDistance(firstEnd, secondStart, secondEnd),
+    getPointToLineSegmentDistance(secondStart, firstStart, firstEnd),
+    getPointToLineSegmentDistance(secondEnd, firstStart, firstEnd)
+  );
+};
+
+const getPointToLineSegmentDistance = (
+  point: PixelPoint,
+  start: PixelPoint,
+  end: PixelPoint
+): number => {
+  const lengthSquared = ((end.x - start.x) ** 2) + ((end.y - start.y) ** 2);
+  if (lengthSquared === 0) {
+    return Math.sqrt(((point.x - start.x) ** 2) + ((point.y - start.y) ** 2));
+  }
+  const ratio = clamp(
+    (((point.x - start.x) * (end.x - start.x))
+      + ((point.y - start.y) * (end.y - start.y))) / lengthSquared,
+    0,
+    1
+  );
+  const projection = {
+    x: start.x + (ratio * (end.x - start.x)),
+    y: start.y + (ratio * (end.y - start.y)),
+  };
+
+  return Math.sqrt(
+    ((point.x - projection.x) ** 2) + ((point.y - projection.y) ** 2)
+  );
+};
+
+const doLineSegmentsIntersect = (
+  firstStart: PixelPoint,
+  firstEnd: PixelPoint,
+  secondStart: PixelPoint,
+  secondEnd: PixelPoint
+): boolean => {
+  const cross = (start: PixelPoint, end: PixelPoint, point: PixelPoint) =>
+    ((end.x - start.x) * (point.y - start.y))
+      - ((end.y - start.y) * (point.x - start.x));
+  const firstSideStart = cross(firstStart, firstEnd, secondStart);
+  const firstSideEnd = cross(firstStart, firstEnd, secondEnd);
+  const secondSideStart = cross(secondStart, secondEnd, firstStart);
+  const secondSideEnd = cross(secondStart, secondEnd, firstEnd);
+
+  if (
+    firstSideStart === 0
+    && firstSideEnd === 0
+    && secondSideStart === 0
+    && secondSideEnd === 0
+  ) {
+    return Math.max(Math.min(firstStart.x, firstEnd.x), Math.min(secondStart.x, secondEnd.x))
+        <= Math.min(Math.max(firstStart.x, firstEnd.x), Math.max(secondStart.x, secondEnd.x))
+      && Math.max(Math.min(firstStart.y, firstEnd.y), Math.min(secondStart.y, secondEnd.y))
+        <= Math.min(Math.max(firstStart.y, firstEnd.y), Math.max(secondStart.y, secondEnd.y));
+  }
+
+  return firstSideStart * firstSideEnd <= 0
+    && secondSideStart * secondSideEnd <= 0;
+};
+
+const projectSiteSketchPointToCurrentFrame = (
+  point: SketchPoint,
+  siteSketchFrame?: SketchFrame,
+  currentFrame?: SketchFrame
+): SketchPoint => {
+  if (!siteSketchFrame || !currentFrame) return point;
+
+  return {
+    x: currentFrame.minX
+      + (((point.x - siteSketchFrame.minX) / siteSketchFrame.width)
+        * currentFrame.width),
+    y: currentFrame.minY
+      + (((point.y - siteSketchFrame.minY) / siteSketchFrame.height)
+        * currentFrame.height),
+  };
 };
 
 const toLineSegments = ({
@@ -1436,7 +2146,9 @@ const styles = StyleSheet.create({
   headerActions: {
     alignItems: 'center',
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
+    justifyContent: 'flex-end',
     marginLeft: 'auto',
   },
   headerTitleRow: {
@@ -1516,6 +2228,29 @@ const styles = StyleSheet.create({
   headerButtonDisabled: {
     opacity: 0.42,
   },
+  headerToolButton: {
+    alignItems: 'center',
+    borderColor: '#8ca8a2',
+    borderRadius: 6,
+    borderWidth: 1,
+    flexDirection: 'row',
+    minHeight: 34,
+    paddingHorizontal: 9,
+  },
+  headerToolButtonActive: {
+    backgroundColor: '#175cd3',
+    borderColor: '#84adff',
+  },
+  headerToolButtonText: {
+    color: '#f8fafc',
+    fontSize: 12,
+    fontWeight: '900',
+    marginLeft: 5,
+  },
+  siteSketchButtonActive: {
+    backgroundColor: '#7c3aed',
+    borderColor: '#c4b5fd',
+  },
   referenceImportButton: {
     alignItems: 'center',
     borderColor: '#8ca8a2',
@@ -1546,6 +2281,77 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 0,
     top: '50%',
+  },
+  satelliteAttribution: {
+    backgroundColor: 'rgba(15, 23, 42, 0.72)',
+    borderRadius: 3,
+    bottom: 8,
+    color: '#ffffff',
+    fontSize: 9,
+    fontWeight: '700',
+    left: 8,
+    paddingHorizontal: 5,
+    paddingVertical: 3,
+    position: 'absolute',
+    zIndex: 35,
+  },
+  satelliteError: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(127, 29, 29, 0.88)',
+    borderRadius: 6,
+    flexDirection: 'row',
+    left: 10,
+    maxWidth: '72%',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    position: 'absolute',
+    top: 34,
+    zIndex: 36,
+  },
+  satelliteErrorText: {
+    color: '#ffffff',
+    flexShrink: 1,
+    fontSize: 11,
+    fontWeight: '800',
+    marginLeft: 7,
+  },
+  satelliteLoading: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(15, 23, 42, 0.72)',
+    borderRadius: 6,
+    flexDirection: 'row',
+    left: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    position: 'absolute',
+    top: 34,
+    zIndex: 36,
+  },
+  satelliteLoadingText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '800',
+    marginLeft: 7,
+  },
+  satellitePartial: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(146, 64, 14, 0.88)',
+    borderRadius: 6,
+    flexDirection: 'row',
+    left: 10,
+    maxWidth: '72%',
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    position: 'absolute',
+    top: 34,
+    zIndex: 36,
+  },
+  satellitePartialText: {
+    color: '#ffffff',
+    flexShrink: 1,
+    fontSize: 11,
+    fontWeight: '800',
+    marginLeft: 7,
   },
   boundaryPoint: {
     backgroundColor: '#175cd3',

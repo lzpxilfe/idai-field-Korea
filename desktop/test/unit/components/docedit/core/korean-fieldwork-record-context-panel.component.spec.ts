@@ -964,6 +964,41 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
     });
 
 
+    it('parses tablet circle sketches at the full mobile scale range', () => {
+
+        const feature = createDocument('feature-1', 'Feature', 'F1', {}, {
+            featureLocationSketch: JSON.stringify({
+                version: 1,
+                shape: 'circle',
+                center: { x: 50, y: 50 },
+                points: [{ x: 50, y: 50 }],
+                rotation: 0,
+                scale: 8
+            })
+        });
+        const component = createComponent({
+            find: jest.fn().mockResolvedValue({ documents: [feature] })
+        });
+        component.document = feature as any;
+
+        const preview = component.getFeatureLocationSketchPreview()!;
+
+        expect(preview.summary).toBe('원 · 중심 50%, 50%');
+        expect(preview.location.ellipse).toEqual(expect.objectContaining({
+            cx: 60,
+            cy: 40,
+            rx: 1.2,
+            ry: 1.2
+        }));
+        expect(preview.shape.ellipse).toEqual(expect.objectContaining({
+            cx: 60,
+            cy: 40,
+            rx: 2.3,
+            ry: 2.3
+        }));
+    });
+
+
     it('shows tablet free drawing strokes as desktop feature sketch previews', () => {
 
         const feature = createDocument('feature-1', 'Feature', 'F1', {}, {
@@ -994,6 +1029,56 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
         expect(preview.viewBox).toBe('0 0 120 72');
         expect(preview.path).toContain('M ');
         expect(preview.path).toContain('L ');
+    });
+
+
+    it('shows the boundary-normalized shared site overview sketch on desktop', () => {
+
+        const boundary = createDocument('boundary-1', 'SurveyBoundary', '조사경계', {}, {
+            siteOverviewSketchStrokes: JSON.stringify({
+                version: 1,
+                strokes: [
+                    { points: [{ x: 1000, y: 2000 }, { x: 9000, y: 8000 }] }
+                ]
+            }),
+            siteOverviewSketchUpdatedAt: '2026-07-18T09:30:00.000Z',
+            siteOverviewSketchCoordinateSpace: 'boundaryNormalized10000V1'
+        });
+        const component = createComponent({
+            find: jest.fn().mockResolvedValue({ documents: [boundary] })
+        });
+        component.document = boundary as any;
+        component.fieldDefinitions = [
+            field('siteOverviewSketchStrokes')
+        ] as any;
+
+        expect(component.hasSiteOverviewSketchPreview()).toBe(true);
+
+        const preview = component.getSiteOverviewSketchPreview()!;
+
+        expect(preview.summary).toBe('유적 전체 약도 1획 2점');
+        expect(preview.updatedAt).toBe('2026-07-18');
+        expect(preview.path).toBe('M 26.4 19.2 L 93.6 52.8');
+        expect(preview.viewBox).toBe('0 0 120 72');
+    });
+
+
+    it('keeps an empty shared site overview slot on SurveyBoundary only', () => {
+
+        const boundary = createDocument('boundary-1', 'SurveyBoundary', '조사경계');
+        const component = createComponent({
+            find: jest.fn().mockResolvedValue({ documents: [boundary] })
+        });
+        component.document = boundary as any;
+
+        expect(component.getSiteOverviewSketchPreview()).toEqual(expect.objectContaining({
+            emptyLabel: '공용 전체 약도 없음',
+            summary: '유적 전체 약도 없음'
+        }));
+
+        component.document = createDocument('feature-1', 'Feature', 'F1') as any;
+
+        expect(component.getSiteOverviewSketchPreview()).toBeUndefined();
     });
 
 
@@ -1032,6 +1117,22 @@ describe('KoreanFieldworkRecordContextPanelComponent', () => {
         expect(template).toContain('getFeatureFreeDrawingPreview() as freeDrawingPreview');
         expect(template).toContain('자유 스케치');
         expect(template).toContain('태블릿 자유 스케치');
+    });
+
+
+    it('keeps the shared site overview preview section in the desktop record context template', () => {
+
+        const template = fs.readFileSync(
+            path.resolve(
+                __dirname,
+                '../../../../../src/app/components/docedit/core/korean-fieldwork-record-context-panel.html'
+            ),
+            'utf8'
+        );
+
+        expect(template).toContain('getSiteOverviewSketchPreview() as siteOverviewSketchPreview');
+        expect(template).toContain('공용 유적 전체 약도');
+        expect(template).toContain('태블릿과 데스크톱 공용 유적 전체 약도');
     });
 
 
