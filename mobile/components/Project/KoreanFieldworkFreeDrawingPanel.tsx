@@ -15,6 +15,8 @@ import {
   View,
 } from 'react-native';
 import {
+  applyKoreanFieldworkHandwritingErasers,
+  KOREAN_FIELDWORK_PEN_MEMO_COORDINATE_SPACE,
   KoreanFieldworkHandwritingPoint,
   KoreanFieldworkHandwritingStroke,
   KoreanFieldworkHandwritingTool,
@@ -28,8 +30,10 @@ import KoreanFieldworkFullscreenDrawingModal, {
   DEFAULT_FIELDWORK_DRAWING_TOOL,
   KoreanFieldworkBrushControls,
 } from './KoreanFieldworkFullscreenDrawingModal';
-import { KOREAN_FIELDWORK_PEN_MEMO_PAGE_ASPECT_RATIO }
-  from './korean-fieldwork-pen-memo-layout';
+import {
+  KOREAN_FIELDWORK_PEN_MEMO_GRID_STEP,
+  KOREAN_FIELDWORK_PEN_MEMO_PAGE_ASPECT_RATIO,
+} from './korean-fieldwork-pen-memo-layout';
 
 export const KOREAN_FIELDWORK_FREE_DRAWING_FIELDS = {
   drawingStrokes: 'drawingSketchStrokes',
@@ -53,6 +57,14 @@ interface CanvasSize {
 interface PixelPoint {
   x: number;
   y: number;
+}
+
+interface PreviewTransform {
+  minX: number;
+  minY: number;
+  offsetX: number;
+  offsetY: number;
+  scale: number;
 }
 
 interface Props {
@@ -82,6 +94,7 @@ const MIN_SMOOTHING_STEPS = 1;
 const MAX_SMOOTHING_STEPS = 4;
 const DOUBLE_TAP_DELAY_MS = 260;
 const DOUBLE_TAP_DISTANCE = 520;
+const PREVIEW_TAP_MAX_DISTANCE = 12;
 const TEXT = {
   title: '\uc57d\ub3c4 \uc2a4\ucf00\uce58',
 };
@@ -120,6 +133,9 @@ const KoreanFieldworkFreeDrawingPanel: React.FC<Props> = ({
   title = TEXT.title,
   writingGuides = false,
 }) => {
+  const coordinateSpace = writingGuides
+    ? KOREAN_FIELDWORK_PEN_MEMO_COORDINATE_SPACE
+    : undefined;
   const strokes = useMemo(
     () => normalizeKoreanFieldworkHandwritingStrokes(strokesValue),
     [strokesValue]
@@ -143,8 +159,18 @@ const KoreanFieldworkFreeDrawingPanel: React.FC<Props> = ({
   const latestStrokesRef = useRef<KoreanFieldworkHandwritingStroke[]>(strokes);
   const pendingTapCommitRef = useRef<ReturnType<typeof setTimeout>>();
   const pendingTapStrokeRef = useRef<KoreanFieldworkHandwritingStroke>();
+  const previewTapStartRef = useRef<PixelPoint>();
+  const previewTapMovedRef = useRef(false);
   const hasAppliedInitialFullscreenRef = useRef(false);
   const visibleStrokes = activeStroke ? strokes.concat(activeStroke) : strokes;
+  const previewStrokes = writingGuides
+    ? applyKoreanFieldworkHandwritingErasers(visibleStrokes, {
+      coordinateSpace,
+    })
+    : visibleStrokes;
+  const previewTransform = writingGuides
+    ? getInfiniteGridPreviewTransform(previewStrokes, canvasSize)
+    : undefined;
   const strokeCount = strokes.length;
   const setDrawingInteractionActive = useCallback((isActive: boolean) => {
     if (isDrawingInteractionActiveRef.current === isActive) return;
@@ -159,6 +185,8 @@ const KoreanFieldworkFreeDrawingPanel: React.FC<Props> = ({
 
   useEffect(() => () => {
     cancelPendingTapStroke();
+    previewTapStartRef.current = undefined;
+    previewTapMovedRef.current = false;
     if (activeStrokeRenderFrameRef.current !== undefined) {
       cancelAnimationFrame(activeStrokeRenderFrameRef.current);
     }
@@ -183,6 +211,11 @@ const KoreanFieldworkFreeDrawingPanel: React.FC<Props> = ({
     if (height > 0 && width > 0) setCanvasSize({ height, width });
   };
   const startStroke = (event: GestureResponderEvent) => {
+    if (writingGuides) {
+      previewTapStartRef.current = getPixelTouchPoint(event);
+      previewTapMovedRef.current = false;
+      return;
+    }
     const point = getNormalizedPoint(event, canvasSize);
     if (!point) return;
 
@@ -203,12 +236,38 @@ const KoreanFieldworkFreeDrawingPanel: React.FC<Props> = ({
     setActiveStroke(activeStrokeRef.current);
   };
   const moveStroke = (event: GestureResponderEvent) => {
+    if (writingGuides) {
+      const startPoint = previewTapStartRef.current;
+      const currentPoint = getPixelTouchPoint(event);
+      if (
+        startPoint
+        && currentPoint
+        && getPixelPointDistance(startPoint, currentPoint) > PREVIEW_TAP_MAX_DISTANCE
+      ) {
+        previewTapMovedRef.current = true;
+      }
+      return;
+    }
     const point = getNormalizedPoint(event, canvasSize);
     if (!point) return;
 
     appendActiveStrokePoint(point);
   };
   const finishStroke = (event?: GestureResponderEvent) => {
+    if (writingGuides) {
+      const startPoint = previewTapStartRef.current;
+      const releasePoint = event ? getPixelTouchPoint(event) : undefined;
+      const shouldOpenFullscreen = !!startPoint
+        && !previewTapMovedRef.current
+        && (
+          !releasePoint
+          || getPixelPointDistance(startPoint, releasePoint)
+            <= PREVIEW_TAP_MAX_DISTANCE
+        );
+      cancelPreviewTap();
+      if (shouldOpenFullscreen) openFullscreen();
+      return;
+    }
     const releasePoint = event ? getNormalizedPoint(event, canvasSize) : undefined;
     if (releasePoint) {
       appendActiveStrokePoint(releasePoint, RELEASE_POINT_MIN_DISTANCE);
@@ -228,16 +287,24 @@ const KoreanFieldworkFreeDrawingPanel: React.FC<Props> = ({
 
     commitStroke(stroke);
   };
+  const cancelPreviewTap = () => {
+    previewTapStartRef.current = undefined;
+    previewTapMovedRef.current = false;
+  };
   const undoStroke = () => {
     cancelPendingTapStroke();
     const nextStrokes = latestStrokesRef.current.slice(0, -1);
     latestStrokesRef.current = nextStrokes;
-    onUpdateStrokes(serializeKoreanFieldworkHandwriting(nextStrokes));
+    onUpdateStrokes(serializeKoreanFieldworkHandwriting(nextStrokes, {
+      coordinateSpace,
+    }));
   };
   const clearStrokes = () => {
     cancelPendingTapStroke();
     latestStrokesRef.current = [];
-    onUpdateStrokes(serializeKoreanFieldworkHandwriting([]));
+    onUpdateStrokes(serializeKoreanFieldworkHandwriting([], {
+      coordinateSpace,
+    }));
   };
   const selectBrushWidth = (width: number) => {
     setBrushWidth(width);
@@ -246,10 +313,12 @@ const KoreanFieldworkFreeDrawingPanel: React.FC<Props> = ({
     nextStrokes: KoreanFieldworkHandwritingStroke[]
   ) => {
     latestStrokesRef.current = normalizeKoreanFieldworkHandwritingStrokes(
-      nextStrokes
+      nextStrokes,
+      { coordinateSpace }
     );
     onUpdateStrokes(serializeKoreanFieldworkHandwriting(
-      latestStrokesRef.current
+      latestStrokesRef.current,
+      { coordinateSpace }
     ));
   };
   const appendActiveStrokePoint = (
@@ -299,7 +368,9 @@ const KoreanFieldworkFreeDrawingPanel: React.FC<Props> = ({
   const commitStroke = (stroke: KoreanFieldworkHandwritingStroke) => {
     const nextStrokes = latestStrokesRef.current.concat(stroke);
     latestStrokesRef.current = nextStrokes;
-    onUpdateStrokes(serializeKoreanFieldworkHandwriting(nextStrokes));
+    onUpdateStrokes(serializeKoreanFieldworkHandwriting(nextStrokes, {
+      coordinateSpace,
+    }));
   };
 
   const scheduleTapStrokeCommit = (stroke: KoreanFieldworkHandwritingStroke) => {
@@ -405,28 +476,40 @@ const KoreanFieldworkFreeDrawingPanel: React.FC<Props> = ({
       />
       <View
         onLayout={updateCanvasSize}
-        onMoveShouldSetResponderCapture={() => true}
-        onMoveShouldSetResponder={() => true}
+        onMoveShouldSetResponderCapture={() => !writingGuides}
+        onMoveShouldSetResponder={() => !writingGuides}
         onResponderGrant={startStroke}
         onResponderMove={moveStroke}
         onResponderRelease={finishStroke}
-        onResponderTerminate={finishStroke}
-        onResponderTerminationRequest={() => false}
-        onStartShouldSetResponderCapture={() => true}
+        onResponderTerminate={writingGuides ? cancelPreviewTap : finishStroke}
+        onResponderTerminationRequest={() => writingGuides}
+        onStartShouldSetResponderCapture={() => !writingGuides}
         onStartShouldSetResponder={() => true}
-        onTouchCancel={() => setDrawingInteractionActive(false)}
-        onTouchEnd={() => setDrawingInteractionActive(false)}
-        onTouchStart={() => setDrawingInteractionActive(true)}
+        onTouchCancel={() => {
+          if (!writingGuides) setDrawingInteractionActive(false);
+        }}
+        onTouchEnd={() => {
+          if (!writingGuides) setDrawingInteractionActive(false);
+        }}
+        onTouchStart={() => {
+          if (!writingGuides) setDrawingInteractionActive(true);
+        }}
         style={styles.canvas}
         testID="fieldworkFreeDrawingCanvas"
       >
-        {visibleStrokes.flatMap((stroke, strokeIndex) =>
-          toStrokeSegments(stroke, strokeIndex, canvasSize)
+        {previewStrokes.flatMap((stroke, strokeIndex) =>
+          toStrokeSegments(
+            stroke,
+            strokeIndex,
+            canvasSize,
+            previewTransform
+          )
         )}
       </View>
       <KoreanFieldworkFullscreenDrawingModal
         background={writingGuides ? {
           aspectRatio: KOREAN_FIELDWORK_PEN_MEMO_PAGE_ASPECT_RATIO,
+          canvasMode: 'penMemoInfiniteGrid',
           writingGuides: true,
         } : undefined}
         brushColor={brushColor}
@@ -525,6 +608,17 @@ const getLocalTouchPoint = (event: GestureResponderEvent): {
   };
 };
 
+const getPixelTouchPoint = (
+  event: GestureResponderEvent
+): PixelPoint | undefined => {
+  const { locationX, locationY } = getLocalTouchPoint(event);
+
+  return typeof locationX === 'number' && typeof locationY === 'number'
+    && Number.isFinite(locationX) && Number.isFinite(locationY)
+    ? { x: locationX, y: locationY }
+    : undefined;
+};
+
 interface TouchPointCandidate {
   locationX?: number;
   locationY?: number;
@@ -545,11 +639,71 @@ const normalizeCoordinate = (value: number): number =>
 
 const denormalizePoint = (
   point: KoreanFieldworkHandwritingPoint,
+  canvasSize: CanvasSize,
+  previewTransform?: PreviewTransform
+): PixelPoint => previewTransform
+  ? {
+    x: previewTransform.offsetX
+      + ((point.x - previewTransform.minX) * previewTransform.scale),
+    y: previewTransform.offsetY
+      + ((point.y - previewTransform.minY) * previewTransform.scale),
+  }
+  : {
+    x: (point.x / MAX_COORDINATE) * canvasSize.width,
+    y: (point.y / MAX_COORDINATE) * canvasSize.height,
+  };
+
+const getInfiniteGridPreviewTransform = (
+  strokes: readonly KoreanFieldworkHandwritingStroke[],
   canvasSize: CanvasSize
-): PixelPoint => ({
-  x: (point.x / MAX_COORDINATE) * canvasSize.width,
-  y: (point.y / MAX_COORDINATE) * canvasSize.height,
-});
+): PreviewTransform | undefined => {
+  const bounds = strokes.reduce((strokeBounds, stroke) =>
+    stroke.points.reduce((pointBounds, point) => ({
+      hasExtendedPoint: pointBounds.hasExtendedPoint
+        || point.x < 0
+        || point.x > MAX_COORDINATE
+        || point.y < 0
+        || point.y > MAX_COORDINATE,
+      hasPoint: true,
+      maxX: Math.max(pointBounds.maxX, point.x),
+      maxY: Math.max(pointBounds.maxY, point.y),
+      minX: Math.min(pointBounds.minX, point.x),
+      minY: Math.min(pointBounds.minY, point.y),
+    }), strokeBounds), {
+      hasExtendedPoint: false,
+      hasPoint: false,
+      maxX: Number.NEGATIVE_INFINITY,
+      maxY: Number.NEGATIVE_INFINITY,
+      minX: Number.POSITIVE_INFINITY,
+      minY: Number.POSITIVE_INFINITY,
+    });
+  if (!bounds.hasPoint || !bounds.hasExtendedPoint) return undefined;
+
+  const { maxX, maxY, minX, minY } = bounds;
+  const sourceWidth = Math.max(
+    KOREAN_FIELDWORK_PEN_MEMO_GRID_STEP,
+    maxX - minX
+  );
+  const sourceHeight = Math.max(
+    KOREAN_FIELDWORK_PEN_MEMO_GRID_STEP,
+    maxY - minY
+  );
+  const sourceMinX = ((minX + maxX) - sourceWidth) / 2;
+  const sourceMinY = ((minY + maxY) - sourceHeight) / 2;
+  const padding = 16;
+  const scale = Math.max(0.0001, Math.min(
+    Math.max(1, canvasSize.width - (padding * 2)) / sourceWidth,
+    Math.max(1, canvasSize.height - (padding * 2)) / sourceHeight
+  ));
+
+  return {
+    minX: sourceMinX,
+    minY: sourceMinY,
+    offsetX: (canvasSize.width - (sourceWidth * scale)) / 2,
+    offsetY: (canvasSize.height - (sourceHeight * scale)) / 2,
+    scale,
+  };
+};
 
 const getPointDistance = (
   pointA: KoreanFieldworkHandwritingPoint,
@@ -584,13 +738,18 @@ const getInterpolatedStrokePoints = (
 const toStrokeSegments = (
   stroke: KoreanFieldworkHandwritingStroke,
   strokeIndex: number,
-  canvasSize: CanvasSize
+  canvasSize: CanvasSize,
+  previewTransform?: PreviewTransform
 ) => {
   const strokeWidth = getStrokeWidth(stroke);
   const strokeColor = getStrokePreviewColor(stroke);
 
   if (stroke.points.length === 1) {
-    const point = denormalizePoint(stroke.points[0], canvasSize);
+    const point = denormalizePoint(
+      stroke.points[0],
+      canvasSize,
+      previewTransform
+    );
 
     return (
       <View
@@ -612,7 +771,11 @@ const toStrokeSegments = (
     );
   }
 
-  const smoothedPoints = getSmoothedPixelStrokePoints(stroke, canvasSize);
+  const smoothedPoints = getSmoothedPixelStrokePoints(
+    stroke,
+    canvasSize,
+    previewTransform
+  );
 
   const segments = smoothedPoints.slice(1).map((point, pointIndex) => {
     const previousPoint = smoothedPoints[pointIndex];
@@ -675,9 +838,11 @@ const getStrokePreviewColor = (
 
 const getSmoothedPixelStrokePoints = (
   stroke: KoreanFieldworkHandwritingStroke,
-  canvasSize: CanvasSize
+  canvasSize: CanvasSize,
+  previewTransform?: PreviewTransform
 ): PixelPoint[] => {
-  const points = stroke.points.map((point) => denormalizePoint(point, canvasSize));
+  const points = stroke.points.map((point) =>
+    denormalizePoint(point, canvasSize, previewTransform));
   if (points.length < 3) return points;
 
   const smoothedPoints: PixelPoint[] = [];

@@ -140,6 +140,52 @@ describe('korean-fieldwork-evidence-review', () => {
     });
 
 
+    it('fits the complete v2 infinite-grid pen memo while normalized previews stay clamped', () => {
+
+        const value = JSON.stringify({
+            version: 2,
+            coordinateSpace: 'penMemoInfiniteGridV1',
+            strokes: [{
+                points: [{ x: -5000, y: -2000 }, { x: 15000, y: 12000 }]
+            }]
+        });
+
+        expect(getPenMemoSketchPreview(value)).toEqual({
+            label: '스케치 메모 1획/2점.',
+            path: 'M 20 8 L 100 64',
+            viewBox: '0 0 120 72'
+        });
+        expect(getPenMemoSketchPreview(value, {
+            preserveNormalizedCanvas: true
+        })?.path).toBe('M 32 8 L 88 64');
+    });
+
+
+    it('applies v2 infinite-grid erasers before fitting the desktop preview', () => {
+
+        const preview = getPenMemoSketchPreview(JSON.stringify({
+            version: 2,
+            coordinateSpace: 'penMemoInfiniteGridV1',
+            strokes: [
+                {
+                    points: [{ x: -5000, y: 0 }, { x: 15000, y: 0 }],
+                    tool: 'pen',
+                    width: 8
+                },
+                {
+                    points: [{ x: 5000, y: -1000 }, { x: 5000, y: 1000 }],
+                    tool: 'eraser',
+                    width: 12
+                }
+            ]
+        }));
+
+        expect(preview?.path).toBe(
+            'M 8 36 L 59.5 36 M 60.5 36 L 112 36'
+        );
+    });
+
+
     it('preserves boundary-normalized tablet sketch positions for shared site overviews', () => {
 
         const preview = getPenMemoSketchPreview(JSON.stringify({

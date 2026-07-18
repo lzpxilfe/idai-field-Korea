@@ -18,6 +18,20 @@ export interface KoreanFieldworkHandwritingPayload {
   strokes: KoreanFieldworkHandwritingStroke[];
 }
 
+export const KOREAN_FIELDWORK_PEN_MEMO_COORDINATE_SPACE =
+  'penMemoInfiniteGridV1' as const;
+export const KOREAN_FIELDWORK_PEN_MEMO_WORLD_LIMIT = 10000000;
+
+export interface KoreanFieldworkPenMemoHandwritingPayload {
+  coordinateSpace: typeof KOREAN_FIELDWORK_PEN_MEMO_COORDINATE_SPACE;
+  version: 2;
+  strokes: KoreanFieldworkHandwritingStroke[];
+}
+
+export interface KoreanFieldworkHandwritingNormalizationOptions {
+  coordinateSpace?: typeof KOREAN_FIELDWORK_PEN_MEMO_COORDINATE_SPACE;
+}
+
 const MAX_COORDINATE = 10000;
 const MIN_STROKE_WIDTH = 1;
 const MAX_STROKE_WIDTH = 24;
@@ -30,13 +44,18 @@ const ERASER_REFERENCE_CANVAS_SIZE = 640;
 const MIN_ERASER_RADIUS = 24;
 const MIN_ERASER_SAMPLE_SPACING = 8;
 const MAX_ERASER_SAMPLE_SPACING = 40;
+const MAX_ERASER_DENSE_SAMPLES_PER_STROKE = 20000;
 
 export const normalizeKoreanFieldworkHandwritingStrokes = (
-  value: unknown
+  value: unknown,
+  options: KoreanFieldworkHandwritingNormalizationOptions = {}
 ): KoreanFieldworkHandwritingStroke[] => {
   const normalizedValue = typeof value === 'string'
     ? parseKoreanFieldworkHandwritingPayload(value)
     : value;
+  const coordinateSpace = isHandwritingPayload(normalizedValue)
+    ? getCoordinateSpace(normalizedValue)
+    : options.coordinateSpace;
   const strokesValue = isRecord(normalizedValue)
     && Array.isArray(normalizedValue.strokes)
     ? normalizedValue.strokes
@@ -45,7 +64,7 @@ export const normalizeKoreanFieldworkHandwritingStrokes = (
   if (!Array.isArray(strokesValue)) return [];
 
   return strokesValue
-    .map(normalizeStroke)
+    .map((stroke) => normalizeStroke(stroke, coordinateSpace))
     .filter((stroke): stroke is KoreanFieldworkHandwritingStroke => !!stroke);
 };
 
@@ -58,11 +77,18 @@ export const countKoreanFieldworkHandwritingPoints = (
 ): number => strokes.reduce((count, stroke) => count + stroke.points.length, 0);
 
 export const serializeKoreanFieldworkHandwriting = (
-  strokes: readonly KoreanFieldworkHandwritingStroke[]
-): string => JSON.stringify({
-  version: 1,
-  strokes: normalizeKoreanFieldworkHandwritingStrokes(strokes),
-} satisfies KoreanFieldworkHandwritingPayload);
+  strokes: readonly KoreanFieldworkHandwritingStroke[],
+  options: KoreanFieldworkHandwritingNormalizationOptions = {}
+): string => options.coordinateSpace === KOREAN_FIELDWORK_PEN_MEMO_COORDINATE_SPACE
+  ? JSON.stringify({
+    coordinateSpace: KOREAN_FIELDWORK_PEN_MEMO_COORDINATE_SPACE,
+    version: 2,
+    strokes: normalizeKoreanFieldworkHandwritingStrokes(strokes, options),
+  } satisfies KoreanFieldworkPenMemoHandwritingPayload)
+  : JSON.stringify({
+    version: 1,
+    strokes: normalizeKoreanFieldworkHandwritingStrokes(strokes),
+  } satisfies KoreanFieldworkHandwritingPayload);
 
 /**
  * Replays the saved stroke timeline and returns only ink that remains visible.
@@ -70,9 +96,10 @@ export const serializeKoreanFieldworkHandwriting = (
  * remain intact. The stored payload itself is deliberately left unchanged.
  */
 export const applyKoreanFieldworkHandwritingErasers = (
-  value: unknown
+  value: unknown,
+  options: KoreanFieldworkHandwritingNormalizationOptions = {}
 ): KoreanFieldworkHandwritingStroke[] => {
-  const timeline = normalizeKoreanFieldworkHandwritingStrokes(value);
+  const timeline = normalizeKoreanFieldworkHandwritingStrokes(value, options);
   let visibleStrokes: KoreanFieldworkHandwritingStroke[] = [];
 
   for (const stroke of timeline) {
@@ -150,7 +177,8 @@ const getHandwritingPayloadCandidatesFromLine = (line: string): string[] => {
 };
 
 const normalizeStroke = (
-  value: unknown
+  value: unknown,
+  coordinateSpace?: typeof KOREAN_FIELDWORK_PEN_MEMO_COORDINATE_SPACE
 ): KoreanFieldworkHandwritingStroke | undefined => {
   const pointsValue = isRecord(value) && Array.isArray(value.points)
     ? value.points
@@ -159,7 +187,7 @@ const normalizeStroke = (
   if (!Array.isArray(pointsValue)) return undefined;
 
   const points = pointsValue
-    .map(normalizePoint)
+    .map((point) => normalizePoint(point, coordinateSpace))
     .filter((point): point is KoreanFieldworkHandwritingPoint => !!point);
 
   if (points.length === 0) return undefined;
@@ -177,12 +205,13 @@ const normalizeStroke = (
 };
 
 const normalizePoint = (
-  value: unknown
+  value: unknown,
+  coordinateSpace?: typeof KOREAN_FIELDWORK_PEN_MEMO_COORDINATE_SPACE
 ): KoreanFieldworkHandwritingPoint | undefined => {
   if (!isRecord(value)) return undefined;
 
-  const x = normalizeCoordinate(value.x);
-  const y = normalizeCoordinate(value.y);
+  const x = normalizeCoordinate(value.x, coordinateSpace);
+  const y = normalizeCoordinate(value.y, coordinateSpace);
   const pressure = normalizePressure(value.pressure);
 
   return x === undefined || y === undefined
@@ -213,7 +242,12 @@ const subtractEraserStroke = (
     MIN_ERASER_SAMPLE_SPACING,
     Math.min(MAX_ERASER_SAMPLE_SPACING, radius / 3)
   );
-  const sampledPoints = sampleStrokePoints(penStroke.points, sampleSpacing);
+  const sampledPoints = sampleStrokePoints(
+    penStroke.points,
+    sampleSpacing,
+    getStrokeBounds(eraserStroke.points),
+    radius
+  );
   const visibleRuns: KoreanFieldworkHandwritingPoint[][] = [];
   let activeRun: KoreanFieldworkHandwritingPoint[] = [];
 
@@ -266,22 +300,136 @@ const getStrokeBounds = (
 
 const sampleStrokePoints = (
   points: readonly KoreanFieldworkHandwritingPoint[],
-  spacing: number
+  spacing: number,
+  focusBounds: { maxX: number; maxY: number; minX: number; minY: number },
+  focusPadding: number
 ): KoreanFieldworkHandwritingPoint[] => {
   if (points.length < 2) return points.slice();
 
+  const segments = points.slice(1).map((end, index) => {
+    const start = points[index];
+    const interval = getSegmentBoundsIntersectionInterval(
+      start,
+      end,
+      focusBounds,
+      focusPadding
+    );
+    return {
+      end,
+      interval,
+      length: getPointDistance(start, end),
+      start,
+    };
+  });
+  const focusedLength = segments.reduce((length, segment) =>
+    length + (segment.interval
+      ? segment.length * (segment.interval.end - segment.interval.start)
+      : 0), 0);
+  const effectiveSpacing = Math.max(
+    spacing,
+    focusedLength / MAX_ERASER_DENSE_SAMPLES_PER_STROKE
+  );
   const sampledPoints: KoreanFieldworkHandwritingPoint[] = [points[0]];
-  for (let index = 1; index < points.length; index += 1) {
-    const start = points[index - 1];
-    const end = points[index];
-    const distance = getPointDistance(start, end);
-    const steps = Math.max(1, Math.ceil(distance / spacing));
-    for (let step = 1; step <= steps; step += 1) {
-      const progress = step / steps;
-      sampledPoints.push(interpolateHandwritingPoint(start, end, progress));
+  let denseSampleCount = 0;
+  for (const { end, interval, length, start } of segments) {
+    if (!interval) {
+      appendSampledPoint(sampledPoints, end);
+      continue;
     }
+
+    if (interval.start > 0) {
+      appendSampledPoint(
+        sampledPoints,
+        interpolateHandwritingPoint(start, end, interval.start)
+      );
+    }
+    const remainingSampleBudget = Math.max(
+      0,
+      MAX_ERASER_DENSE_SAMPLES_PER_STROKE - denseSampleCount
+    );
+    const steps = Math.min(
+      remainingSampleBudget,
+      Math.max(1, Math.ceil(
+        (length * (interval.end - interval.start)) / effectiveSpacing
+      ))
+    );
+    for (let step = 1; step <= steps; step += 1) {
+      const progress = interval.start
+        + ((interval.end - interval.start) * (step / steps));
+      appendSampledPoint(
+        sampledPoints,
+        interpolateHandwritingPoint(start, end, progress)
+      );
+    }
+    denseSampleCount += steps;
+    if (steps === 0) {
+      appendSampledPoint(
+        sampledPoints,
+        interpolateHandwritingPoint(start, end, interval.end)
+      );
+    }
+    if (interval.end < 1) appendSampledPoint(sampledPoints, end);
   }
   return sampledPoints;
+};
+
+const appendSampledPoint = (
+  points: KoreanFieldworkHandwritingPoint[],
+  point: KoreanFieldworkHandwritingPoint
+): void => {
+  const previousPoint = points[points.length - 1];
+  if (
+    previousPoint
+    && previousPoint.x === point.x
+    && previousPoint.y === point.y
+    && previousPoint.pressure === point.pressure
+  ) {
+    return;
+  }
+  points.push(point);
+};
+
+const getSegmentBoundsIntersectionInterval = (
+  start: KoreanFieldworkHandwritingPoint,
+  end: KoreanFieldworkHandwritingPoint,
+  bounds: { maxX: number; maxY: number; minX: number; minY: number },
+  padding: number
+): { end: number; start: number } | undefined => {
+  let intervalStart = 0;
+  let intervalEnd = 1;
+  const axes = [
+    {
+      change: end.x - start.x,
+      maximum: bounds.maxX + padding,
+      minimum: bounds.minX - padding,
+      origin: start.x,
+    },
+    {
+      change: end.y - start.y,
+      maximum: bounds.maxY + padding,
+      minimum: bounds.minY - padding,
+      origin: start.y,
+    },
+  ];
+
+  for (const axis of axes) {
+    if (axis.change === 0) {
+      if (axis.origin < axis.minimum || axis.origin > axis.maximum) {
+        return undefined;
+      }
+      continue;
+    }
+    const first = (axis.minimum - axis.origin) / axis.change;
+    const second = (axis.maximum - axis.origin) / axis.change;
+    intervalStart = Math.max(intervalStart, Math.min(first, second));
+    intervalEnd = Math.min(intervalEnd, Math.max(first, second));
+    if (intervalStart > intervalEnd) return undefined;
+  }
+
+  return {
+    end: Math.max(0, Math.min(1, intervalEnd)),
+    start: Math.max(0, Math.min(1, intervalStart)),
+  };
 };
 
 const interpolateHandwritingPoint = (
@@ -355,10 +503,19 @@ const normalizePressure = (value: unknown): number | undefined => {
   ) / 1000;
 };
 
-const normalizeCoordinate = (value: unknown): number | undefined => {
+const normalizeCoordinate = (
+  value: unknown,
+  coordinateSpace?: typeof KOREAN_FIELDWORK_PEN_MEMO_COORDINATE_SPACE
+): number | undefined => {
   if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
 
-  return Math.max(0, Math.min(MAX_COORDINATE, Math.round(value)));
+  const roundedValue = Math.round(value);
+  return coordinateSpace === KOREAN_FIELDWORK_PEN_MEMO_COORDINATE_SPACE
+    ? Math.max(
+      -KOREAN_FIELDWORK_PEN_MEMO_WORLD_LIMIT,
+      Math.min(KOREAN_FIELDWORK_PEN_MEMO_WORLD_LIMIT, roundedValue)
+    )
+    : Math.max(0, Math.min(MAX_COORDINATE, roundedValue));
 };
 
 const normalizeStrokeWidth = (value: unknown): number | undefined => {
@@ -393,6 +550,18 @@ const parseKoreanFieldworkHandwritingPayload = (value: string): unknown => {
     return value;
   }
 };
+
+const getCoordinateSpace = (
+  value: unknown
+): typeof KOREAN_FIELDWORK_PEN_MEMO_COORDINATE_SPACE | undefined =>
+  isRecord(value)
+  && value.version === 2
+  && value.coordinateSpace === KOREAN_FIELDWORK_PEN_MEMO_COORDINATE_SPACE
+    ? KOREAN_FIELDWORK_PEN_MEMO_COORDINATE_SPACE
+    : undefined;
+
+const isHandwritingPayload = (value: unknown): boolean =>
+  isRecord(value) && Array.isArray(value.strokes);
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   !!value && typeof value === 'object';

@@ -79,6 +79,8 @@ const MAX_NORMALIZED_PREVIEW_SOURCE_SEGMENTS = 6000;
 const MAX_NORMALIZED_PREVIEW_VISIBLE_SEGMENTS = 8000;
 const MAX_NORMALIZED_PREVIEW_ERASER_CHECKS = 250000;
 const NORMALIZED_PREVIEW_INTERVAL_EPSILON = 0.000001;
+const PEN_MEMO_INFINITE_GRID_COORDINATE_SPACE = 'penMemoInfiniteGridV1';
+const PEN_MEMO_INFINITE_GRID_COORDINATE_LIMIT = 10000000;
 
 export interface KoreanFieldworkPenMemoTranscriptionSummary {
     document: Document;
@@ -555,7 +557,7 @@ export function getPenMemoSketchPreview(
         } = {}
 ): KoreanFieldworkPenMemoSketchPreview|undefined {
 
-    const strokes = getPenMemoStrokes(value);
+    const strokes = getPenMemoStrokes(value, !options.preserveNormalizedCanvas);
     const drawableStrokes = strokes.filter(stroke => stroke.tool !== 'eraser');
     if (drawableStrokes.length === 0) return undefined;
 
@@ -565,11 +567,22 @@ export function getPenMemoSketchPreview(
     const visibleNormalizedSegments = options.preserveNormalizedCanvas
         ? getVisibleNormalizedCanvasSegments(strokes, normalizedCanvasAspectRatio)
         : [];
+    const shouldReplayInfiniteGridErasers = !options.preserveNormalizedCanvas
+        && isPenMemoInfiniteGridValue(value)
+        && strokes.some(stroke => stroke.tool === 'eraser');
+    const visibleInfiniteGridSegments = shouldReplayInfiniteGridErasers
+        ? getVisibleNormalizedCanvasSegments(strokes, 1)
+        : [];
     if (options.preserveNormalizedCanvas && visibleNormalizedSegments.length === 0) {
         return undefined;
     }
+    if (shouldReplayInfiniteGridErasers && visibleInfiniteGridSegments.length === 0) {
+        return undefined;
+    }
 
-    const points = drawableStrokes.flatMap(stroke => stroke.points);
+    const points = shouldReplayInfiniteGridErasers
+        ? visibleInfiniteGridSegments.flatMap(segment => [segment.start, segment.end])
+        : drawableStrokes.flatMap(stroke => stroke.points);
     const bounds = options.preserveNormalizedCanvas
         ? { minX: 0, minY: 0, maxX: 10000, maxY: 10000 }
         : getPointBounds(points);
@@ -603,6 +616,15 @@ export function getPenMemoSketchPreview(
             ))
             .filter(strokePath => strokePath.length > 0)
             .join(' ')
+        : shouldReplayInfiniteGridErasers
+            ? visibleInfiniteGridSegments
+                .map(segment => getPreviewStrokePath(
+                    isSamePenMemoPoint(segment.start, segment.end)
+                        ? [toPreviewPoint(segment.start)]
+                        : [toPreviewPoint(segment.start), toPreviewPoint(segment.end)]
+                ))
+                .filter(strokePath => strokePath.length > 0)
+                .join(' ')
         : drawableStrokes
             .map(stroke => getPreviewStrokePath(stroke.points.map(toPreviewPoint)))
             .filter(strokePath => strokePath.length > 0)
@@ -645,31 +667,41 @@ function getPenMemoStrokeStatsFromStrokes(strokes: KoreanFieldworkPenMemoStroke[
 }
 
 
-function getPenMemoStrokes(value: unknown): KoreanFieldworkPenMemoStroke[] {
+function getPenMemoStrokes(
+        value: unknown,
+        allowInfiniteGridCoordinates: boolean = false
+): KoreanFieldworkPenMemoStroke[] {
 
-    if (typeof value !== 'string') return getParsedPenMemoStrokes(value);
+    if (typeof value !== 'string') {
+        return getParsedPenMemoStrokes(value, allowInfiniteGridCoordinates);
+    }
 
     const trimmedValue = value.trim();
     if (!trimmedValue || trimmedValue === '[]') return [];
 
     try {
-        return getParsedPenMemoStrokes(JSON.parse(trimmedValue));
+        return getParsedPenMemoStrokes(JSON.parse(trimmedValue), allowInfiniteGridCoordinates);
     } catch (_err) {
         return [];
     }
 }
 
 
-function getParsedPenMemoStrokes(value: unknown): KoreanFieldworkPenMemoStroke[] {
+function getParsedPenMemoStrokes(
+        value: unknown,
+        allowInfiniteGridCoordinates: boolean = false
+): KoreanFieldworkPenMemoStroke[] {
 
     const strokesValue = isRecord(value) && Array.isArray(value.strokes)
         ? value.strokes
         : value;
     if (!Array.isArray(strokesValue)) return [];
+    const preserveInfiniteGridCoordinates = allowInfiniteGridCoordinates
+        && isPenMemoInfiniteGridPayload(value);
 
     return strokesValue
         .map(stroke => ({
-            points: getStrokePoints(stroke),
+            points: getStrokePoints(stroke, preserveInfiniteGridCoordinates),
             tool: isRecord(stroke) && stroke.tool === 'eraser'
                 ? 'eraser' as const
                 : 'pen' as const,
@@ -1025,7 +1057,10 @@ function isSamePenMemoPoint(
 }
 
 
-function getStrokePoints(stroke: unknown): KoreanFieldworkPenMemoPoint[] {
+function getStrokePoints(
+        stroke: unknown,
+        preserveInfiniteGridCoordinates: boolean = false
+): KoreanFieldworkPenMemoPoint[] {
 
     const points = isRecord(stroke) && Array.isArray(stroke.points)
         ? stroke.points
@@ -1034,29 +1069,61 @@ function getStrokePoints(stroke: unknown): KoreanFieldworkPenMemoPoint[] {
     if (!Array.isArray(points)) return [];
 
     return points
-        .map(getStrokePoint)
+        .map(point => getStrokePoint(point, preserveInfiniteGridCoordinates))
         .filter((point): point is KoreanFieldworkPenMemoPoint => point !== undefined);
 }
 
 
-function getStrokePoint(point: unknown): KoreanFieldworkPenMemoPoint|undefined {
+function getStrokePoint(
+        point: unknown,
+        preserveInfiniteGridCoordinates: boolean
+): KoreanFieldworkPenMemoPoint|undefined {
 
     if (!isRecord(point)) return undefined;
+    const x = getFiniteCoordinate(point.x, preserveInfiniteGridCoordinates);
+    const y = getFiniteCoordinate(point.y, preserveInfiniteGridCoordinates);
 
-    return getFiniteCoordinate(point.x) === undefined || getFiniteCoordinate(point.y) === undefined
+    return x === undefined || y === undefined
         ? undefined
-        : {
-            x: getFiniteCoordinate(point.x) as number,
-            y: getFiniteCoordinate(point.y) as number
-        };
+        : { x, y };
 }
 
 
-function getFiniteCoordinate(value: unknown): number|undefined {
+function getFiniteCoordinate(
+        value: unknown,
+        preserveInfiniteGridCoordinates: boolean
+): number|undefined {
 
-    return typeof value === 'number' && Number.isFinite(value)
-        ? Math.max(0, Math.min(10000, value))
-        : undefined;
+    if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
+
+    const coordinateLimit = preserveInfiniteGridCoordinates
+        ? PEN_MEMO_INFINITE_GRID_COORDINATE_LIMIT
+        : 10000;
+
+    return Math.max(
+        preserveInfiniteGridCoordinates ? -coordinateLimit : 0,
+        Math.min(coordinateLimit, value)
+    );
+}
+
+
+function isPenMemoInfiniteGridPayload(value: unknown): boolean {
+
+    return isRecord(value)
+        && value.version === 2
+        && value.coordinateSpace === PEN_MEMO_INFINITE_GRID_COORDINATE_SPACE;
+}
+
+
+function isPenMemoInfiniteGridValue(value: unknown): boolean {
+
+    if (typeof value !== 'string') return isPenMemoInfiniteGridPayload(value);
+
+    try {
+        return isPenMemoInfiniteGridPayload(JSON.parse(value));
+    } catch (_err) {
+        return false;
+    }
 }
 
 

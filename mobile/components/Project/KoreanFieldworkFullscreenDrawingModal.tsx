@@ -15,6 +15,9 @@ import {
 } from 'react-native';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
 import {
+  applyKoreanFieldworkHandwritingErasers,
+  KOREAN_FIELDWORK_PEN_MEMO_COORDINATE_SPACE,
+  KOREAN_FIELDWORK_PEN_MEMO_WORLD_LIMIT,
   KoreanFieldworkHandwritingStroke,
   KoreanFieldworkHandwritingTool,
   normalizeKoreanFieldworkHandwritingStrokes,
@@ -22,6 +25,7 @@ import {
 import {
   KOREAN_FIELDWORK_PEN_MEMO_GRID_STEP,
   KOREAN_FIELDWORK_PEN_MEMO_LINE_HEIGHT,
+  KOREAN_FIELDWORK_PEN_MEMO_MAJOR_EVERY,
 } from './korean-fieldwork-pen-memo-layout';
 
 export const DEFAULT_FIELDWORK_BRUSH_WIDTH = 5;
@@ -43,6 +47,7 @@ export type FieldworkDrawingInteractionTool =
 export interface FieldworkFullscreenDrawingBackground {
   aspectRatio?: number;
   boundaryPoints?: { x: number; y: number }[];
+  canvasMode?: 'bounded' | 'penMemoInfiniteGrid';
   label?: string;
   satelliteAttribution?: string;
   satelliteTiles?: {
@@ -125,9 +130,14 @@ const KoreanFieldworkFullscreenDrawingModal: React.FC<Props> = ({
   const currentStrokesRef = useRef<KoreanFieldworkHandwritingStroke[]>([]);
   const undoHistoryRef = useRef<KoreanFieldworkHandwritingStroke[][]>([]);
   const redoHistoryRef = useRef<KoreanFieldworkHandwritingStroke[][]>([]);
+  const coordinateSpace = background?.canvasMode === 'penMemoInfiniteGrid'
+    ? KOREAN_FIELDWORK_PEN_MEMO_COORDINATE_SPACE
+    : undefined;
   const normalizedStrokes = useMemo(
-    () => normalizeKoreanFieldworkHandwritingStrokes(strokes),
-    [strokes]
+    () => normalizeKoreanFieldworkHandwritingStrokes(strokes, {
+      coordinateSpace,
+    }),
+    [coordinateSpace, strokes]
   );
   const [html, setHtml] = useState<string>();
   const [currentStrokes, setCurrentStrokes] =
@@ -192,7 +202,8 @@ const KoreanFieldworkFullscreenDrawingModal: React.FC<Props> = ({
   };
   const updateStrokes = (nextStrokes: KoreanFieldworkHandwritingStroke[]) => {
     const normalizedNextStrokes = normalizeKoreanFieldworkHandwritingStrokes(
-      nextStrokes
+      nextStrokes,
+      { coordinateSpace }
     );
     currentStrokesRef.current = normalizedNextStrokes;
     setCurrentStrokes(normalizedNextStrokes);
@@ -251,7 +262,10 @@ const KoreanFieldworkFullscreenDrawingModal: React.FC<Props> = ({
     }
 
     if (message.type === 'strokes') {
-      recordStrokes(normalizeKoreanFieldworkHandwritingStrokes(message.payload));
+      recordStrokes(normalizeKoreanFieldworkHandwritingStrokes(
+        message.payload,
+        { coordinateSpace }
+      ));
     }
   };
 
@@ -364,7 +378,7 @@ const KoreanFieldworkFullscreenDrawingModal: React.FC<Props> = ({
           >
             <MaterialIcons name="grid-on" size={14} color="#2f6f4e" />
             <Text style={styles.writingGuideNoticeText}>
-              방안지 무늬는 화면에만 표시 · 저장과 글자 인식에서 제외됩니다
+              작은 칸 5×5마다 굵은 선 · 손가락으로 메모지를 계속 이동할 수 있습니다
             </Text>
           </View>
         )}
@@ -612,13 +626,28 @@ const buildFullscreenDrawingHtml = ({
   drawingTool: KoreanFieldworkHandwritingTool;
   strokes: KoreanFieldworkHandwritingStroke[];
 }): string => {
+  const coordinateSpace = background?.canvasMode === 'penMemoInfiniteGrid'
+    ? KOREAN_FIELDWORK_PEN_MEMO_COORDINATE_SPACE
+    : undefined;
+  const initialStrokes = normalizeKoreanFieldworkHandwritingStrokes(strokes, {
+    coordinateSpace,
+  });
+  const visibleInk = coordinateSpace
+    ? applyKoreanFieldworkHandwritingErasers(initialStrokes, {
+      coordinateSpace,
+    })
+    : [];
+  const lastVisibleStroke = visibleInk[visibleInk.length - 1];
+  const initialFocusPoint = lastVisibleStroke
+    ?.points[lastVisibleStroke.points.length - 1];
   const initialState = toHtmlJson({
     background,
     brushColor,
     brushWidth,
     drawingTool,
+    initialFocusPoint,
     maxCoordinate: MAX_COORDINATE,
-    strokes: normalizeKoreanFieldworkHandwritingStrokes(strokes),
+    strokes: initialStrokes,
   });
 
   return `<!doctype html>
@@ -650,13 +679,17 @@ let isDrawing=false;
 let lassoPoints=[];
 let selectedIndices=[];
 let selectionMove=null;
-let lastPenInteractionAt=0;
+let activePenPointerId=null;
 let renderQueued=false;
 let pixelRatio=1;
+let hasInitializedInfiniteViewport=false;
 const maxCoordinate=state.maxCoordinate||10000;
 const background=state.background||{};
 const penMemoGridStep=${KOREAN_FIELDWORK_PEN_MEMO_GRID_STEP};
 const penMemoLineHeight=${KOREAN_FIELDWORK_PEN_MEMO_LINE_HEIGHT};
+const penMemoMajorEvery=${KOREAN_FIELDWORK_PEN_MEMO_MAJOR_EVERY};
+const penMemoWorldLimit=${KOREAN_FIELDWORK_PEN_MEMO_WORLD_LIMIT};
+const isInfiniteGrid=background.canvasMode==='penMemoInfiniteGrid';
 const satelliteTiles=(Array.isArray(background.satelliteTiles)
   ?background.satelliteTiles:[]).map((tile)=>{
     const image=new Image();
@@ -671,8 +704,8 @@ const releasePointMinDistance=${FULLSCREEN_DRAWING_RELEASE_POINT_MIN_DISTANCE};
 const interpolatedPointSpacing=${FULLSCREEN_DRAWING_INTERPOLATED_POINT_SPACING};
 const maxInterpolatedPointsPerMove=${FULLSCREEN_DRAWING_MAX_INTERPOLATED_POINTS_PER_MOVE};
 let viewport={offsetX:0,offsetY:0,scale:1};
-const palmRejectionAfterPenMs=700;
-const palmContactSize=34;
+const minimumUsableCanvasSize=16;
+const maxGridLinesPerAxis=512;
 function post(type,payload){
   if(window.ReactNativeWebView){
     window.ReactNativeWebView.postMessage(JSON.stringify({type,payload}));
@@ -685,6 +718,7 @@ function resize(){
   canvas.width=Math.max(1,Math.round(rect.width*ratio));
   canvas.height=Math.max(1,Math.round(rect.height*ratio));
   ctx.setTransform(ratio,0,0,ratio,0,0);
+  initializeInfiniteViewport();
   requestRender();
 }
 function getCssSize(){
@@ -692,7 +726,9 @@ function getCssSize(){
   return {height:rect.height,width:rect.width};
 }
 function getBaseDrawingFrame(){
-  const size=getCssSize();
+  return getBaseDrawingFrameForSize(getCssSize());
+}
+function getBaseDrawingFrameForSize(size){
   const aspectRatio=Math.max(0.05,Math.min(20,Number(background.aspectRatio)||1));
   const canvasAspect=size.width/Math.max(size.height,1);
   let width=size.width;
@@ -721,6 +757,23 @@ function toScreenPoint(point){
     y:(size.height/2)+((base.y-(size.height/2))*viewport.scale)+viewport.offsetY
   };
 }
+function initializeInfiniteViewport(){
+  if(!isInfiniteGrid||hasInitializedInfiniteViewport) return;
+  const size=getCssSize();
+  if(size.width<=minimumUsableCanvasSize||size.height<=minimumUsableCanvasSize) return;
+  hasInitializedInfiniteViewport=true;
+  const latestPoint=state.initialFocusPoint;
+  if(!latestPoint||(
+    latestPoint.x>=0&&latestPoint.x<=maxCoordinate
+    &&latestPoint.y>=0&&latestPoint.y<=maxCoordinate
+  )) return;
+  const latestScreenPoint=toScreenPoint(latestPoint);
+  viewport={
+    offsetX:viewport.offsetX+(size.width/2)-latestScreenPoint.x,
+    offsetY:viewport.offsetY+(size.height/2)-latestScreenPoint.y,
+    scale:viewport.scale
+  };
+}
 function screenToNormalized(point){
   if(!point||!Number.isFinite(point.x)||!Number.isFinite(point.y)) return undefined;
   const size=getCssSize();
@@ -733,12 +786,25 @@ function screenToNormalized(point){
     y:((point.y-viewport.offsetY-(size.height/2))/viewport.scale)+(size.height/2)
   };
   if(!Number.isFinite(base.x)||!Number.isFinite(base.y)) return undefined;
-  if(base.x<frame.left||base.x>frame.left+frame.width||base.y<frame.top||base.y>frame.top+frame.height){
+  if(!isInfiniteGrid&&(
+    base.x<frame.left||base.x>frame.left+frame.width
+    ||base.y<frame.top||base.y>frame.top+frame.height
+  )){
     return undefined;
   }
+  const minimumCoordinate=isInfiniteGrid?-penMemoWorldLimit:0;
+  const maximumCoordinate=isInfiniteGrid?penMemoWorldLimit:maxCoordinate;
   const normalized={
-    x:clamp(Math.round(((base.x-frame.left)/frame.width)*maxCoordinate),0,maxCoordinate),
-    y:clamp(Math.round(((base.y-frame.top)/frame.height)*maxCoordinate),0,maxCoordinate)
+    x:clamp(
+      Math.round(((base.x-frame.left)/frame.width)*maxCoordinate),
+      minimumCoordinate,
+      maximumCoordinate
+    ),
+    y:clamp(
+      Math.round(((base.y-frame.top)/frame.height)*maxCoordinate),
+      minimumCoordinate,
+      maximumCoordinate
+    )
   };
   if(Number.isFinite(point.pressure)) normalized.pressure=clamp(point.pressure,0,1);
   return normalized;
@@ -804,14 +870,21 @@ function updateGestureFromPointers(){
   }
   if(second){
     const center=getMidpoint(first,second);
+    const size=getCssSize();
     const nextScale=clamp(
       gesture.scale*(getPixelDistance(first,second)/Math.max(gesture.distance,1)),
       1,
       6
     );
     viewport={
-      offsetX:gesture.offsetX+(center.x-gesture.center.x),
-      offsetY:gesture.offsetY+(center.y-gesture.center.y),
+      offsetX:center.x-(size.width/2)-(
+        (gesture.center.x-(size.width/2)-gesture.offsetX)
+        /gesture.scale
+      )*nextScale,
+      offsetY:center.y-(size.height/2)-(
+        (gesture.center.y-(size.height/2)-gesture.offsetY)
+        /gesture.scale
+      )*nextScale,
       scale:nextScale
     };
   }else{
@@ -823,11 +896,12 @@ function updateGestureFromPointers(){
   }
   requestRender();
 }
+function cancelTouchGestureForPen(){
+  activePointers.clear();
+  if(gesture&&(gesture.kind==='pan'||gesture.kind==='pinch')) gesture=null;
+}
 function isPalmPointer(event){
-  return event.pointerType==='touch'&&(
-    Math.max(Number(event.width)||0,Number(event.height)||0)>=palmContactSize
-    || Date.now()-lastPenInteractionAt<palmRejectionAfterPenMs
-  );
+  return event.pointerType==='touch'&&activePenPointerId!==null;
 }
 function startPointer(event){
   event.preventDefault();
@@ -839,7 +913,10 @@ function startPointer(event){
     startGestureFromPointers();
     return;
   }
-  if(event.pointerType==='pen') lastPenInteractionAt=Date.now();
+  if(event.pointerType==='pen'){
+    activePenPointerId=event.pointerId;
+    cancelTouchGestureForPen();
+  }
   canvas.setPointerCapture&&canvas.setPointerCapture(event.pointerId);
   if(drawingTool==='hand'){
     gesture={
@@ -882,7 +959,6 @@ function movePointer(event){
     updateGestureFromPointers();
     return;
   }
-  if(event.pointerType==='pen') lastPenInteractionAt=Date.now();
   if(gesture&&gesture.kind==='directPan'&&gesture.pointerId===event.pointerId){
     event.preventDefault();
     viewport={
@@ -919,7 +995,9 @@ function endPointer(event){
     }
     return;
   }
-  if(event.pointerType==='pen') lastPenInteractionAt=Date.now();
+  if(event.pointerType==='pen'&&activePenPointerId===event.pointerId){
+    activePenPointerId=null;
+  }
   if(gesture&&gesture.kind==='directPan'&&gesture.pointerId===event.pointerId){
     gesture=null;
     return;
@@ -1003,12 +1081,14 @@ function selectStrokesInLasso(){
 function moveSelectedStrokes(deltaX,deltaY){
   if(!Number.isFinite(deltaX)||!Number.isFinite(deltaY)) return;
   const selected=new Set(selectedIndices);
+  const minimumCoordinate=isInfiniteGrid?-penMemoWorldLimit:0;
+  const maximumCoordinate=isInfiniteGrid?penMemoWorldLimit:maxCoordinate;
   strokes=strokes.map((stroke,index)=>selected.has(index)?{
     ...stroke,
     points:stroke.points.map((point)=>({
       ...point,
-      x:clamp(Math.round(point.x+deltaX),0,maxCoordinate),
-      y:clamp(Math.round(point.y+deltaY),0,maxCoordinate)
+      x:clamp(Math.round(point.x+deltaX),minimumCoordinate,maximumCoordinate),
+      y:clamp(Math.round(point.y+deltaY),minimumCoordinate,maximumCoordinate)
     }))
   }:stroke);
 }
@@ -1170,55 +1250,82 @@ function drawBackground(){
 }
 function drawWritingGuidePaper(){
   const size=getCssSize();
-  const start=toScreenPoint({x:0,y:0});
-  const end=toScreenPoint({x:maxCoordinate,y:maxCoordinate});
-  const left=Math.min(start.x,end.x);
-  const top=Math.min(start.y,end.y);
-  const width=Math.abs(end.x-start.x);
-  const height=Math.abs(end.y-start.y);
-
   ctx.save();
-  ctx.fillStyle='#e9edf0';
-  ctx.fillRect(0,0,size.width,size.height);
   ctx.fillStyle='#fffef9';
-  ctx.fillRect(left,top,width,height);
-  ctx.beginPath();
-  ctx.rect(left,top,width,height);
-  ctx.clip();
+  ctx.fillRect(0,0,size.width,size.height);
+  if(size.width<=minimumUsableCanvasSize||size.height<=minimumUsableCanvasSize){
+    ctx.restore();
+    return;
+  }
 
-  for(let x=penMemoGridStep;x<maxCoordinate;x+=penMemoGridStep){
-    const isMajor=x%penMemoLineHeight===0;
-    const guideStart=toScreenPoint({x,y:0});
-    const guideEnd=toScreenPoint({x,y:maxCoordinate});
+  const frame=getBaseDrawingFrameForSize(size);
+  const pixelsPerCoordinateX=(frame.width/maxCoordinate)*viewport.scale;
+  const pixelsPerCoordinateY=(frame.height/maxCoordinate)*viewport.scale;
+  if(
+    !Number.isFinite(pixelsPerCoordinateX)||pixelsPerCoordinateX<=0
+    ||!Number.isFinite(pixelsPerCoordinateY)||pixelsPerCoordinateY<=0
+  ){
+    ctx.restore();
+    return;
+  }
+  const originX=(size.width/2)
+    +((frame.left-(size.width/2))*viewport.scale)+viewport.offsetX;
+  const originY=(size.height/2)
+    +((frame.top-(size.height/2))*viewport.scale)+viewport.offsetY;
+  const minimumCoordinate=isInfiniteGrid?-penMemoWorldLimit:0;
+  const maximumCoordinate=isInfiniteGrid?penMemoWorldLimit:maxCoordinate;
+  const xRange=getVisibleGridIndexRange(
+    clamp((0-originX)/pixelsPerCoordinateX,minimumCoordinate,maximumCoordinate),
+    clamp((size.width-originX)/pixelsPerCoordinateX,minimumCoordinate,maximumCoordinate)
+  );
+  const yRange=getVisibleGridIndexRange(
+    clamp((0-originY)/pixelsPerCoordinateY,minimumCoordinate,maximumCoordinate),
+    clamp((size.height-originY)/pixelsPerCoordinateY,minimumCoordinate,maximumCoordinate)
+  );
+
+  for(let gridIndex=xRange.first;gridIndex<=xRange.last;gridIndex+=xRange.stride){
+    const x=gridIndex*xRange.step;
+    const isMajor=((gridIndex%penMemoMajorEvery)+penMemoMajorEvery)
+      %penMemoMajorEvery===0;
+    const screenX=originX+(x*pixelsPerCoordinateX);
     ctx.strokeStyle=isMajor
       ?'rgba(47,111,78,0.22)'
       :'rgba(47,111,78,0.075)';
     ctx.lineWidth=isMajor?1.15:0.7;
     ctx.beginPath();
-    ctx.moveTo(guideStart.x,guideStart.y);
-    ctx.lineTo(guideEnd.x,guideEnd.y);
+    ctx.moveTo(screenX,0);
+    ctx.lineTo(screenX,size.height);
     ctx.stroke();
   }
-  for(let y=penMemoGridStep;y<maxCoordinate;y+=penMemoGridStep){
-    const isLineBoundary=y%penMemoLineHeight===0;
-    const guideStart=toScreenPoint({x:0,y});
-    const guideEnd=toScreenPoint({x:maxCoordinate,y});
-    ctx.strokeStyle=isLineBoundary
+  for(let gridIndex=yRange.first;gridIndex<=yRange.last;gridIndex+=yRange.stride){
+    const y=gridIndex*yRange.step;
+    const isMajor=((gridIndex%penMemoMajorEvery)+penMemoMajorEvery)
+      %penMemoMajorEvery===0;
+    const screenY=originY+(y*pixelsPerCoordinateY);
+    ctx.strokeStyle=isMajor
       ?'rgba(47,111,78,0.28)'
       :'rgba(47,111,78,0.075)';
-    ctx.lineWidth=isLineBoundary?1.35:0.7;
+    ctx.lineWidth=isMajor?1.35:0.7;
     ctx.beginPath();
-    ctx.moveTo(guideStart.x,guideStart.y);
-    ctx.lineTo(guideEnd.x,guideEnd.y);
+    ctx.moveTo(0,screenY);
+    ctx.lineTo(size.width,screenY);
     ctx.stroke();
   }
   ctx.restore();
-
-  ctx.save();
-  ctx.strokeStyle='rgba(47,111,78,0.34)';
-  ctx.lineWidth=1.2;
-  ctx.strokeRect(left,top,width,height);
-  ctx.restore();
+}
+function getVisibleGridIndexRange(firstCoordinate,lastCoordinate){
+  const step=Math.max(1,Number(penMemoGridStep)||1);
+  const minimum=Math.min(firstCoordinate,lastCoordinate);
+  const maximum=Math.max(firstCoordinate,lastCoordinate);
+  const first=Math.floor(minimum/step);
+  const last=Math.ceil(maximum/step);
+  const lineCount=Math.max(1,last-first+1);
+  return {
+    first,
+    last,
+    step,
+    stride:Math.max(1,Math.ceil(lineCount/maxGridLinesPerAxis))
+  };
 }
 function drawSelectionOverlay(){
   ctx.save();

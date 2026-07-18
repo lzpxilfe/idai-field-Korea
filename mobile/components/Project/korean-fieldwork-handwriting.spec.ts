@@ -2,6 +2,7 @@ import {
   applyKoreanFieldworkHandwritingErasers,
   buildKoreanFieldworkHandwritingNoteText,
   extractKoreanFieldworkHandwritingFromText,
+  KOREAN_FIELDWORK_PEN_MEMO_COORDINATE_SPACE,
   normalizeKoreanFieldworkHandwritingStrokes,
   serializeKoreanFieldworkHandwriting,
 } from './korean-fieldwork-handwriting';
@@ -64,6 +65,49 @@ describe('Korean fieldwork handwriting', () => {
       { points: [{ x: 10, y: 20 }], width: 8 },
       { points: [{ x: 20, y: 30 }], width: 24 },
     ]);
+  });
+
+  it('preserves signed infinite-grid PenMemo coordinates without changing v1', () => {
+    const payload = serializeKoreanFieldworkHandwriting([
+      { points: [{ x: -2400.4, y: 12800.6 }] },
+    ], {
+      coordinateSpace: KOREAN_FIELDWORK_PEN_MEMO_COORDINATE_SPACE,
+    });
+
+    expect(JSON.parse(payload)).toEqual({
+      coordinateSpace: 'penMemoInfiniteGridV1',
+      version: 2,
+      strokes: [{ points: [{ x: -2400, y: 12801 }] }],
+    });
+    expect(normalizeKoreanFieldworkHandwritingStrokes(payload)).toEqual([
+      { points: [{ x: -2400, y: 12801 }] },
+    ]);
+    expect(normalizeKoreanFieldworkHandwritingStrokes({
+      version: 1,
+      strokes: [{ points: [{ x: -2400, y: 12801 }] }],
+    }, {
+      coordinateSpace: KOREAN_FIELDWORK_PEN_MEMO_COORDINATE_SPACE,
+    })).toEqual([
+      { points: [{ x: 0, y: 10000 }] },
+    ]);
+  });
+
+  it('applies a finite safety limit to infinite-grid coordinates', () => {
+    expect(normalizeKoreanFieldworkHandwritingStrokes({
+      coordinateSpace: 'penMemoInfiniteGridV1',
+      version: 2,
+      strokes: [{
+        points: [
+          { x: -20000000, y: 20000000 },
+          { x: 20000000, y: -20000000 },
+        ],
+      }],
+    })).toEqual([{
+      points: [
+        { x: -10000000, y: 10000000 },
+        { x: 10000000, y: -10000000 },
+      ],
+    }]);
   });
 
   it('preserves normalized S Pen pressure without changing legacy points', () => {
@@ -141,6 +185,39 @@ describe('Korean fieldwork handwriting', () => {
       .toBeGreaterThan(500);
     expect(visibleStrokes.flatMap((stroke) => stroke.points))
       .not.toContainEqual({ x: 500, y: 1000 });
+  });
+
+  it('samples only near an eraser on a very long infinite-grid stroke', () => {
+    const visibleStrokes = applyKoreanFieldworkHandwritingErasers({
+      coordinateSpace: 'penMemoInfiniteGridV1',
+      version: 2,
+      strokes: [
+        {
+          points: [
+            { x: -10000000, y: 1000 },
+            { x: 10000000, y: 1000 },
+          ],
+          tool: 'pen',
+          width: 5,
+        },
+        {
+          points: [
+            { x: 12345, y: 800 },
+            { x: 12345, y: 1200 },
+          ],
+          tool: 'eraser',
+          width: 12,
+        },
+      ],
+    });
+
+    expect(visibleStrokes).toHaveLength(2);
+    expect(Math.max(...visibleStrokes[0].points.map((point) => point.x)))
+      .toBeLessThan(12345);
+    expect(Math.min(...visibleStrokes[1].points.map((point) => point.x)))
+      .toBeGreaterThan(12345);
+    expect(visibleStrokes.flatMap((stroke) => stroke.points).length)
+      .toBeLessThan(100);
   });
 
   it('removes an earlier pen stroke completely when fully covered', () => {
