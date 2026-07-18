@@ -1,13 +1,18 @@
 import { NativeModules, Platform } from 'react-native';
 import {
+  applyKoreanFieldworkHandwritingErasers,
   hasKoreanFieldworkHandwriting,
   KoreanFieldworkHandwritingStroke,
-  normalizeKoreanFieldworkHandwritingStrokes,
   serializeKoreanFieldworkHandwriting,
 } from '@/components/Project/korean-fieldwork-handwriting';
+import {
+  KOREAN_FIELDWORK_PEN_MEMO_COORDINATE_MAX,
+  KOREAN_FIELDWORK_PEN_MEMO_LINE_COUNT,
+  KOREAN_FIELDWORK_PEN_MEMO_LINE_HEIGHT,
+} from '@/components/Project/korean-fieldwork-pen-memo-layout';
 
-const WRITING_AREA_WIDTH = 10000;
-const ESTIMATED_LINE_HEIGHT = 2000;
+const WRITING_AREA_WIDTH = KOREAN_FIELDWORK_PEN_MEMO_COORDINATE_MAX;
+const ESTIMATED_LINE_HEIGHT = KOREAN_FIELDWORK_PEN_MEMO_LINE_HEIGHT;
 
 interface NativeRecognitionModule {
   downloadModel: () => Promise<KoreanHandwritingModelStatus>;
@@ -52,8 +57,7 @@ export const recognizeKoreanHandwriting = async (
   strokesValue: unknown,
   preContext = ''
 ): Promise<KoreanHandwritingRecognitionResult> => {
-  const strokes = normalizeKoreanFieldworkHandwritingStrokes(strokesValue)
-    .filter((stroke) => stroke.tool !== 'eraser');
+  const strokes = applyKoreanFieldworkHandwritingErasers(strokesValue);
   if (!hasKoreanFieldworkHandwriting(strokes)) {
     throw new Error('읽을 수 있는 펜 필기가 없습니다.');
   }
@@ -94,15 +98,14 @@ export const recognizeKoreanHandwriting = async (
 export const getKoreanHandwritingLinePayloads = (
   strokesValue: unknown
 ): string[] => {
-  const strokes = normalizeKoreanFieldworkHandwritingStrokes(strokesValue)
-    .filter((stroke) => stroke.tool !== 'eraser');
+  const strokes = applyKoreanFieldworkHandwritingErasers(strokesValue);
   const lines = new Map<number, KoreanFieldworkHandwritingStroke[]>();
 
   strokes.forEach((stroke) => {
     const averageY = stroke.points.reduce((sum, point) => sum + point.y, 0)
       / Math.max(1, stroke.points.length);
     const lineIndex = Math.max(0, Math.min(
-      4,
+      KOREAN_FIELDWORK_PEN_MEMO_LINE_COUNT - 1,
       Math.floor(averageY / ESTIMATED_LINE_HEIGHT)
     ));
     const lineStartY = lineIndex * ESTIMATED_LINE_HEIGHT;
@@ -110,7 +113,10 @@ export const getKoreanHandwritingLinePayloads = (
       ...stroke,
       points: stroke.points.map((point) => ({
         ...point,
-        y: Math.max(0, point.y - lineStartY),
+        y: Math.max(0, Math.min(
+          ESTIMATED_LINE_HEIGHT - 1,
+          point.y - lineStartY
+        )),
       })),
     };
     lines.set(lineIndex, [...(lines.get(lineIndex) ?? []), shiftedStroke]);

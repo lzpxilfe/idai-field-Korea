@@ -19,6 +19,10 @@ import {
   KoreanFieldworkHandwritingTool,
   normalizeKoreanFieldworkHandwritingStrokes,
 } from './korean-fieldwork-handwriting';
+import {
+  KOREAN_FIELDWORK_PEN_MEMO_GRID_STEP,
+  KOREAN_FIELDWORK_PEN_MEMO_LINE_HEIGHT,
+} from './korean-fieldwork-pen-memo-layout';
 
 export const DEFAULT_FIELDWORK_BRUSH_WIDTH = 5;
 export const FIELDWORK_BRUSH_WIDTH_OPTIONS = [3, 5, 8, 12] as const;
@@ -353,6 +357,17 @@ const KoreanFieldworkFullscreenDrawingModal: React.FC<Props> = ({
           showAdvancedTools
           testIDPrefix={`${testIDPrefix}FullscreenBrush`}
         />
+        {background?.writingGuides && (
+          <View
+            style={styles.writingGuideNotice}
+            testID={`${testIDPrefix}FullscreenWritingGuideNotice`}
+          >
+            <MaterialIcons name="grid-on" size={14} color="#2f6f4e" />
+            <Text style={styles.writingGuideNoticeText}>
+              방안지 무늬는 화면에만 표시 · 저장과 글자 인식에서 제외됩니다
+            </Text>
+          </View>
+        )}
         {html && (
           <WebView
             androidLayerType="hardware"
@@ -640,6 +655,8 @@ let renderQueued=false;
 let pixelRatio=1;
 const maxCoordinate=state.maxCoordinate||10000;
 const background=state.background||{};
+const penMemoGridStep=${KOREAN_FIELDWORK_PEN_MEMO_GRID_STEP};
+const penMemoLineHeight=${KOREAN_FIELDWORK_PEN_MEMO_LINE_HEIGHT};
 const satelliteTiles=(Array.isArray(background.satelliteTiles)
   ?background.satelliteTiles:[]).map((tile)=>{
     const image=new Image();
@@ -1099,6 +1116,9 @@ function getAveragePressure(first,second){
   return (firstPressure+secondPressure)/2;
 }
 function drawBackground(){
+  if(background.writingGuides){
+    drawWritingGuidePaper();
+  }
   if(satelliteTiles.length>0){
     ctx.save();
     ctx.globalAlpha=0.82;
@@ -1120,20 +1140,6 @@ function drawBackground(){
         Math.abs(end.y-start.y)
       );
     });
-    ctx.restore();
-  }
-  if(background.writingGuides){
-    ctx.save();
-    ctx.strokeStyle='rgba(47,111,78,0.18)';
-    ctx.lineWidth=1;
-    for(let y=2000;y<maxCoordinate;y+=2000){
-      const start=toScreenPoint({x:0,y});
-      const end=toScreenPoint({x:maxCoordinate,y});
-      ctx.beginPath();
-      ctx.moveTo(start.x,start.y);
-      ctx.lineTo(end.x,end.y);
-      ctx.stroke();
-    }
     ctx.restore();
   }
   const points=Array.isArray(background.boundaryPoints)
@@ -1160,6 +1166,58 @@ function drawBackground(){
     ctx.font='700 13px sans-serif';
     ctx.fillText(background.label,12,24);
   }
+  ctx.restore();
+}
+function drawWritingGuidePaper(){
+  const size=getCssSize();
+  const start=toScreenPoint({x:0,y:0});
+  const end=toScreenPoint({x:maxCoordinate,y:maxCoordinate});
+  const left=Math.min(start.x,end.x);
+  const top=Math.min(start.y,end.y);
+  const width=Math.abs(end.x-start.x);
+  const height=Math.abs(end.y-start.y);
+
+  ctx.save();
+  ctx.fillStyle='#e9edf0';
+  ctx.fillRect(0,0,size.width,size.height);
+  ctx.fillStyle='#fffef9';
+  ctx.fillRect(left,top,width,height);
+  ctx.beginPath();
+  ctx.rect(left,top,width,height);
+  ctx.clip();
+
+  for(let x=penMemoGridStep;x<maxCoordinate;x+=penMemoGridStep){
+    const isMajor=x%penMemoLineHeight===0;
+    const guideStart=toScreenPoint({x,y:0});
+    const guideEnd=toScreenPoint({x,y:maxCoordinate});
+    ctx.strokeStyle=isMajor
+      ?'rgba(47,111,78,0.22)'
+      :'rgba(47,111,78,0.075)';
+    ctx.lineWidth=isMajor?1.15:0.7;
+    ctx.beginPath();
+    ctx.moveTo(guideStart.x,guideStart.y);
+    ctx.lineTo(guideEnd.x,guideEnd.y);
+    ctx.stroke();
+  }
+  for(let y=penMemoGridStep;y<maxCoordinate;y+=penMemoGridStep){
+    const isLineBoundary=y%penMemoLineHeight===0;
+    const guideStart=toScreenPoint({x:0,y});
+    const guideEnd=toScreenPoint({x:maxCoordinate,y});
+    ctx.strokeStyle=isLineBoundary
+      ?'rgba(47,111,78,0.28)'
+      :'rgba(47,111,78,0.075)';
+    ctx.lineWidth=isLineBoundary?1.35:0.7;
+    ctx.beginPath();
+    ctx.moveTo(guideStart.x,guideStart.y);
+    ctx.lineTo(guideEnd.x,guideEnd.y);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  ctx.save();
+  ctx.strokeStyle='rgba(47,111,78,0.34)';
+  ctx.lineWidth=1.2;
+  ctx.strokeRect(left,top,width,height);
   ctx.restore();
 }
 function drawSelectionOverlay(){
@@ -1379,6 +1437,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '900',
     marginRight: 8,
+  },
+  writingGuideNotice: {
+    alignItems: 'center',
+    backgroundColor: '#f0fdf4',
+    borderBottomColor: '#bbf7d0',
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    minHeight: 30,
+    paddingHorizontal: 12,
+  },
+  writingGuideNoticeText: {
+    color: '#2f5f4a',
+    fontSize: 11,
+    fontWeight: '800',
+    marginLeft: 6,
   },
   brushOption: {
     alignItems: 'center',

@@ -28,6 +28,8 @@ import KoreanFieldworkFullscreenDrawingModal, {
   DEFAULT_FIELDWORK_DRAWING_TOOL,
   KoreanFieldworkBrushControls,
 } from './KoreanFieldworkFullscreenDrawingModal';
+import { KOREAN_FIELDWORK_PEN_MEMO_PAGE_ASPECT_RATIO }
+  from './korean-fieldwork-pen-memo-layout';
 
 export const KOREAN_FIELDWORK_FREE_DRAWING_FIELDS = {
   drawingStrokes: 'drawingSketchStrokes',
@@ -424,7 +426,7 @@ const KoreanFieldworkFreeDrawingPanel: React.FC<Props> = ({
       </View>
       <KoreanFieldworkFullscreenDrawingModal
         background={writingGuides ? {
-          aspectRatio: 1.6,
+          aspectRatio: KOREAN_FIELDWORK_PEN_MEMO_PAGE_ASPECT_RATIO,
           writingGuides: true,
         } : undefined}
         brushColor={brushColor}

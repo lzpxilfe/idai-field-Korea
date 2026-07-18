@@ -1,4 +1,5 @@
 import {
+  applyKoreanFieldworkHandwritingErasers,
   buildKoreanFieldworkHandwritingNoteText,
   extractKoreanFieldworkHandwritingFromText,
   normalizeKoreanFieldworkHandwritingStrokes,
@@ -114,5 +115,69 @@ describe('Korean fieldwork handwriting', () => {
         width: 12,
       },
     ]);
+  });
+
+  it('removes only the middle of an earlier pen stroke crossed by an eraser', () => {
+    const visibleStrokes = applyKoreanFieldworkHandwritingErasers({
+      version: 1,
+      strokes: [
+        {
+          points: [{ x: 0, y: 1000 }, { x: 1000, y: 1000 }],
+          tool: 'pen',
+          width: 5,
+        },
+        {
+          points: [{ x: 500, y: 800 }, { x: 500, y: 1200 }],
+          tool: 'eraser',
+          width: 12,
+        },
+      ],
+    });
+
+    expect(visibleStrokes).toHaveLength(2);
+    expect(Math.max(...visibleStrokes[0].points.map((point) => point.x)))
+      .toBeLessThan(500);
+    expect(Math.min(...visibleStrokes[1].points.map((point) => point.x)))
+      .toBeGreaterThan(500);
+    expect(visibleStrokes.flatMap((stroke) => stroke.points))
+      .not.toContainEqual({ x: 500, y: 1000 });
+  });
+
+  it('removes an earlier pen stroke completely when fully covered', () => {
+    expect(applyKoreanFieldworkHandwritingErasers({
+      version: 1,
+      strokes: [
+        { points: [{ x: 450, y: 1000 }, { x: 550, y: 1000 }] },
+        {
+          points: [{ x: 400, y: 1000 }, { x: 600, y: 1000 }],
+          tool: 'eraser',
+          width: 24,
+        },
+      ],
+    })).toEqual([]);
+  });
+
+  it('preserves pen strokes written after the eraser interaction', () => {
+    const rewrittenStroke = {
+      color: '#dc2626',
+      points: [{ x: 450, y: 1000 }, { x: 550, y: 1000 }],
+      tool: 'pen' as const,
+      width: 5,
+    };
+    const visibleStrokes = applyKoreanFieldworkHandwritingErasers({
+      version: 1,
+      strokes: [
+        { points: [{ x: 0, y: 1000 }, { x: 1000, y: 1000 }] },
+        {
+          points: [{ x: 500, y: 800 }, { x: 500, y: 1200 }],
+          tool: 'eraser',
+          width: 12,
+        },
+        rewrittenStroke,
+      ],
+    });
+
+    expect(visibleStrokes).toContainEqual(rewrittenStroke);
+    expect(visibleStrokes.every((stroke) => stroke.tool !== 'eraser')).toBe(true);
   });
 });

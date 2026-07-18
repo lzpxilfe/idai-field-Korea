@@ -273,6 +273,50 @@ describe('KoreanFieldworkFreeDrawingPanel', () => {
     expect(getByTestId('fieldworkFreeDrawingFullscreenCanvas')).toBeTruthy();
   });
 
+  it('shows pen memos on a square graph-paper guide that is never saved as ink', () => {
+    const handleUpdateStrokes = jest.fn();
+    const { getByTestId, getByText } = render(
+      <KoreanFieldworkFreeDrawingPanel
+        onUpdateStrokes={handleUpdateStrokes}
+        writingGuides
+      />
+    );
+
+    fireEvent.press(getByTestId('fieldworkFreeDrawingFullscreen'));
+    const fullscreenCanvas = getByTestId('fieldworkFreeDrawingFullscreenCanvas');
+    const html = fullscreenCanvas.props.source.html as string;
+
+    expect(getByTestId('fieldworkFreeDrawingFullscreenWritingGuideNotice'))
+      .toBeTruthy();
+    expect(getByText(/저장과 글자 인식에서 제외/)).toBeTruthy();
+    expect(html).toContain('"aspectRatio":1');
+    expect(html).toContain('"writingGuides":true');
+    expect(html).toContain('const penMemoGridStep=2000;');
+    expect(html).toContain('const penMemoLineHeight=2000;');
+    expect(html).toContain('function drawWritingGuidePaper()');
+
+    const canvas = getByTestId('fieldworkFreeDrawingCanvas');
+    fireEvent(canvas, 'responderGrant', {
+      nativeEvent: { locationX: 32, locationY: 28 },
+    });
+    fireEvent(canvas, 'responderMove', {
+      nativeEvent: { locationX: 160, locationY: 140 },
+    });
+    fireEvent(canvas, 'responderRelease', {
+      nativeEvent: { locationX: 160, locationY: 140 },
+    });
+
+    const payload = JSON.parse(handleUpdateStrokes.mock.calls[0][0]);
+    expect(payload).toEqual({
+      version: 1,
+      strokes: [expect.objectContaining({
+        points: expect.any(Array),
+        tool: 'pen',
+      })],
+    });
+    expect(handleUpdateStrokes.mock.calls[0][0]).not.toContain('writingGuide');
+  });
+
   it('keeps full-screen drawing coordinates valid and samples strokes densely', () => {
     const { getByTestId } = render(
       <KoreanFieldworkFreeDrawingPanel

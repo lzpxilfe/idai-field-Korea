@@ -24,6 +24,12 @@ const MAX_STROKE_WIDTH = 24;
 const MIN_PRESSURE = 0;
 const MAX_PRESSURE = 1;
 const HEX_COLOR_PATTERN = /^#[0-9a-f]{6}$/i;
+const DEFAULT_PEN_WIDTH = 5;
+const DEFAULT_ERASER_WIDTH = 5;
+const ERASER_REFERENCE_CANVAS_SIZE = 640;
+const MIN_ERASER_RADIUS = 24;
+const MIN_ERASER_SAMPLE_SPACING = 8;
+const MAX_ERASER_SAMPLE_SPACING = 40;
 
 export const normalizeKoreanFieldworkHandwritingStrokes = (
   value: unknown
@@ -57,6 +63,30 @@ export const serializeKoreanFieldworkHandwriting = (
   version: 1,
   strokes: normalizeKoreanFieldworkHandwritingStrokes(strokes),
 } satisfies KoreanFieldworkHandwritingPayload);
+
+/**
+ * Replays the saved stroke timeline and returns only ink that remains visible.
+ * Erasers affect preceding pen strokes, while pen strokes written afterwards
+ * remain intact. The stored payload itself is deliberately left unchanged.
+ */
+export const applyKoreanFieldworkHandwritingErasers = (
+  value: unknown
+): KoreanFieldworkHandwritingStroke[] => {
+  const timeline = normalizeKoreanFieldworkHandwritingStrokes(value);
+  let visibleStrokes: KoreanFieldworkHandwritingStroke[] = [];
+
+  for (const stroke of timeline) {
+    if (stroke.tool !== 'eraser') {
+      visibleStrokes.push(stroke);
+      continue;
+    }
+
+    visibleStrokes = visibleStrokes.flatMap((visibleStroke) =>
+      subtractEraserStroke(visibleStroke, stroke));
+  }
+
+  return visibleStrokes;
+};
 
 export const buildKoreanFieldworkHandwritingNoteText = (
   strokes: readonly KoreanFieldworkHandwritingStroke[]
@@ -163,6 +193,159 @@ const normalizePoint = (
       y,
     };
 };
+
+const subtractEraserStroke = (
+  penStroke: KoreanFieldworkHandwritingStroke,
+  eraserStroke: KoreanFieldworkHandwritingStroke
+): KoreanFieldworkHandwritingStroke[] => {
+  const radius = Math.max(
+    MIN_ERASER_RADIUS,
+    (
+      (eraserStroke.width ?? DEFAULT_ERASER_WIDTH)
+      + (penStroke.width ?? DEFAULT_PEN_WIDTH)
+    ) / 2 * (MAX_COORDINATE / ERASER_REFERENCE_CANVAS_SIZE)
+  );
+  if (!strokeBoundsOverlap(penStroke, eraserStroke, radius)) {
+    return [penStroke];
+  }
+
+  const sampleSpacing = Math.max(
+    MIN_ERASER_SAMPLE_SPACING,
+    Math.min(MAX_ERASER_SAMPLE_SPACING, radius / 3)
+  );
+  const sampledPoints = sampleStrokePoints(penStroke.points, sampleSpacing);
+  const visibleRuns: KoreanFieldworkHandwritingPoint[][] = [];
+  let activeRun: KoreanFieldworkHandwritingPoint[] = [];
+
+  for (const point of sampledPoints) {
+    if (getDistanceToStroke(point, eraserStroke.points) > radius) {
+      activeRun.push(point);
+    } else if (activeRun.length > 0) {
+      visibleRuns.push(activeRun);
+      activeRun = [];
+    }
+  }
+  if (activeRun.length > 0) visibleRuns.push(activeRun);
+
+  return visibleRuns.map((points) => ({
+    ...(penStroke.color ? { color: penStroke.color } : {}),
+    points,
+    ...(penStroke.tool ? { tool: penStroke.tool } : {}),
+    ...(penStroke.width !== undefined ? { width: penStroke.width } : {}),
+  }));
+};
+
+const strokeBoundsOverlap = (
+  first: KoreanFieldworkHandwritingStroke,
+  second: KoreanFieldworkHandwritingStroke,
+  padding: number
+): boolean => {
+  const firstBounds = getStrokeBounds(first.points);
+  const secondBounds = getStrokeBounds(second.points);
+
+  return firstBounds.minX <= secondBounds.maxX + padding
+    && firstBounds.maxX >= secondBounds.minX - padding
+    && firstBounds.minY <= secondBounds.maxY + padding
+    && firstBounds.maxY >= secondBounds.minY - padding;
+};
+
+const getStrokeBounds = (
+  points: readonly KoreanFieldworkHandwritingPoint[]
+): { maxX: number; maxY: number; minX: number; minY: number } =>
+  points.slice(1).reduce((bounds, point) => ({
+    maxX: Math.max(bounds.maxX, point.x),
+    maxY: Math.max(bounds.maxY, point.y),
+    minX: Math.min(bounds.minX, point.x),
+    minY: Math.min(bounds.minY, point.y),
+  }), {
+    maxX: points[0].x,
+    maxY: points[0].y,
+    minX: points[0].x,
+    minY: points[0].y,
+  });
+
+const sampleStrokePoints = (
+  points: readonly KoreanFieldworkHandwritingPoint[],
+  spacing: number
+): KoreanFieldworkHandwritingPoint[] => {
+  if (points.length < 2) return points.slice();
+
+  const sampledPoints: KoreanFieldworkHandwritingPoint[] = [points[0]];
+  for (let index = 1; index < points.length; index += 1) {
+    const start = points[index - 1];
+    const end = points[index];
+    const distance = getPointDistance(start, end);
+    const steps = Math.max(1, Math.ceil(distance / spacing));
+    for (let step = 1; step <= steps; step += 1) {
+      const progress = step / steps;
+      sampledPoints.push(interpolateHandwritingPoint(start, end, progress));
+    }
+  }
+  return sampledPoints;
+};
+
+const interpolateHandwritingPoint = (
+  start: KoreanFieldworkHandwritingPoint,
+  end: KoreanFieldworkHandwritingPoint,
+  progress: number
+): KoreanFieldworkHandwritingPoint => {
+  const pressure = start.pressure !== undefined || end.pressure !== undefined
+    ? (start.pressure ?? 0.5)
+      + (((end.pressure ?? start.pressure ?? 0.5) - (start.pressure ?? 0.5))
+        * progress)
+    : undefined;
+
+  return {
+    ...(pressure !== undefined
+      ? { pressure: Math.round(pressure * 1000) / 1000 }
+      : {}),
+    x: Math.round(start.x + ((end.x - start.x) * progress)),
+    y: Math.round(start.y + ((end.y - start.y) * progress)),
+  };
+};
+
+const getDistanceToStroke = (
+  point: KoreanFieldworkHandwritingPoint,
+  strokePoints: readonly KoreanFieldworkHandwritingPoint[]
+): number => {
+  if (strokePoints.length === 1) return getPointDistance(point, strokePoints[0]);
+
+  let minimumDistance = Number.POSITIVE_INFINITY;
+  for (let index = 1; index < strokePoints.length; index += 1) {
+    minimumDistance = Math.min(
+      minimumDistance,
+      getDistanceToSegment(point, strokePoints[index - 1], strokePoints[index])
+    );
+  }
+  return minimumDistance;
+};
+
+const getDistanceToSegment = (
+  point: KoreanFieldworkHandwritingPoint,
+  start: KoreanFieldworkHandwritingPoint,
+  end: KoreanFieldworkHandwritingPoint
+): number => {
+  const deltaX = end.x - start.x;
+  const deltaY = end.y - start.y;
+  const lengthSquared = (deltaX ** 2) + (deltaY ** 2);
+  if (lengthSquared === 0) return getPointDistance(point, start);
+
+  const projection = Math.max(0, Math.min(1,
+    (((point.x - start.x) * deltaX) + ((point.y - start.y) * deltaY))
+      / lengthSquared
+  ));
+  return getPointDistance(point, {
+    x: start.x + (deltaX * projection),
+    y: start.y + (deltaY * projection),
+  });
+};
+
+const getPointDistance = (
+  first: KoreanFieldworkHandwritingPoint,
+  second: KoreanFieldworkHandwritingPoint
+): number => Math.sqrt(
+  ((second.x - first.x) ** 2) + ((second.y - first.y) ** 2)
+);
 
 const normalizePressure = (value: unknown): number | undefined => {
   if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
