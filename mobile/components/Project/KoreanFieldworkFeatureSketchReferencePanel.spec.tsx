@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 import { Document } from 'idai-field-core';
 import React from 'react';
 import { StyleSheet } from 'react-native';
@@ -18,6 +18,37 @@ jest.mock('@expo/vector-icons', () => {
 const C = KOREAN_FIELDWORK_CATEGORIES;
 
 describe('KoreanFieldworkFeatureSketchReferencePanel', () => {
+  it('opens free sketch only after the feature-shape preview is pressed twice', () => {
+    const onOpenFreeSketch = jest.fn();
+    const feature = createDoc('feature-1', C.FEATURE, {
+      featureLocationSketch: JSON.stringify({
+        version: 1,
+        shape: 'oval',
+        center: { x: 50, y: 50 },
+        points: [{ x: 50, y: 50 }],
+        rotation: 0,
+        scale: 100,
+      }),
+    });
+    const { getByTestId } = render(
+      <KoreanFieldworkFeatureSketchReferencePanel
+        document={feature}
+        documents={[feature]}
+        onOpenFreeSketch={onOpenFreeSketch}
+      />
+    );
+
+    fireEvent.press(getByTestId('featureShapeSketchPreview'));
+    expect(onOpenFreeSketch).not.toHaveBeenCalled();
+
+    fireEvent.press(getByTestId('featureShapeSketchPreview'));
+    expect(onOpenFreeSketch).toHaveBeenCalledTimes(1);
+
+    fireEvent.press(getByTestId('featureBoundaryLocationPreview'));
+    fireEvent.press(getByTestId('featureBoundaryLocationPreview'));
+    expect(onOpenFreeSketch).toHaveBeenCalledTimes(1);
+  });
+
   it('shows feature location against the survey boundary and the feature shape', () => {
     const feature = createDoc('feature-1', C.FEATURE, {
       featureLocationSketch: JSON.stringify({

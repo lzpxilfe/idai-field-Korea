@@ -18,6 +18,7 @@ import {
 import PouchDB from 'pouchdb-node';
 import React from 'react';
 import { t2 } from '@/test_data/test_docs/t2';
+import { si1 } from '@/test_data/test_docs/si1';
 import { ConfigurationContext } from '@/contexts/configuration-context';
 import LabelsContext from '@/contexts/labels/labels-context';
 import { PreferencesContext } from '@/contexts/preferences-context';
@@ -380,18 +381,41 @@ describe('DocumentAdd', () => {
   it('adds a sketch canvas to new pen memo records instead of exposing raw memo JSON', async () => {
     cleanup();
     mockUseGlobalSearchParams.mockReturnValue({
-      parentDocId: t2.resource.id,
+      parentDocId: si1.resource.id,
       categoryName: 'PenMemo',
     });
     renderAPI = renderDocumentAddScreen(
       preferences,
       createProjectConfiguration([createCategory('PenMemo')]),
-      repository
+      repository,
+      [si1]
     );
 
     await waitFor(() => renderAPI.getByTestId('koreanFieldworkFreeDrawingPanel'));
+    expect(renderAPI.getByTestId('featureSketchReferencePanel')).toBeTruthy();
+    expect(renderAPI.queryByTestId('fieldworkFreeDrawingFullscreenCanvas')).toBeNull();
     expect(renderAPI.queryByTestId('groupSelect_koreanFieldwork')).toBeNull();
-    drawStroke(renderAPI);
+    fireEvent.press(renderAPI.getByTestId('fieldworkFreeDrawingFullscreen'));
+    fireEvent(
+      renderAPI.getByTestId('fieldworkFreeDrawingFullscreenCanvas'),
+      'message',
+      {
+        nativeEvent: {
+          data: JSON.stringify({
+            payload: [{
+              points: [
+                { x: 1000, y: 1000 },
+                { x: 3000, y: 3000 },
+              ],
+              tool: 'pen',
+              width: 5,
+            }],
+            type: 'strokes',
+          }),
+        },
+      }
+    );
+    fireEvent.press(renderAPI.getByTestId('fieldworkFreeDrawingFullscreenClose'));
     fireEvent.press(renderAPI.getByTestId('saveDocBtn'));
 
     await waitFor(() => expect(repository.create).toHaveBeenCalledTimes(1));

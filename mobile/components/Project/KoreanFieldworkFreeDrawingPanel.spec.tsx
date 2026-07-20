@@ -546,6 +546,34 @@ describe('KoreanFieldworkFreeDrawingPanel', () => {
     expect(getByTestId('fieldworkFreeDrawingFullscreenCanvas')).toBeTruthy();
   });
 
+  it('reopens the full-screen canvas for each external request', () => {
+    const { getByTestId, queryByTestId, rerender } = render(
+      <KoreanFieldworkFreeDrawingPanel
+        fullscreenRequestId={0}
+        onUpdateStrokes={jest.fn()}
+      />
+    );
+
+    rerender(
+      <KoreanFieldworkFreeDrawingPanel
+        fullscreenRequestId={1}
+        onUpdateStrokes={jest.fn()}
+      />
+    );
+    expect(getByTestId('fieldworkFreeDrawingFullscreenCanvas')).toBeTruthy();
+
+    fireEvent.press(getByTestId('fieldworkFreeDrawingFullscreenClose'));
+    expect(queryByTestId('fieldworkFreeDrawingFullscreenCanvas')).toBeNull();
+
+    rerender(
+      <KoreanFieldworkFreeDrawingPanel
+        fullscreenRequestId={2}
+        onUpdateStrokes={jest.fn()}
+      />
+    );
+    expect(getByTestId('fieldworkFreeDrawingFullscreenCanvas')).toBeTruthy();
+  });
+
   it('does not show technical stroke and point counts in the sketch header', () => {
     const { queryByText } = render(
       <KoreanFieldworkFreeDrawingPanel

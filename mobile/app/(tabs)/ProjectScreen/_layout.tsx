@@ -46,6 +46,8 @@ const ProjectLayout = ({
   const { preferences } = preferencesContext;
   const [isTakingLong, setIsTakingLong] = useState(false);
   const projectSettings = preferences.projects[preferences.currentProject];
+  const projectDisplayName =
+    projectSettings?.displayName?.trim() || preferences.currentProject;
   const clearInitialPullPending = useCallback(() => {
     if (!preferences.currentProject || !projectSettings?.initialPullPending) return;
 
@@ -82,7 +84,7 @@ const ProjectLayout = ({
   if (!config) {
     return (
       <ProjectConfigurationLoadingState
-        projectName={preferences.currentProject}
+        projectName={projectDisplayName}
         isTakingLong={isTakingLong}
       />
     );

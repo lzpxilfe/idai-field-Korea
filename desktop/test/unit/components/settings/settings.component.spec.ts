@@ -83,37 +83,6 @@ describe('SettingsComponent', () => {
     });
 
 
-    it('tracks Kakao map provider keys in the Korean fieldwork settings section', async () => {
-
-        const component = createComponent({
-            get: jest.fn().mockResolvedValue(createProjectDocument({
-                projectInvestigationMode: 'trialTrench',
-                projectBoundarySummary: 'Area 1 boundary'
-            }))
-        });
-
-        await component.ngOnInit();
-
-        expect(component.hasKoreanSatelliteMapDisplayKey()).toBe(false);
-        expect(component.getKoreanMapProviderNotice()).toContain('REST 키만으로는 지도 화면을 표시할 수 없습니다');
-
-        component.settings.mapProviderSettings.kakaoLocalRestApiKey = 'rest-key';
-
-        expect(component.hasKoreanSatelliteMapDisplayKey()).toBe(false);
-        expect(component.getKoreanMapProviderNotice()).toContain('주소 검색과 좌표 변환용');
-
-        component.settings.mapProviderSettings.kakaoNativeAppKey = 'native-key';
-
-        expect(component.hasKoreanSatelliteMapDisplayKey()).toBe(false);
-        expect(component.getKoreanMapProviderNotice()).toContain('JavaScript 키 WebView 경로를 우선 사용');
-
-        component.settings.mapProviderSettings.kakaoMapJavaScriptKey = 'js-key';
-
-        expect(component.hasKoreanSatelliteMapDisplayKey()).toBe(true);
-        expect(component.getKoreanMapProviderNotice()).toContain('JavaScript 키');
-    });
-
-
     it('prepares a desktop receive database for a tablet-first project', async () => {
 
         const settingsService = {

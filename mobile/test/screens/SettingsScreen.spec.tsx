@@ -22,6 +22,7 @@ import {
   createKoreanFieldworkDefaultInstitutionNameStorageKey,
   createKoreanFieldworkInvestigationModeStorageKey,
   createKoreanFieldworkProjectBoundaryDraftStorageKey,
+  createKoreanFieldworkProjectDisplayNameStorageKey,
 } from '@/components/Project/korean-fieldwork-investigation-mode';
 import useConfiguration from '@/hooks/use-configuration';
 import usePouchDbDatastore from '@/hooks/use-pouchdb-datastore';
@@ -49,6 +50,29 @@ describe('SettingsScreen', () => {
     mockedUsePouchDbDatastore.mockReturnValue(undefined);
     mockedUseConfiguration.mockReturnValue(undefined);
     mockedUseRepository.mockReturnValue(undefined);
+  });
+
+  it('shows the project display name and separates its desktop link ID', async () => {
+    await AsyncStorage.setItem(
+      createKoreanFieldworkProjectDisplayNameStorageKey('fieldwork-1'),
+      '테스트'
+    );
+    const preferences = createPreferencesContextValue(jest.fn());
+    const { getByTestId, getByText } = render(
+      <SafeAreaInsetsContext.Provider value={safeAreaInsets}>
+        <PreferencesContext.Provider value={preferences}>
+          <SettingsScreen />
+        </PreferencesContext.Provider>
+      </SafeAreaInsetsContext.Provider>
+    );
+
+    await waitFor(() => {
+      expect(getByTestId('settings-current-project').props.children)
+        .toBe('테스트');
+    });
+    expect(getByText('데스크톱 연동 ID')).toBeTruthy();
+    expect(getByTestId('settings-current-project-link-id').props.children)
+      .toBe('fieldwork-1');
   });
 
   it('saves worker name and current project investigation mode', async () => {
@@ -423,19 +447,19 @@ describe('SettingsScreen', () => {
     }));
   });
 
-  it('saves Kakao map provider keys without hardcoding them into project setup', async () => {
+  it('uses the map background without exposing Kakao key inputs', async () => {
     const setMapProviderSettings = jest.fn();
     const preferences = createPreferencesContextValue(jest.fn(), {
       mapProviderSettings: {
-        kakaoLocalRestApiKey: '',
-        kakaoMapJavaScriptKey: '',
-        kakaoNativeAppKey: '',
+        kakaoLocalRestApiKey: 'legacy-rest-key',
+        kakaoMapJavaScriptKey: 'legacy-js-key',
+        kakaoNativeAppKey: 'legacy-native-key',
       },
     }, {
       setMapProviderSettings,
     });
 
-    const { getByTestId, getByText } = render(
+    const { getByText, queryByTestId } = render(
       <SafeAreaInsetsContext.Provider value={safeAreaInsets}>
         <PreferencesContext.Provider value={preferences}>
           <SettingsScreen />
@@ -444,31 +468,13 @@ describe('SettingsScreen', () => {
     );
 
     await waitFor(() => {
-      expect(getByText('지도 API 키')).toBeTruthy();
+      expect(getByText('지도 배경')).toBeTruthy();
     });
-
-    fireEvent.changeText(
-      getByTestId('settings-kakao-local-rest-api-key-input'),
-      '  rest-key  '
-    );
-    fireEvent.changeText(
-      getByTestId('settings-kakao-map-javascript-key-input'),
-      '  js-key  '
-    );
-    fireEvent.changeText(
-      getByTestId('settings-kakao-native-app-key-input'),
-      '  native-key  '
-    );
-    fireEvent.press(getByTestId('settings-save'));
-
-    await waitFor(() => {
-      expect(setMapProviderSettings).toHaveBeenCalledWith(expect.objectContaining({
-        kakaoLocalRestApiKey: 'rest-key',
-        kakaoMapJavaScriptKey: 'js-key',
-        kakaoNativeAppKey: 'native-key',
-      }));
-      expect(router.back).toHaveBeenCalled();
-    });
+    expect(getByText(/별도 API 키 없이/)).toBeTruthy();
+    expect(queryByTestId('settings-kakao-local-rest-api-key-input')).toBeNull();
+    expect(queryByTestId('settings-kakao-map-javascript-key-input')).toBeNull();
+    expect(queryByTestId('settings-kakao-native-app-key-input')).toBeNull();
+    expect(setMapProviderSettings).not.toHaveBeenCalled();
   });
 
   it('loads current project setup from the project document when local values are missing', async () => {

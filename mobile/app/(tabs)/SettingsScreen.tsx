@@ -55,17 +55,12 @@ const SettingsScreen: React.FC = () => {
     preferences.preferences.username
   );
   const [institutionName, setInstitutionName] = useState('');
-  const [kakaoLocalRestApiKey, setKakaoLocalRestApiKey] = useState('');
-  const [kakaoMapJavaScriptKey, setKakaoMapJavaScriptKey] = useState('');
-  const [kakaoNativeAppKey, setKakaoNativeAppKey] = useState('');
   const [investigationModeId, setInvestigationModeId] =
     useState<KoreanFieldworkInvestigationModeId>();
   const [boundarySummary, setBoundarySummary] = useState('');
   const [projectBoundaryDraft, setProjectBoundaryDraft] =
     useState<KoreanFieldworkProjectBoundaryDraft>();
   const [hasProjectSetupInteraction, setHasProjectSetupInteraction] =
-    useState(false);
-  const [hasMapProviderInteraction, setHasMapProviderInteraction] =
     useState(false);
   const hasProjectSetupInteractionRef = useRef(false);
   const hasInstitutionNameInteractionRef = useRef(false);
@@ -74,6 +69,15 @@ const SettingsScreen: React.FC = () => {
   const repositoryUsername = preferences.preferences.username.trim();
   const currentProjectSettings =
     preferences.preferences.projects[currentProject];
+  const [projectDisplayName, setProjectDisplayName] = useState(
+    currentProjectSettings?.displayName?.trim() ?? ''
+  );
+  const visibleProjectName =
+    projectDisplayName
+    || currentProjectSettings?.displayName?.trim()
+    || currentProject;
+  const hasSeparateProjectLinkId =
+    visibleProjectName.length > 0 && visibleProjectName !== currentProject;
   const clearInitialPullPending = useCallback(() => {
     if (!currentProject || !currentProjectSettings?.initialPullPending) return;
 
@@ -100,19 +104,6 @@ const SettingsScreen: React.FC = () => {
   );
 
   useEffect(() => {
-    setKakaoLocalRestApiKey(
-      preferences.preferences.mapProviderSettings.kakaoLocalRestApiKey
-    );
-    setKakaoMapJavaScriptKey(
-      preferences.preferences.mapProviderSettings.kakaoMapJavaScriptKey
-    );
-    setKakaoNativeAppKey(
-      preferences.preferences.mapProviderSettings.kakaoNativeAppKey
-    );
-    setHasMapProviderInteraction(false);
-  }, [preferences.preferences.mapProviderSettings]);
-
-  useEffect(() => {
     let isActive = true;
 
     loadKoreanFieldworkDefaultInstitutionName()
@@ -131,6 +122,7 @@ const SettingsScreen: React.FC = () => {
     let isActive = true;
 
     if (!hasCurrentProject) {
+      setProjectDisplayName('');
       setInvestigationModeId(undefined);
       setBoundarySummary('');
       setProjectBoundaryDraft(undefined);
@@ -143,6 +135,7 @@ const SettingsScreen: React.FC = () => {
     }
 
     setIsLoadingProjectSettings(true);
+    setProjectDisplayName(currentProjectSettings?.displayName?.trim() ?? '');
     setInvestigationModeId(undefined);
     setBoundarySummary('');
     setProjectBoundaryDraft(undefined);
@@ -161,7 +154,13 @@ const SettingsScreen: React.FC = () => {
         loadKoreanFieldworkProjectBoundaryDraft(currentProject),
       ]);
 
-      if (!isActive || hasProjectSetupInteractionRef.current) return;
+      if (!isActive) return;
+      setProjectDisplayName(
+        setupDefaults.displayName?.trim()
+        ?? currentProjectSettings?.displayName?.trim()
+        ?? ''
+      );
+      if (hasProjectSetupInteractionRef.current) return;
       setInvestigationModeId(setupDefaults.investigationModeId);
       setBoundarySummary(setupDefaults.boundarySummary ?? '');
       setProjectBoundaryDraft(boundaryDraft);
@@ -180,15 +179,18 @@ const SettingsScreen: React.FC = () => {
     return () => {
       isActive = false;
     };
-  }, [currentProject, hasCurrentProject, projectRepository]);
+  }, [
+    currentProject,
+    currentProjectSettings?.displayName,
+    hasCurrentProject,
+    projectRepository,
+  ]);
 
   const isBoundarySummaryValid = boundarySummary.trim().length > 0;
   const canSaveProjectSetup =
     hasCurrentProject
     && !!investigationModeId
     && isBoundarySummaryValid;
-  const canSaveMapProviderSettings =
-    hasMapProviderInteraction;
   const canSaveUsername = usernameVal.trim().length > 0;
   const canSaveInstitutionName = institutionName.trim().length > 0;
   const isProjectSetupIncomplete =
@@ -201,7 +203,6 @@ const SettingsScreen: React.FC = () => {
       canSaveUsername
       || canSaveInstitutionName
       || canSaveProjectSetup
-      || canSaveMapProviderSettings
     )
     && !isSaving;
   const projectSetupNotice = getProjectSetupNotice(
@@ -220,13 +221,6 @@ const SettingsScreen: React.FC = () => {
         await saveKoreanFieldworkDefaultInstitutionName(
           institutionName
         );
-      }
-      if (canSaveMapProviderSettings) {
-        preferences.setMapProviderSettings({
-          kakaoLocalRestApiKey: kakaoLocalRestApiKey.trim(),
-          kakaoMapJavaScriptKey: kakaoMapJavaScriptKey.trim(),
-          kakaoNativeAppKey: kakaoNativeAppKey.trim(),
-        });
       }
       if (canSaveProjectSetup && investigationModeId) {
         await saveKoreanFieldworkInvestigationModeId(
@@ -260,9 +254,6 @@ const SettingsScreen: React.FC = () => {
   const markProjectSetupInteraction = () => {
     hasProjectSetupInteractionRef.current = true;
     setHasProjectSetupInteraction(true);
-  };
-  const markMapProviderInteraction = () => {
-    setHasMapProviderInteraction(true);
   };
   const setInstitutionNameValue = (value: string) => {
     hasInstitutionNameInteractionRef.current = true;
@@ -318,13 +309,29 @@ const SettingsScreen: React.FC = () => {
                     size={18}
                     color="#175cd3"
                   />
-                  <Text
-                    numberOfLines={1}
-                    style={styles.currentProjectText}
-                    testID="settings-current-project"
-                  >
-                    {currentProject}
-                  </Text>
+                  <View style={styles.currentProjectIdentity}>
+                    <Text
+                      numberOfLines={1}
+                      style={styles.currentProjectText}
+                      testID="settings-current-project"
+                    >
+                      {visibleProjectName}
+                    </Text>
+                    {hasSeparateProjectLinkId && (
+                      <View style={styles.currentProjectIdRow}>
+                        <Text style={styles.currentProjectIdLabel}>
+                          데스크톱 연동 ID
+                        </Text>
+                        <Text
+                          numberOfLines={1}
+                          style={styles.currentProjectIdText}
+                          testID="settings-current-project-link-id"
+                        >
+                          {currentProject}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
                 </View>
 
                 <Text style={styles.fieldLabel}>조사 방식</Text>
@@ -432,57 +439,20 @@ const SettingsScreen: React.FC = () => {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>지도 API 키</Text>
+            <Text style={styles.sectionTitle}>지도 배경</Text>
             <Text style={styles.sectionText}>
-              카카오는 기능별 키가 다릅니다. REST 키는 주소·좌표용이고, 태블릿 지도 배경 선택은 JavaScript 키 WebView 경로를 우선 사용합니다.
+              별도 API 키 없이 일반지도·위성지도·하이브리드 지도를 열어
+              경계를 기록합니다.
             </Text>
-            <Input
-              label="카카오 Local REST 키"
-              value={kakaoLocalRestApiKey}
-              onChangeText={(value) => {
-                markMapProviderInteraction();
-                setKakaoLocalRestApiKey(value);
-              }}
-              autoCapitalize="none"
-              autoCorrect={false}
-              helpText="주소 검색과 좌표 변환에 사용합니다. 지도 배경 표시용 키는 아닙니다."
-              testID="settings-kakao-local-rest-api-key-input"
-              style={styles.input}
-            />
-            <Input
-              label="카카오 지도 JavaScript 키"
-              value={kakaoMapJavaScriptKey}
-              onChangeText={(value) => {
-                markMapProviderInteraction();
-                setKakaoMapJavaScriptKey(value);
-              }}
-              autoCapitalize="none"
-              autoCorrect={false}
-              helpText="WebView로 카카오 일반지도, 위성지도, 하이브리드를 선택해 경계를 찍을 때 사용합니다. SDK가 막히면 지도 화면에 표시되는 WebView 출처를 Kakao Developers에 등록하세요."
-              testID="settings-kakao-map-javascript-key-input"
-              style={styles.input}
-            />
-            <Input
-              label="카카오 Native App 키"
-              value={kakaoNativeAppKey}
-              onChangeText={(value) => {
-                markMapProviderInteraction();
-                setKakaoNativeAppKey(value);
-              }}
-              autoCapitalize="none"
-              autoCorrect={false}
-              helpText="네이티브 지도 연동용으로 보관합니다. 현재 카카오 지도 경계 찍기는 JavaScript 키를 우선 사용합니다."
-              testID="settings-kakao-native-app-key-input"
-              style={styles.input}
-            />
             <View style={styles.boundaryNotice}>
               <Ionicons
-                name="key-outline"
+                name="map-outline"
                 size={18}
                 color="#175cd3"
               />
               <Text style={styles.boundaryText}>
-                키는 이 태블릿의 앱 설정에 저장됩니다. 소스 코드나 APK 빌드 스크립트에는 직접 넣지 않습니다.
+                인터넷이 끊기면 도면 배경과 이미 저장하거나 가져온 경계는
+                그대로 사용할 수 있습니다.
               </Text>
             </View>
           </View>
@@ -727,12 +697,32 @@ const styles = StyleSheet.create({
     minHeight: 42,
     paddingHorizontal: 12,
   },
+  currentProjectIdentity: {
+    flex: 1,
+    marginLeft: 8,
+    paddingVertical: 8,
+  },
+  currentProjectIdLabel: {
+    color: '#475467',
+    fontSize: 10,
+    fontWeight: '800',
+    marginRight: 6,
+  },
+  currentProjectIdRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    marginTop: 3,
+  },
+  currentProjectIdText: {
+    color: '#667085',
+    flex: 1,
+    fontSize: 10,
+    fontWeight: '700',
+  },
   currentProjectText: {
     color: '#175cd3',
-    flex: 1,
     fontSize: 14,
     fontWeight: '900',
-    marginLeft: 8,
   },
   fieldLabel: {
     color: '#27343b',

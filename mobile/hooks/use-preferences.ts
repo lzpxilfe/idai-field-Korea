@@ -395,18 +395,8 @@ const hasPersistableSecureValue = (value: unknown): boolean => {
 };
 
 const normalizeMapProviderSettings = (
-  mapProviderSettings: unknown
-): MapProviderSettings => {
-  const safeMapProviderSettings = isRecord(mapProviderSettings)
-    ? mapProviderSettings
-    : {};
-
-  return {
-    kakaoLocalRestApiKey: getStringValue(safeMapProviderSettings.kakaoLocalRestApiKey) ?? '',
-    kakaoMapJavaScriptKey: getStringValue(safeMapProviderSettings.kakaoMapJavaScriptKey) ?? '',
-    kakaoNativeAppKey: getStringValue(safeMapProviderSettings.kakaoNativeAppKey) ?? '',
-  };
-};
+  _mapProviderSettings: unknown
+): MapProviderSettings => defaultMapProviderSettings();
 
 const normalizeProjectSettings = (
   project: string,

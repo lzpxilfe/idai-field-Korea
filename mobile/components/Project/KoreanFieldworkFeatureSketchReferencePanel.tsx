@@ -4,6 +4,7 @@ import React, { useMemo, useState } from 'react';
 import type { DimensionValue } from 'react-native';
 import {
   LayoutChangeEvent,
+  Pressable,
   StyleSheet,
   Text,
   View,
@@ -46,6 +47,7 @@ interface FeatureLocationSketch {
 interface Props {
   document: Document;
   documents: readonly Document[];
+  onOpenFreeSketch?: () => void;
 }
 
 const PREVIEW_DEFAULT_SIZE = {
@@ -69,10 +71,12 @@ const FEATURE_SKETCH_SHAPE_MIN_SCALE = 8;
 const FEATURE_SKETCH_SHAPE_MAX_SCALE = 240;
 const FEATURE_SKETCH_REFERENCE_SHAPE_MIN_WIDTH = 6;
 const FEATURE_SKETCH_REFERENCE_SHAPE_MIN_HEIGHT = 5;
+const DOUBLE_PRESS_DELAY_MS = 350;
 const TEXT = {
   panelTitle: '\uc720\uad6c \uc704\uce58\uc640 \ud615\ud0dc',
   boundaryTitle: '\uc804\uccb4 \uacbd\uacc4 \uc548 \uc704\uce58',
   shapeTitle: '\uc720\uad6c \ud615\ud0dc \uc2a4\ucf00\uce58',
+  openSketchHint: '\ub450 \ubc88 \ub20c\ub7ec \uc790\uc720 \uc2a4\ucf00\uce58',
   noBoundary: '\uc870\uc0ac \uacbd\uacc4 \uc5c6\uc74c',
   noSketch: '\uc720\uad6c \uc2a4\ucf00\uce58 \uc5c6\uc74c',
   feature: '\uc720\uad6c',
@@ -81,6 +85,7 @@ const TEXT = {
 const KoreanFieldworkFeatureSketchReferencePanel: React.FC<Props> = ({
   document,
   documents,
+  onOpenFreeSketch,
 }) => {
   const [boundaryCanvasSize, setBoundaryCanvasSize] =
     useState(PREVIEW_DEFAULT_SIZE);
@@ -156,6 +161,7 @@ const KoreanFieldworkFeatureSketchReferencePanel: React.FC<Props> = ({
         </SketchCard>
         <SketchCard
           onLayout={(size) => setShapeCanvasSize(size)}
+          onDoublePress={onOpenFreeSketch}
           isShapePreview
           testID="featureShapeSketchPreview"
           title={TEXT.shapeTitle}
@@ -178,22 +184,50 @@ const SketchCard: React.FC<{
   children: React.ReactNode;
   isShapePreview?: boolean;
   onLayout: (size: CanvasSize) => void;
+  onDoublePress?: () => void;
   testID: string;
   title: string;
 }> = ({
   children,
   isShapePreview = false,
   onLayout,
+  onDoublePress,
   testID,
   title,
 }) => {
+  const [lastPressAt, setLastPressAt] = useState(0);
   const handleLayout = (event: LayoutChangeEvent) => {
     const { height, width } = event.nativeEvent.layout;
     if (height > 0 && width > 0) onLayout({ height, width });
   };
+  const handlePress = () => {
+    if (!onDoublePress) return;
+
+    const pressedAt = Date.now();
+    if (
+      lastPressAt > 0
+      && pressedAt - lastPressAt <= DOUBLE_PRESS_DELAY_MS
+    ) {
+      setLastPressAt(0);
+      onDoublePress();
+      return;
+    }
+
+    setLastPressAt(pressedAt);
+  };
 
   return (
-    <View style={styles.card} testID={testID}>
+    <Pressable
+      accessibilityHint={onDoublePress ? TEXT.openSketchHint : undefined}
+      accessibilityRole={onDoublePress ? 'button' : undefined}
+      disabled={!onDoublePress}
+      onPress={handlePress}
+      style={({ pressed }) => [
+        styles.card,
+        !!onDoublePress && pressed && styles.cardPressed,
+      ]}
+      testID={testID}
+    >
       <Text style={styles.cardTitle}>{title}</Text>
       <View
         onLayout={handleLayout}
@@ -210,7 +244,13 @@ const SketchCard: React.FC<{
         <View style={styles.horizontalAxis} />
         {children}
       </View>
-    </View>
+      {!!onDoublePress && (
+        <View pointerEvents="none" style={styles.openSketchHint}>
+          <Ionicons name="expand-outline" size={12} color="#175cd3" />
+          <Text style={styles.openSketchHintText}>{TEXT.openSketchHint}</Text>
+        </View>
+      )}
+    </Pressable>
   );
 };
 
@@ -710,12 +750,30 @@ const styles = StyleSheet.create({
     minWidth: 0,
     overflow: 'hidden',
   },
+  cardPressed: {
+    borderColor: '#175cd3',
+    opacity: 0.86,
+  },
   cardTitle: {
     color: '#475467',
     fontSize: 11,
     fontWeight: '900',
     paddingHorizontal: 8,
     paddingTop: 7,
+  },
+  openSketchHint: {
+    alignItems: 'center',
+    backgroundColor: '#eff8ff',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+    paddingVertical: 5,
+  },
+  openSketchHintText: {
+    color: '#175cd3',
+    fontSize: 10,
+    fontWeight: '800',
+    marginLeft: 3,
   },
   previewCanvas: {
     backgroundColor: '#ffffff',

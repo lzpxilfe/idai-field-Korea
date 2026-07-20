@@ -436,7 +436,7 @@ describe('CreateProjectModal', () => {
   it('creates a local project with a Korean field site name', async () => {
     const handleProjectCreated = jest.fn();
     const projectName = '서울 종로구 반다비 유적 1구역';
-    const { getByTestId } = render(
+    const { getByTestId, getByText } = render(
       <SafeAreaInsetsContext.Provider value={safeAreaInsets}>
         <CreateProjectModal
           onProjectCreated={handleProjectCreated}
@@ -447,6 +447,9 @@ describe('CreateProjectModal', () => {
 
     fireEvent.changeText(getByTestId('project-input'), `  ${projectName}  `);
     const projectId = createServerCompatibleProjectId(projectName);
+    expect(getByText('데스크톱 연동 ID')).toBeTruthy();
+    expect(getByTestId('project-link-id').props.children).toBe(projectId);
+    expect(getByTestId('project-link-id-preview')).toBeTruthy();
     fireEvent.press(getByTestId('project-investigation-mode_excavation'));
     await drawBoundary(getByTestId);
     fireEvent.press(getByTestId('create-project-submit'));

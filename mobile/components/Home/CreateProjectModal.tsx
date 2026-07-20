@@ -4,7 +4,7 @@ import {
   KOREAN_FIELDWORK_PROJECT_LABEL,
   KOREAN_FIELDWORK_PROJECT_LANGUAGES,
 } from '@/constants/korean-fieldwork-project';
-import React, { useContext, useState } from 'react';
+import React, { useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -43,7 +43,6 @@ import {
 import type {
   KoreanFieldworkInvestigationModeId,
 } from '@/components/Project/korean-fieldwork-investigation-mode';
-import { PreferencesContext } from '@/contexts/preferences-context';
 import { colors } from '@/utils/colors';
 import {
   getLocalProjectNameInvalidText,
@@ -71,7 +70,6 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
   onProjectCreated,
   onClose,
 }) => {
-  const preferences = useContext(PreferencesContext);
   const [project, setProject] = useState<string>('');
   const [projectTouched, setProjectTouched] = useState<boolean>(false);
   const [investigationModeId, setInvestigationModeId] =
@@ -94,6 +92,10 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
     mode: 'local',
   });
   const { displayName, projectId } = projectNameValidation;
+  const hasSeparateProjectLinkId =
+    projectNameValidation.isAvailable
+    && displayName !== projectId
+    && projectId.length > 0;
   const hasBoundaryGeometry = (pickedBoundary?.coordinates.length ?? 0) >= 3;
   const canCreateProject =
     projectNameValidation.isAvailable && !!investigationModeId && hasBoundaryGeometry;
@@ -198,9 +200,7 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
     >
       <KakaoSatellitePicker
         initialLocation={boundaryPickerInitialLocation}
-        javaScriptKey={
-          preferences.preferences.mapProviderSettings.kakaoMapJavaScriptKey
-        }
+        javaScriptKey=""
         onClose={() => setIsBoundaryPickerOpen(false)}
         onPickBoundary={onPickBoundary}
         visible={isBoundaryPickerOpen}
@@ -260,11 +260,40 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
               autoComplete="off"
               autoCorrect={false}
               autoFocus
-              helpText="한국어 현장 기록 설정을 사용합니다. 다른 기기와 동기화하려면 같은 이름을 정확히 사용하세요."
+              helpText="입력한 이름은 화면에 그대로 표시됩니다. 한글·공백 등이 포함되면 기기와 데스크톱 연결용 ID가 따로 만들어집니다."
               invalidText={getLocalProjectNameInvalidText(projectNameValidation)}
               isValid={showProjectNameError ? false : undefined}
               style={styles.input}
             />
+            {hasSeparateProjectLinkId && (
+              <View
+                style={styles.projectLinkIdPreview}
+                testID="project-link-id-preview"
+              >
+                <View style={styles.projectLinkIdHeading}>
+                  <Ionicons
+                    name="desktop-outline"
+                    size={16}
+                    color="#175cd3"
+                  />
+                  <Text style={styles.projectLinkIdLabel}>
+                    데스크톱 연동 ID
+                  </Text>
+                </View>
+                <Text
+                  selectable
+                  style={styles.projectLinkIdValue}
+                  testID="project-link-id"
+                >
+                  {projectId}
+                </Text>
+                <Text style={styles.projectLinkIdHelp}>
+                  프로젝트 이름은 ‘{displayName}’으로 보입니다. 위 ID는
+                  기기 간 동기화와 데스크톱 연결에만 사용되며, 이름이 바뀐
+                  것이 아닙니다.
+                </Text>
+              </View>
+            )}
 
             <View style={styles.setupSection}>
               <Text style={styles.sectionTitle}>프로젝트 기본 설정</Text>
@@ -561,6 +590,37 @@ const styles = StyleSheet.create({
   },
   modeLabelSelected: {
     color: '#1f5f43',
+  },
+  projectLinkIdHeading: {
+    alignItems: 'center',
+    flexDirection: 'row',
+  },
+  projectLinkIdHelp: {
+    color: '#475467',
+    fontSize: 11,
+    fontWeight: '700',
+    lineHeight: 16,
+    marginTop: 5,
+  },
+  projectLinkIdLabel: {
+    color: '#175cd3',
+    fontSize: 12,
+    fontWeight: '900',
+    marginLeft: 6,
+  },
+  projectLinkIdPreview: {
+    backgroundColor: '#eff8ff',
+    borderColor: '#b2ddff',
+    borderRadius: 6,
+    borderWidth: 1,
+    marginTop: 8,
+    padding: 10,
+  },
+  projectLinkIdValue: {
+    color: '#101828',
+    fontSize: 13,
+    fontWeight: '900',
+    marginTop: 6,
   },
   sectionText: {
     color: '#667085',

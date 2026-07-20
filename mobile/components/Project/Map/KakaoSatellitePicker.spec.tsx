@@ -35,16 +35,18 @@ jest.mock('expo-location', () => ({
 jest.mock('react-native-webview', () => {
   const React = require('react');
   const { View } = require('react-native');
-
-  return {
-    WebView: React.forwardRef((props: Record<string, unknown>, ref: unknown) => {
+  const MockWebView = React.forwardRef(
+    (props: Record<string, unknown>, ref: unknown) => {
       React.useImperativeHandle(ref, () => ({
         postMessage: mockPostMessage,
       }));
 
       return <View {...props} />;
-    }),
-  };
+    }
+  );
+  MockWebView.displayName = 'MockWebView';
+
+  return { WebView: MockWebView };
 });
 
 describe('KakaoSatellitePicker', () => {
@@ -75,6 +77,26 @@ describe('KakaoSatellitePicker', () => {
     });
 
     expect(queryByTestId('kakao-boundary-loading-overlay')).toBeNull();
+  });
+
+  it('starts with the open basemap when the Kakao JavaScript key is empty', () => {
+    const { getByTestId } = render(
+      <KakaoSatellitePicker
+        initialLocation={{ latitude: 36.45, longitude: 127.12 }}
+        javaScriptKey="   "
+        onClose={jest.fn()}
+        onPickBoundary={jest.fn()}
+        visible
+      />
+    );
+
+    const webView = getByTestId('kakao-satellite-picker-webview');
+    expect(webView.props.source).toEqual(expect.objectContaining({
+      html: expect.stringContaining('tile.openstreetmap.org'),
+      baseUrl: 'https://idai-field.local/boundary-picker/',
+    }));
+    expect(webView.props.source.html).toContain('World_Imagery');
+    expect(webView.props.source.html).not.toContain('dapi.kakao.com');
   });
 
   it('shows the live device location and sends it to the WebView map', async () => {

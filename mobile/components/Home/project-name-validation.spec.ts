@@ -90,6 +90,13 @@ describe('project name validation', () => {
     }
   });
 
+  it('keeps 테스트 as the display name and creates a stable link ID', () => {
+    const validation = validateProjectName('테스트', [], { mode: 'local' });
+
+    expect(validation.displayName).toBe('테스트');
+    expect(validation.projectId).toBe('fieldwork-119k6d');
+  });
+
   it('keeps path-like characters out of local project names', () => {
     const validation = validateProjectName('반다비/1구역', [], { mode: 'local' });
 

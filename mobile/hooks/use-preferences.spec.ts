@@ -186,7 +186,7 @@ describe('usePreferences', () => {
             .toEqual({ pointRadius: 8 });
     });
 
-    it('should preserve Kakao map provider keys as app-wide settings', async () => {
+    it('should discard deprecated Kakao map provider keys', async () => {
 
         const { result } = await renderUsePreferences();
 
@@ -200,18 +200,17 @@ describe('usePreferences', () => {
 
         expect(result.current.preferences.mapProviderSettings)
             .toEqual({
-                kakaoLocalRestApiKey: 'rest-key',
-                kakaoMapJavaScriptKey: 'js-key',
-                kakaoNativeAppKey: 'native-key',
+                kakaoLocalRestApiKey: '',
+                kakaoMapJavaScriptKey: '',
+                kakaoNativeAppKey: '',
             });
-        await waitFor(() => expect(SecureStore.setItemAsync).toBeCalledWith(
-            MAP_PROVIDER_SETTINGS_SECURE_STORAGE_KEY,
-            JSON.stringify({
-                kakaoLocalRestApiKey: 'rest-key',
-                kakaoMapJavaScriptKey: 'js-key',
-                kakaoNativeAppKey: 'native-key',
-            })
+        await waitFor(() => expect(SecureStore.deleteItemAsync).toBeCalledWith(
+            MAP_PROVIDER_SETTINGS_SECURE_STORAGE_KEY
         ));
+        expect(SecureStore.setItemAsync).not.toHaveBeenCalledWith(
+            MAP_PROVIDER_SETTINGS_SECURE_STORAGE_KEY,
+            expect.anything()
+        );
 
         const storedPreferences = getLatestStoredPreferences();
         expect(storedPreferences.mapProviderSettings).toEqual({
@@ -355,12 +354,7 @@ describe('usePreferences', () => {
     });
 
 
-    it('should preserve updated map provider keys in AsyncStorage when secure persistence fails', async () => {
-
-        const warnSpy = jest.spyOn(console, 'warn').mockImplementation(jest.fn());
-        (SecureStore.setItemAsync as jest.Mock)
-            .mockRejectedValueOnce(new Error('secure store unavailable'));
-
+    it('should not restore deprecated map provider keys to AsyncStorage', async () => {
         const { result } = await renderUsePreferences();
 
         await act(async () => {
@@ -371,16 +365,15 @@ describe('usePreferences', () => {
             });
         });
 
-        await waitFor(() => expect(warnSpy).toHaveBeenCalled());
-
         const storedPreferences = getLatestStoredPreferences();
         expect(storedPreferences.mapProviderSettings).toEqual({
-            kakaoLocalRestApiKey: 'rest-key',
-            kakaoMapJavaScriptKey: 'js-key',
-            kakaoNativeAppKey: 'native-key',
+            kakaoLocalRestApiKey: '',
+            kakaoMapJavaScriptKey: '',
+            kakaoNativeAppKey: '',
         });
-
-        warnSpy.mockRestore();
+        expect(JSON.stringify(storedPreferences)).not.toContain('rest-key');
+        expect(JSON.stringify(storedPreferences)).not.toContain('js-key');
+        expect(JSON.stringify(storedPreferences)).not.toContain('native-key');
     });
 
 
@@ -513,9 +506,9 @@ describe('usePreferences', () => {
             mapSettings: defaultMapSettings(),
         });
         expect(result.current.preferences.mapProviderSettings).toEqual({
-            kakaoLocalRestApiKey: 'rest-key',
-            kakaoMapJavaScriptKey: 'js-key',
-            kakaoNativeAppKey: 'native-key',
+            kakaoLocalRestApiKey: '',
+            kakaoMapJavaScriptKey: '',
+            kakaoNativeAppKey: '',
         });
     });
 

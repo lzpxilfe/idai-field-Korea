@@ -68,6 +68,7 @@ interface PreviewTransform {
 }
 
 interface Props {
+  fullscreenRequestId?: number;
   initiallyFullscreen?: boolean;
   onDrawingActiveChange?: (isActive: boolean) => void;
   onUpdateStrokes: (serializedStrokes: string) => void;
@@ -126,6 +127,7 @@ export const getKoreanFieldworkFreeDrawingConfig = (
 };
 
 const KoreanFieldworkFreeDrawingPanel: React.FC<Props> = ({
+  fullscreenRequestId = 0,
   initiallyFullscreen = false,
   onDrawingActiveChange,
   onUpdateStrokes,
@@ -162,6 +164,7 @@ const KoreanFieldworkFreeDrawingPanel: React.FC<Props> = ({
   const previewTapStartRef = useRef<PixelPoint>();
   const previewTapMovedRef = useRef(false);
   const hasAppliedInitialFullscreenRef = useRef(false);
+  const lastFullscreenRequestIdRef = useRef(fullscreenRequestId);
   const visibleStrokes = activeStroke ? strokes.concat(activeStroke) : strokes;
   const previewStrokes = writingGuides
     ? applyKoreanFieldworkHandwritingErasers(visibleStrokes, {
@@ -205,6 +208,15 @@ const KoreanFieldworkFreeDrawingPanel: React.FC<Props> = ({
     setIsFullscreen(true);
     setDrawingInteractionActive(true);
   }, [initiallyFullscreen, setDrawingInteractionActive]);
+
+  useEffect(() => {
+    if (fullscreenRequestId === lastFullscreenRequestIdRef.current) return;
+
+    lastFullscreenRequestIdRef.current = fullscreenRequestId;
+    cancelPendingTapStroke();
+    setIsFullscreen(true);
+    setDrawingInteractionActive(true);
+  }, [fullscreenRequestId, setDrawingInteractionActive]);
 
   const updateCanvasSize = (event: LayoutChangeEvent) => {
     const { height, width } = event.nativeEvent.layout;

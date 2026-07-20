@@ -78,6 +78,8 @@ export const ProjectContextProvider = ({ children }) => {
   const preferences = useContext(PreferencesContext);
   const currentProject = preferences.preferences.currentProject;
   const currentProjectSettings = preferences.preferences.projects[currentProject];
+  const currentProjectDisplayName =
+    currentProjectSettings?.displayName?.trim() || currentProject;
   const [projectOpeningGate, setProjectOpeningGate] =
     useState<ProjectOpeningGate>({
       project: currentProject,
@@ -193,7 +195,7 @@ export const ProjectContextProvider = ({ children }) => {
     !projectOpeningGate.canShow;
 
   if (isPreparingProject) {
-    return <ProjectOpeningLoadingState projectName={currentProject} />;
+    return <ProjectOpeningLoadingState projectName={currentProjectDisplayName} />;
   }
 
 

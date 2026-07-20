@@ -352,6 +352,32 @@ describe('Map', () => {
     expect(editDocument).not.toHaveBeenCalled();
   });
 
+  it('opens the public basemap picker when no Kakao JavaScript key is saved', async () => {
+    const { getByTestId } = render(
+      <ConfigurationContext.Provider value={createConfigurationMock() as any}>
+        <PreferencesContext.Provider value={createPreferencesMock('') as any}>
+          <Map
+            repository={createRepositoryMock() as any}
+            documents={[createDoc(C.OPERATION, 'operation-1')]}
+            selectedDocumentIds={['operation-1']}
+            addDocument={jest.fn()}
+            addDocumentOfCategory={jest.fn()}
+            editDocument={jest.fn()}
+            removeDocument={jest.fn()}
+            selectParent={jest.fn()}
+            readinessIssues={[]}
+            investigationModeId="excavation"
+            satellitePickerRequestId={1}
+          />
+        </PreferencesContext.Provider>
+      </ConfigurationContext.Provider>
+    );
+
+    await waitFor(() => {
+      expect(getByTestId('mock-kakao-boundary-save')).toBeTruthy();
+    });
+  });
+
   it('names bottom-sheet pen memo drafts from the highlighted feature', async () => {
     const operation = createDoc(C.OPERATION, 'operation-1', { identifier: '1구역' });
     const feature = createDoc(C.FEATURE, 'feature-1', {
@@ -529,13 +555,13 @@ const createConfigurationMock = () => ({
   }),
 });
 
-const createPreferencesMock = () => ({
+const createPreferencesMock = (kakaoMapJavaScriptKey: string = 'js-key') => ({
   getMapSettings: jest.fn(() => ({ pointRadius: defaultPointRadius })),
   preferences: {
     currentProject: 'test-project',
     mapProviderSettings: {
       kakaoLocalRestApiKey: '',
-      kakaoMapJavaScriptKey: 'js-key',
+      kakaoMapJavaScriptKey,
       kakaoNativeAppKey: '',
     },
   },

@@ -57,6 +57,9 @@ import { KOREAN_FIELDWORK_CATEGORIES } from '@/components/Project/korean-fieldwo
 import {
   getKoreanFieldworkRecordDisplayIdentifier,
 } from '@/components/Project/korean-fieldwork-record-evidence';
+import {
+  getKoreanFieldworkParentPath,
+} from '@/components/Project/korean-fieldwork-record-summary';
 import { PreferencesContext } from '@/contexts/preferences-context';
 import {
   KoreanFieldworkInvestigationModeId,
@@ -94,6 +97,8 @@ const DocumentEdit: React.FC = () => {
   const [investigationModeId, setInvestigationModeId] =
     useState<KoreanFieldworkInvestigationModeId>();
   const [isFreeDrawingActive, setIsFreeDrawingActive] = useState(false);
+  const [freeDrawingFullscreenRequestId, setFreeDrawingFullscreenRequestId] =
+    useState(0);
   const [soilProfileSampleRequest, setSoilProfileSampleRequest] =
     useState<SoilProfileLayerSampleRequest>();
   const projectId = preferencesContext.preferences.currentProject;
@@ -225,6 +230,19 @@ const DocumentEdit: React.FC = () => {
   );
   const isFeatureRecord = resource.category === KOREAN_FIELDWORK_CATEGORIES.FEATURE;
   const freeDrawingConfig = getKoreanFieldworkFreeDrawingConfig(resource.category);
+  const documentsById = new Map(
+    (documents ?? []).map((candidate) => [candidate.resource.id, candidate])
+  );
+  documentsById.set(effectiveDocument.resource.id, effectiveDocument);
+  const featureSketchReferenceDocument = isFeatureRecord
+    ? effectiveDocument
+    : resource.category === KOREAN_FIELDWORK_CATEGORIES.PEN_MEMO
+      ? getKoreanFieldworkParentPath(effectiveDocument, documentsById)
+        .slice()
+        .reverse()
+        .find((candidate) =>
+          candidate.resource.category === KOREAN_FIELDWORK_CATEGORIES.FEATURE)
+      : undefined;
 
   return (
     <DocumentForm
@@ -246,10 +264,13 @@ const DocumentEdit: React.FC = () => {
       returnBtnHandler={onReturn}
       formHeader={
         <View>
-          {isFeatureRecord && (
+          {!!featureSketchReferenceDocument && (
             <KoreanFieldworkFeatureSketchReferencePanel
-              document={effectiveDocument}
+              document={featureSketchReferenceDocument}
               documents={documents ?? []}
+              onOpenFreeSketch={isFeatureRecord
+                ? () => setFreeDrawingFullscreenRequestId((value) => value + 1)
+                : undefined}
             />
           )}
           {isFeatureRecord && (
@@ -312,6 +333,7 @@ const DocumentEdit: React.FC = () => {
       formFooter={freeDrawingConfig ? (
         <View>
           <KoreanFieldworkFreeDrawingPanel
+            fullscreenRequestId={freeDrawingFullscreenRequestId}
             initiallyFullscreen={shouldOpenFreeSketch}
             onDrawingActiveChange={setIsFreeDrawingActive}
             strokesValue={resource[freeDrawingConfig.strokesField]}

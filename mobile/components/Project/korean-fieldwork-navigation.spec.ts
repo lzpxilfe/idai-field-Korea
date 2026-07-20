@@ -84,7 +84,7 @@ describe('Korean fieldwork navigation helpers', () => {
     });
   });
 
-  it('opens a new pen memo directly in the full-screen writing canvas', () => {
+  it('opens a new pen memo with its feature context and memo preview visible', () => {
     pushKoreanFieldworkDocumentAdd({
       categoryName: 'PenMemo',
       parentDocId: 'feature-1',
@@ -96,7 +96,6 @@ describe('Korean fieldwork navigation helpers', () => {
       params: {
         parentDocId: 'feature-1',
         categoryName: 'PenMemo',
-        openFreeSketch: '1',
         returnTo: 'fieldBoard',
       },
     });

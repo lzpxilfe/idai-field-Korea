@@ -31,10 +31,6 @@ import {
     isKoreanFieldworkProjectSetupFilledIn
 } from '../../util/korean-fieldwork-project-setup';
 import type { KoreanFieldworkInvestigationModeId } from '../../util/korean-fieldwork-project-setup';
-import {
-    getKoreanFieldworkSatelliteMapProviderNotice,
-    hasKoreanFieldworkSatelliteMapDisplayKey
-} from '../../util/korean-fieldwork-map-provider-settings';
 import { ProjectIdentifierValidation } from '../../model/project-identifier-validation';
 
 import { ip as getIpAddress } from 'address';
@@ -265,14 +261,6 @@ export class SettingsComponent implements OnInit, AfterViewChecked {
                 return '태블릿에서 먼저 만든 프로젝트도 같은 ID로 빈 저장소를 준비하면 받을 수 있습니다.';
         }
     }
-
-
-    public hasKoreanSatelliteMapDisplayKey = () =>
-        hasKoreanFieldworkSatelliteMapDisplayKey(this.settings?.mapProviderSettings);
-
-
-    public getKoreanMapProviderNotice = () =>
-        getKoreanFieldworkSatelliteMapProviderNotice(this.settings?.mapProviderSettings);
 
 
     public setKoreanInvestigationMode(modeId: KoreanFieldworkInvestigationModeId) {

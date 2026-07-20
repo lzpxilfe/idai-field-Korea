@@ -68,9 +68,7 @@ const setMapProviderSettingsDefaults = config => {
     }
 
     for (const key of ['kakaoLocalRestApiKey', 'kakaoMapJavaScriptKey', 'kakaoNativeAppKey']) {
-        if (typeof config.mapProviderSettings[key] !== 'string') {
-            config.mapProviderSettings[key] = '';
-        }
+        config.mapProviderSettings[key] = '';
     }
 };
 

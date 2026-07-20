@@ -63,7 +63,7 @@ const KAKAO_MAP_WEBVIEW_BASE_URLS = [
   'http://127.0.0.1/',
 ];
 const OPEN_BASEMAP_WEBVIEW_BASE_URL = 'https://idai-field.local/boundary-picker/';
-const KAKAO_MAP_TYPE_OPTIONS: Array<{ id: KakaoMapTypeId; label: string }> = [
+const KAKAO_MAP_TYPE_OPTIONS: { id: KakaoMapTypeId; label: string }[] = [
   { id: 'ROADMAP', label: '일반' },
   { id: 'SKYVIEW', label: '위성' },
   { id: 'HYBRID', label: '혼합' },
@@ -113,6 +113,7 @@ const KakaoSatellitePicker: React.FC<KakaoSatellitePickerProps> = ({
 }) => {
   const copy = BOUNDARY_PICKER_COPY[drawingMode]
     ?? BOUNDARY_PICKER_COPY.surveyBoundary;
+  const hasKakaoJavaScriptKey = javaScriptKey.trim().length > 0;
   const webViewRef = useRef<any>(null);
   const latitude = initialLocation?.latitude ?? DEFAULT_LOCATION.latitude;
   const longitude = initialLocation?.longitude ?? DEFAULT_LOCATION.longitude;
@@ -122,7 +123,12 @@ const KakaoSatellitePicker: React.FC<KakaoSatellitePickerProps> = ({
   const [baseUrlIndex, setBaseUrlIndex] = useState(0);
   const [isMapReady, setIsMapReady] = useState(false);
   const [mapLoadError, setMapLoadError] = useState<string>();
-  const [mapEngine, setMapEngine] = useState<BoundaryMapEngine>('kakao');
+  const [preferredMapEngine, setPreferredMapEngine] = useState<BoundaryMapEngine>(
+    hasKakaoJavaScriptKey ? 'kakao' : 'open'
+  );
+  const mapEngine: BoundaryMapEngine = hasKakaoJavaScriptKey
+    ? preferredMapEngine
+    : 'open';
   const [reloadNonce, setReloadNonce] = useState(0);
   const [selectedMapTypeId, setSelectedMapTypeId] = useState<KakaoMapTypeId>('HYBRID');
   const [initialMapTypeId, setInitialMapTypeId] = useState<KakaoMapTypeId>('HYBRID');
@@ -165,7 +171,7 @@ const KakaoSatellitePicker: React.FC<KakaoSatellitePickerProps> = ({
       setBaseUrlIndex(0);
       setIsMapReady(false);
       setMapLoadError(undefined);
-      setMapEngine('kakao');
+      setPreferredMapEngine(hasKakaoJavaScriptKey ? 'kakao' : 'open');
       setInitialMapTypeId('HYBRID');
       setSelectedMapTypeId('HYBRID');
       setLiveLocation(initialLocation);
@@ -173,7 +179,7 @@ const KakaoSatellitePicker: React.FC<KakaoSatellitePickerProps> = ({
       setReloadNonce((value) => value + 1);
       setMessage(copy.initialMessage);
     }
-  }, [copy.initialMessage, javaScriptKey, visible]);
+  }, [copy.initialMessage, hasKakaoJavaScriptKey, initialLocation, visible]);
 
   useEffect(() => {
     if (!visible) return;
@@ -265,7 +271,7 @@ const KakaoSatellitePicker: React.FC<KakaoSatellitePickerProps> = ({
   };
 
   const switchToOpenBasemap = () => {
-    setMapEngine('open');
+    setPreferredMapEngine('open');
     setBaseUrlIndex(0);
     setIsMapReady(false);
     setMapLoadError(undefined);
@@ -333,7 +339,7 @@ const KakaoSatellitePicker: React.FC<KakaoSatellitePickerProps> = ({
   };
 
   const retryLoadingMap = () => {
-    setMapEngine('kakao');
+    setPreferredMapEngine(hasKakaoJavaScriptKey ? 'kakao' : 'open');
     setBaseUrlIndex(0);
     setIsMapReady(false);
     setMapLoadError(undefined);

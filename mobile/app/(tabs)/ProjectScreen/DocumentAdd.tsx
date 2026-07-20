@@ -26,6 +26,8 @@ import KoreanFieldworkDrawingSurveyPanel
   from '@/components/Project/KoreanFieldworkDrawingSurveyPanel';
 import KoreanFieldworkFindSpotPanel
   from '@/components/Project/KoreanFieldworkFindSpotPanel';
+import KoreanFieldworkFeatureSketchReferencePanel
+  from '@/components/Project/KoreanFieldworkFeatureSketchReferencePanel';
 import KoreanFieldworkFreeDrawingPanel, {
   getKoreanFieldworkFreeDrawingConfig,
 } from '@/components/Project/KoreanFieldworkFreeDrawingPanel';
@@ -280,6 +282,14 @@ const DocumentAdd: React.FC = () => {
             parentDocument={parentDoc}
             resource={newResource}
           />
+          {categoryName === KOREAN_FIELDWORK_CATEGORIES.PEN_MEMO
+            && parentDoc.resource.category === KOREAN_FIELDWORK_CATEGORIES.FEATURE
+            && (
+              <KoreanFieldworkFeatureSketchReferencePanel
+                document={parentDoc}
+                documents={documents ?? [parentDoc]}
+              />
+            )}
           <KoreanFieldworkFindSpotPanel
             documents={documents ?? []}
             parentDocument={parentDoc}

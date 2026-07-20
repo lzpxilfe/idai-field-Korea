@@ -81,7 +81,7 @@ describe('ProjectContextProvider', () => {
       hasLoadedInitialDocuments: false,
     });
 
-    const { getByTestId, queryByText } = render(
+    const { getByTestId, getByText, queryByText } = render(
       <PreferencesContext.Provider value={createPreferencesContext(preferences)}>
         <ProjectContextProvider>
           <Text>child</Text>
@@ -90,6 +90,7 @@ describe('ProjectContextProvider', () => {
     );
 
     expect(getByTestId('project-opening-loading-state')).toBeTruthy();
+    expect(getByText('테스트 프로젝트 기록을 불러오는 중입니다.')).toBeTruthy();
     expect(queryByText('child')).toBeNull();
   });
 });
@@ -132,6 +133,7 @@ const createPreferences = () => ({
   projects: {
     fieldwork: {
       connected: true,
+      displayName: '테스트',
       password: 'field-secret',
       url: 'https://field.example/db',
       mapSettings: { pointRadius: 6 },

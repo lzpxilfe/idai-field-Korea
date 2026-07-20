@@ -17,6 +17,7 @@ import {
 import PouchDB from 'pouchdb-node';
 import React from 'react';
 import { t2 } from '@/test_data/test_docs/t2';
+import { si1 } from '@/test_data/test_docs/si1';
 import { ConfigurationContext } from '@/contexts/configuration-context';
 import LabelsContext from '@/contexts/labels/labels-context';
 import { PreferencesContext } from '@/contexts/preferences-context';
@@ -268,6 +269,51 @@ describe('DocumentEdit', () => {
       expect(renderAPI.getByTestId('fieldworkFreeDrawingFullscreenCanvas'))
         .toBeTruthy()
     );
+  });
+
+  it('opens the existing free sketch from a double press without changing the feature outline', async () => {
+    cleanup();
+    mockUseGlobalSearchParams.mockReturnValue({
+      docId: si1.resource.id,
+      categoryName: 'Feature',
+    });
+    renderAPI = renderDocumentEditScreen(
+      preferences,
+      config,
+      repository
+    );
+
+    await waitFor(() => renderAPI.getByTestId('featureShapeSketchPreview'));
+    fireEvent.press(renderAPI.getByTestId('featureShapeSketchPreview'));
+    expect(renderAPI.queryByTestId('fieldworkFreeDrawingFullscreenCanvas')).toBeNull();
+    fireEvent.press(renderAPI.getByTestId('featureShapeSketchPreview'));
+
+    const canvas = await waitFor(() =>
+      renderAPI.getByTestId('fieldworkFreeDrawingFullscreenCanvas'));
+    fireEvent(canvas, 'message', {
+      nativeEvent: {
+        data: JSON.stringify({
+          payload: [{
+            points: [
+              { x: 1000, y: 1000 },
+              { x: 3000, y: 3000 },
+            ],
+            tool: 'pen',
+            width: 5,
+          }],
+          type: 'strokes',
+        }),
+      },
+    });
+    fireEvent.press(renderAPI.getByTestId('fieldworkFreeDrawingFullscreenClose'));
+    fireEvent.press(renderAPI.getByTestId('editDocBtn'));
+
+    await waitFor(() => expect(repository.update).toHaveBeenCalledTimes(1));
+    const updatedDocument = (repository.update as jest.Mock).mock.calls[0][0];
+    expect(updatedDocument.resource.featureFreeDrawingStrokes)
+      .toContain('"strokes"');
+    expect(updatedDocument.resource.featureLocationSketch)
+      .toBe(si1.resource.featureLocationSketch);
   });
 
   it('keeps tablet edit saves quiet even when later HWP handoff will need review', async () => {

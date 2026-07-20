@@ -19,44 +19,9 @@ export function getKoreanFieldworkDefaultMapProviderSettings(): KoreanFieldworkM
     };
 }
 
-export function normalizeKoreanFieldworkMapProviderSettings(settings: any): KoreanFieldworkMapProviderSettings {
+export function normalizeKoreanFieldworkMapProviderSettings(
+    _settings: unknown
+): KoreanFieldworkMapProviderSettings {
 
-    const defaults = getKoreanFieldworkDefaultMapProviderSettings();
-    if (!settings || typeof settings !== 'object' || Array.isArray(settings)) return defaults;
-
-    return {
-        kakaoLocalRestApiKey: getString(settings.kakaoLocalRestApiKey),
-        kakaoMapJavaScriptKey: getString(settings.kakaoMapJavaScriptKey),
-        kakaoNativeAppKey: getString(settings.kakaoNativeAppKey)
-    };
-}
-
-export function hasKoreanFieldworkSatelliteMapDisplayKey(settings: any): boolean {
-
-    const normalized = normalizeKoreanFieldworkMapProviderSettings(settings);
-    return !!normalized.kakaoMapJavaScriptKey.trim();
-}
-
-export function getKoreanFieldworkSatelliteMapProviderNotice(settings: any): string {
-
-    const normalized = normalizeKoreanFieldworkMapProviderSettings(settings);
-
-    if (normalized.kakaoMapJavaScriptKey.trim()) {
-        return '카카오 지도 JavaScript 키가 저장되어 있습니다. 태블릿에서는 JavaScript 키 WebView 경로를 우선 사용해 일반지도, 위성지도, 하이브리드로 조사 경계를 만들 수 있습니다. SHP/DXF/GeoJSON은 태블릿에서 파일 선택으로 바로 가져오거나, 데스크톱에서 가져온 뒤 같은 프로젝트로 동기화한 경계와 함께 읽습니다.';
-    }
-
-    if (normalized.kakaoNativeAppKey.trim()) {
-        return '카카오 Native App 키가 저장되어 있습니다. 현재 태블릿 지도 선택은 JavaScript 키 WebView 경로를 우선 사용합니다. SHP/DXF/GeoJSON은 태블릿에서 파일 선택으로 바로 가져오거나, 데스크톱에서 가져온 뒤 같은 프로젝트로 동기화해 확인하세요.';
-    }
-
-    if (normalized.kakaoLocalRestApiKey.trim()) {
-        return '카카오 Local REST 키는 저장되어 있습니다. 이 키는 주소 검색과 좌표 변환용이며, 지도 선택 화면에는 JavaScript 키 또는 Native App 키가 필요합니다.';
-    }
-
-    return '지도 선택 경계 작업에는 카카오 지도 JavaScript 키를 우선 사용합니다. Native App 키는 네이티브 지도 연동용으로 보관할 수 있고, REST 키만으로는 지도 화면을 표시할 수 없습니다.';
-}
-
-function getString(value: unknown): string {
-
-    return typeof value === 'string' ? value : '';
+    return getKoreanFieldworkDefaultMapProviderSettings();
 }

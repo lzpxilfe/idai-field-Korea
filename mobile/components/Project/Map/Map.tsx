@@ -41,10 +41,6 @@ import {
 import {
   getKoreanFieldworkMapStartPanelCopy,
 } from './korean-fieldwork-map-start-panel';
-import {
-  getKakaoSatelliteBasemapStatusMessage,
-  KAKAO_SATELLITE_BASEMAP_TITLE,
-} from './korean-fieldwork-map-provider-status';
 import KakaoSatellitePicker, {
   KakaoSatellitePickedBoundary,
   KakaoSatellitePickedLocation,
@@ -133,8 +129,6 @@ const Map: React.FC<MapProps> = (props) => {
   const [wgs84Location, setWgs84Location] = useState<KakaoSatellitePickedLocation>();
   const [isKakaoSatellitePickerOpen, setIsKakaoSatellitePickerOpen] = useState(false);
   const [isBoundaryFileImportOpen, setIsBoundaryFileImportOpen] = useState(false);
-  const currentMapProviderSettings = preferences.preferences.mapProviderSettings;
-
   const [
     geoDocuments,
     layerDocuments,
@@ -356,18 +350,8 @@ const Map: React.FC<MapProps> = (props) => {
   }, [config]);
 
   const showSatelliteBasemapInfo = useCallback(() => {
-    const javaScriptKey = currentMapProviderSettings.kakaoMapJavaScriptKey.trim();
-    if (javaScriptKey) {
-      setIsKakaoSatellitePickerOpen(true);
-      return;
-    }
-
-    Alert.alert(
-      KAKAO_SATELLITE_BASEMAP_TITLE,
-      getKakaoSatelliteBasemapStatusMessage(currentMapProviderSettings),
-      [{ text: '확인' }]
-    );
-  }, [currentMapProviderSettings]);
+    setIsKakaoSatellitePickerOpen(true);
+  }, []);
 
   const openSatellitePicker = useCallback(() => {
     showSatelliteBasemapInfo();
@@ -682,7 +666,7 @@ const Map: React.FC<MapProps> = (props) => {
     <View style={styles.container} onLayout={handleLayoutChange}>
       <KakaoSatellitePicker
         initialLocation={wgs84Location ?? DEFAULT_KAKAO_PICKER_LOCATION}
-        javaScriptKey={currentMapProviderSettings.kakaoMapJavaScriptKey}
+        javaScriptKey=""
         onClose={() => setIsKakaoSatellitePickerOpen(false)}
         onPickBoundary={(pickedBoundary) => {
           void createSurveyBoundaryFromKakaoSatelliteBoundary(pickedBoundary);
