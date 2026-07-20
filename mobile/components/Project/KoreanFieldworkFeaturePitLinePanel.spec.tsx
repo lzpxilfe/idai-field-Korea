@@ -1,6 +1,7 @@
 import { fireEvent, render } from '@testing-library/react-native';
 import { Document } from 'idai-field-core';
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import KoreanFieldworkFeaturePitLinePanel, {
   KOREAN_FIELDWORK_FEATURE_PHOTO_DIRECTION_FIELDS,
   KOREAN_FIELDWORK_FEATURE_PIT_LINE_FIELDS,
@@ -135,11 +136,161 @@ describe('KoreanFieldworkFeaturePitLinePanel', () => {
     );
     expect(directions[0]).toMatchObject({
       id: 'photo-direction-1',
+      kind: 'direction',
       start: { x: 20, y: 25 },
       end: { x: 80, y: 75 },
     });
     expect(updates[KOREAN_FIELDWORK_FEATURE_PIT_LINE_FIELDS.lines])
       .toBeUndefined();
+  });
+
+  it('stores a short photo gesture as a position point', () => {
+    const onUpdateResourceFields = jest.fn();
+    const { getByTestId } = render(
+      <KoreanFieldworkFeaturePitLinePanel
+        document={createDoc('feature-1', C.FEATURE)}
+        documents={[]}
+        mode="photoDirection"
+        onUpdateResourceFields={onUpdateResourceFields}
+      />
+    );
+
+    fireEvent.press(getByTestId('evidenceChip_photos'));
+    const canvas = getByTestId('featurePitLineCanvas');
+    fireEvent(canvas, 'layout', {
+      nativeEvent: { layout: { height: 200, width: 400 } },
+    });
+    fireEvent(canvas, 'responderGrant', {
+      nativeEvent: { locationX: 80, locationY: 50 },
+    });
+    fireEvent(canvas, 'responderRelease', {
+      nativeEvent: { locationX: 86, locationY: 55 },
+    });
+
+    const updates = onUpdateResourceFields.mock.calls[0][0];
+    const directions = JSON.parse(
+      updates[KOREAN_FIELDWORK_FEATURE_PHOTO_DIRECTION_FIELDS.lines]
+    );
+
+    expect(directions[0]).toMatchObject({
+      id: 'photo-direction-1',
+      kind: 'point',
+      start: { x: 20, y: 25 },
+      end: { x: 20, y: 25 },
+      points: [
+        { x: 20, y: 25 },
+        { x: 20, y: 25 },
+      ],
+    });
+  });
+
+  it('renders a photo point without a direction line or arrow', () => {
+    const { getByTestId, queryByTestId } = render(
+      <KoreanFieldworkFeaturePitLinePanel
+        document={createDoc('feature-1', C.FEATURE, {
+          featurePhotoDirections: JSON.stringify([
+            {
+              version: 2,
+              id: 'photo-direction-1',
+              kind: 'point',
+              label: '1',
+              start: { x: 20, y: 25 },
+              end: { x: 20, y: 25 },
+              points: [
+                { x: 20, y: 25 },
+                { x: 20, y: 25 },
+              ],
+            },
+          ]),
+        })}
+        documents={[]}
+        mode="photoDirection"
+        onUpdateResourceFields={jest.fn()}
+      />
+    );
+
+    fireEvent.press(getByTestId('evidenceChip_photos'));
+
+    expect(getByTestId('featurePitLineStart')).toBeTruthy();
+    expect(queryByTestId('featurePitLineSegment')).toBeNull();
+    expect(queryByTestId('featurePitLineEnd')).toBeNull();
+  });
+
+  it('rotates saved and pending arrows along their actual screen direction', () => {
+    const { getByTestId } = render(
+      <KoreanFieldworkFeaturePitLinePanel
+        document={createDoc('feature-1', C.FEATURE, {
+          featurePhotoDirections: JSON.stringify([
+            {
+              version: 2,
+              id: 'photo-direction-1',
+              kind: 'direction',
+              label: '1',
+              start: { x: 20, y: 25 },
+              end: { x: 80, y: 75 },
+              points: [
+                { x: 20, y: 25 },
+                { x: 80, y: 75 },
+              ],
+            },
+          ]),
+        })}
+        documents={[]}
+        mode="photoDirection"
+        onUpdateResourceFields={jest.fn()}
+      />
+    );
+
+    fireEvent.press(getByTestId('evidenceChip_photos'));
+    const canvas = getByTestId('featurePitLineCanvas');
+    fireEvent(canvas, 'layout', {
+      nativeEvent: { layout: { height: 200, width: 400 } },
+    });
+
+    const savedArrowStyle = StyleSheet.flatten(
+      getByTestId('featurePitLineEnd').props.style
+    );
+    const savedAngle = Math.atan2(100, 240) * (180 / Math.PI);
+    expect(savedArrowStyle.transform).toEqual([
+      { rotateZ: `${savedAngle}deg` },
+    ]);
+
+    fireEvent(canvas, 'responderGrant', {
+      nativeEvent: { locationX: 320, locationY: 100 },
+    });
+    fireEvent(canvas, 'responderMove', {
+      nativeEvent: { locationX: 80, locationY: 100 },
+    });
+
+    const pendingArrowStyle = StyleSheet.flatten(
+      getByTestId('featurePitLinePendingEnd').props.style
+    );
+    expect(pendingArrowStyle.transform).toEqual([{ rotateZ: '180deg' }]);
+  });
+
+  it('continues to ignore a short tap in soil pit line mode', () => {
+    const onUpdateResourceFields = jest.fn();
+    const { getByTestId } = render(
+      <KoreanFieldworkFeaturePitLinePanel
+        document={createDoc('feature-1', C.FEATURE)}
+        documents={[]}
+        onUpdateResourceFields={onUpdateResourceFields}
+      />
+    );
+
+    fireEvent.press(getByTestId('featurePitLineOpen'));
+    const canvas = getByTestId('featurePitLineCanvas');
+    fireEvent(canvas, 'layout', {
+      nativeEvent: { layout: { height: 200, width: 400 } },
+    });
+    fireEvent(canvas, 'responderGrant', {
+      nativeEvent: { locationX: 80, locationY: 50 },
+    });
+    fireEvent(canvas, 'responderRelease', {
+      nativeEvent: { locationX: 86, locationY: 55 },
+    });
+
+    expect(onUpdateResourceFields).not.toHaveBeenCalled();
   });
 
   it('keeps the pit line hint row mounted while choosing points', () => {

@@ -22,6 +22,7 @@ import {
 
 type FeatureLocationSketchShape =
   'point' | 'polygon' | 'rectangle' | 'circle' | 'oval';
+type FeaturePhotoAnnotationKind = 'point' | 'direction';
 
 interface SketchPoint {
   x: number;
@@ -49,6 +50,7 @@ interface FeatureLocationSketch {
 interface FeatureSoilPitLine {
   end: SketchPoint;
   id: string;
+  kind?: FeaturePhotoAnnotationKind;
   label: string;
   points: SketchPoint[];
   start: SketchPoint;
@@ -93,6 +95,7 @@ const SHAPE_PREVIEW_SIDE_PADDING = 9;
 const SHAPE_PREVIEW_TOP_PADDING = 22;
 const SHAPE_PREVIEW_BOTTOM_PADDING = 12;
 const MIN_LINE_DISTANCE = 3;
+const PHOTO_POINT_MAX_DISTANCE_PX = 12;
 const VALID_SHAPES = new Set<FeatureLocationSketchShape>([
   'point',
   'polygon',
@@ -112,9 +115,10 @@ const TEXT = {
   noSketch: '\uc720\uad6c \uc2a4\ucf00\uce58 \uc5c6\uc74c',
   photo: '\uc0ac\uc9c4',
   photoDirectionHint:
-    '\ucd2c\uc601\ud55c \uc704\uce58\uc5d0\uc11c \uc0ac\uc9c4 \ub300\uc0c1 \ubc29\ud5a5\uc73c\ub85c \uc190\uac00\ub77d\uc744 \ub04c\uc5b4 \ud45c\uc2dc\ud558\uc138\uc694.',
+    '\uc810\uc744 \ucc0d\uc73c\uba74 \ucd2c\uc601 \uc704\uce58\ub9cc, \uc704\uce58\uc5d0\uc11c \ub04c\uba74 \uc0ac\uc9c4\uc744 \ucc0d\uc740 \ubc29\ud5a5\uae4c\uc9c0 \uc800\uc7a5\ub429\ub2c8\ub2e4.',
+  photoPointPending: '\uc774\ub300\ub85c \ub193\uc73c\uba74 \ucd2c\uc601 \uc704\uce58\ub9cc \uc800\uc7a5\ub429\ub2c8\ub2e4.',
   photoDirectionPending: '\uc190\uac00\ub77d\uc744 \ub5bc\uba74 \ucd2c\uc601 \uc704\uce58\uc640 \ubc29\ud5a5\uc774 \uc800\uc7a5\ub429\ub2c8\ub2e4.',
-  photoDirectionReady: '\ucd2c\uc601 \uc704\uce58\ub97c \ub204\ub974\uace0 \ub300\uc0c1 \ubc29\ud5a5\uc73c\ub85c \ub04c\uc5b4\ubcf4\uc138\uc694.',
+  photoDirectionReady: '\ucd2c\uc601 \uc704\uce58\ub97c \ud55c \ubc88 \ub204\ub974\uac70\ub098, \uadf8 \uc704\uce58\uc5d0\uc11c \ub300\uc0c1 \ubc29\ud5a5\uc73c\ub85c \ub04c\uc5b4\ubcf4\uc138\uc694.',
   photoDirectionTitle: '\uc0ac\uc9c4 \uc704\uce58\u00b7\ubc29\ud5a5',
   openPitRecords: '\ud53c\ud2b8 \uae30\ub85d \ubcf4\uae30',
   pendingHint: '\uc190\uac00\ub77d\uc744 \ub5bc\uba74 \ud604\uc7ac \uc704\uce58\uae4c\uc9c0 \uc9c1\uc120\uc774 \ucd94\uac00\ub429\ub2c8\ub2e4.',
@@ -180,9 +184,19 @@ const KoreanFieldworkFeaturePitLinePanel: React.FC<Props> = ({
   const photoChecklistCount = getPhotoChecklistCount(
     (document.resource as Record<string, unknown>).featureInvestigationChecklist
   );
+  const isPendingPhotoDirection = isPhotoDirectionMode
+    && !!pendingStartPoint
+    && !!pendingEndPoint
+    && getPixelPointDistance(
+      pendingStartPoint,
+      pendingEndPoint,
+      canvasSize
+    ) >= PHOTO_POINT_MAX_DISTANCE_PX;
   const pitLineStatusText = isPhotoDirectionMode
     ? pendingStartPoint
-      ? TEXT.photoDirectionPending
+      ? isPendingPhotoDirection
+        ? TEXT.photoDirectionPending
+        : TEXT.photoPointPending
       : TEXT.photoDirectionReady
     : pendingStartPoint
       ? TEXT.pendingHint
@@ -223,15 +237,29 @@ const KoreanFieldworkFeaturePitLinePanel: React.FC<Props> = ({
     const start = pendingStartPointRef.current;
     const end = getNormalizedPoint(event, canvasSize) ?? pendingEndPoint;
     cancelPendingLine();
-    if (!start || !end || getPointDistance(start, end) < MIN_LINE_DISTANCE) return;
+    if (!start || !end) return;
+
+    const photoAnnotationKind: FeaturePhotoAnnotationKind | undefined =
+      isPhotoDirectionMode
+        ? getPixelPointDistance(start, end, canvasSize)
+            < PHOTO_POINT_MAX_DISTANCE_PX
+          ? 'point'
+          : 'direction'
+        : undefined;
+    if (
+      !isPhotoDirectionMode
+      && getPointDistance(start, end) < MIN_LINE_DISTANCE
+    ) return;
+    const savedEnd = photoAnnotationKind === 'point' ? start : end;
 
     saveLines([
       ...savedLines,
       createFeatureSoilPitLine(
         start,
-        end,
+        savedEnd,
         savedLines.length,
-        isPhotoDirectionMode ? 'photo-direction' : 'soil-pit-line'
+        isPhotoDirectionMode ? 'photo-direction' : 'soil-pit-line',
+        photoAnnotationKind
       ),
     ]);
   };
@@ -563,34 +591,47 @@ const KoreanFieldworkFeaturePitLinePanel: React.FC<Props> = ({
                 )}
               {savedLines.map((line, index) => {
                 const points = getPitLinePoints(line);
+                const isPhotoPoint = isPhotoDirectionMode
+                  && isPhotoPositionPoint(line);
+                const directionAngle = !isPhotoPoint && isPhotoDirectionMode
+                  ? getPhotoDirectionAngle(
+                    points[0],
+                    points[points.length - 1],
+                    canvasSize
+                  )
+                  : undefined;
 
                 return (
                   <React.Fragment key={`${line.id}-${index}`}>
-                    {toLineSegments({
-                      canvasSize,
-                      closePath: false,
-                      color: isPhotoDirectionMode ? '#175cd3' : '#2f5f4a',
-                      keyPrefix: `feature-pit-line-${line.id}-${index}`,
-                      points,
-                      testID: 'featurePitLineSegment',
-                      width: 4,
-                    })}
+                    {!isPhotoPoint && toLineSegments({
+                        canvasSize,
+                        closePath: false,
+                        color: isPhotoDirectionMode ? '#175cd3' : '#2f5f4a',
+                        keyPrefix: `feature-pit-line-${line.id}-${index}`,
+                        points,
+                        testID: 'featurePitLineSegment',
+                        width: 4,
+                      })}
                     <LineHandle
                       icon={isPhotoDirectionMode ? 'photo-camera' : undefined}
                       label={isPhotoDirectionMode ? undefined : line.label}
                       point={points[0]}
                       testID="featurePitLineStart"
                     />
-                    <LineHandle
-                      icon={isPhotoDirectionMode ? 'arrow-forward' : undefined}
-                      label={isPhotoDirectionMode ? undefined : line.label}
-                      point={points[points.length - 1]}
-                      testID="featurePitLineEnd"
-                    />
+                    {!isPhotoPoint && (
+                      <LineHandle
+                        icon={isPhotoDirectionMode ? 'arrow-forward' : undefined}
+                        label={isPhotoDirectionMode ? undefined : line.label}
+                        point={points[points.length - 1]}
+                        rotationDegrees={directionAngle}
+                        testID="featurePitLineEnd"
+                      />
+                    )}
                     <View
                       pointerEvents="none"
                       style={[
                         styles.lineLabel,
+                        isPhotoPoint && styles.photoPointLabel,
                         getPointPercentStyle(getLineMidpoint(line)),
                       ]}
                       testID={`featurePitLineLabel_${index}`}
@@ -602,7 +643,10 @@ const KoreanFieldworkFeaturePitLinePanel: React.FC<Props> = ({
               })}
               {pendingStartPoint && pendingEndPoint && (
                 <>
-                  {getPointDistance(pendingStartPoint, pendingEndPoint) >= MIN_LINE_DISTANCE
+                  {(isPhotoDirectionMode
+                    ? isPendingPhotoDirection
+                    : getPointDistance(pendingStartPoint, pendingEndPoint)
+                      >= MIN_LINE_DISTANCE)
                     && toLineSegments({
                       canvasSize,
                       closePath: false,
@@ -613,14 +657,25 @@ const KoreanFieldworkFeaturePitLinePanel: React.FC<Props> = ({
                       width: 3,
                     })}
                   <LineHandle
-                    label="+"
+                    icon={isPhotoDirectionMode ? 'photo-camera' : undefined}
+                    label={isPhotoDirectionMode ? undefined : '+'}
                     point={pendingStartPoint}
                     testID="featurePitLinePendingStart"
                   />
-                  <LineHandle
-                    point={pendingEndPoint}
-                    testID="featurePitLinePendingEnd"
-                  />
+                  {(!isPhotoDirectionMode || isPendingPhotoDirection) && (
+                    <LineHandle
+                      icon={isPhotoDirectionMode ? 'arrow-forward' : undefined}
+                      point={pendingEndPoint}
+                      rotationDegrees={isPhotoDirectionMode
+                        ? getPhotoDirectionAngle(
+                          pendingStartPoint,
+                          pendingEndPoint,
+                          canvasSize
+                        )
+                        : undefined}
+                      testID="featurePitLinePendingEnd"
+                    />
+                  )}
                 </>
               )}
             </View>
@@ -688,11 +743,18 @@ const LineHandle: React.FC<{
   icon?: keyof typeof MaterialIcons.glyphMap;
   label?: string;
   point: SketchPoint;
+  rotationDegrees?: number;
   testID: string;
-}> = ({ icon, label, point, testID }) => (
+}> = ({ icon, label, point, rotationDegrees, testID }) => (
   <View
     pointerEvents="none"
-    style={[styles.lineHandle, getPointPercentStyle(point)]}
+    style={[
+      styles.lineHandle,
+      getPointPercentStyle(point),
+      rotationDegrees !== undefined && {
+        transform: [{ rotateZ: `${rotationDegrees}deg` }],
+      },
+    ]}
     testID={testID}
   >
     {icon && <MaterialIcons name={icon} size={11} color="#ffffff" />}
@@ -738,6 +800,9 @@ const normalizeFeatureSoilPitLine = (
     id: typeof rawValue.id === 'string'
       ? rawValue.id
       : createFeatureSoilPitLineId(index),
+    kind: rawValue.kind === 'point' || rawValue.kind === 'direction'
+      ? rawValue.kind
+      : undefined,
     label: typeof rawValue.label === 'string'
       ? rawValue.label
       : `${index + 1}`,
@@ -754,13 +819,15 @@ const createFeatureSoilPitLine = (
   start: SketchPoint,
   end: SketchPoint,
   index: number,
-  idPrefix = 'soil-pit-line'
+  idPrefix = 'soil-pit-line',
+  kind?: FeaturePhotoAnnotationKind
 ): FeatureSoilPitLine => {
   const points = [start, end];
 
   return {
     end: points[points.length - 1],
     id: createFeatureSoilPitLineId(index, idPrefix),
+    kind,
     label: `${index + 1}`,
     points,
     start: points[0],
@@ -1098,6 +1165,36 @@ const normalizeRotation = (value: number): number => {
 const getPointDistance = (a: SketchPoint, b: SketchPoint): number =>
   Math.sqrt(((a.x - b.x) ** 2) + ((a.y - b.y) ** 2));
 
+const getPixelPointDistance = (
+  a: SketchPoint,
+  b: SketchPoint,
+  canvasSize: CanvasSize
+): number => {
+  const pixelA = denormalizePoint(a, canvasSize);
+  const pixelB = denormalizePoint(b, canvasSize);
+
+  return Math.sqrt(
+    ((pixelA.x - pixelB.x) ** 2) + ((pixelA.y - pixelB.y) ** 2)
+  );
+};
+
+const getPhotoDirectionAngle = (
+  start: SketchPoint,
+  end: SketchPoint,
+  canvasSize: CanvasSize
+): number => {
+  const pixelStart = denormalizePoint(start, canvasSize);
+  const pixelEnd = denormalizePoint(end, canvasSize);
+
+  return Math.atan2(
+    pixelEnd.y - pixelStart.y,
+    pixelEnd.x - pixelStart.x
+  ) * (180 / Math.PI);
+};
+
+const isPhotoPositionPoint = (line: FeatureSoilPitLine): boolean =>
+  line.kind === 'point' || getPointDistance(line.start, line.end) < 0.001;
+
 const hasRelationTo = (candidate: Document, documentId: string): boolean => {
   const relations = candidate.resource.relations as
     | Record<string, unknown>
@@ -1364,6 +1461,10 @@ const styles = StyleSheet.create({
     fontSize: 8,
     fontWeight: '900',
     lineHeight: 10,
+  },
+  photoPointLabel: {
+    marginLeft: 5,
+    marginTop: -18,
   },
   modalCloseButton: {
     alignItems: 'center',
