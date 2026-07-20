@@ -168,15 +168,53 @@ const KoreanFieldworkFreeDrawingPanel: React.FC<Props> = ({
   const previewTapMovedRef = useRef(false);
   const hasAppliedInitialFullscreenRef = useRef(false);
   const lastFullscreenRequestIdRef = useRef(fullscreenRequestId);
-  const visibleStrokes = activeStroke ? strokes.concat(activeStroke) : strokes;
-  const previewStrokes = writingGuides
-    ? applyKoreanFieldworkHandwritingErasers(visibleStrokes, {
-      coordinateSpace,
-    })
-    : visibleStrokes;
-  const previewTransform = writingGuides
-    ? getInfiniteGridPreviewTransform(previewStrokes, canvasSize)
-    : undefined;
+  const visibleStrokes = useMemo(
+    () => activeStroke ? strokes.concat(activeStroke) : strokes,
+    [activeStroke, strokes]
+  );
+  const previewStrokes = useMemo(
+    () => writingGuides
+      ? applyKoreanFieldworkHandwritingErasers(visibleStrokes, {
+        coordinateSpace,
+      })
+      : visibleStrokes,
+    [coordinateSpace, visibleStrokes, writingGuides]
+  );
+  const previewTransform = useMemo(
+    () => writingGuides
+      ? getInfiniteGridPreviewTransform(previewStrokes, canvasSize)
+      : undefined,
+    [canvasSize, previewStrokes, writingGuides]
+  );
+  const savedPreviewStrokes = writingGuides ? previewStrokes : strokes;
+  const savedStrokeElements = useMemo(
+    () => savedPreviewStrokes.flatMap((stroke, strokeIndex) =>
+      toStrokeSegments(
+        stroke,
+        strokeIndex,
+        canvasSize,
+        previewTransform
+      )
+    ),
+    [canvasSize, previewTransform, savedPreviewStrokes]
+  );
+  const activeStrokeElements = useMemo(
+    () => !writingGuides && activeStroke
+      ? toStrokeSegments(
+        activeStroke,
+        strokes.length,
+        canvasSize,
+        previewTransform
+      )
+      : undefined,
+    [
+      activeStroke,
+      canvasSize,
+      previewTransform,
+      strokes.length,
+      writingGuides,
+    ]
+  );
   const fullscreenBackground = useMemo(
     () => writingGuides
       ? {
@@ -523,14 +561,8 @@ const KoreanFieldworkFreeDrawingPanel: React.FC<Props> = ({
         style={styles.canvas}
         testID="fieldworkFreeDrawingCanvas"
       >
-        {previewStrokes.flatMap((stroke, strokeIndex) =>
-          toStrokeSegments(
-            stroke,
-            strokeIndex,
-            canvasSize,
-            previewTransform
-          )
-        )}
+        {savedStrokeElements}
+        {activeStrokeElements}
       </View>
       <KoreanFieldworkFullscreenDrawingModal
         background={fullscreenBackground}

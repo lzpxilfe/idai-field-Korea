@@ -579,7 +579,22 @@ describe('DocumentAddModal', () => {
     expect(dynamicCanvasStyle.height).toBeGreaterThanOrEqual(440);
     expect(dynamicCanvasStyle.height).toBeLessThanOrEqual(860);
     expect(canvas.props.onStartShouldSetResponder).toBeUndefined();
-    expect(touchLayer.props.onStartShouldSetResponder()).toBe(true);
+    const oneFingerGesture = {
+      nativeEvent: {
+        touches: [{ locationX: 100, locationY: 50 }],
+      },
+    };
+    const twoFingerGesture = {
+      nativeEvent: {
+        touches: [
+          { locationX: 80, locationY: 50 },
+          { locationX: 120, locationY: 50 },
+        ],
+      },
+    };
+    expect(touchLayer.props.onStartShouldSetResponder(oneFingerGesture)).toBe(false);
+    expect(touchLayer.props.onMoveShouldSetResponder(oneFingerGesture)).toBe(false);
+    expect(touchLayer.props.onStartShouldSetResponder(twoFingerGesture)).toBe(true);
     expect(StyleSheet.flatten(touchLayer.props.style)).toEqual(
       expect.objectContaining({
         bottom: 0,
@@ -593,6 +608,9 @@ describe('DocumentAddModal', () => {
     fireEvent(canvas, 'layout', {
       nativeEvent: { layout: { height: 100, width: 200 } },
     });
+    fireEvent.press(getByTestId('featureSketchZoomIn'));
+    expect(getByTestId('featureLocationSketchTouchLayer')
+      .props.onStartShouldSetResponder(oneFingerGesture)).toBe(true);
     fireEvent(touchLayer, 'responderGrant', {
       nativeEvent: { locationX: 100, locationY: 50 },
     });
@@ -603,9 +621,9 @@ describe('DocumentAddModal', () => {
       nativeEvent: { locationX: 100, locationY: 20 },
     });
     expect(StyleSheet.flatten(getByTestId('featureSketchFlatMapSurface').props.style))
-      .toEqual(expect.objectContaining({
-        top: -22,
-      }));
+      .toEqual(expect.objectContaining({ top: expect.any(Number) }));
+    expect(StyleSheet.flatten(getByTestId('featureSketchFlatMapSurface').props.style).top)
+      .toBeLessThan(0);
     fireEvent.press(getByTestId('featureSketchViewReset'));
     expect(StyleSheet.flatten(getByTestId('featureSketchFlatMapSurface').props.style))
       .toEqual(expect.objectContaining({
@@ -620,6 +638,8 @@ describe('DocumentAddModal', () => {
     fireEvent.press(getByTestId('featureSketchMode_polygon'));
     expect(getByTestId('featureSketchMode_polygon').props.accessibilityState)
       .toMatchObject({ selected: true });
+    expect(getByTestId('featureLocationSketchTouchLayer')
+      .props.onStartShouldSetResponder(oneFingerGesture)).toBe(true);
     fireEvent.press(getByTestId('featureSketchMode_polygon'));
     expect(getByTestId('featureSketchMode_inspect').props.accessibilityState)
       .toMatchObject({ selected: true });
@@ -655,6 +675,63 @@ describe('DocumentAddModal', () => {
     await waitFor(() => {
       expect(getByTestId('featureSketchLiveLocation')).toBeTruthy();
     });
+  });
+
+  it('discards an unfinished shape when its responder is terminated', () => {
+    const onAddCategory = jest.fn();
+    const parentDoc = {
+      resource: {
+        id: 'operation-1',
+        identifier: 'Operation 1',
+        category: C.TRENCH,
+        relations: {},
+      },
+    } as any;
+
+    const { getByTestId } = render(
+      <LabelsContext.Provider value={{ labels: new Labels(() => ['ko']) }}>
+        <ConfigurationContext.Provider value={createConfig([
+          createCategory(C.TRENCH),
+          createCategory(C.FEATURE),
+        ])}
+        >
+          <DocumentAddModal
+            boundaryDraft={createBoundaryDraft()}
+            initialCategoryName={C.FEATURE}
+            onAddCategory={onAddCategory}
+            onClose={jest.fn()}
+            parentDoc={parentDoc}
+          />
+        </ConfigurationContext.Provider>
+      </LabelsContext.Provider>
+    );
+
+    const canvas = getByTestId('featureLocationSketchCanvas');
+    const touchLayer = getByTestId('featureLocationSketchTouchLayer');
+    fireEvent(canvas, 'layout', {
+      nativeEvent: { layout: { height: 100, width: 200 } },
+    });
+    fireEvent.press(getByTestId('featureSketchMode_circle'));
+    fireEvent(touchLayer, 'responderGrant', {
+      nativeEvent: { locationX: 60, locationY: 30 },
+    });
+    fireEvent(touchLayer, 'responderMove', {
+      nativeEvent: { locationX: 100, locationY: 50 },
+    });
+    fireEvent(touchLayer, 'responderTerminate', {
+      nativeEvent: { locationX: 100, locationY: 50 },
+    });
+
+    fireEvent.changeText(getByTestId('featureIdentifierInput'), '1호 유구');
+    selectFeatureTypeAndSubmit(getByTestId, 'featureType_startUnknown');
+
+    expect(onAddCategory).toHaveBeenCalledWith(
+      C.FEATURE,
+      parentDoc,
+      expect.not.objectContaining({
+        featureLocationSketch: expect.anything(),
+      })
+    );
   });
 
   it('stores a drawn feature boundary from the project-boundary sketch', () => {

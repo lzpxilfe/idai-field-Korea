@@ -1494,6 +1494,7 @@ const DocumentsList: React.FC = () => {
               title={group.title}
               subtitle={group.subtitle}
               documents={group.documents}
+              allDocuments={documents}
               documentsById={documentsById}
               getCategoryLabel={getCategoryLabel}
               issueCountByDocumentId={
@@ -1786,6 +1787,7 @@ const RecordSection: React.FC<{
   title: string;
   subtitle: string;
   documents: Document[];
+  allDocuments: Document[];
   documentsById: Map<string, Document>;
   getCategoryLabel: (categoryName: string) => string;
   issueCountByDocumentId: { [documentId: string]: number };
@@ -1806,6 +1808,7 @@ const RecordSection: React.FC<{
   title,
   subtitle,
   documents,
+  allDocuments,
   documentsById,
   getCategoryLabel,
   issueCountByDocumentId,
@@ -1819,10 +1822,7 @@ const RecordSection: React.FC<{
   onEditDocument,
   onDeleteDocument,
   onUpdateResourceFields,
-}) => {
-  const allDocuments = Array.from(documentsById.values());
-
-  return (
+}) => (
     <View style={styles.recordSection}>
       <View style={styles.recordSectionHeader}>
         <View style={styles.recordSectionTitleWrap}>
@@ -1855,8 +1855,7 @@ const RecordSection: React.FC<{
         />
       ))}
     </View>
-  );
-};
+);
 
 export const RecordRow: React.FC<{
   document: Document;
@@ -1900,7 +1899,12 @@ export const RecordRow: React.FC<{
   );
   const description = getRecordDescription(document);
   const statusChips = getKoreanFieldworkRecordStatusChips(document);
-  const evidenceChips = getKoreanFieldworkEvidenceChips(document, documents);
+  const evidenceChips = useMemo(
+    () => selected
+      ? getKoreanFieldworkEvidenceChips(document, documents)
+      : [],
+    [document, documents, selected]
+  );
   const [activeEvidenceChipId, setActiveEvidenceChipId] = useState<string>();
   const activeEvidenceChip = evidenceChips.find((chip) =>
     chip.id === activeEvidenceChipId
@@ -1920,21 +1924,29 @@ export const RecordRow: React.FC<{
     [allowedAddCategoryNames, config, document.resource.category]
   );
   const actionSummary = useMemo(
-    () => getKoreanFieldworkRecordActionSummary(
+    () => selected
+      ? getKoreanFieldworkRecordActionSummary(
+        document,
+        documents,
+        allowedAddCategoryNames,
+        investigationModeId
+      )
+      : undefined,
+    [
+      allowedAddCategoryNames,
       document,
       documents,
-      allowedAddCategoryNames,
-      investigationModeId
-    ),
-    [allowedAddCategoryNames, document, documents, investigationModeId]
+      investigationModeId,
+      selected,
+    ]
   );
-  const visibleActions = actionSummary.actions.slice(0, 2);
+  const visibleActions = actionSummary?.actions.slice(0, 2) ?? [];
   const isFeatureRecord =
     document.resource.category === KOREAN_FIELDWORK_CATEGORIES.FEATURE;
   const hasExpandedBody = selected && (
     evidenceChips.length > 0
     || !!description
-    || actionSummary.isTracked
+    || !!actionSummary?.isTracked
     || isFeatureRecord
   );
   const handleOpenOrEdit = () => {
@@ -2155,7 +2167,7 @@ export const RecordRow: React.FC<{
                 {description}
               </Text>
             )}
-            {actionSummary.isTracked && (
+            {actionSummary?.isTracked && (
               <RecordWorkSummary
                 summary={actionSummary}
                 actions={visibleActions}

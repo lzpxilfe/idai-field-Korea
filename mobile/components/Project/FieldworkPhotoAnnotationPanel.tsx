@@ -30,6 +30,7 @@ import {
   DEFAULT_FIELDWORK_DRAWING_TOOL,
   KoreanFieldworkBrushControls,
 } from './KoreanFieldworkFullscreenDrawingModal';
+import { isKoreanFieldworkStylusPointer } from './korean-fieldwork-stylus-input';
 import {
   FieldworkPhotoRect as Rect,
   MAX_FIELDWORK_PHOTO_COORDINATE,
@@ -99,6 +100,7 @@ const DEFAULT_DRAWING_TOOL = DEFAULT_FIELDWORK_DRAWING_TOOL;
 const MIN_POINT_DISTANCE = 18;
 const RELEASE_POINT_MIN_DISTANCE = 1;
 const TAP_OPEN_FULLSCREEN_DISTANCE = 35;
+const PREVIEW_FINGER_TAP_MAX_DISTANCE = 12;
 const INTERPOLATED_POINT_SPACING = 90;
 const MAX_INTERPOLATED_POINTS_PER_MOVE = 18;
 const SAMPLE_PREVIEW_INTERVAL_MS = 140;
@@ -144,17 +146,41 @@ const FieldworkPhotoAnnotationPanel: React.FC<FieldworkPhotoAnnotationPanelProps
   const [sampleStatus, setSampleStatus] = useState<string>();
   const [webviewImageUri, setWebviewImageUri] = useState<string>();
   const activeStrokeRef = useRef<KoreanFieldworkHandwritingStroke>();
+  const activeStrokeRenderFrameRef = useRef<number>();
+  const activeStrokeIsStylusRef = useRef(false);
+  const brushColorRef = useRef(brushColor);
+  const brushWidthRef = useRef(brushWidth);
+  const drawingToolRef = useRef(drawingTool);
   const fullscreenWebViewRef = useRef<WebView>(null);
+  const isSampleModeRef = useRef(isSampleMode);
   const latestStrokesRef = useRef<KoreanFieldworkHandwritingStroke[]>(strokes);
+  const preparingImageUriRef = useRef<string>();
   const touchStartPointRef = useRef<KoreanFieldworkHandwritingPoint>();
   const activeCanvasRef = useRef<'fullscreen' | 'preview'>();
+  const previewFingerTapStartRef = useRef<{ x: number; y: number }>();
+  const previewFingerTapMovedRef = useRef(false);
   const handledSampleRequestKeyRef = useRef<number | string>();
   const fullscreenImageUriRef = useRef<string>();
-  const visibleStrokes = activeStroke ? strokes.concat(activeStroke) : strokes;
+  brushColorRef.current = brushColor;
+  brushWidthRef.current = brushWidth;
+  drawingToolRef.current = drawingTool;
+  isSampleModeRef.current = isSampleMode;
   const strokeCount = strokes.length;
   const imageFrame = useMemo(
     () => getContainedImageFrame(canvasSize, imageSize),
     [canvasSize, imageSize]
+  );
+  const savedStrokeElements = useMemo(
+    () => strokes.flatMap((stroke, strokeIndex) =>
+      toStrokeSegments(stroke, strokeIndex, imageFrame)
+    ),
+    [imageFrame, strokes]
+  );
+  const activeStrokeElements = useMemo(
+    () => activeStroke
+      ? toStrokeSegments(activeStroke, strokes.length, imageFrame)
+      : undefined,
+    [activeStroke, imageFrame, strokes.length]
   );
 
   const postFullscreenCommand = useCallback((
@@ -168,6 +194,7 @@ const FieldworkPhotoAnnotationPanel: React.FC<FieldworkPhotoAnnotationPanelProps
 
     const nextImageUri = webviewImageUri ?? imageUri;
     fullscreenImageUriRef.current = nextImageUri;
+    isSampleModeRef.current = nextSampleMode;
     setIsSampleMode(nextSampleMode);
     setPendingSamplePoint(undefined);
     setFullscreenHtml(buildPhotoAnnotationFullscreenHtml({
@@ -180,50 +207,64 @@ const FieldworkPhotoAnnotationPanel: React.FC<FieldworkPhotoAnnotationPanelProps
       strokes: latestStrokesRef.current,
     }));
     setIsFullscreenOpen(true);
+
+    if (
+      nextImageUri === imageUri
+      && isLocalFileUri(imageUri)
+      && preparingImageUriRef.current !== imageUri
+    ) {
+      preparingImageUriRef.current = imageUri;
+      FileSystem.readAsStringAsync(imageUri, {
+        encoding: FileSystem.EncodingType.Base64,
+      })
+        .then((base64) => {
+          if (!base64 || fullscreenImageUriRef.current !== imageUri) return;
+
+          const preparedImageUri =
+            `data:${getImageMimeTypeFromUri(imageUri)};base64,${base64}`;
+          fullscreenImageUriRef.current = preparedImageUri;
+          setWebviewImageUri(preparedImageUri);
+          setFullscreenHtml(buildPhotoAnnotationFullscreenHtml({
+            brushColor: brushColorRef.current,
+            brushWidth: brushWidthRef.current,
+            drawingTool: drawingToolRef.current,
+            imageUri: preparedImageUri,
+            isSampleMode: isSampleModeRef.current,
+            munsellReferences: SOIL_COLOR_MUNSELL_REFERENCES,
+            strokes: latestStrokesRef.current,
+          }));
+        })
+        .catch(() => undefined)
+        .finally(() => {
+          if (preparingImageUriRef.current === imageUri) {
+            preparingImageUriRef.current = undefined;
+          }
+        });
+    }
   }, [brushColor, brushWidth, drawingTool, imageUri, webviewImageUri]);
 
   const closeFullscreen = useCallback(() => {
+    isSampleModeRef.current = false;
     setIsFullscreenOpen(false);
     setIsSampleMode(false);
     setFullscreenHtml(undefined);
     setPendingSamplePoint(undefined);
     fullscreenImageUriRef.current = undefined;
-  }, []);
+    setWebviewImageUri(imageUri);
+  }, [imageUri]);
 
   useEffect(() => {
     latestStrokesRef.current = strokes;
   }, [strokes]);
 
+  useEffect(() => () => {
+    if (activeStrokeRenderFrameRef.current !== undefined) {
+      cancelAnimationFrame(activeStrokeRenderFrameRef.current);
+    }
+  }, []);
+
   useEffect(() => {
-    if (!imageUri) {
-      setWebviewImageUri(undefined);
-      return;
-    }
-
-    let isActive = true;
     setWebviewImageUri(imageUri);
-    if (!isLocalFileUri(imageUri)) {
-      return () => {
-        isActive = false;
-      };
-    }
-
-    FileSystem.readAsStringAsync(imageUri, {
-      encoding: FileSystem.EncodingType.Base64,
-    })
-      .then((base64) => {
-        if (!isActive || !base64) return;
-        setWebviewImageUri(
-          `data:${getImageMimeTypeFromUri(imageUri)};base64,${base64}`
-        );
-      })
-      .catch(() => {
-        if (isActive) setWebviewImageUri(imageUri);
-      });
-
-    return () => {
-      isActive = false;
-    };
   }, [imageUri]);
 
   useEffect(() => {
@@ -283,18 +324,17 @@ const FieldworkPhotoAnnotationPanel: React.FC<FieldworkPhotoAnnotationPanelProps
 
     fullscreenImageUriRef.current = webviewImageUri;
     setFullscreenHtml(buildPhotoAnnotationFullscreenHtml({
-      brushColor,
-      brushWidth,
-      drawingTool,
+      brushColor: brushColorRef.current,
+      brushWidth: brushWidthRef.current,
+      drawingTool: drawingToolRef.current,
       imageUri: webviewImageUri ?? imageUri,
-      isSampleMode,
+      isSampleMode: isSampleModeRef.current,
       munsellReferences: SOIL_COLOR_MUNSELL_REFERENCES,
       strokes: latestStrokesRef.current,
     }));
   }, [
     imageUri,
     isFullscreenOpen,
-    isSampleMode,
     webviewImageUri,
   ]);
 
@@ -344,6 +384,7 @@ const FieldworkPhotoAnnotationPanel: React.FC<FieldworkPhotoAnnotationPanelProps
       return;
     }
 
+    activeStrokeIsStylusRef.current = isStylusGestureEvent(event);
     touchStartPointRef.current = point;
     activeCanvasRef.current = canvasMode;
     activeStrokeRef.current = {
@@ -383,6 +424,11 @@ const FieldworkPhotoAnnotationPanel: React.FC<FieldworkPhotoAnnotationPanelProps
     const stroke = activeStrokeRef.current;
     const startPoint = touchStartPointRef.current;
     activeStrokeRef.current = undefined;
+    activeStrokeIsStylusRef.current = false;
+    if (activeStrokeRenderFrameRef.current !== undefined) {
+      cancelAnimationFrame(activeStrokeRenderFrameRef.current);
+      activeStrokeRenderFrameRef.current = undefined;
+    }
     touchStartPointRef.current = undefined;
     activeCanvasRef.current = undefined;
     setActiveStroke(undefined);
@@ -401,6 +447,51 @@ const FieldworkPhotoAnnotationPanel: React.FC<FieldworkPhotoAnnotationPanelProps
     }
 
     commitStrokes(latestStrokesRef.current.concat(stroke));
+  };
+  const cancelPreviewStroke = () => {
+    activeStrokeRef.current = undefined;
+    activeStrokeIsStylusRef.current = false;
+    activeCanvasRef.current = undefined;
+    touchStartPointRef.current = undefined;
+    if (activeStrokeRenderFrameRef.current !== undefined) {
+      cancelAnimationFrame(activeStrokeRenderFrameRef.current);
+      activeStrokeRenderFrameRef.current = undefined;
+    }
+    setActiveStroke(undefined);
+  };
+  const startPreviewFingerTap = (event: GestureResponderEvent) => {
+    if (isStylusGestureEvent(event)) return;
+
+    const { locationX, locationY } = getLocalTouchPoint(event);
+    if (typeof locationX !== 'number' || typeof locationY !== 'number') return;
+
+    previewFingerTapStartRef.current = { x: locationX, y: locationY };
+    previewFingerTapMovedRef.current = false;
+  };
+  const movePreviewFingerTap = (event: GestureResponderEvent) => {
+    const startPoint = previewFingerTapStartRef.current;
+    if (!startPoint) return;
+
+    const { locationX, locationY } = getLocalTouchPoint(event);
+    if (typeof locationX !== 'number' || typeof locationY !== 'number') return;
+
+    if (
+      Math.hypot(locationX - startPoint.x, locationY - startPoint.y)
+      > PREVIEW_FINGER_TAP_MAX_DISTANCE
+    ) {
+      previewFingerTapMovedRef.current = true;
+    }
+  };
+  const finishPreviewFingerTap = () => {
+    const shouldOpenFullscreen =
+      !!previewFingerTapStartRef.current && !previewFingerTapMovedRef.current;
+    previewFingerTapStartRef.current = undefined;
+    previewFingerTapMovedRef.current = false;
+    if (shouldOpenFullscreen) openFullscreen(false);
+  };
+  const cancelPreviewFingerTap = () => {
+    previewFingerTapStartRef.current = undefined;
+    previewFingerTapMovedRef.current = false;
   };
   const appendActiveStrokePoint = (
     point: KoreanFieldworkHandwritingPoint,
@@ -428,7 +519,20 @@ const FieldworkPhotoAnnotationPanel: React.FC<FieldworkPhotoAnnotationPanelProps
       tool: currentStroke.tool,
       width: currentStroke.width,
     };
-    setActiveStroke(activeStrokeRef.current);
+    scheduleActiveStrokeRender();
+  };
+  const scheduleActiveStrokeRender = () => {
+    if (activeStrokeRenderFrameRef.current !== undefined) return;
+
+    activeStrokeRenderFrameRef.current = requestAnimationFrame(() => {
+      activeStrokeRenderFrameRef.current = undefined;
+      if (!activeStrokeRef.current) return;
+
+      setActiveStroke({
+        ...activeStrokeRef.current,
+        points: activeStrokeRef.current.points.slice(),
+      });
+    });
   };
   const undoStroke = () => {
     commitStrokes(latestStrokesRef.current.slice(0, -1));
@@ -559,15 +663,21 @@ const FieldworkPhotoAnnotationPanel: React.FC<FieldworkPhotoAnnotationPanelProps
       )}
       <View
         onLayout={updateCanvasSize}
-        onMoveShouldSetResponderCapture={() => true}
-        onMoveShouldSetResponder={() => true}
+        onMoveShouldSetResponderCapture={(event) =>
+          isStylusGestureEvent(event)}
+        onMoveShouldSetResponder={(event) => isStylusGestureEvent(event)}
         onResponderGrant={(event) => startStroke(event, imageFrame, 'preview')}
         onResponderMove={(event) => moveStroke(event, imageFrame, 'preview')}
         onResponderRelease={(event) => finishStroke(event, imageFrame, 'preview')}
-        onResponderTerminate={(event) => finishStroke(event, imageFrame, 'preview')}
-        onResponderTerminationRequest={() => false}
-        onStartShouldSetResponderCapture={() => true}
-        onStartShouldSetResponder={() => true}
+        onResponderTerminate={cancelPreviewStroke}
+        onResponderTerminationRequest={() => !activeStrokeIsStylusRef.current}
+        onStartShouldSetResponderCapture={(event) =>
+          isStylusGestureEvent(event)}
+        onStartShouldSetResponder={(event) => isStylusGestureEvent(event)}
+        onTouchCancel={cancelPreviewFingerTap}
+        onTouchEnd={finishPreviewFingerTap}
+        onTouchMove={movePreviewFingerTap}
+        onTouchStart={startPreviewFingerTap}
         style={styles.canvas}
         testID="fieldworkPhotoAnnotationCanvas"
       >
@@ -578,9 +688,8 @@ const FieldworkPhotoAnnotationPanel: React.FC<FieldworkPhotoAnnotationPanelProps
             style={StyleSheet.absoluteFillObject}
           />
         </View>
-        {visibleStrokes.flatMap((stroke, strokeIndex) =>
-          toStrokeSegments(stroke, strokeIndex, imageFrame)
-        )}
+        {savedStrokeElements}
+        {activeStrokeElements}
       </View>
       <Modal
         animationType="fade"
@@ -813,6 +922,11 @@ const normalizePhotoSamplePreview = (
     rgb,
   };
 };
+
+const isStylusGestureEvent = (event?: GestureResponderEvent): boolean =>
+  event === undefined || isKoreanFieldworkStylusPointer(
+    (event?.nativeEvent as { pointerType?: unknown } | undefined)?.pointerType
+  );
 
 const getNormalizedPoint = (
   event: GestureResponderEvent,
@@ -1081,7 +1195,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:#111827;font-family:-a
 <script>
 const state=${initialState};
 const canvas=document.getElementById('canvas');
-const ctx=canvas.getContext('2d',{willReadFrequently:true});
+const ctx=canvas.getContext('2d');
 const sampleCanvas=document.createElement('canvas');
 const sampleCtx=sampleCanvas.getContext('2d',{willReadFrequently:true});
 const strokeCanvas=document.createElement('canvas');
@@ -1101,8 +1215,12 @@ let lastSamplePreviewScreenPoint=null;
 let isDrawing=false;
 let renderQueued=false;
 let gesture=null;
-let pixelRatio=1;
 let viewport={offsetX:0,offsetY:0,scale:1};
+let renderTransform=null;
+let cachedInkStrokes=null;
+let cachedInkViewport=null;
+let cachedInkCanvasWidth=0;
+let cachedInkCanvasHeight=0;
 const maxCoordinate=state.maxCoordinate||10000;
 const references=Array.isArray(state.munsellReferences)?state.munsellReferences:[];
 const minPointDistance=${MIN_POINT_DISTANCE};
@@ -1118,19 +1236,26 @@ function post(type,payload){
 }
 function resize(){
   const rect=canvas.getBoundingClientRect();
-  const ratio=window.devicePixelRatio||1;
-  pixelRatio=ratio;
+  const ratio=Math.min(window.devicePixelRatio||1,2);
   canvas.width=Math.max(1,Math.round(rect.width*ratio));
   canvas.height=Math.max(1,Math.round(rect.height*ratio));
+  strokeCanvas.width=canvas.width;
+  strokeCanvas.height=canvas.height;
   ctx.setTransform(ratio,0,0,ratio,0,0);
+  strokeCtx.setTransform(ratio,0,0,ratio,0,0);
   requestRender();
 }
 function getCssSize(){
+  if(renderTransform) return renderTransform.size;
   const rect=canvas.getBoundingClientRect();
   return {height:rect.height,width:rect.width};
 }
 function getBaseImageFrame(){
   const size=getCssSize();
+  if(renderTransform) return renderTransform.frame;
+  return getBaseImageFrameForSize(size);
+}
+function getBaseImageFrameForSize(size){
   const imageWidth=image.naturalWidth||image.width||size.width;
   const imageHeight=image.naturalHeight||image.height||size.height;
   const scale=Math.min(size.width/imageWidth,size.height/imageHeight);
@@ -1279,7 +1404,7 @@ function appendActiveStrokePoint(point,minDistance){
   if(previous&&distance(previous,point)<minDistance) return;
   const points=previous?interpolatePoints(previous,point):[point];
   if(points.length===0) return;
-  activeStroke.points=activeStroke.points.concat(points);
+  activeStroke.points.push(...points);
   requestRender();
 }
 function interpolatePoints(start,end){
@@ -1374,16 +1499,37 @@ function readRgbAtNormalizedPoint(point){
 function draw(){
   renderQueued=false;
   const size=getCssSize();
+  renderTransform={frame:getBaseImageFrameForSize(size),size};
   ctx.clearRect(0,0,size.width,size.height);
   drawPhoto();
-  strokeCanvas.width=canvas.width;
-  strokeCanvas.height=canvas.height;
-  strokeCtx.setTransform(pixelRatio,0,0,pixelRatio,0,0);
-  strokeCtx.clearRect(0,0,size.width,size.height);
-  strokes.forEach((stroke)=>drawStroke(stroke,'#ffea00',strokeCtx));
-  if(activeStroke) drawStroke(activeStroke,'#ffea00',strokeCtx);
+  const isPreviewingEraser=!!activeStroke&&activeStroke.tool==='eraser';
+  const shouldRebuildInk=
+    cachedInkStrokes!==strokes
+    ||!cachedInkViewport
+    ||cachedInkViewport.offsetX!==viewport.offsetX
+    ||cachedInkViewport.offsetY!==viewport.offsetY
+    ||cachedInkViewport.scale!==viewport.scale
+    ||cachedInkCanvasWidth!==strokeCanvas.width
+    ||cachedInkCanvasHeight!==strokeCanvas.height;
+  if(shouldRebuildInk||isPreviewingEraser){
+    strokeCtx.clearRect(0,0,size.width,size.height);
+    strokes.forEach((stroke)=>drawStroke(stroke,'#ffea00',strokeCtx));
+    if(isPreviewingEraser) drawStroke(activeStroke,'#ffea00',strokeCtx);
+    if(!isPreviewingEraser){
+      cachedInkStrokes=strokes;
+      cachedInkViewport={...viewport};
+      cachedInkCanvasWidth=strokeCanvas.width;
+      cachedInkCanvasHeight=strokeCanvas.height;
+    }else{
+      cachedInkStrokes=null;
+    }
+  }
   ctx.drawImage(strokeCanvas,0,0,size.width,size.height);
+  if(activeStroke&&!isPreviewingEraser){
+    drawStroke(activeStroke,'#ffea00',ctx);
+  }
   if(activeSample) drawSampleOverlay(activeSample);
+  renderTransform=null;
 }
 function drawPhoto(){
   const size=getCssSize();
@@ -1647,8 +1793,11 @@ window.addEventListener('resize',resize);
 image.onload=function(){
   imageReady=true;
   try{
-    sampleCanvas.width=image.naturalWidth||image.width;
-    sampleCanvas.height=image.naturalHeight||image.height;
+    const sourceWidth=image.naturalWidth||image.width;
+    const sourceHeight=image.naturalHeight||image.height;
+    const sampleScale=Math.min(1,2048/Math.max(sourceWidth,sourceHeight));
+    sampleCanvas.width=Math.max(1,Math.round(sourceWidth*sampleScale));
+    sampleCanvas.height=Math.max(1,Math.round(sourceHeight*sampleScale));
     sampleCtx.drawImage(image,0,0,sampleCanvas.width,sampleCanvas.height);
     sampleCtx.getImageData(0,0,1,1);
     imageSamplingReady=true;

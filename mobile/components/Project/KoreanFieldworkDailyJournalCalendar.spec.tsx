@@ -342,6 +342,41 @@ describe('KoreanFieldworkDailyJournalCalendar', () => {
     expect(strokePoints.length).toBeGreaterThan(2);
   });
 
+  it('lets finger drags yield to scrolling while keeping stylus ink captured', () => {
+    const handleUpdateDailyLog = jest.fn();
+    const { getByTestId } = render(
+      <KoreanFieldworkDailyJournalCalendar
+        canEdit
+        dailyLog={createDailyLog() as any}
+        now={new Date('2026-06-30T09:00:00+09:00')}
+        onCreateDailyLog={jest.fn()}
+        onUpdateDailyLog={handleUpdateDailyLog}
+      />
+    );
+    const canvas = getByTestId('dailyJournalBoundaryCanvas');
+
+    expect(canvas.props.onStartShouldSetResponderCapture({
+      nativeEvent: { pointerType: 'touch' },
+    })).toBe(false);
+    expect(canvas.props.onStartShouldSetResponder({
+      nativeEvent: { pointerType: 'touch' },
+    })).toBe(false);
+    expect(canvas.props.onStartShouldSetResponderCapture({
+      nativeEvent: { pointerType: 'pen' },
+    })).toBe(true);
+
+    fireEvent(canvas, 'responderGrant', {
+      nativeEvent: {
+        changedTouches: [{ locationX: 80, locationY: 40 }],
+        pointerType: 'touch',
+      },
+    });
+    expect(canvas.props.onResponderTerminationRequest()).toBe(true);
+    fireEvent(canvas, 'responderTerminate');
+
+    expect(handleUpdateDailyLog).not.toHaveBeenCalled();
+  });
+
   it('opens the boundary memo as a full-screen drawing canvas', () => {
     const { getByTestId } = render(
       <KoreanFieldworkDailyJournalCalendar

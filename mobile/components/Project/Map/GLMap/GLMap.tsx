@@ -32,8 +32,10 @@ import {
   addHighlightedDocToScene,
   addLayerToScene,
   addlocationPointToScene,
+  clearSceneAndDispose,
   ObjectChildValues,
   removeDocumentFromScene,
+  removeLocationPointFromScene,
   updateDocumentInScene,
   updatePointRadiusOfScene,
 } from './geojson/geojson-gl-shape';
@@ -107,6 +109,18 @@ const GLMap: React.FC<GLMapProps> = ({
   const renderer = useRef<Renderer>();
   const glContext = useRef<ExpoWebGLRenderingContext>();
   const glContextToScreenFactor = useRef<number>(0);
+  const renderFrame = useRef<number>();
+  const locationRef = useRef(location);
+  const showCurrentLocationRef = useRef(showCurrentLocation);
+  const selectedDocumentIdsRef = useRef(selectedDocumentIds);
+  const highlightedDocIdRef = useRef(highlightedDocId);
+  const pointRadiusRef = useRef(pointRadius);
+
+  locationRef.current = location;
+  showCurrentLocationRef.current = showCurrentLocation;
+  selectedDocumentIdsRef.current = selectedDocumentIds;
+  highlightedDocIdRef.current = highlightedDocId;
+  pointRadiusRef.current = pointRadius;
 
   const pressStartTime = useRef<number>(0);
 
@@ -116,16 +130,21 @@ const GLMap: React.FC<GLMapProps> = ({
   const top = useRef<number>(0);
 
   const renderScene = useCallback(() => {
-    scene.position.set(
-      left.current + zoom.current,
-      top.current + zoom.current,
-      0
-    );
-    scene.scale.set(zoom.current, zoom.current, 1);
-    if (glContext && glContext.current && renderer && renderer.current) {
-      renderer.current.render(scene, camera);
-      glContext.current.endFrameEXP();
-    }
+    if (renderFrame.current !== undefined) return;
+
+    renderFrame.current = requestAnimationFrame(() => {
+      renderFrame.current = undefined;
+      scene.position.set(
+        left.current + zoom.current,
+        top.current + zoom.current,
+        0
+      );
+      scene.scale.set(zoom.current, zoom.current, 1);
+      if (glContext.current && renderer.current) {
+        renderer.current.render(scene, camera);
+        glContext.current.endFrameEXP();
+      }
+    });
   }, [camera, scene]);
   const updateCameraFrame = useCallback(() => {
     if (!isUsableScreen(screen)) return;
@@ -264,10 +283,16 @@ const GLMap: React.FC<GLMapProps> = ({
   }, [renderScene, updateCameraFrame]);
 
   useEffect(() => {
-    scene.clear();
+    clearSceneAndDispose(scene);
     geoDocuments.forEach((doc) => {
       try {
-        addDocumentToScene(doc, documentToWorldMatrix, scene, config);
+        addDocumentToScene(
+          doc,
+          documentToWorldMatrix,
+          scene,
+          config,
+          pointRadiusRef.current
+        );
       } catch (error) {
         console.warn('Unable to render map document', doc.resource.id, error);
       }
@@ -284,14 +309,26 @@ const GLMap: React.FC<GLMapProps> = ({
       }
     });
     try {
-      if (showCurrentLocation && location) {
+      if (showCurrentLocationRef.current && locationRef.current) {
         addlocationPointToScene(documentToWorldMatrix, scene, [
-          location.x,
-          location.y,
+          locationRef.current.x,
+          locationRef.current.y,
         ]);
       }
     } catch (error) {
       console.warn('Unable to render current location on map', error);
+    }
+    selectedDocumentIdsRef.current.forEach((docId) => {
+      const object = scene.getObjectByProperty('uuid', docId);
+      if (!object) return;
+
+      object.userData = { ...object.userData, isSelected: true };
+      object.children.forEach((child) => {
+        child.visible = child.name === ObjectChildValues.selected;
+      });
+    });
+    if (highlightedDocIdRef.current) {
+      addHighlightedDocToScene(highlightedDocIdRef.current, scene);
     }
     renderScene();
   }, [
@@ -300,12 +337,31 @@ const GLMap: React.FC<GLMapProps> = ({
     scene,
     documentToWorldMatrix,
     renderScene,
-    pointRadius,
     layerDocuments,
-    location,
-    showCurrentLocation,
     getLayerImageUri,
     getLayerOpacity,
+  ]);
+
+  useEffect(() => {
+    try {
+      if (showCurrentLocation && location) {
+        addlocationPointToScene(documentToWorldMatrix, scene, [
+          location.x,
+          location.y,
+        ]);
+      } else {
+        removeLocationPointFromScene(scene);
+      }
+    } catch (error) {
+      console.warn('Unable to update current location on map', error);
+    }
+    renderScene();
+  }, [
+    documentToWorldMatrix,
+    location,
+    renderScene,
+    scene,
+    showCurrentLocation,
   ]);
 
   useEffect(() => {
@@ -362,7 +418,14 @@ const GLMap: React.FC<GLMapProps> = ({
     try {
       if (status === 'deleted')
         removeDocumentFromScene(document.resource.id, scene);
-      else updateDocumentInScene(document, documentToWorldMatrix, scene, config);
+      else
+        updateDocumentInScene(
+          document,
+          documentToWorldMatrix,
+          scene,
+          config,
+          pointRadiusRef.current
+        );
     } catch (error) {
       console.warn('Unable to update rendered map document', document.resource.id, error);
     }
@@ -405,7 +468,7 @@ const GLMap: React.FC<GLMapProps> = ({
     });
     renderScene();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pointRadius, scene, geoDocuments, documentToWorldMatrix, renderScene]);
+  }, [pointRadius, scene, renderScene]);
 
   const onContextCreate = async (gl: ExpoWebGLRenderingContext) => {
     try {
@@ -421,6 +484,8 @@ const GLMap: React.FC<GLMapProps> = ({
         return;
       }
       glContext.current = gl;
+      (renderer.current as (Renderer & { dispose?: () => void }) | undefined)
+        ?.dispose?.();
       renderer.current = new Renderer({ gl: glContext.current });
       glContextToScreenFactor.current = width / screen.width;
       if (!Number.isFinite(glContextToScreenFactor.current) || glContextToScreenFactor.current <= 0) {
@@ -442,6 +507,24 @@ const GLMap: React.FC<GLMapProps> = ({
       console.warn('Unable to initialize GL map renderer', error);
     }
   };
+
+  useEffect(() => () => {
+    if (renderFrame.current !== undefined) {
+      cancelAnimationFrame(renderFrame.current);
+      renderFrame.current = undefined;
+    }
+    clearSceneAndDispose(scene);
+    const activeRenderer = renderer.current as
+      | (Renderer & {
+          dispose?: () => void;
+          forceContextLoss?: () => void;
+        })
+      | undefined;
+    activeRenderer?.dispose?.();
+    activeRenderer?.forceContextLoss?.();
+    renderer.current = undefined;
+    glContext.current = undefined;
+  }, [scene]);
 
   if (!camera) return null;
 

@@ -31,6 +31,7 @@ import {
   normalizeKoreanFieldworkHandwritingStrokes,
   serializeKoreanFieldworkHandwriting,
 } from './korean-fieldwork-handwriting';
+import { isKoreanFieldworkStylusPointer } from './korean-fieldwork-stylus-input';
 import KoreanFieldworkFullscreenDrawingModal, {
   DEFAULT_FIELDWORK_BRUSH_COLOR,
   DEFAULT_FIELDWORK_BRUSH_WIDTH,
@@ -125,15 +126,17 @@ const KoreanFieldworkDailyJournalCalendar: React.FC<
   const [isWorkMemoDirty, setIsWorkMemoDirty] = useState(false);
   const [saveStatus, setSaveStatus] =
     useState<'saved'|'saving'|'error'|undefined>();
+  const dailyLogRef = useRef(dailyLog);
   const selectedDateKeyRef = useRef(selectedDateKey);
   const saveRequestIdRef = useRef(0);
+  dailyLogRef.current = dailyLog;
   selectedDateKeyRef.current = selectedDateKey;
   const visibleWeekKey = formatDateKey(visibleWeekDate);
   const dayItems = useMemo(
     () => getCalendarWeek(
-      visibleWeekDate,
-      effectiveToday,
-      effectiveSelectedDate
+      parseDateKey(visibleWeekKey),
+      parseDateKey(todayKey),
+      parseDateKey(selectedDateKey)
     ),
     [selectedDateKey, todayKey, visibleWeekKey]
   );
@@ -146,39 +149,55 @@ const KoreanFieldworkDailyJournalCalendar: React.FC<
     dailyLog,
     FIELD.safetyEducationStretching
   );
-  const boundaryStrokes = normalizeKoreanFieldworkHandwritingStrokes(
-    getResourceValue(dailyLog, FIELD.boundaryMemoStrokes)
+  const boundaryStrokes = useMemo(
+    () => normalizeKoreanFieldworkHandwritingStrokes(
+      getResourceValue(dailyLog, FIELD.boundaryMemoStrokes)
+    ),
+    [dailyLog]
   );
   const hasBoundaryMemo = hasKoreanFieldworkHandwriting(boundaryStrokes);
-  const effectiveBoundaryDraft = getKoreanFieldworkDailyJournalBoundaryDraft(
-    dailyLog,
-    boundaryDraft
+  const effectiveBoundaryDraft = useMemo(
+    () => getKoreanFieldworkDailyJournalBoundaryDraft(
+      dailyLog,
+      boundaryDraft
+    ),
+    [boundaryDraft, dailyLog]
   );
-  const featureOverlays = getKoreanFieldworkDailyJournalFeatureOverlays(
-    documents,
-    effectiveSelectedDate,
-    effectiveBoundaryDraft
+  const featureOverlays = useMemo(
+    () => getKoreanFieldworkDailyJournalFeatureOverlays(
+      documents,
+      effectiveSelectedDate,
+      effectiveBoundaryDraft
+    ),
+    [documents, effectiveBoundaryDraft, effectiveSelectedDate]
   );
-  const boundaryMemoSourceLogs = getKoreanFieldworkBoundaryMemoSourceLogs(
-    dailyLogs,
-    effectiveSelectedDate
+  const boundaryMemoSourceLogs = useMemo(
+    () => getKoreanFieldworkBoundaryMemoSourceLogs(
+      dailyLogs,
+      effectiveSelectedDate
+    ),
+    [dailyLogs, effectiveSelectedDate]
   );
   const yesterdayDateKey = formatDateKey(addDays(effectiveSelectedDate, -1));
-  const yesterdayBoundaryMemoSource = boundaryMemoSourceLogs.find((document) =>
-    getStringField(document, 'date') === yesterdayDateKey);
+  const yesterdayBoundaryMemoSource = useMemo(
+    () => boundaryMemoSourceLogs.find((document) =>
+      getStringField(document, 'date') === yesterdayDateKey
+    ),
+    [boundaryMemoSourceLogs, yesterdayDateKey]
+  );
 
   useEffect(() => {
     setPersonnelDraft(getPersonnelDraft(dailyLog));
   }, [dailyLog]);
 
   useEffect(() => {
-    setWorkMemoDraft(getStringField(dailyLog, FIELD.workMemo));
+    setWorkMemoDraft(getStringField(dailyLogRef.current, FIELD.workMemo));
     setIsWorkMemoDirty(false);
     setSaveStatus(undefined);
   }, [dailyLog?.resource.id, selectedDateKey]);
 
   useEffect(() => {
-    setVisibleWeekDate(new Date(effectiveSelectedDate));
+    setVisibleWeekDate(parseDateKey(selectedDateKey));
   }, [selectedDateKey]);
 
   const saveUpdates = async (
@@ -677,8 +696,9 @@ const BoundaryMemoCanvas: React.FC<{
   const [activeStroke, setActiveStroke] =
     useState<KoreanFieldworkHandwritingStroke>();
   const activeStrokeRef = useRef<KoreanFieldworkHandwritingStroke>();
+  const activeStrokeRenderFrameRef = useRef<number>();
+  const activeStrokeIsStylusRef = useRef(false);
   const latestStrokesRef = useRef<KoreanFieldworkHandwritingStroke[]>(strokes);
-  const visibleStrokes = activeStroke ? strokes.concat(activeStroke) : strokes;
   const boundaryPlan = useMemo(
     () => getBoundaryPlanBackground(boundaryDraft),
     [boundaryDraft]
@@ -691,6 +711,58 @@ const BoundaryMemoCanvas: React.FC<{
       boundaryAspectRatio
     ),
     [boundaryAspectRatio, boundaryPlan, canvasSize]
+  );
+  const boundarySegmentElements = useMemo(
+    () => toBoundarySegments(boundaryPoints),
+    [boundaryPoints]
+  );
+  const boundaryVertexElements = useMemo(
+    () => boundaryPoints.map((point, index) => (
+      <View
+        key={`point-${index}`}
+        style={[
+          styles.boundaryVertex,
+          {
+            left: point.x - 4,
+            top: point.y - 4,
+          },
+        ]}
+      />
+    )),
+    [boundaryPoints]
+  );
+  const featureOverlayElements = useMemo(
+    () => featureOverlays.flatMap((overlay, overlayIndex) =>
+      toFeatureOverlayElements(
+        overlay,
+        overlayIndex,
+        canvasSize,
+        boundaryAspectRatio
+      )
+    ),
+    [boundaryAspectRatio, canvasSize, featureOverlays]
+  );
+  const savedStrokeElements = useMemo(
+    () => strokes.flatMap((stroke, strokeIndex) =>
+      toStrokeSegments(
+        stroke,
+        strokeIndex,
+        canvasSize,
+        boundaryAspectRatio
+      )
+    ),
+    [boundaryAspectRatio, canvasSize, strokes]
+  );
+  const activeStrokeElements = useMemo(
+    () => activeStroke
+      ? toStrokeSegments(
+        activeStroke,
+        strokes.length,
+        canvasSize,
+        boundaryAspectRatio
+      )
+      : undefined,
+    [activeStroke, boundaryAspectRatio, canvasSize, strokes.length]
   );
   const fullscreenBackground = useMemo(
     () => {
@@ -718,6 +790,12 @@ const BoundaryMemoCanvas: React.FC<{
     latestStrokesRef.current = strokes;
   }, [strokes]);
 
+  useEffect(() => () => {
+    if (activeStrokeRenderFrameRef.current !== undefined) {
+      cancelAnimationFrame(activeStrokeRenderFrameRef.current);
+    }
+  }, []);
+
   useEffect(() => {
     setIsImportDateListVisible(false);
   }, [selectedDate]);
@@ -732,6 +810,7 @@ const BoundaryMemoCanvas: React.FC<{
     const point = getNormalizedPoint(event, canvasSize, boundaryAspectRatio);
     if (!point) return;
 
+    activeStrokeIsStylusRef.current = isStylusGestureEvent(event);
     activeStrokeRef.current = {
       color: brushColor,
       points: [point],
@@ -760,11 +839,25 @@ const BoundaryMemoCanvas: React.FC<{
 
     const stroke = activeStrokeRef.current;
     activeStrokeRef.current = undefined;
+    activeStrokeIsStylusRef.current = false;
+    if (activeStrokeRenderFrameRef.current !== undefined) {
+      cancelAnimationFrame(activeStrokeRenderFrameRef.current);
+      activeStrokeRenderFrameRef.current = undefined;
+    }
     setActiveStroke(undefined);
 
     if (!stroke || stroke.points.length === 0) return;
 
     commitStrokes(latestStrokesRef.current.concat(stroke));
+  };
+  const cancelStroke = () => {
+    activeStrokeRef.current = undefined;
+    activeStrokeIsStylusRef.current = false;
+    if (activeStrokeRenderFrameRef.current !== undefined) {
+      cancelAnimationFrame(activeStrokeRenderFrameRef.current);
+      activeStrokeRenderFrameRef.current = undefined;
+    }
+    setActiveStroke(undefined);
   };
   const undoStroke = () => {
     commitStrokes(latestStrokesRef.current.slice(0, -1));
@@ -805,7 +898,20 @@ const BoundaryMemoCanvas: React.FC<{
       tool: currentStroke.tool,
       width: currentStroke.width,
     };
-    setActiveStroke(activeStrokeRef.current);
+    scheduleActiveStrokeRender();
+  };
+  const scheduleActiveStrokeRender = () => {
+    if (activeStrokeRenderFrameRef.current !== undefined) return;
+
+    activeStrokeRenderFrameRef.current = requestAnimationFrame(() => {
+      activeStrokeRenderFrameRef.current = undefined;
+      if (!activeStrokeRef.current) return;
+
+      setActiveStroke({
+        ...activeStrokeRef.current,
+        points: activeStrokeRef.current.points.slice(),
+      });
+    });
   };
 
   return (
@@ -959,33 +1065,26 @@ const BoundaryMemoCanvas: React.FC<{
       />
       <View
         onLayout={updateCanvasSize}
-        onMoveShouldSetResponderCapture={() => canEdit}
-        onMoveShouldSetResponder={() => canEdit}
+        onMoveShouldSetResponderCapture={(event) =>
+          canEdit && isStylusGestureEvent(event)}
+        onMoveShouldSetResponder={(event) =>
+          canEdit && isStylusGestureEvent(event)}
         onResponderGrant={startStroke}
         onResponderMove={moveStroke}
         onResponderRelease={finishStroke}
-        onResponderTerminate={finishStroke}
-        onResponderTerminationRequest={() => false}
-        onStartShouldSetResponderCapture={() => canEdit}
-        onStartShouldSetResponder={() => canEdit}
+        onResponderTerminate={cancelStroke}
+        onResponderTerminationRequest={() => !activeStrokeIsStylusRef.current}
+        onStartShouldSetResponderCapture={(event) =>
+          canEdit && isStylusGestureEvent(event)}
+        onStartShouldSetResponder={(event) =>
+          canEdit && isStylusGestureEvent(event)}
         style={styles.boundaryCanvas}
         testID="dailyJournalBoundaryCanvas"
       >
         {boundaryDraft ? (
           <>
-            {toBoundarySegments(boundaryPoints)}
-            {boundaryPoints.map((point, index) => (
-              <View
-                key={`point-${index}`}
-                style={[
-                  styles.boundaryVertex,
-                  {
-                    left: point.x - 4,
-                    top: point.y - 4,
-                  },
-                ]}
-              />
-            ))}
+            {boundarySegmentElements}
+            {boundaryVertexElements}
             <Text style={styles.boundaryCanvasLabel}>조사 경계</Text>
           </>
         ) : (
@@ -996,22 +1095,9 @@ const BoundaryMemoCanvas: React.FC<{
             </Text>
           </View>
         )}
-        {featureOverlays.flatMap((overlay, overlayIndex) =>
-          toFeatureOverlayElements(
-            overlay,
-            overlayIndex,
-            canvasSize,
-            boundaryAspectRatio
-          )
-        )}
-        {visibleStrokes.flatMap((stroke, strokeIndex) =>
-          toStrokeSegments(
-            stroke,
-            strokeIndex,
-            canvasSize,
-            boundaryAspectRatio
-          )
-        )}
+        {featureOverlayElements}
+        {savedStrokeElements}
+        {activeStrokeElements}
       </View>
       <KoreanFieldworkFullscreenDrawingModal
         background={fullscreenBackground}
@@ -1237,6 +1323,12 @@ const formatDateKey = (date: Date): string =>
     String(date.getMonth() + 1).padStart(2, '0'),
     String(date.getDate()).padStart(2, '0'),
   ].join('-');
+
+const parseDateKey = (dateKey: string): Date => {
+  const [year, month, day] = dateKey.split('-').map(Number);
+
+  return new Date(year, Math.max(0, month - 1), day);
+};
 
 const formatBoundaryMemoSourceDate = (dateKey: string): string => {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateKey);
@@ -1507,6 +1599,11 @@ const getBoundaryProjection = (
     yRange: Math.max(maxY - minY, 0.000001),
   };
 };
+
+const isStylusGestureEvent = (event?: GestureResponderEvent): boolean =>
+  event === undefined || isKoreanFieldworkStylusPointer(
+    (event?.nativeEvent as { pointerType?: unknown } | undefined)?.pointerType
+  );
 
 const getNormalizedPoint = (
   event: GestureResponderEvent,

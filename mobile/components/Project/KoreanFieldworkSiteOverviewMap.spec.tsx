@@ -238,6 +238,7 @@ describe('KoreanFieldworkSiteOverviewMap', () => {
         ],
       },
     });
+    fireEvent(canvas, 'responderRelease');
 
     expect(getScaleFromStyle(getByTestId('siteOverviewMapContent').props.style))
       .toBeGreaterThan(1);

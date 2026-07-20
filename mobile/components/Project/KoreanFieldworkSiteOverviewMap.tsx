@@ -200,6 +200,8 @@ const KoreanFieldworkSiteOverviewMap: React.FC<Props> = ({
   const isSiteSketchClosingRef = useRef(false);
   const pinchGestureRef = useRef<SiteOverviewPinchGesture>();
   const panGestureRef = useRef<SiteOverviewPanGesture>();
+  const viewportFrameRef = useRef<number>();
+  const pendingViewportRef = useRef<SiteOverviewViewport>();
   const boundaryProjection = useMemo(
     () => getSurveyBoundaryProjection(documents, boundaryDraft, canvasSize),
     [boundaryDraft, canvasSize, documents]
@@ -282,6 +284,13 @@ const KoreanFieldworkSiteOverviewMap: React.FC<Props> = ({
     if (!isSiteSketchOpen) setSiteSketchStrokes(storedSiteSketchStrokes);
   }, [isSiteSketchOpen, storedSiteSketchStrokes]);
 
+  useEffect(() => () => {
+    if (viewportFrameRef.current !== undefined) {
+      cancelAnimationFrame(viewportFrameRef.current);
+    }
+    pendingViewportRef.current = undefined;
+  }, []);
+
   useEffect(() => {
     if (backgroundMode === 'satellite' && satelliteTiles.length === 0) {
       setBackgroundMode('plan');
@@ -363,6 +372,27 @@ const KoreanFieldworkSiteOverviewMap: React.FC<Props> = ({
     const { height, width } = event.nativeEvent.layout;
     if (height > 0 && width > 0) setCanvasSize({ height, width });
   };
+  const scheduleViewportUpdate = (nextViewport: SiteOverviewViewport) => {
+    pendingViewportRef.current = nextViewport;
+    if (viewportFrameRef.current !== undefined) return;
+
+    viewportFrameRef.current = requestAnimationFrame(() => {
+      viewportFrameRef.current = undefined;
+      const pendingViewport = pendingViewportRef.current;
+      pendingViewportRef.current = undefined;
+      if (pendingViewport) setViewport(pendingViewport);
+    });
+  };
+  const takePendingViewport = (): SiteOverviewViewport | undefined => {
+    if (viewportFrameRef.current !== undefined) {
+      cancelAnimationFrame(viewportFrameRef.current);
+      viewportFrameRef.current = undefined;
+    }
+    const pendingViewport = pendingViewportRef.current;
+    pendingViewportRef.current = undefined;
+
+    return pendingViewport;
+  };
   const startViewportGesture = (event: GestureResponderEvent) => {
     const pinchGesture = getSiteOverviewTouchGesture(event);
     if (pinchGesture) {
@@ -405,7 +435,7 @@ const KoreanFieldworkSiteOverviewMap: React.FC<Props> = ({
         y: canvasSize.height / 2,
       };
 
-      setViewport(normalizeSiteOverviewViewport({
+      scheduleViewportUpdate(normalizeSiteOverviewViewport({
         offsetX: pinchGesture.center.x - canvasCenter.x
           - (scaleRatio * (
             initialGesture.center.x
@@ -433,7 +463,7 @@ const KoreanFieldworkSiteOverviewMap: React.FC<Props> = ({
       viewport: normalizedViewport,
     };
     panGestureRef.current = panGesture;
-    setViewport(normalizeSiteOverviewViewport({
+    scheduleViewportUpdate(normalizeSiteOverviewViewport({
       offsetX: panGesture.viewport.offsetX + point.x - panGesture.start.x,
       offsetY: panGesture.viewport.offsetY + point.y - panGesture.start.y,
       scale: panGesture.viewport.scale,
@@ -442,12 +472,16 @@ const KoreanFieldworkSiteOverviewMap: React.FC<Props> = ({
   const finishViewportGesture = () => {
     pinchGestureRef.current = undefined;
     panGestureRef.current = undefined;
-    setViewport((currentViewport) =>
-      normalizeSiteOverviewViewport(currentViewport, canvasSize));
+    const pendingViewport = takePendingViewport();
+    setViewport((currentViewport) => normalizeSiteOverviewViewport(
+      pendingViewport ?? currentViewport,
+      canvasSize
+    ));
   };
   const resetViewport = () => {
     pinchGestureRef.current = undefined;
     panGestureRef.current = undefined;
+    takePendingViewport();
     setViewport(SITE_OVERVIEW_DEFAULT_VIEWPORT);
   };
   const toggleDistanceMeasurement = () => {

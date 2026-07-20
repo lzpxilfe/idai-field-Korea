@@ -14,6 +14,7 @@ import {
   DoubleSide,
   Line,
   LineBasicMaterial,
+  Material,
   Mesh,
   MeshBasicMaterial,
   Object3D,
@@ -21,6 +22,7 @@ import {
   Shape,
   ShapeGeometry,
   ShapeUtils,
+  Texture,
   Vector2,
 } from 'three';
 import {
@@ -68,22 +70,69 @@ export const updateDocumentInScene = (
   document: Document,
   documentToWorldMatrix: Matrix4,
   scene: Scene,
-  config: ProjectConfiguration
+  config: ProjectConfiguration,
+  pointRadius?: number
 ): void => {
   removeDocumentFromScene(document.resource.id, scene);
-  addDocumentToScene(document, documentToWorldMatrix, scene, config);
+  addDocumentToScene(
+    document,
+    documentToWorldMatrix,
+    scene,
+    config,
+    pointRadius
+  );
 };
 
 export const removeDocumentFromScene = (docId: string, scene: Scene): void => {
   const parent = scene.getObjectByProperty('uuid', docId);
-  if (parent) scene.remove(parent);
+  if (parent) {
+    parent.parent?.remove(parent);
+    disposeObject3D(parent);
+  }
+};
+
+/**
+ * Releases the GPU-backed resources owned by an object and all of its
+ * descendants. Three.js does not dispose geometries, materials, or textures
+ * when an Object3D is removed from a scene.
+ */
+export const disposeObject3D = (object: Object3D): void => {
+  object.traverse((child) => {
+    const disposableChild = child as Object3D & {
+      geometry?: BufferGeometry;
+      material?: Material | Material[];
+    };
+    disposableChild.geometry?.dispose();
+
+    if (Array.isArray(disposableChild.material)) {
+      disposableChild.material.forEach(disposeMaterial);
+    } else if (disposableChild.material) {
+      disposeMaterial(disposableChild.material);
+    }
+  });
+};
+
+export const clearSceneAndDispose = (scene: Scene): void => {
+  const children = [...scene.children];
+  scene.clear();
+  children.forEach(disposeObject3D);
+};
+
+const disposeMaterial = (material: Material): void => {
+  Object.values(material).forEach((value) => {
+    if ((value as Texture | undefined)?.isTexture) {
+      (value as Texture).dispose();
+    }
+  });
+  material.dispose();
 };
 
 export const addDocumentToScene = (
   doc: Document,
   documentToWorldMatrix: Matrix4,
   scene: Scene,
-  config: ProjectConfiguration
+  config: ProjectConfiguration,
+  pointRadius?: number
 ): void => {
   if (!documentToWorldMatrix) return;
   const geometry = doc.resource.geometry as FieldGeometry;
@@ -116,7 +165,8 @@ export const addDocumentToScene = (
         scene,
         config,
         doc,
-        geometry.coordinates
+        geometry.coordinates,
+        pointRadius
       );
       break;
   }
@@ -286,9 +336,12 @@ export const pointToShape: ShapeFunction<Position | Position[]> = (
   if (!pointParent) {
     pointParent = new Object3D();
     pointParent.name = name;
+    pointParent.userData = { radius: defaultPointRadius };
     scene.add(pointParent);
   }
-  pointParent.userData = { radius: radius || defaultPointRadius };
+  if (isFinitePositiveNumber(radius as number)) {
+    pointParent.userData = { radius };
+  }
 
   const parent = new Object3D();
   const color =
@@ -363,6 +416,7 @@ export const updatePointRadiusOfScene = (
 
   if (!pointParent) return;
   scene.remove(pointParent);
+  disposeObject3D(pointParent);
 
   geoDocuments.forEach((doc) => {
     const geometry = doc.resource.geometry as FieldGeometry;
@@ -414,8 +468,7 @@ export const addlocationPointToScene = (
 
   const point = scene.getObjectByName(location);
   if (point) {
-    point.translateX(x);
-    point.translateY(y);
+    point.position.set(x, y, 0);
     return;
   }
 
@@ -425,14 +478,22 @@ export const addlocationPointToScene = (
   const segments = 30; //<-- Increase or decrease for more resolution
 
   const circleGeometry = new CircleGeometry(radius, segments);
-  circleGeometry.translate(x, y, 0);
   const locationPoint = new Mesh(
     circleGeometry,
     new MeshBasicMaterial({ color })
   );
   locationPoint.name = location;
+  locationPoint.position.set(x, y, 0);
 
   scene.add(locationPoint);
+};
+
+export const removeLocationPointFromScene = (scene: Object3D): void => {
+  const point = scene.getObjectByName('location');
+  if (!point) return;
+
+  point.parent?.remove(point);
+  disposeObject3D(point);
 };
 
 export const addHighlightedDocToScene = (docId: string, scene: Scene): void => {
@@ -441,7 +502,10 @@ export const addHighlightedDocToScene = (docId: string, scene: Scene): void => {
 
   const name = 'highlighted';
   let parent = scene.getObjectByName(name);
-  if (parent) scene.remove(parent);
+  if (parent) {
+    scene.remove(parent);
+    disposeObject3D(parent);
+  }
 
   parent = new Object3D();
   parent.name = name;

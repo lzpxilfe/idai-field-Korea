@@ -72,6 +72,52 @@ describe('FieldworkPhotoAnnotationPanel', () => {
     expect(stroke.points.length).toBeGreaterThan(2);
   });
 
+  it('lets finger drags yield to scrolling and cancels unfinished preview ink', () => {
+    const handleUpdateStrokes = jest.fn();
+    const { getByTestId, queryByTestId } = render(
+      <FieldworkPhotoAnnotationPanel
+        imageUri="file:///tablet/photo.jpg"
+        onUpdateStrokes={handleUpdateStrokes}
+      />
+    );
+    const canvas = getByTestId('fieldworkPhotoAnnotationCanvas');
+
+    expect(canvas.props.onStartShouldSetResponderCapture({
+      nativeEvent: { pointerType: 'touch' },
+    })).toBe(false);
+    expect(canvas.props.onStartShouldSetResponder({
+      nativeEvent: { pointerType: 'touch' },
+    })).toBe(false);
+    expect(canvas.props.onStartShouldSetResponderCapture({
+      nativeEvent: { pointerType: 'pen' },
+    })).toBe(true);
+
+    fireEvent(canvas, 'touchStart', {
+      nativeEvent: {
+        locationX: 32,
+        locationY: 24,
+        pointerType: 'touch',
+      },
+    });
+    fireEvent(canvas, 'touchMove', {
+      nativeEvent: {
+        locationX: 32,
+        locationY: 80,
+        pointerType: 'touch',
+      },
+    });
+    fireEvent(canvas, 'touchEnd', {
+      nativeEvent: {
+        locationX: 32,
+        locationY: 80,
+        pointerType: 'touch',
+      },
+    });
+
+    expect(handleUpdateStrokes).not.toHaveBeenCalled();
+    expect(queryByTestId('fieldworkPhotoAnnotationFullscreenCanvas')).toBeNull();
+  });
+
   it('does not show technical stroke and point counts in the photo header', () => {
     const { queryByText } = render(
       <FieldworkPhotoAnnotationPanel
@@ -98,11 +144,19 @@ describe('FieldworkPhotoAnnotationPanel', () => {
     );
 
     const canvas = getByTestId('fieldworkPhotoAnnotationCanvas');
-    fireEvent(canvas, 'responderGrant', {
-      nativeEvent: { locationX: 32, locationY: 24 },
+    fireEvent(canvas, 'touchStart', {
+      nativeEvent: {
+        locationX: 32,
+        locationY: 24,
+        pointerType: 'touch',
+      },
     });
-    fireEvent(canvas, 'responderRelease', {
-      nativeEvent: { locationX: 32, locationY: 24 },
+    fireEvent(canvas, 'touchEnd', {
+      nativeEvent: {
+        locationX: 32,
+        locationY: 24,
+        pointerType: 'touch',
+      },
     });
 
     expect(handleUpdateStrokes).not.toHaveBeenCalled();
@@ -258,14 +312,14 @@ describe('FieldworkPhotoAnnotationPanel', () => {
       />
     );
 
+    expect(FileSystem.readAsStringAsync).not.toHaveBeenCalled();
+    fireEvent.press(getByTestId('fieldworkPhotoSamplePointButton'));
     await waitFor(() =>
       expect(FileSystem.readAsStringAsync).toHaveBeenCalledWith(
         'file:///tablet/profile.png',
         { encoding: FileSystem.EncodingType.Base64 }
       )
     );
-
-    fireEvent.press(getByTestId('fieldworkPhotoSamplePointButton'));
     await waitFor(() => {
       const fullscreenCanvas = getByTestId(
         'fieldworkPhotoAnnotationFullscreenCanvas'

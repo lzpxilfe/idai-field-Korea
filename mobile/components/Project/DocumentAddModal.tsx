@@ -148,6 +148,14 @@ type FeatureSketchPanGestureState = {
   offsetY: number;
   start: FeatureSketchTouchPoint;
 };
+type FeatureSketchInteractionSnapshot = {
+  center: FeatureSketchPoint;
+  isPolygonClosed: boolean;
+  points: FeatureSketchPoint[];
+  rotation: number;
+  scale: number;
+  wasEdited: boolean;
+};
 type FeatureLiveLocation = KoreanFieldworkBoundaryLocation & {
   accuracy?: number;
 };
@@ -215,11 +223,6 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
     },
     [isFeatureWideLayout, windowDimensions.height]
   );
-  const featureMapTranslateY = featureCreationScrollY.interpolate({
-    extrapolate: 'clamp',
-    inputRange: [0, featureSketchCanvasHeight],
-    outputRange: [0, -featureSketchCanvasHeight],
-  });
   const featureCreationScrollTrackHeight = Math.max(
     0,
     featureCreationViewportHeight - 20
@@ -277,6 +280,12 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
   const featureShapeGestureRef = useRef<FeatureShapeGestureState>();
   const featureViewportGestureRef = useRef<FeatureSketchViewportGestureState>();
   const featureViewportPanRef = useRef<FeatureSketchPanGestureState>();
+  const featureSketchInteractionSnapshotRef =
+    useRef<FeatureSketchInteractionSnapshot>();
+  const featureSketchMoveFrameRef = useRef<number>();
+  const pendingFeatureSketchMoveEventRef = useRef<GestureResponderEvent>();
+  const previewFeatureSketchPointRef =
+    useRef<(event: GestureResponderEvent) => void>();
 
   const isAllowedCategory = useCallback(
     (category: CategoryForm) =>
@@ -422,6 +431,13 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
       locationSubscription?.remove();
     };
   }, [isChoosingFeatureType]);
+
+  useEffect(() => () => {
+    if (featureSketchMoveFrameRef.current !== undefined) {
+      cancelAnimationFrame(featureSketchMoveFrameRef.current);
+    }
+    pendingFeatureSketchMoveEventRef.current = undefined;
+  }, []);
 
   if (!parentDoc) return null;
   const parentCategory = config.getCategory(parentDoc.resource.category);
@@ -690,8 +706,56 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
       setFeatureSketchPolygonClosed(false);
     }
   };
+  previewFeatureSketchPointRef.current = previewFeatureSketchPoint;
+
+  const flushPendingFeatureSketchMove = () => {
+    if (featureSketchMoveFrameRef.current !== undefined) {
+      cancelAnimationFrame(featureSketchMoveFrameRef.current);
+      featureSketchMoveFrameRef.current = undefined;
+    }
+
+    const pendingEvent = pendingFeatureSketchMoveEventRef.current;
+    pendingFeatureSketchMoveEventRef.current = undefined;
+    if (pendingEvent) previewFeatureSketchPointRef.current?.(pendingEvent);
+  };
+
+  const scheduleFeatureSketchMove = (event: GestureResponderEvent) => {
+    const eventSnapshot = copyFeatureSketchGestureEvent(event);
+    if (featureSketchMoveFrameRef.current === undefined) {
+      previewFeatureSketchPoint(eventSnapshot);
+      featureSketchMoveFrameRef.current = requestAnimationFrame(() => {
+        featureSketchMoveFrameRef.current = undefined;
+        const pendingEvent = pendingFeatureSketchMoveEventRef.current;
+        pendingFeatureSketchMoveEventRef.current = undefined;
+        if (pendingEvent) previewFeatureSketchPointRef.current?.(pendingEvent);
+      });
+      return;
+    }
+
+    pendingFeatureSketchMoveEventRef.current = eventSnapshot;
+  };
+
+  const beginFeatureSketchInteraction = (event: GestureResponderEvent) => {
+    if (featureSketchActiveTool !== 'inspect') {
+      featureSketchInteractionSnapshotRef.current = {
+        center: featureSketchCenter,
+        isPolygonClosed: featureSketchPolygonClosed,
+        points: featureSketchPoints.slice(),
+        rotation: featureSketchRotation,
+        scale: featureSketchScale,
+        wasEdited: featureSketchWasEdited,
+      };
+    } else {
+      featureSketchInteractionSnapshotRef.current = undefined;
+    }
+
+    previewFeatureSketchPoint(event);
+  };
 
   const commitFeatureSketchPoint = (event: GestureResponderEvent) => {
+    flushPendingFeatureSketchMove();
+    featureSketchInteractionSnapshotRef.current = undefined;
+
     if (featureSketchActiveTool === 'inspect') {
       cancelFeatureSketchPoint();
       return;
@@ -800,12 +864,37 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
   };
 
   const cancelFeatureSketchPoint = () => {
+    if (featureSketchMoveFrameRef.current !== undefined) {
+      cancelAnimationFrame(featureSketchMoveFrameRef.current);
+      featureSketchMoveFrameRef.current = undefined;
+    }
+    pendingFeatureSketchMoveEventRef.current = undefined;
+
+    const interactionSnapshot = featureSketchInteractionSnapshotRef.current;
+    featureSketchInteractionSnapshotRef.current = undefined;
+    if (interactionSnapshot) {
+      setFeatureSketchCenter(interactionSnapshot.center);
+      setFeatureSketchPoints(interactionSnapshot.points);
+      setFeatureSketchPolygonClosed(interactionSnapshot.isPolygonClosed);
+      setFeatureSketchRotation(interactionSnapshot.rotation);
+      setFeatureSketchScale(interactionSnapshot.scale);
+      setFeatureSketchWasEdited(interactionSnapshot.wasEdited);
+    }
+
     lastPreviewFeatureSketchPointRef.current = undefined;
     draggedFeatureSketchPointIndexRef.current = undefined;
     featureShapeGestureRef.current = undefined;
     featureViewportGestureRef.current = undefined;
     featureViewportPanRef.current = undefined;
     setActiveFeatureSketchPoint(undefined);
+  };
+
+  const shouldFeatureSketchClaimResponder = (event: GestureResponderEvent) => {
+    if (featureSketchActiveTool !== 'inspect') return true;
+
+    return featureSketchViewport.scale > FEATURE_SKETCH_VIEWPORT_MIN_SCALE
+      + FEATURE_SKETCH_VIEWPORT_SCALE_THRESHOLD
+      || getFeatureSketchTouches(event).length > 1;
   };
 
   const updateFeatureSketchViewport = (event: GestureResponderEvent) => {
@@ -1321,13 +1410,13 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
           </View>
         )}
         <View
-          onMoveShouldSetResponder={() => true}
-          onResponderGrant={previewFeatureSketchPoint}
-          onResponderMove={previewFeatureSketchPoint}
+          onMoveShouldSetResponder={shouldFeatureSketchClaimResponder}
+          onResponderGrant={beginFeatureSketchInteraction}
+          onResponderMove={scheduleFeatureSketchMove}
           onResponderRelease={commitFeatureSketchPoint}
           onResponderTerminate={cancelFeatureSketchPoint}
           onResponderTerminationRequest={() => false}
-          onStartShouldSetResponder={() => true}
+          onStartShouldSetResponder={shouldFeatureSketchClaimResponder}
           style={styles.featureSketchTouchLayer}
           testID="featureLocationSketchTouchLayer"
         />
@@ -1513,19 +1602,6 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
 
     return (
       <View style={styles.featureCreationLayout} testID="featureCreationLayout">
-        <Animated.View
-          style={[
-            styles.featureCreationMapPane,
-            isFeatureWideLayout && styles.featureCreationMapPaneWide,
-            {
-              height: featureSketchCanvasHeight,
-              transform: [{ translateY: featureMapTranslateY }],
-            },
-          ]}
-          testID="featureCreationMapPane"
-        >
-          {renderFeatureLocationSketchPanel()}
-        </Animated.View>
         <Animated.ScrollView
           contentContainerStyle={[
             styles.featureCreationLayoutContent,
@@ -1547,6 +1623,16 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
           style={styles.featureCreationScroller}
           testID="featureCreationScroller"
         >
+          <View
+            style={[
+              styles.featureCreationMapPane,
+              isFeatureWideLayout && styles.featureCreationMapPaneWide,
+              { height: featureSketchCanvasHeight },
+            ]}
+            testID="featureCreationMapPane"
+          >
+            {renderFeatureLocationSketchPanel()}
+          </View>
           <View
             pointerEvents="none"
             style={styles.featureCreationScrollHandle}
@@ -2284,6 +2370,23 @@ interface FeatureSketchNativeEvent extends FeatureSketchTouchCandidate {
   changedTouches?: FeatureSketchTouchCandidate[];
   touches?: FeatureSketchTouchCandidate[];
 }
+
+const copyFeatureSketchGestureEvent = (
+  event: GestureResponderEvent
+): GestureResponderEvent => {
+  const nativeEvent = event.nativeEvent as unknown as FeatureSketchNativeEvent;
+  const copyTouches = (touches?: FeatureSketchTouchCandidate[]) =>
+    touches?.map((touch) => ({ ...touch }));
+
+  return {
+    nativeEvent: {
+      locationX: nativeEvent.locationX,
+      locationY: nativeEvent.locationY,
+      changedTouches: copyTouches(nativeEvent.changedTouches),
+      touches: copyTouches(nativeEvent.touches),
+    },
+  } as unknown as GestureResponderEvent;
+};
 
 const getFeatureSketchLocalTouchPoint = (
   value?: FeatureSketchTouchCandidate

@@ -30,19 +30,32 @@ const useMapGestureHandler = (
 
     const initialLeft = useRef<number>(0);
     const initialTop = useRef<number>(0);
+    const screenToWorldMatrixRef = useRef(screenToWorldMatrix);
+    const renderSceneRef = useRef(renderScene);
+    screenToWorldMatrixRef.current = screenToWorldMatrix;
+    renderSceneRef.current = renderScene;
 
     const screenToWorld = (point: Position): Position | null => {
-        const transformed = processTransform2d(screenToWorldMatrix, point);
+        const transformed = processTransform2d(
+            screenToWorldMatrixRef.current,
+            point
+        );
         return isFinitePosition(transformed) ? transformed : null;
     };
 
     const shouldRespond = (e: GestureResponderEvent, gestureState: PanResponderGestureState):boolean =>
         (e.nativeEvent.touches?.length ?? 0) === 2 ||
-        Math.pow(gestureState.dx,2) + Math.pow(gestureState.dy,2) >= moveThreshold;
+        Math.pow(gestureState.dx,2) + Math.pow(gestureState.dy,2)
+            >= Math.pow(moveThreshold, 2);
+
+    const finishGesture = () => {
+        isMoving.current = false;
+        isZooming.current = false;
+    };
     
     const panResponder = useRef(PanResponder.create({
         onPanResponderGrant: no,
-        onPanResponderTerminate: no,
+        onPanResponderTerminate: finishGesture,
         onShouldBlockNativeResponder: yes,
         onPanResponderTerminationRequest: yes,
         onMoveShouldSetPanResponder: shouldRespond,
@@ -67,10 +80,7 @@ const useMapGestureHandler = (
                 isZooming.current = false;
             }
         },
-        onPanResponderRelease: () => {
-            isMoving.current = false;
-            isZooming.current = false;
-        }
+        onPanResponderRelease: finishGesture,
     })).current;
 
     const touchHandler = (x: number, y: number): void => {
@@ -91,7 +101,7 @@ const useMapGestureHandler = (
 
             left.current = initialLeft.current + dx;
             top.current = initialTop.current + dy;
-            renderScene();
+            renderSceneRef.current();
         }
     };
 
@@ -122,7 +132,7 @@ const useMapGestureHandler = (
             left.current = (initialLeft.current + dx - x) * touchZoom + x;
             top.current = (initialTop.current + dy - y) * touchZoom + y;
             zoom.current = initialZoom.current * touchZoom;
-            renderScene();
+            renderSceneRef.current();
         }
     };
     

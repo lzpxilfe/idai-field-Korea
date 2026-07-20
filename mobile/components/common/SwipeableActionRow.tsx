@@ -1,6 +1,13 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import React, { useMemo, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
+  Animated,
   PanResponder,
   PanResponderGestureState,
   StyleSheet,
@@ -38,35 +45,60 @@ const SwipeableActionRow: React.FC<SwipeableActionRowProps> = ({
 }) => {
   const revealWidth = actions.length * actionWidth;
   const [isOpen, setIsOpen] = useState(false);
-  const [dragOffset, setDragOffset] = useState(0);
-  const visibleOffset = dragOffset > 0
-    ? dragOffset
-    : isOpen ? revealWidth : 0;
-  const areActionsVisible = visibleOffset > 0;
-  const close = () => {
-    setDragOffset(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const translateX = useRef(new Animated.Value(0)).current;
+  const isOpenRef = useRef(isOpen);
+  isOpenRef.current = isOpen;
+  const areActionsVisible = isOpen || isDragging;
+  const animateTo = useCallback((
+    nextIsOpen: boolean,
+    onComplete?: () => void
+  ) => {
+    Animated.timing(translateX, {
+      duration: 150,
+      toValue: nextIsOpen ? -revealWidth : 0,
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (finished) onComplete?.();
+    });
+  }, [revealWidth, translateX]);
+  const close = useCallback(() => {
+    setIsDragging(true);
     setIsOpen(false);
-  };
+    animateTo(false, () => setIsDragging(false));
+  }, [animateTo]);
+
+  useEffect(() => {
+    translateX.setValue(isOpenRef.current ? -revealWidth : 0);
+  }, [revealWidth, translateX]);
+
   const panResponder = useMemo(
     () => PanResponder.create({
       onMoveShouldSetPanResponder: (_event, gestureState) =>
         shouldHandleHorizontalSwipe(gestureState),
+      onPanResponderGrant: () => {
+        setIsDragging(true);
+      },
       onPanResponderMove: (_event, gestureState) => {
-        setDragOffset(getSwipeOffset(gestureState, isOpen, revealWidth));
+        translateX.setValue(
+          -getSwipeOffset(gestureState, isOpen, revealWidth)
+        );
       },
       onPanResponderRelease: (_event, gestureState) => {
         const nextOffset = getSwipeOffset(gestureState, isOpen, revealWidth);
-        setDragOffset(0);
-        setIsOpen(
+        const nextIsOpen =
           gestureState.dx < -SWIPE_OPEN_THRESHOLD
-          || nextOffset > revealWidth / 2
-        );
+          || nextOffset > revealWidth / 2;
+
+        setIsOpen(nextIsOpen);
+        if (nextIsOpen) setIsDragging(false);
+        animateTo(nextIsOpen, () => setIsDragging(false));
       },
       onPanResponderTerminate: () => {
-        setDragOffset(0);
+        animateTo(isOpen, () => setIsDragging(false));
       },
     }),
-    [isOpen, revealWidth]
+    [animateTo, isOpen, revealWidth, translateX]
   );
 
   if (actions.length === 0) {
@@ -112,18 +144,18 @@ const SwipeableActionRow: React.FC<SwipeableActionRowProps> = ({
           </TouchableOpacity>
         ))}
       </View>
-      <View
+      <Animated.View
         {...panResponder.panHandlers}
         style={[
           styles.surface,
           {
-            transform: [{ translateX: -visibleOffset }],
+            transform: [{ translateX }],
           },
         ]}
         testID={`${testID}_surface`}
       >
         {children}
-      </View>
+      </Animated.View>
     </View>
   );
 };

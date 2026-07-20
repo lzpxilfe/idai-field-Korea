@@ -690,7 +690,11 @@ let selectedIndices=[];
 let selectionMove=null;
 let activePenPointerId=null;
 let renderQueued=false;
-let pixelRatio=1;
+let renderTransform=null;
+let cachedInkStrokes=null;
+let cachedInkViewport=null;
+let cachedInkCanvasWidth=0;
+let cachedInkCanvasHeight=0;
 let hasInitializedInfiniteViewport=false;
 const maxCoordinate=state.maxCoordinate||10000;
 const background=state.background||{};
@@ -722,19 +726,23 @@ function post(type,payload){
 }
 function resize(){
   const rect=canvas.getBoundingClientRect();
-  const ratio=window.devicePixelRatio||1;
-  pixelRatio=ratio;
+  const ratio=Math.min(window.devicePixelRatio||1,2);
   canvas.width=Math.max(1,Math.round(rect.width*ratio));
   canvas.height=Math.max(1,Math.round(rect.height*ratio));
+  strokeCanvas.width=canvas.width;
+  strokeCanvas.height=canvas.height;
   ctx.setTransform(ratio,0,0,ratio,0,0);
+  strokeCtx.setTransform(ratio,0,0,ratio,0,0);
   initializeInfiniteViewport();
   requestRender();
 }
 function getCssSize(){
+  if(renderTransform) return renderTransform.size;
   const rect=canvas.getBoundingClientRect();
   return {height:rect.height,width:rect.width};
 }
 function getBaseDrawingFrame(){
+  if(renderTransform) return renderTransform.frame;
   return getBaseDrawingFrameForSize(getCssSize());
 }
 function getBaseDrawingFrameForSize(size){
@@ -1119,7 +1127,7 @@ function appendActiveStrokePoint(point,minDistance){
   if(previous&&distance(previous,point)<minDistance) return;
   const points=previous?interpolatePoints(previous,point):[point];
   if(points.length===0) return;
-  activeStroke.points=activeStroke.points.concat(points);
+  activeStroke.points.push(...points);
   requestRender();
 }
 function interpolatePoints(start,end){
@@ -1422,16 +1430,37 @@ function drawSelectionOverlay(){
 function render(){
   renderQueued=false;
   const size=getCssSize();
+  renderTransform={frame:getBaseDrawingFrameForSize(size),size};
   ctx.clearRect(0,0,size.width,size.height);
   drawBackground();
-  strokeCanvas.width=canvas.width;
-  strokeCanvas.height=canvas.height;
-  strokeCtx.setTransform(pixelRatio,0,0,pixelRatio,0,0);
-  strokeCtx.clearRect(0,0,size.width,size.height);
-  strokes.forEach((stroke)=>drawStroke(stroke,'#111827',strokeCtx));
-  if(activeStroke) drawStroke(activeStroke,'#111827',strokeCtx);
+  const isPreviewingEraser=!!activeStroke&&activeStroke.tool==='eraser';
+  const shouldRebuildInk=
+    cachedInkStrokes!==strokes
+    ||!cachedInkViewport
+    ||cachedInkViewport.offsetX!==viewport.offsetX
+    ||cachedInkViewport.offsetY!==viewport.offsetY
+    ||cachedInkViewport.scale!==viewport.scale
+    ||cachedInkCanvasWidth!==strokeCanvas.width
+    ||cachedInkCanvasHeight!==strokeCanvas.height;
+  if(shouldRebuildInk||isPreviewingEraser){
+    strokeCtx.clearRect(0,0,size.width,size.height);
+    strokes.forEach((stroke)=>drawStroke(stroke,'#111827',strokeCtx));
+    if(isPreviewingEraser) drawStroke(activeStroke,'#111827',strokeCtx);
+    if(!isPreviewingEraser){
+      cachedInkStrokes=strokes;
+      cachedInkViewport={...viewport};
+      cachedInkCanvasWidth=strokeCanvas.width;
+      cachedInkCanvasHeight=strokeCanvas.height;
+    }else{
+      cachedInkStrokes=null;
+    }
+  }
   ctx.drawImage(strokeCanvas,0,0,size.width,size.height);
+  if(activeStroke&&!isPreviewingEraser){
+    drawStroke(activeStroke,'#111827',ctx);
+  }
   drawSelectionOverlay();
+  renderTransform=null;
 }
 function requestRender(){
   if(renderQueued) return;

@@ -1,4 +1,11 @@
-import React, { ReactNode, useRef, useState } from 'react';
+import React, {
+    ReactNode,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from 'react';
 import { Animated, Dimensions, LayoutChangeEvent, StyleSheet, View } from 'react-native';
 import {
     HandlerStateChangeEvent,
@@ -20,7 +27,10 @@ const HEADER_HEIGHT = 10;
 const BottomSheet: React.FC<BottomSheetProps> = (props) => {
 
     const [windowHeight, setWindowHeight] = useState<number>(Dimensions.get('window').height);
-    const SNAP_POINTS_FROM_TOP = props.snapPointsFromTop.map(value => value * windowHeight);
+    const SNAP_POINTS_FROM_TOP = useMemo(
+        () => props.snapPointsFromTop.map(value => value * windowHeight),
+        [props.snapPointsFromTop, windowHeight]
+    );
     const START = SNAP_POINTS_FROM_TOP[0];
     const END = SNAP_POINTS_FROM_TOP[SNAP_POINTS_FROM_TOP.length - 1];
 
@@ -31,37 +41,57 @@ const BottomSheet: React.FC<BottomSheetProps> = (props) => {
 
     const [lastSnap, setLastSnap] = useState<number>(END);
 
-    let lastScrollYValue = 0;
+    const lastScrollYValue = useRef(0);
     const lastScrollY = useRef(new Animated.Value(0)).current;
-    lastScrollY.addListener(({ value }) => {
-        lastScrollYValue = value;
-    });
+    useEffect(() => {
+        const listenerId = lastScrollY.addListener(({ value }) => {
+            lastScrollYValue.current = value;
+        });
+
+        return () => {
+            lastScrollY.removeListener(listenerId);
+        };
+    }, [lastScrollY]);
 
     const dragY = useRef(new Animated.Value(9)).current;
-    const _onGestureEvent = Animated.event(
-        [{ nativeEvent: { translationY: dragY } }],
-        { useNativeDriver: USE_NATIVE_DRIVER }
+    const _onGestureEvent = useMemo(
+        () => Animated.event(
+            [{ nativeEvent: { translationY: dragY } }],
+            { useNativeDriver: USE_NATIVE_DRIVER }
+        ),
+        [dragY]
     );
-    const reverseLastScrollY = Animated.multiply(
-        new Animated.Value(-1),
-        lastScrollY
+    const negativeOne = useRef(new Animated.Value(-1)).current;
+    const reverseLastScrollY = useMemo(
+        () => Animated.multiply(negativeOne, lastScrollY),
+        [lastScrollY, negativeOne]
     );
 
     const translateYOffset = useRef(new Animated.Value(END)).current;
-    const translateY = Animated.add(
+    const translateY = useMemo(() => Animated.add(
         translateYOffset,
-        Animated.add(dragY, reverseLastScrollY)).interpolate({
+        Animated.add(dragY, reverseLastScrollY)
+    ).interpolate({
             inputRange: [START, END],
             outputRange: [START, END],
-            extrapolate: 'clamp', });
+            extrapolate: 'clamp',
+        }), [
+            dragY,
+            END,
+            reverseLastScrollY,
+            START,
+            translateYOffset,
+        ]);
 
 
-    const _onHandlerStateChange = ({ nativeEvent }: HandlerStateChangeEvent<PanGestureHandlerEventPayload>) => {
+    const _onHandlerStateChange = useCallback(({
+        nativeEvent,
+    }: HandlerStateChangeEvent<PanGestureHandlerEventPayload>) => {
         
         if (nativeEvent.oldState === State.ACTIVE) {
             let { translationY } = nativeEvent;
             const { velocityY } = nativeEvent;
-            translationY -= lastScrollYValue;
+            translationY -= lastScrollYValue.current;
             const dragToss = 0.05;
             const endOffsetY =
             lastSnap + translationY + dragToss * velocityY;
@@ -87,18 +117,30 @@ const BottomSheet: React.FC<BottomSheetProps> = (props) => {
             useNativeDriver: USE_NATIVE_DRIVER,
             }).start();
         }
-    };
+    }, [
+        dragY,
+        lastSnap,
+        SNAP_POINTS_FROM_TOP,
+        translateYOffset,
+    ]);
     
-    const _onHeaderHandlerStateChange = ({ nativeEvent }: HandlerStateChangeEvent<PanGestureHandlerEventPayload>) => {
+    const _onHeaderHandlerStateChange = useCallback(({
+        nativeEvent,
+    }: HandlerStateChangeEvent<PanGestureHandlerEventPayload>) => {
 
         if (nativeEvent.oldState === State.BEGAN) {
             lastScrollY.setValue(0);
         }
         _onHandlerStateChange({ nativeEvent });
-    };
+    }, [_onHandlerStateChange, lastScrollY]);
     
 
-    const handleLayoutChange = (_event: LayoutChangeEvent) => setWindowHeight( Dimensions.get('window').height);
+    const handleLayoutChange = useCallback((_event: LayoutChangeEvent) => {
+        const nextHeight = Dimensions.get('window').height;
+        setWindowHeight((currentHeight) =>
+            currentHeight === nextHeight ? currentHeight : nextHeight
+        );
+    }, []);
 
 
     return (
