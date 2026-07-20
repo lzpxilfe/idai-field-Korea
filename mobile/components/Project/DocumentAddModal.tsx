@@ -20,6 +20,7 @@ import {
   Animated,
   GestureResponderEvent,
   Image,
+  InteractionManager,
   LayoutChangeEvent,
   Modal,
   Pressable,
@@ -77,6 +78,7 @@ const FEATURE_SKETCH_TABLET_WIDTH = 600;
 const FEATURE_SKETCH_SCALE_STEP = 10;
 const FEATURE_SKETCH_ROTATION_STEP = 15;
 const FEATURE_SKETCH_GRID_PERCENTS = [25, 50, 75];
+const FEATURE_LIVE_LOCATION_START_DELAY_MS = 350;
 const FEATURE_SKETCH_BOUNDARY_PADDING = 14;
 const FEATURE_SKETCH_SHAPE_BASE_WIDTH = 18;
 const FEATURE_SKETCH_SHAPE_BASE_HEIGHT = 12;
@@ -368,10 +370,16 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
   );
 
   useEffect(() => {
-    if (!isChoosingFeatureType) return;
+    if (!isChoosingFeatureType) {
+      setFeatureLiveLocation(undefined);
+      setFeatureLiveLocationStatus('idle');
+      return;
+    }
 
     let isMounted = true;
     let locationSubscription: Location.LocationSubscription | undefined;
+    let locationStartTimeout: ReturnType<typeof setTimeout> | undefined;
+    let locationStartTask: { cancel?: () => void } | undefined;
 
     const updateLiveLocation = (coords: Location.LocationObjectCoords) => {
       const nextLocation = getFeatureLiveLocationFromCoords(coords);
@@ -424,10 +432,18 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
       }
     };
 
-    void startLocationWatch();
+    locationStartTask = InteractionManager.runAfterInteractions(() => {
+      locationStartTimeout = setTimeout(() => {
+        if (isMounted) void startLocationWatch();
+      }, FEATURE_LIVE_LOCATION_START_DELAY_MS);
+    });
 
     return () => {
       isMounted = false;
+      if (locationStartTimeout !== undefined) {
+        clearTimeout(locationStartTimeout);
+      }
+      locationStartTask?.cancel?.();
       locationSubscription?.remove();
     };
   }, [isChoosingFeatureType]);
@@ -1657,7 +1673,6 @@ const DocumentAddModal: React.FC<AddModalProps> = ({
               isFeatureWideLayout && styles.featureNamePanelWide,
             ]}>
             <Input
-              autoFocus
               isValid={true}
               invalidText="유구명을 먼저 입력하세요."
               label="유구명"
