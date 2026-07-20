@@ -51,6 +51,7 @@ import {
   createKoreanFieldworkRecordMemoDraft,
   getKoreanFieldworkDailyLogAppendUpdates,
   getKoreanFieldworkDailyLogForOperation,
+  getKoreanFieldworkDailyLogsForOperation,
   getKoreanFieldworkFieldNoteOperation,
   getKoreanFieldworkNotebookContinuationSeed,
   KoreanFieldworkFieldNoteContinuationSeed,
@@ -268,6 +269,11 @@ const DocumentsList: React.FC = () => {
   const scrollViewRef = useRef<ScrollView>(null);
   const fieldNoteContinuationRequestId = useRef(0);
   const handledResetToOverviewKeyRef = useRef<string>();
+  const selectedJournalDateRef = useRef(selectedJournalDate);
+  const selectedJournalOperationIdRef = useRef<string>();
+  const dailyJournalSaveQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const pendingDailyJournalSaveCountRef = useRef(0);
+  const locallyCreatedDailyLogIdsRef = useRef<Map<string, string>>(new Map());
   const [isCreatingFieldNote, setIsCreatingFieldNote] = useState(false);
   const [projectBoundaryDraft, setProjectBoundaryDraft] =
     useState<KoreanFieldworkProjectBoundaryDraft>();
@@ -326,7 +332,11 @@ const DocumentsList: React.FC = () => {
     setQuickFindSpotRequest(undefined);
     setSelectedJournalDate(new Date());
     setSelectedJournalDailyLogId(undefined);
+    locallyCreatedDailyLogIdsRef.current.clear();
   }, [projectId]);
+  useEffect(() => {
+    selectedJournalDateRef.current = selectedJournalDate;
+  }, [selectedJournalDate]);
   const {
     investigationModeId: loadedInvestigationModeId,
     boundarySummary,
@@ -745,6 +755,17 @@ const DocumentsList: React.FC = () => {
     selectedFieldNoteOperation
     ?? actionTargets.primaryOperation
     ?? fallbackOperationDocument;
+  useEffect(() => {
+    selectedJournalOperationIdRef.current =
+      journalOperationDocument?.resource.id;
+  }, [journalOperationDocument?.resource.id]);
+  const journalDailyLogs = useMemo(
+    () => getKoreanFieldworkDailyLogsForOperation(
+      journalOperationDocument,
+      documents
+    ),
+    [documents, journalOperationDocument]
+  );
   const explicitlySelectedJournalDailyLog = useMemo(
     () => selectedJournalDailyLogId
       ? documents.find((document) =>
@@ -1025,68 +1046,118 @@ const DocumentsList: React.FC = () => {
       setIsCreatingFieldNote(false);
     }
   };
-  const saveDailyJournalFields = async (
+  const saveDailyJournalFields = (
     updates: Record<string, unknown>
-  ) => {
-    if (!repository) throw new Error('repository unavailable');
+  ): Promise<void> => {
+    if (!repository) {
+      return Promise.reject(new Error('repository unavailable'));
+    }
     if (!journalDailyLog && !journalOperationDocument) {
-      throw new Error('daily journal operation unavailable');
+      return Promise.reject(
+        new Error('daily journal operation unavailable')
+      );
     }
 
-    try {
-      setIsSavingDailyJournal(true);
+    const targetDate = new Date(selectedJournalDate);
+    const targetDailyLogId = journalDailyLog?.resource.id;
+    const targetOperationDocument = journalOperationDocument;
+    const targetOperationId = targetOperationDocument?.resource.id;
+    const targetSaveKey = targetOperationId
+      ? `${targetOperationId}:${getCalendarDateKey(targetDate)}`
+      : undefined;
+    pendingDailyJournalSaveCountRef.current += 1;
+    setIsSavingDailyJournal(true);
 
-      if (journalDailyLog) {
-        await repository.update({
-          ...journalDailyLog,
+    const runSave = async (): Promise<void> => {
+      try {
+        const queuedDailyLogId = targetSaveKey
+          ? locallyCreatedDailyLogIdsRef.current.get(targetSaveKey)
+          : undefined;
+        const effectiveDailyLogId = targetDailyLogId ?? queuedDailyLogId;
+
+        if (effectiveDailyLogId) {
+          const latestDailyLog = await repository.get(effectiveDailyLogId);
+          const updatedDailyLog = await repository.update({
+            ...latestDailyLog,
+            resource: {
+              ...latestDailyLog.resource,
+              ...updates,
+            },
+          });
+          setLocallyCreatedDocuments((current) =>
+            current.some((document) =>
+              document.resource.id === updatedDailyLog.resource.id)
+              ? current.map((document) =>
+                document.resource.id === updatedDailyLog.resource.id
+                  ? updatedDailyLog
+                  : document)
+              : current);
+          return;
+        }
+
+        if (!targetOperationDocument || !targetSaveKey) return;
+
+        const draft = createKoreanFieldworkDailyLogDraft(
+          targetOperationDocument,
+          targetOperationDocument,
+          '',
+          config,
+          targetDate
+        );
+        const isSameDayRecord = isSameCalendarDate(targetDate, now);
+        const createdDocument = await repository.create({
+          ...draft,
           resource: {
-            ...journalDailyLog.resource,
+            ...draft.resource,
+            description: '',
+            diaryAbstract: '',
+            ...(!isSameDayRecord
+              ? {
+                dailyLogEvidenceRole: undefined,
+                dailyLogReview: undefined,
+              }
+              : {}),
             ...updates,
           },
         });
-        return;
+        locallyCreatedDailyLogIdsRef.current.set(
+          targetSaveKey,
+          createdDocument.resource.id
+        );
+        setLocallyCreatedDocuments((current) => [
+          ...current.filter((document) =>
+            document.resource.id !== createdDocument.resource.id),
+          createdDocument,
+        ]);
+        if (
+          isSameCalendarDate(selectedJournalDateRef.current, targetDate)
+          && selectedJournalOperationIdRef.current === targetOperationId
+        ) {
+          setSelectedJournalDailyLogId(createdDocument.resource.id);
+        }
+      } catch (error) {
+        showToast(
+          ToastType.Error,
+          `작업일지를 저장하지 못했습니다. ${error}`
+        );
+        throw error;
       }
+    };
+    const queuedSave = dailyJournalSaveQueueRef.current.then(
+      runSave,
+      runSave
+    );
+    dailyJournalSaveQueueRef.current = queuedSave.catch(() => undefined);
 
-      if (!journalOperationDocument) return;
-
-      const draft = createKoreanFieldworkDailyLogDraft(
-        journalOperationDocument,
-        journalOperationDocument,
-        '',
-        config,
-        selectedJournalDate
+    return queuedSave.finally(() => {
+      pendingDailyJournalSaveCountRef.current = Math.max(
+        0,
+        pendingDailyJournalSaveCountRef.current - 1
       );
-      const isSameDayRecord = isSameCalendarDate(selectedJournalDate, now);
-      const createdDocument = await repository.create({
-        ...draft,
-        resource: {
-          ...draft.resource,
-          description: '',
-          diaryAbstract: '',
-          ...(!isSameDayRecord
-            ? {
-              dailyLogEvidenceRole: undefined,
-              dailyLogReview: undefined,
-            }
-            : {}),
-          ...updates,
-        },
-      });
-      setLocallyCreatedDocuments((current) => [
-        ...current.filter((document) =>
-          document.resource.id !== createdDocument.resource.id),
-        createdDocument,
-      ]);
-      setSelectedJournalDailyLogId(createdDocument.resource.id);
-    } catch (error) {
-      showToast(
-        ToastType.Error,
-        `작업일지를 저장하지 못했습니다. ${error}`
-      );
-      throw error;
-    } finally {
-      setIsSavingDailyJournal(false);
-    }
+      if (pendingDailyJournalSaveCountRef.current === 0) {
+        setIsSavingDailyJournal(false);
+      }
+    });
   };
   const createDailyJournalLog = () => saveDailyJournalFields({
     description: '',
@@ -1268,6 +1339,8 @@ const DocumentsList: React.FC = () => {
             boundarySummary={boundarySummary}
             canEdit={canEditDailyJournal}
             dailyLog={journalDailyLog}
+            dailyLogs={journalDailyLogs}
+            documents={documents}
             isSaving={isSavingDailyJournal}
             now={now}
             selectedDate={selectedJournalDate}
@@ -1495,6 +1568,12 @@ const removeDocumentIdSet = (
 const getStringRouteParam = (
   param: string | string[] | undefined
 ): string | undefined => Array.isArray(param) ? param[0] : param;
+
+const getCalendarDateKey = (date: Date): string => [
+  date.getFullYear(),
+  String(date.getMonth() + 1).padStart(2, '0'),
+  String(date.getDate()).padStart(2, '0'),
+].join('-');
 
 const isSameCalendarDate = (dateA: Date, dateB: Date): boolean =>
   dateA.getFullYear() === dateB.getFullYear()

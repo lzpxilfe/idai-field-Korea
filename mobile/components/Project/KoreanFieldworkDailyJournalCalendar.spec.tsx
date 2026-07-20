@@ -1,8 +1,15 @@
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import {
+  act,
+  fireEvent,
+  render,
+  waitFor,
+} from '@testing-library/react-native';
 import React from 'react';
 import KoreanFieldworkDailyJournalCalendar, {
   getBoundaryPlanBackground,
   getBoundaryCanvasPoints,
+  getKoreanFieldworkBoundaryMemoSourceLogs,
+  getKoreanFieldworkDailyJournalBoundaryDraft,
   KOREAN_FIELDWORK_DAILY_JOURNAL_FIELDS,
 } from './KoreanFieldworkDailyJournalCalendar';
 import { KOREAN_FIELDWORK_CATEGORIES } from './korean-fieldwork-categories';
@@ -408,6 +415,255 @@ describe('KoreanFieldworkDailyJournalCalendar', () => {
     expect(getAllByTestId('dailyJournalBoundaryStrokeJoint').length)
       .toBeGreaterThan(2);
   });
+
+  it('starts a new date blank and imports only yesterday handwriting on demand', async () => {
+    const handleUpdateDailyLog = jest.fn();
+    const sourceBoundary = {
+      coordinates: [
+        { latitude: 37.2, longitude: 127.1 },
+        { latitude: 37.2, longitude: 127.2 },
+        { latitude: 37.1, longitude: 127.2 },
+      ],
+    };
+    const sourceStrokes = JSON.stringify({
+      strokes: [{
+        color: '#111827',
+        points: [{ x: 1000, y: 1000 }, { x: 3000, y: 4000 }],
+        width: 5,
+      }],
+      version: 1,
+    });
+    const yesterdayLog = createDailyLog({
+      [FIELD.boundaryMemoBoundarySnapshot]: JSON.stringify(sourceBoundary),
+      [FIELD.boundaryMemoStrokes]: sourceStrokes,
+      date: '2026-06-29',
+      id: 'daily-log-yesterday',
+    });
+    const { getByTestId, queryAllByTestId } = render(
+      <KoreanFieldworkDailyJournalCalendar
+        boundaryDraft={{
+          coordinates: [
+            { latitude: 37.3, longitude: 127.1 },
+            { latitude: 37.3, longitude: 127.3 },
+            { latitude: 37.0, longitude: 127.3 },
+          ],
+        }}
+        canEdit
+        dailyLogs={[yesterdayLog] as any}
+        onCreateDailyLog={jest.fn()}
+        onUpdateDailyLog={handleUpdateDailyLog}
+        selectedDate={new Date('2026-06-30T12:00:00+09:00')}
+        today={new Date('2026-06-30T12:00:00+09:00')}
+      />
+    );
+
+    expect(queryAllByTestId('dailyJournalBoundaryStrokeSegment')).toHaveLength(0);
+
+    fireEvent.press(getByTestId('dailyJournalBoundaryImportYesterday'));
+
+    await waitFor(() => {
+      expect(handleUpdateDailyLog).toHaveBeenCalledWith(expect.objectContaining({
+        [FIELD.boundaryMemoBoundarySnapshot]: JSON.stringify(sourceBoundary),
+        [FIELD.boundaryMemoCopiedAt]: expect.any(String),
+        [FIELD.boundaryMemoCopiedFromDate]: '2026-06-29',
+        [FIELD.boundaryMemoCopiedFromId]: 'daily-log-yesterday',
+        [FIELD.boundaryMemoStrokes]: expect.stringContaining('"strokes"'),
+      }));
+    });
+    expect(JSON.parse(handleUpdateDailyLog.mock.calls[0][0][
+      FIELD.boundaryMemoStrokes
+    ])).toEqual(JSON.parse(sourceStrokes));
+  });
+
+  it('imports handwriting from a specifically selected earlier date', async () => {
+    const handleUpdateDailyLog = jest.fn();
+    const olderLog = createDailyLog({
+      [FIELD.boundaryMemoStrokes]: JSON.stringify({
+        strokes: [{
+          points: [{ x: 2000, y: 1000 }, { x: 4000, y: 3000 }],
+        }],
+        version: 1,
+      }),
+      date: '2026-06-27',
+      id: 'daily-log-older',
+    });
+    const yesterdayLog = createDailyLog({
+      [FIELD.boundaryMemoStrokes]: JSON.stringify({
+        strokes: [{
+          points: [{ x: 5000, y: 5000 }, { x: 7000, y: 7000 }],
+        }],
+        version: 1,
+      }),
+      date: '2026-06-29',
+      id: 'daily-log-yesterday',
+    });
+    const { getByTestId } = render(
+      <KoreanFieldworkDailyJournalCalendar
+        canEdit
+        dailyLogs={[olderLog, yesterdayLog] as any}
+        onCreateDailyLog={jest.fn()}
+        onUpdateDailyLog={handleUpdateDailyLog}
+        selectedDate={new Date('2026-06-30T12:00:00+09:00')}
+        today={new Date('2026-06-30T12:00:00+09:00')}
+      />
+    );
+
+    fireEvent.press(getByTestId('dailyJournalBoundaryToggleImportDates'));
+    fireEvent.press(getByTestId('dailyJournalBoundaryImportDate_2026-06-27'));
+
+    await waitFor(() => {
+      expect(handleUpdateDailyLog).toHaveBeenCalledWith(expect.objectContaining({
+        [FIELD.boundaryMemoCopiedFromDate]: '2026-06-27',
+        [FIELD.boundaryMemoCopiedFromId]: 'daily-log-older',
+      }));
+    });
+  });
+
+  it('offers only prior dates that contain boundary handwriting', () => {
+    const priorWithMemo = createDailyLog({
+      [FIELD.boundaryMemoStrokes]:
+        '{"version":1,"strokes":[{"points":[{"x":1,"y":1}]}]}',
+      date: '2026-06-28',
+      id: 'prior-with-memo',
+    });
+    const priorWithoutMemo = createDailyLog({
+      date: '2026-06-29',
+      id: 'prior-without-memo',
+    });
+    const selectedDateMemo = createDailyLog({
+      [FIELD.boundaryMemoStrokes]:
+        '{"version":1,"strokes":[{"points":[{"x":2,"y":2}]}]}',
+      date: '2026-06-30',
+      id: 'selected-date-memo',
+    });
+    const futureMemo = createDailyLog({
+      [FIELD.boundaryMemoStrokes]:
+        '{"version":1,"strokes":[{"points":[{"x":3,"y":3}]}]}',
+      date: '2026-07-01',
+      id: 'future-memo',
+    });
+
+    expect(getKoreanFieldworkBoundaryMemoSourceLogs(
+      [
+        priorWithoutMemo,
+        futureMemo,
+        priorWithMemo,
+        selectedDateMemo,
+      ] as any,
+      new Date('2026-06-30T12:00:00+09:00')
+    ).map((document) => document.resource.id)).toEqual(['prior-with-memo']);
+  });
+
+  it('uses the boundary snapshot saved with a historical daily memo', () => {
+    const savedBoundary = {
+      coordinates: [
+        { latitude: 37.2, longitude: 127.1 },
+        { latitude: 37.2, longitude: 127.2 },
+        { latitude: 37.1, longitude: 127.2 },
+      ],
+    };
+    const latestBoundary = {
+      coordinates: [
+        { latitude: 36.2, longitude: 126.1 },
+        { latitude: 36.2, longitude: 126.2 },
+        { latitude: 36.1, longitude: 126.2 },
+      ],
+    };
+
+    expect(getKoreanFieldworkDailyJournalBoundaryDraft(
+      createDailyLog({
+        [FIELD.boundaryMemoBoundarySnapshot]: JSON.stringify(savedBoundary),
+      }) as any,
+      latestBoundary
+    )).toEqual(savedBoundary);
+  });
+
+  it('shows only features known by the selected journal date', () => {
+    const boundaryDraft = {
+      coordinates: [
+        { latitude: 37.2, longitude: 127.1 },
+        { latitude: 37.2, longitude: 127.2 },
+        { latitude: 37.1, longitude: 127.2 },
+      ],
+    };
+    const beforeFeature = createFeature(
+      'feature-before',
+      '1호 수혈',
+      '2026-06-29',
+      30
+    );
+    const laterFeature = createFeature(
+      'feature-later',
+      '2호 수혈',
+      '2026-07-01',
+      70
+    );
+    const props = {
+      boundaryDraft,
+      canEdit: true,
+      documents: [beforeFeature, laterFeature] as any,
+      onCreateDailyLog: jest.fn(),
+      onUpdateDailyLog: jest.fn(),
+      today: new Date('2026-07-02T12:00:00+09:00'),
+    };
+    const { getByTestId, queryByTestId, rerender } = render(
+      <KoreanFieldworkDailyJournalCalendar
+        {...props}
+        selectedDate={new Date('2026-06-30T12:00:00+09:00')}
+      />
+    );
+
+    expect(getByTestId('dailyJournalFeatureOverlay_feature-before')).toBeTruthy();
+    expect(queryByTestId('dailyJournalFeatureOverlay_feature-later')).toBeNull();
+
+    rerender(
+      <KoreanFieldworkDailyJournalCalendar
+        {...props}
+        selectedDate={new Date('2026-07-02T12:00:00+09:00')}
+      />
+    );
+
+    expect(getByTestId('dailyJournalFeatureOverlay_feature-before')).toBeTruthy();
+    expect(getByTestId('dailyJournalFeatureOverlay_feature-later')).toBeTruthy();
+  });
+
+  it('does not show an earlier date save result after the selected date changes', async () => {
+    let resolveSave: (() => void) | undefined;
+    const handleUpdateDailyLog = jest.fn(() => new Promise<void>((resolve) => {
+      resolveSave = resolve;
+    }));
+    const baseProps = {
+      canEdit: true,
+      onCreateDailyLog: jest.fn(),
+      onUpdateDailyLog: handleUpdateDailyLog,
+      today: new Date('2026-07-01T12:00:00+09:00'),
+    };
+    const { getByTestId, queryByText, rerender } = render(
+      <KoreanFieldworkDailyJournalCalendar
+        {...baseProps}
+        dailyLog={createDailyLog({
+          date: '2026-06-30',
+        }) as any}
+        selectedDate={new Date('2026-06-30T12:00:00+09:00')}
+      />
+    );
+
+    fireEvent.press(getByTestId('dailyJournalSafetyPhoto'));
+    expect(handleUpdateDailyLog).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <KoreanFieldworkDailyJournalCalendar
+        {...baseProps}
+        selectedDate={new Date('2026-07-01T12:00:00+09:00')}
+      />
+    );
+    await act(async () => {
+      resolveSave?.();
+      await Promise.resolve();
+    });
+
+    expect(queryByText('작업일지에 반영했습니다.')).toBeNull();
+  });
 });
 
 const createDailyLog = (
@@ -420,6 +676,29 @@ const createDailyLog = (
     date: '2026-06-30',
     relations: {},
     ...extraResource,
+  },
+});
+
+const createFeature = (
+  id: string,
+  identifier: string,
+  date: string,
+  center: number
+) => ({
+  resource: {
+    id,
+    identifier,
+    category: C.FEATURE,
+    fieldworkDate: date,
+    featureLocationSketch: JSON.stringify({
+      center: { x: center, y: center },
+      isClosed: false,
+      points: [],
+      rotation: 0,
+      scale: 100,
+      shape: 'point',
+    }),
+    relations: {},
   },
 });
 

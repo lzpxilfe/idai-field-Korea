@@ -1935,6 +1935,8 @@ const getFeatureLocationSketchDraftParams = ({
     rotation,
     scale,
     projectBoundaryPointCount: boundaryDraft?.coordinates.length ?? 0,
+    projectBoundarySnapshot:
+      getFeatureSketchBoundarySnapshot(boundaryDraft),
   };
   const geometryPoints = getFeatureSketchGeometryPoints({
     center,
@@ -1960,6 +1962,22 @@ const getFeatureLocationSketchDraftParams = ({
   }
 
   return draftParams;
+};
+
+const getFeatureSketchBoundarySnapshot = (
+  boundaryDraft?: KoreanFieldworkProjectBoundaryDraft
+): KoreanFieldworkProjectBoundaryDraft | undefined => {
+  if (!boundaryDraft || boundaryDraft.coordinates.length < 3) return undefined;
+
+  const bounds = getBoundaryLocationBounds(boundaryDraft.coordinates);
+  return {
+    coordinates: [
+      { latitude: bounds.maxLatitude, longitude: bounds.minLongitude },
+      { latitude: bounds.maxLatitude, longitude: bounds.maxLongitude },
+      { latitude: bounds.minLatitude, longitude: bounds.maxLongitude },
+      { latitude: bounds.minLatitude, longitude: bounds.minLongitude },
+    ],
+  };
 };
 
 const getFeatureSketchGeometryPoints = ({

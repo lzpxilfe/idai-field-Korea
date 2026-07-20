@@ -22,6 +22,7 @@ import {
   getKoreanFieldworkNotebookContinuationSeed,
   getKoreanFieldworkDailyLogAppendUpdates,
   getKoreanFieldworkDailyLogForOperation,
+  getKoreanFieldworkDailyLogsForOperation,
   getKoreanFieldworkFieldNoteOperation,
   getKoreanFieldworkFieldNoteSeedFromRecord,
   getKoreanFieldworkFieldNoteSummaries,
@@ -874,6 +875,10 @@ describe('korean-fieldwork-field-notes', () => {
       [oldDailyLog],
       new Date('2026-06-23T03:00:00.000Z')
     )).toBeUndefined();
+    expect(getKoreanFieldworkDailyLogsForOperation(
+      operation,
+      [oldDailyLog, feature, dailyLog]
+    )).toEqual([oldDailyLog, dailyLog]);
     expect(updates).toMatchObject({
       description: '08:30 A 구역 - 제토 시작.\n11:20 수혈 1 - 배수 상태 재검토.',
       dailyLogContent: [

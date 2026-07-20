@@ -298,16 +298,25 @@ export const getKoreanFieldworkDailyLogForOperation = (
   documents: Document[],
   now = new Date()
 ): Document | undefined => {
-  if (!operationDocument) return undefined;
-
-  const relatedDailyLogs = documents.filter((document) =>
-    document.resource.category === C.DAILY_LOG
-    && hasRelation(document, 'isRecordedIn', operationDocument.resource.id)
-  );
   const today = formatDate(now);
 
-  return relatedDailyLogs.find((document) =>
+  return getKoreanFieldworkDailyLogsForOperation(
+    operationDocument,
+    documents
+  ).find((document) =>
     getStringField(document, 'date') === today
+  );
+};
+
+export const getKoreanFieldworkDailyLogsForOperation = (
+  operationDocument: Document | undefined,
+  documents: Document[]
+): Document[] => {
+  if (!operationDocument) return [];
+
+  return documents.filter((document) =>
+    document.resource.category === C.DAILY_LOG
+    && hasRelation(document, 'isRecordedIn', operationDocument.resource.id)
   );
 };
 

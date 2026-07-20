@@ -717,6 +717,11 @@ describe('DocumentAddModal', () => {
     );
     expect(onAddCategory.mock.calls[0][2].featureLocationSketch)
       .toEqual(expect.stringContaining('"isClosed":true'));
+    expect(JSON.parse(
+      onAddCategory.mock.calls[0][2].featureLocationSketch
+    )).toMatchObject({
+      projectBoundarySnapshot: createBoundaryDraft(),
+    });
     expect(onAddCategory.mock.calls[0][2]).not.toHaveProperty(
       'featureGeometryRevisionNote'
     );

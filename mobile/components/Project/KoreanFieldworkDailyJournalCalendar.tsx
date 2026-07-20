@@ -9,6 +9,7 @@ import React, {
 import {
   GestureResponderEvent,
   LayoutChangeEvent,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -18,6 +19,10 @@ import {
 import {
   KoreanFieldworkProjectBoundaryDraft,
 } from './korean-fieldwork-investigation-mode';
+import {
+  getKoreanFieldworkDailyJournalFeatureOverlays,
+  KoreanFieldworkDailyJournalFeatureOverlay,
+} from './korean-fieldwork-daily-journal-plan';
 import {
   hasKoreanFieldworkHandwriting,
   KoreanFieldworkHandwritingPoint,
@@ -35,6 +40,10 @@ import KoreanFieldworkFullscreenDrawingModal, {
 } from './KoreanFieldworkFullscreenDrawingModal';
 
 export const KOREAN_FIELDWORK_DAILY_JOURNAL_FIELDS = {
+  boundaryMemoBoundarySnapshot: 'dailyLogBoundaryMemoBoundarySnapshot',
+  boundaryMemoCopiedAt: 'dailyLogBoundaryMemoCopiedAt',
+  boundaryMemoCopiedFromDate: 'dailyLogBoundaryMemoCopiedFromDate',
+  boundaryMemoCopiedFromId: 'dailyLogBoundaryMemoCopiedFromId',
   boundaryMemoImportedAt: 'dailyLogBoundaryMemoImportedAt',
   boundaryMemoStrokes: 'dailyLogBoundaryMemoStrokes',
   boundaryMemoUpdatedAt: 'dailyLogBoundaryMemoUpdatedAt',
@@ -54,6 +63,8 @@ interface KoreanFieldworkDailyJournalCalendarProps {
   boundarySummary?: string;
   canEdit: boolean;
   dailyLog?: Document;
+  dailyLogs?: readonly Document[];
+  documents?: readonly Document[];
   isSaving?: boolean;
   now?: Date;
   onCreateDailyLog: () => Promise<void> | void;
@@ -90,6 +101,8 @@ const KoreanFieldworkDailyJournalCalendar: React.FC<
   boundarySummary,
   canEdit,
   dailyLog,
+  dailyLogs = [],
+  documents = [],
   isSaving = false,
   now = new Date(),
   onCreateDailyLog,
@@ -112,6 +125,9 @@ const KoreanFieldworkDailyJournalCalendar: React.FC<
   const [isWorkMemoDirty, setIsWorkMemoDirty] = useState(false);
   const [saveStatus, setSaveStatus] =
     useState<'saved'|'saving'|'error'|undefined>();
+  const selectedDateKeyRef = useRef(selectedDateKey);
+  const saveRequestIdRef = useRef(0);
+  selectedDateKeyRef.current = selectedDateKey;
   const visibleWeekKey = formatDateKey(visibleWeekDate);
   const dayItems = useMemo(
     () => getCalendarWeek(
@@ -134,6 +150,22 @@ const KoreanFieldworkDailyJournalCalendar: React.FC<
     getResourceValue(dailyLog, FIELD.boundaryMemoStrokes)
   );
   const hasBoundaryMemo = hasKoreanFieldworkHandwriting(boundaryStrokes);
+  const effectiveBoundaryDraft = getKoreanFieldworkDailyJournalBoundaryDraft(
+    dailyLog,
+    boundaryDraft
+  );
+  const featureOverlays = getKoreanFieldworkDailyJournalFeatureOverlays(
+    documents,
+    effectiveSelectedDate,
+    effectiveBoundaryDraft
+  );
+  const boundaryMemoSourceLogs = getKoreanFieldworkBoundaryMemoSourceLogs(
+    dailyLogs,
+    effectiveSelectedDate
+  );
+  const yesterdayDateKey = formatDateKey(addDays(effectiveSelectedDate, -1));
+  const yesterdayBoundaryMemoSource = boundaryMemoSourceLogs.find((document) =>
+    getStringField(document, 'date') === yesterdayDateKey);
 
   useEffect(() => {
     setPersonnelDraft(getPersonnelDraft(dailyLog));
@@ -155,6 +187,10 @@ const KoreanFieldworkDailyJournalCalendar: React.FC<
   ): Promise<boolean> => {
     if (!canEdit) return false;
 
+    const requestDateKey = selectedDateKey;
+    const requestId = saveRequestIdRef.current + 1;
+    saveRequestIdRef.current = requestId;
+
     try {
       setSaveStatus('saving');
       await onUpdateDailyLog({
@@ -163,10 +199,18 @@ const KoreanFieldworkDailyJournalCalendar: React.FC<
           ? { [FIELD.workMemoUpdatedAt]: new Date().toISOString() }
           : {}),
       });
-      setSaveStatus('saved');
-      return true;
+      const isCurrentDate = selectedDateKeyRef.current === requestDateKey;
+      if (isCurrentDate && saveRequestIdRef.current === requestId) {
+        setSaveStatus('saved');
+      }
+      return isCurrentDate;
     } catch {
-      setSaveStatus('error');
+      if (
+        selectedDateKeyRef.current === requestDateKey
+        && saveRequestIdRef.current === requestId
+      ) {
+        setSaveStatus('error');
+      }
       return false;
     }
   };
@@ -212,13 +256,47 @@ const KoreanFieldworkDailyJournalCalendar: React.FC<
     if (wasSaved) setIsWorkMemoDirty(false);
   };
   const updateBoundaryStrokes = (serializedStrokes: string) => {
+    const boundarySnapshot =
+      getStringField(dailyLog, FIELD.boundaryMemoBoundarySnapshot)
+      || serializeBoundaryDraft(boundaryDraft);
+
     saveUpdates({
-      [FIELD.boundaryMemoImportedAt]: boundaryDraft
+      [FIELD.boundaryMemoImportedAt]: boundarySnapshot
         ? getStringField(dailyLog, FIELD.boundaryMemoImportedAt)
           || new Date().toISOString()
         : undefined,
+      [FIELD.boundaryMemoBoundarySnapshot]: boundarySnapshot || undefined,
       [FIELD.boundaryMemoStrokes]: serializedStrokes,
       [FIELD.boundaryMemoUpdatedAt]: new Date().toISOString(),
+    });
+  };
+  const importBoundaryMemo = (sourceDailyLog: Document) => {
+    if (hasBoundaryMemo) return;
+
+    const sourceStrokes = normalizeKoreanFieldworkHandwritingStrokes(
+      getResourceValue(sourceDailyLog, FIELD.boundaryMemoStrokes)
+    );
+    if (!hasKoreanFieldworkHandwriting(sourceStrokes)) return;
+
+    const copiedAt = new Date().toISOString();
+    const sourceBoundarySnapshot =
+      getStringField(sourceDailyLog, FIELD.boundaryMemoBoundarySnapshot);
+    const boundarySnapshot =
+      sourceBoundarySnapshot || serializeBoundaryDraft(boundaryDraft);
+
+    saveUpdates({
+      [FIELD.boundaryMemoBoundarySnapshot]: boundarySnapshot || undefined,
+      [FIELD.boundaryMemoCopiedAt]: copiedAt,
+      [FIELD.boundaryMemoCopiedFromDate]:
+        getStringField(sourceDailyLog, 'date') || undefined,
+      [FIELD.boundaryMemoCopiedFromId]: sourceDailyLog.resource.id,
+      [FIELD.boundaryMemoImportedAt]: boundarySnapshot
+        ? getStringField(sourceDailyLog, FIELD.boundaryMemoImportedAt)
+          || copiedAt
+        : undefined,
+      [FIELD.boundaryMemoStrokes]:
+        serializeKoreanFieldworkHandwriting(sourceStrokes),
+      [FIELD.boundaryMemoUpdatedAt]: copiedAt,
     });
   };
 
@@ -527,11 +605,24 @@ const KoreanFieldworkDailyJournalCalendar: React.FC<
       </View>
 
       <BoundaryMemoCanvas
-        boundaryDraft={boundaryDraft}
+        boundaryDraft={effectiveBoundaryDraft}
         boundarySummary={boundarySummary}
         canEdit={canEdit && !isSaving}
+        copiedFromDate={getStringField(
+          dailyLog,
+          FIELD.boundaryMemoCopiedFromDate
+        ) || undefined}
+        featureOverlays={featureOverlays}
+        importSources={boundaryMemoSourceLogs}
+        isImportDisabled={
+          !canEdit || isSaving || saveStatus === 'saving' || hasBoundaryMemo
+        }
+        key={selectedDateKey}
+        onImportSource={importBoundaryMemo}
         onUpdateStrokes={updateBoundaryStrokes}
+        selectedDate={effectiveSelectedDate}
         strokes={boundaryStrokes}
+        yesterdaySource={yesterdayBoundaryMemoSource}
       />
 
       {!!saveStatus && (
@@ -553,20 +644,35 @@ const BoundaryMemoCanvas: React.FC<{
   boundaryDraft?: KoreanFieldworkProjectBoundaryDraft;
   boundarySummary?: string;
   canEdit: boolean;
+  copiedFromDate?: string;
+  featureOverlays: readonly KoreanFieldworkDailyJournalFeatureOverlay[];
+  importSources: readonly Document[];
+  isImportDisabled: boolean;
+  onImportSource: (sourceDailyLog: Document) => void;
   onUpdateStrokes: (serializedStrokes: string) => void;
+  selectedDate: Date;
   strokes: KoreanFieldworkHandwritingStroke[];
+  yesterdaySource?: Document;
 }> = ({
   boundaryDraft,
   boundarySummary,
   canEdit,
+  copiedFromDate,
+  featureOverlays,
+  importSources,
+  isImportDisabled,
+  onImportSource,
   onUpdateStrokes,
+  selectedDate,
   strokes,
+  yesterdaySource,
 }) => {
   const [canvasSize, setCanvasSize] = useState(DEFAULT_CANVAS_SIZE);
   const [brushColor, setBrushColor] = useState(DEFAULT_FIELDWORK_BRUSH_COLOR);
   const [brushWidth, setBrushWidth] = useState(DEFAULT_FIELDWORK_BRUSH_WIDTH);
   const [drawingTool, setDrawingTool] =
     useState<KoreanFieldworkHandwritingTool>(DEFAULT_FIELDWORK_DRAWING_TOOL);
+  const [isImportDateListVisible, setIsImportDateListVisible] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [activeStroke, setActiveStroke] =
     useState<KoreanFieldworkHandwritingStroke>();
@@ -600,16 +706,21 @@ const BoundaryMemoCanvas: React.FC<{
       return {
         ...boundaryPlan,
         boundaryPoints: fullscreenBoundaryPoints,
-        label: '\uc870\uc0ac \uacbd\uacc4',
+        guidePaths: featureOverlays.flatMap((overlay) => overlay.guidePaths),
+        label: `조사 경계 · 배치 유구 ${featureOverlays.length}개`,
       };
     },
-    [boundaryPlan]
+    [boundaryPlan, featureOverlays]
   );
   const hasMemoStrokes = hasKoreanFieldworkHandwriting(strokes);
 
   useEffect(() => {
     latestStrokesRef.current = strokes;
   }, [strokes]);
+
+  useEffect(() => {
+    setIsImportDateListVisible(false);
+  }, [selectedDate]);
 
   const updateCanvasSize = (event: LayoutChangeEvent) => {
     const { height, width } = event.nativeEvent.layout;
@@ -707,6 +818,9 @@ const BoundaryMemoCanvas: React.FC<{
               ? boundarySummary || `초기 경계 ${boundaryDraft.coordinates.length}점`
               : '처음 만든 유적 경계가 없습니다.'}
           </Text>
+          <Text style={styles.boundaryFeatureCount}>
+            {`해당 날짜까지 배치된 유구 ${featureOverlays.length}개`}
+          </Text>
         </View>
         <View style={styles.boundaryActions}>
           <IconButton
@@ -730,6 +844,106 @@ const BoundaryMemoCanvas: React.FC<{
           />
         </View>
       </View>
+      <View style={styles.boundaryImportRow}>
+        <TouchableOpacity
+          accessibilityLabel="어제 경계 메모 가져오기"
+          accessibilityState={{
+            disabled: isImportDisabled || !yesterdaySource,
+          }}
+          activeOpacity={0.86}
+          disabled={isImportDisabled || !yesterdaySource}
+          onPress={() => yesterdaySource && onImportSource(yesterdaySource)}
+          style={[
+            styles.boundaryImportButton,
+            (isImportDisabled || !yesterdaySource) && styles.disabledButton,
+          ]}
+          testID="dailyJournalBoundaryImportYesterday"
+        >
+          <MaterialIcons
+            name="history"
+            size={15}
+            color={isImportDisabled || !yesterdaySource ? '#98a2b3' : '#175cd3'}
+          />
+          <Text style={[
+            styles.boundaryImportButtonText,
+            (isImportDisabled || !yesterdaySource) && styles.disabledButtonText,
+          ]}>
+            어제 것 가져오기
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          accessibilityLabel="특정 날짜의 경계 메모 고르기"
+          accessibilityState={{
+            disabled: isImportDisabled || importSources.length === 0,
+            expanded: isImportDateListVisible,
+          }}
+          activeOpacity={0.86}
+          disabled={isImportDisabled || importSources.length === 0}
+          onPress={() => setIsImportDateListVisible((current) => !current)}
+          style={[
+            styles.boundaryImportButton,
+            (isImportDisabled || importSources.length === 0)
+              && styles.disabledButton,
+          ]}
+          testID="dailyJournalBoundaryToggleImportDates"
+        >
+          <MaterialIcons
+            name="event-repeat"
+            size={15}
+            color={
+              isImportDisabled || importSources.length === 0
+                ? '#98a2b3'
+                : '#175cd3'
+            }
+          />
+          <Text style={[
+            styles.boundaryImportButtonText,
+            (isImportDisabled || importSources.length === 0)
+              && styles.disabledButtonText,
+          ]}>
+            다른 날짜에서 가져오기
+          </Text>
+        </TouchableOpacity>
+        <Text style={styles.boundaryImportState}>
+          {hasMemoStrokes
+            ? copiedFromDate
+              ? `${formatBoundaryMemoSourceDate(copiedFromDate)} 메모를 이어 작성 중입니다.`
+              : '이 날짜 메모가 있어 가져오기는 잠겼습니다.'
+            : yesterdaySource
+              ? '빈 메모로 시작하거나 어제 작업을 이어가세요.'
+              : '이 날짜는 빈 메모로 시작합니다.'}
+        </Text>
+      </View>
+      {isImportDateListVisible && (
+        <ScrollView
+          horizontal
+          contentContainerStyle={styles.boundaryImportDateList}
+          showsHorizontalScrollIndicator
+          testID="dailyJournalBoundaryImportDateList"
+        >
+          {importSources.map((sourceDailyLog) => {
+            const sourceDate = getStringField(sourceDailyLog, 'date');
+
+            return (
+              <TouchableOpacity
+                accessibilityLabel={`${sourceDate} 경계 메모 가져오기`}
+                activeOpacity={0.86}
+                key={sourceDailyLog.resource.id}
+                onPress={() => {
+                  setIsImportDateListVisible(false);
+                  onImportSource(sourceDailyLog);
+                }}
+                style={styles.boundaryImportDateButton}
+                testID={`dailyJournalBoundaryImportDate_${sourceDate}`}
+              >
+                <Text style={styles.boundaryImportDateButtonText}>
+                  {formatBoundaryMemoSourceDate(sourceDate)}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      )}
       <KoreanFieldworkBrushControls
         brushColor={brushColor}
         brushWidth={brushWidth}
@@ -782,6 +996,14 @@ const BoundaryMemoCanvas: React.FC<{
             </Text>
           </View>
         )}
+        {featureOverlays.flatMap((overlay, overlayIndex) =>
+          toFeatureOverlayElements(
+            overlay,
+            overlayIndex,
+            canvasSize,
+            boundaryAspectRatio
+          )
+        )}
         {visibleStrokes.flatMap((stroke, strokeIndex) =>
           toStrokeSegments(
             stroke,
@@ -811,6 +1033,7 @@ const BoundaryMemoCanvas: React.FC<{
       />
       <Text style={styles.boundaryHint}>
         제토 범위, 노출 유구, 유물 출토 지점처럼 하루 작업 상황을 펜으로 표시합니다.
+        {` ${formatFullDate(selectedDate)} 기록에만 따로 저장됩니다.`}
         {hasMemoStrokes ? ' 저장된 메모가 있습니다.' : ''}
       </Text>
     </View>
@@ -1015,6 +1238,44 @@ const formatDateKey = (date: Date): string =>
     String(date.getDate()).padStart(2, '0'),
   ].join('-');
 
+const formatBoundaryMemoSourceDate = (dateKey: string): string => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateKey);
+  if (!match) return dateKey;
+
+  return `${Number(match[2])}월 ${Number(match[3])}일`;
+};
+
+export const getKoreanFieldworkBoundaryMemoSourceLogs = (
+  dailyLogs: readonly Document[],
+  selectedDate: Date
+): Document[] => {
+  const selectedDateKey = formatDateKey(selectedDate);
+  const sourcesByDate = new Map<string, Document>();
+
+  dailyLogs.forEach((dailyLog) => {
+    const dateKey = getStringField(dailyLog, 'date');
+    const strokes = normalizeKoreanFieldworkHandwritingStrokes(
+      getResourceValue(dailyLog, FIELD.boundaryMemoStrokes)
+    );
+    if (
+      !isDateKey(dateKey)
+      || dateKey >= selectedDateKey
+      || !hasKoreanFieldworkHandwriting(strokes)
+    ) {
+      return;
+    }
+
+    sourcesByDate.set(dateKey, dailyLog);
+  });
+
+  return Array.from(sourcesByDate.entries())
+    .sort(([dateA], [dateB]) => dateB.localeCompare(dateA))
+    .map(([, dailyLog]) => dailyLog);
+};
+
+const isDateKey = (value: string): boolean =>
+  /^\d{4}-\d{2}-\d{2}$/.test(value);
+
 interface PersonnelDraft {
   equipmentCount: string;
   equipmentSize: string;
@@ -1107,6 +1368,54 @@ const getResourceValue = (
   fieldName: string
 ): unknown => (document?.resource as unknown as Record<string, unknown> | undefined)
   ?.[fieldName];
+
+export const getKoreanFieldworkDailyJournalBoundaryDraft = (
+  dailyLog: Document | undefined,
+  fallbackBoundaryDraft: KoreanFieldworkProjectBoundaryDraft | undefined
+): KoreanFieldworkProjectBoundaryDraft | undefined => {
+  const snapshot = getStringField(
+    dailyLog,
+    FIELD.boundaryMemoBoundarySnapshot
+  );
+  if (!snapshot) return fallbackBoundaryDraft;
+
+  try {
+    const parsed = JSON.parse(snapshot) as Record<string, unknown>;
+    if (!parsed || !Array.isArray(parsed.coordinates)) {
+      return fallbackBoundaryDraft;
+    }
+    const coordinates = parsed.coordinates
+      .filter((coordinate): coordinate is Record<string, unknown> =>
+        !!coordinate && typeof coordinate === 'object')
+      .map((coordinate) => ({
+        latitude: coordinate.latitude,
+        longitude: coordinate.longitude,
+      }))
+      .filter((coordinate): coordinate is {
+        latitude: number;
+        longitude: number;
+      } =>
+        typeof coordinate.latitude === 'number'
+        && Number.isFinite(coordinate.latitude)
+        && typeof coordinate.longitude === 'number'
+        && Number.isFinite(coordinate.longitude));
+
+    return coordinates.length >= 3
+      ? {
+        ...parsed,
+        coordinates,
+      } as unknown as KoreanFieldworkProjectBoundaryDraft
+      : fallbackBoundaryDraft;
+  } catch {
+    return fallbackBoundaryDraft;
+  }
+};
+
+const serializeBoundaryDraft = (
+  boundaryDraft: KoreanFieldworkProjectBoundaryDraft | undefined
+): string | undefined => boundaryDraft
+  ? JSON.stringify(boundaryDraft)
+  : undefined;
 
 export const getBoundaryPlanBackground = (
   boundaryDraft: KoreanFieldworkProjectBoundaryDraft | undefined
@@ -1358,6 +1667,94 @@ const toBoundarySegments = (points: { x: number; y: number }[]) => {
       />
     );
   });
+};
+
+const toFeatureOverlayElements = (
+  overlay: KoreanFieldworkDailyJournalFeatureOverlay,
+  overlayIndex: number,
+  canvasSize: { height: number; width: number },
+  aspectRatio = 1
+): React.ReactElement[] => {
+  const elements: React.ReactElement[] = [];
+
+  overlay.guidePaths.forEach((path, pathIndex) => {
+    const points = mapNormalizedPointsToCanvas(
+      path.points,
+      canvasSize,
+      aspectRatio
+    );
+    const color = path.strokeColor ?? '#0f766e';
+    const width = clamp(path.width ?? 2, 1, 8);
+
+    if (points.length === 1) {
+      const point = points[0];
+      const size = Math.max(8, width * 3);
+      elements.push(
+        <View
+          key={`feature-${overlayIndex}-${pathIndex}-dot`}
+          pointerEvents="none"
+          style={[
+            styles.featureGuideDot,
+            {
+              backgroundColor: path.fillColor ?? 'rgba(15,118,110,0.15)',
+              borderColor: color,
+              borderRadius: size / 2,
+              height: size,
+              left: point.x - (size / 2),
+              top: point.y - (size / 2),
+              width: size,
+            },
+          ]}
+          testID="dailyJournalFeatureGuidePath"
+        />
+      );
+      return;
+    }
+
+    const pathSegments = points.slice(1).map((point, pointIndex) => (
+      <LineSegment
+        color={color}
+        end={point}
+        key={`feature-${overlayIndex}-${pathIndex}-${pointIndex}`}
+        start={points[pointIndex]}
+        testID="dailyJournalFeatureGuidePath"
+        width={width}
+      />
+    ));
+    if (path.closed && points.length >= 3) {
+      pathSegments.push(
+        <LineSegment
+          color={color}
+          end={points[0]}
+          key={`feature-${overlayIndex}-${pathIndex}-closed`}
+          start={points[points.length - 1]}
+          testID="dailyJournalFeatureGuidePath"
+          width={width}
+        />
+      );
+    }
+    elements.push(...pathSegments);
+  });
+
+  const center = denormalizePoint(overlay.center, canvasSize, aspectRatio);
+  elements.push(
+    <Text
+      key={`feature-${overlayIndex}-label`}
+      numberOfLines={1}
+      style={[
+        styles.featureGuideLabel,
+        {
+          left: clamp(center.x + 5, 3, Math.max(canvasSize.width - 95, 3)),
+          top: clamp(center.y - 11, 3, Math.max(canvasSize.height - 23, 3)),
+        },
+      ]}
+      testID={`dailyJournalFeatureOverlay_${overlay.id}`}
+    >
+      {overlay.label}
+    </Text>
+  );
+
+  return elements;
 };
 
 const toStrokeSegments = (
@@ -1912,8 +2309,64 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     marginTop: 2,
   },
+  boundaryFeatureCount: {
+    color: '#0f766e',
+    fontSize: 10,
+    fontWeight: '900',
+    marginTop: 2,
+  },
   boundaryActions: {
     flexDirection: 'row',
+  },
+  boundaryImportRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 8,
+  },
+  boundaryImportButton: {
+    alignItems: 'center',
+    backgroundColor: '#eff8ff',
+    borderColor: '#b2ddff',
+    borderRadius: 6,
+    borderWidth: 1,
+    flexDirection: 'row',
+    marginBottom: 5,
+    marginRight: 6,
+    minHeight: 34,
+    paddingHorizontal: 9,
+  },
+  boundaryImportButtonText: {
+    color: '#175cd3',
+    fontSize: 11,
+    fontWeight: '900',
+    marginLeft: 4,
+  },
+  boundaryImportState: {
+    color: '#667085',
+    fontSize: 10,
+    fontWeight: '800',
+    lineHeight: 15,
+    marginBottom: 4,
+  },
+  boundaryImportDateList: {
+    paddingBottom: 3,
+    paddingRight: 6,
+  },
+  boundaryImportDateButton: {
+    backgroundColor: '#f8fafc',
+    borderColor: '#d0d5dd',
+    borderRadius: 999,
+    borderWidth: 1,
+    marginRight: 6,
+    minHeight: 32,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
+  },
+  boundaryImportDateButtonText: {
+    color: '#344054',
+    fontSize: 11,
+    fontWeight: '900',
   },
   iconButton: {
     alignItems: 'center',
@@ -1955,6 +2408,23 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     position: 'absolute',
     top: 8,
+  },
+  featureGuideDot: {
+    borderWidth: 2,
+    position: 'absolute',
+  },
+  featureGuideLabel: {
+    backgroundColor: 'rgba(240,253,250,0.9)',
+    borderColor: '#99f6e4',
+    borderRadius: 3,
+    borderWidth: 1,
+    color: '#115e59',
+    fontSize: 9,
+    fontWeight: '900',
+    maxWidth: 90,
+    paddingHorizontal: 3,
+    paddingVertical: 1,
+    position: 'absolute',
   },
   boundaryEmpty: {
     alignItems: 'center',
