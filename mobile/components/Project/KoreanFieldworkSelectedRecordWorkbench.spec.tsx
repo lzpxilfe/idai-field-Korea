@@ -127,7 +127,8 @@ describe('KoreanFieldworkSelectedRecordWorkbench', () => {
     });
 
     expect(getByText('번호 정리')).toBeTruthy();
-    expect(getAllByText('수혈 17').length).toBeGreaterThanOrEqual(2);
+    expect(getByText('[시기미상] 수혈 17')).toBeTruthy();
+    expect(getAllByText('수혈 17').length).toBeGreaterThanOrEqual(1);
 
     fireEvent.changeText(
       getByTestId('identifierRevisionNextInput'),

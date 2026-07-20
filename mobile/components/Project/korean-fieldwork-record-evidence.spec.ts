@@ -214,6 +214,59 @@ describe('Korean fieldwork record evidence', () => {
       [feature, photo]
     )).toBe('1호 수혈 북쪽 전경');
   });
+
+  it('shows a selected feature period before the identifier without renaming it', () => {
+    const feature = createDoc(
+      'feature-1',
+      C.FEATURE,
+      '1호 수혈',
+      {},
+      { period: 'joseon' }
+    );
+
+    expect(getKoreanFieldworkRecordDisplayIdentifier(feature, [feature]))
+      .toBe('[조선] 1호 수혈');
+    expect(feature.resource.identifier).toBe('1호 수혈');
+  });
+
+  it('shows an unknown period when the feature period is not selected', () => {
+    const feature = createDoc('feature-1', C.FEATURE, '1호 수혈');
+
+    expect(getKoreanFieldworkRecordDisplayIdentifier(feature, [feature]))
+      .toBe('[시기미상] 1호 수혈');
+  });
+
+  it('keeps period ranges and removes a legacy period prefix from display only', () => {
+    const feature = createDoc(
+      'feature-1',
+      C.FEATURE,
+      '조선시대 1호 수혈',
+      {},
+      {
+        period: {
+          value: 'bronzeAge',
+          endValue: 'threeKingdoms',
+        },
+      }
+    );
+
+    expect(getKoreanFieldworkRecordDisplayIdentifier(feature, [feature]))
+      .toBe('[청동기~삼국] 1호 수혈');
+    expect(feature.resource.identifier).toBe('조선시대 1호 수혈');
+  });
+
+  it('does not add period labels to non-feature records', () => {
+    const photo = createDoc(
+      'photo-1',
+      C.PHOTO,
+      '사진 1',
+      {},
+      { period: 'joseon' }
+    );
+
+    expect(getKoreanFieldworkRecordDisplayIdentifier(photo, [photo]))
+      .toBe('사진 1');
+  });
 });
 
 const createDoc = (

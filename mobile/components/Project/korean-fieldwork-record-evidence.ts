@@ -5,6 +5,7 @@ import {
 import {
   getKoreanFieldworkCategoryLabel,
   getKoreanFieldworkDisplayIdentifier,
+  getKoreanFieldworkResourceDisplayIdentifier,
 } from './korean-fieldwork-categories';
 import { getKoreanFieldworkPrimaryParent } from './korean-fieldwork-record-summary';
 
@@ -50,28 +51,34 @@ export const getKoreanFieldworkRecordDisplayIdentifier = (
     candidate,
   ]));
   const parentDocument = getKoreanFieldworkPrimaryParent(document, documentsById);
+  let displayIdentifier: string;
   if (!parentDocument) {
-    return currentIdentifier
+    displayIdentifier = currentIdentifier
       || getKoreanFieldworkCategoryLabel(document.resource.category);
+  } else {
+    const evidenceChip = getKoreanFieldworkEvidenceChips(parentDocument, [...documents])
+      .find((chip) => chip.documents.some((candidate) =>
+        candidate.resource.id === document.resource.id));
+    if (!evidenceChip) {
+      displayIdentifier = currentIdentifier
+        || getKoreanFieldworkCategoryLabel(document.resource.category);
+    } else {
+      const ordinal = evidenceChip.documents.findIndex((candidate) =>
+        candidate.resource.id === document.resource.id) + 1;
+
+      displayIdentifier = getKoreanFieldworkEvidenceRecordIdentifier(
+        parentDocument,
+        document,
+        evidenceChip.label,
+        ordinal
+      );
+    }
   }
 
-  const evidenceChip = getKoreanFieldworkEvidenceChips(parentDocument, [...documents])
-    .find((chip) => chip.documents.some((candidate) =>
-      candidate.resource.id === document.resource.id));
-  if (!evidenceChip) {
-    return currentIdentifier
-      || getKoreanFieldworkCategoryLabel(document.resource.category);
-  }
-
-  const ordinal = evidenceChip.documents.findIndex((candidate) =>
-    candidate.resource.id === document.resource.id) + 1;
-
-  return getKoreanFieldworkEvidenceRecordIdentifier(
-    parentDocument,
-    document,
-    evidenceChip.label,
-    ordinal
-  );
+  return getKoreanFieldworkResourceDisplayIdentifier({
+    ...document.resource,
+    identifier: displayIdentifier,
+  });
 };
 
 const getEvidenceParentIdentifier = (parentDocument: Document): string => {

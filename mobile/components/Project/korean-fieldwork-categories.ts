@@ -1,5 +1,6 @@
 import {
   getKoreanFieldworkCategoryLabel as getCoreKoreanFieldworkCategoryLabel,
+  getKoreanFieldworkFeaturePeriodSummary,
   KOREAN_FIELDWORK_CATEGORIES as CORE_KOREAN_FIELDWORK_CATEGORIES,
   KOREAN_FIELDWORK_CATEGORY_LABELS as CORE_KOREAN_FIELDWORK_CATEGORY_LABELS,
   KOREAN_FIELDWORK_CATEGORY_ORDER as CORE_KOREAN_FIELDWORK_CATEGORY_ORDER,
@@ -88,6 +89,50 @@ export const getKoreanFieldworkDisplayIdentifier = (
   return value
     .replace(/^\ud604\uc7a5\ub2e8\uc704-/, '\uc870\uc0ac\uad6c\uc5ed-')
     .replace(/^\uc870\uc0ac\uae30\uc900-/, '\uc870\uc0ac\uad6c\uc5ed-');
+};
+
+export const getKoreanFieldworkFeaturePeriodDisplayLabel = (
+  resource: {
+    category: string;
+    period?: unknown;
+  }
+): string | undefined => {
+  if (resource.category !== KOREAN_FIELDWORK_CATEGORIES.FEATURE) {
+    return undefined;
+  }
+
+  return getKoreanFieldworkFeaturePeriodSummary(resource.period)
+    ?? '\uc2dc\uae30\ubbf8\uc0c1';
+};
+
+export const getKoreanFieldworkResourceDisplayIdentifier = (
+  resource: {
+    category: string;
+    identifier?: string;
+    period?: unknown;
+  },
+  fallbackIdentifier = ''
+): string => {
+  const identifier = getKoreanFieldworkDisplayIdentifier(resource.identifier)
+    || fallbackIdentifier.trim()
+    || getKoreanFieldworkCategoryLabel(resource.category);
+  const periodLabel = getKoreanFieldworkFeaturePeriodDisplayLabel(resource);
+  const identifierWithoutLegacyPeriod = periodLabel
+    ? stripLegacyFeaturePeriodPrefix(identifier)
+    : identifier;
+
+  return periodLabel
+    ? `[${periodLabel}] ${identifierWithoutLegacyPeriod}`
+    : identifier;
+};
+
+const stripLegacyFeaturePeriodPrefix = (identifier: string): string => {
+  const withoutPeriod = identifier.replace(
+    /^(?:\uc2dc\uae30\ubbf8\uc0c1|\uad6c\uc11d\uae30(?:\uc2dc\ub300)?|\uc2e0\uc11d\uae30(?:\uc2dc\ub300)?|\uccad\ub3d9\uae30(?:\uc2dc\ub300)?|\ucd08\uae30\ucca0\uae30(?:\uc2dc\ub300)?|\uc6d0\uc0bc\uad6d(?:\uc2dc\ub300)?|\uc0bc\uad6d(?:\uc2dc\ub300)?|\ud1b5\uc77c\uc2e0\ub77c(?:\uc2dc\ub300)?|\uace0\ub824(?:\uc2dc\ub300)?|\uc870\uc120(?:\uc2dc\ub300)?|\uadfc\ud604\ub300(?:\uc2dc\ub300)?)(?=\s|[\u00b7:\-\u2013\u2014]|\d|$)\s*(?:[\u00b7:\-\u2013\u2014]\s*)?/,
+    ''
+  ).trim();
+
+  return withoutPeriod || identifier;
 };
 
 export const getKoreanFieldworkCategoryDescription = (

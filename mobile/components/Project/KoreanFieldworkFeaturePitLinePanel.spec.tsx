@@ -142,6 +142,88 @@ describe('KoreanFieldworkFeaturePitLinePanel', () => {
     });
     expect(updates[KOREAN_FIELDWORK_FEATURE_PIT_LINE_FIELDS.lines])
       .toBeUndefined();
+    expect(updates.featureInvestigationChecklist).toBeUndefined();
+    expect(updates.featureRecordingStatus).toBeUndefined();
+  });
+
+  it('combines photo stages above the position and direction canvas', () => {
+    const onUpdateResourceFields = jest.fn();
+    const { getByTestId, getByText } = render(
+      <KoreanFieldworkFeaturePitLinePanel
+        document={createDoc('feature-1', C.FEATURE, {
+          featureInvestigationChecklist: [
+            'preInvestigationPhotoTaken',
+            'preInvestigationPhotoTaken',
+            'soilProfilePhotoLinked',
+          ],
+          featurePhotoDirections: JSON.stringify([]),
+        })}
+        documents={[]}
+        mode="photoDirection"
+        onUpdateResourceFields={onUpdateResourceFields}
+      />
+    );
+
+    fireEvent.press(getByTestId('evidenceChip_photos'));
+
+    expect(getByTestId('featurePhotoStageSection')).toBeTruthy();
+    expect(getByText('1. 조사 전·중·후')).toBeTruthy();
+    expect(getByText('2. 촬영 위치·방향')).toBeTruthy();
+    expect(getByTestId('featurePitLineCanvas')).toBeTruthy();
+    expect(
+      getByTestId('featurePhotoStage_preInvestigationPhotoTaken')
+        .props.accessibilityState
+    ).toEqual({ checked: true });
+    expect(
+      getByTestId('featurePhotoStage_inProgressPhotoTaken')
+        .props.accessibilityState
+    ).toEqual({ checked: false });
+    expect(getByText('조사 전 · 1/3')).toBeTruthy();
+
+    fireEvent.press(
+      getByTestId('featurePhotoStage_inProgressPhotoTaken')
+    );
+
+    expect(onUpdateResourceFields).toHaveBeenCalledWith({
+      featureInvestigationChecklist: [
+        'preInvestigationPhotoTaken',
+        'soilProfilePhotoLinked',
+        'inProgressPhotoTaken',
+      ],
+      featureRecordingStatus: 'investigating',
+    });
+    expect(
+      onUpdateResourceFields.mock.calls[0][0][
+        KOREAN_FIELDWORK_FEATURE_PHOTO_DIRECTION_FIELDS.lines
+      ]
+    ).toBeUndefined();
+  });
+
+  it('marks the feature complete when the after-investigation photo is checked', () => {
+    const onUpdateResourceFields = jest.fn();
+    const { getByTestId } = render(
+      <KoreanFieldworkFeaturePitLinePanel
+        document={createDoc('feature-1', C.FEATURE, {
+          featureInvestigationChecklist: ['preInvestigationPhotoTaken'],
+        })}
+        documents={[]}
+        mode="photoDirection"
+        onUpdateResourceFields={onUpdateResourceFields}
+      />
+    );
+
+    fireEvent.press(getByTestId('evidenceChip_photos'));
+    fireEvent.press(
+      getByTestId('featurePhotoStage_completionPhotoTaken')
+    );
+
+    expect(onUpdateResourceFields).toHaveBeenCalledWith({
+      featureInvestigationChecklist: [
+        'preInvestigationPhotoTaken',
+        'completionPhotoTaken',
+      ],
+      featureRecordingStatus: 'confirmed',
+    });
   });
 
   it('stores a short photo gesture as a position point', () => {
@@ -266,6 +348,182 @@ describe('KoreanFieldworkFeaturePitLinePanel', () => {
       getByTestId('featurePitLinePendingEnd').props.style
     );
     expect(pendingArrowStyle.transform).toEqual([{ rotateZ: '180deg' }]);
+  });
+
+  it('renders one optional record row for each of five photo annotations', () => {
+    const { getByTestId } = render(
+      <KoreanFieldworkFeaturePitLinePanel
+        document={createDoc('feature-1', C.FEATURE, {
+          featurePhotoDirections: JSON.stringify(
+            Array.from({ length: 5 }, (_value, index) =>
+              createPhotoDirection(index + 1))
+          ),
+        })}
+        documents={[]}
+        mode="photoDirection"
+        onUpdateResourceFields={jest.fn()}
+      />
+    );
+
+    fireEvent.press(getByTestId('evidenceChip_photos'));
+
+    expect(getByTestId('featurePitLineScroll')).toBeTruthy();
+    for (let index = 0; index < 5; index += 1) {
+      expect(getByTestId(`featureAnnotationNoteRow_${index}`)).toBeTruthy();
+      expect(getByTestId(`featureAnnotationNoteInput_${index}`)).toBeTruthy();
+    }
+  });
+
+  it('persists a photo annotation note only after the local draft blurs', () => {
+    const onUpdateResourceFields = jest.fn();
+    const { getByTestId } = render(
+      <KoreanFieldworkFeaturePitLinePanel
+        document={createDoc('feature-1', C.FEATURE, {
+          featurePhotoDirections: JSON.stringify([
+            createPhotoDirection(1, '조사 전 전경'),
+          ]),
+        })}
+        documents={[]}
+        mode="photoDirection"
+        onUpdateResourceFields={onUpdateResourceFields}
+      />
+    );
+
+    fireEvent.press(getByTestId('evidenceChip_photos'));
+    const input = getByTestId('featureAnnotationNoteInput_0');
+    expect(input.props.value).toBe('조사 전 전경');
+
+    fireEvent.changeText(input, '  북쪽에서 본 조사 중 전경  ');
+    expect(onUpdateResourceFields).not.toHaveBeenCalled();
+
+    fireEvent(input, 'blur');
+
+    const updates = onUpdateResourceFields.mock.calls[0][0];
+    const directions = JSON.parse(
+      updates[KOREAN_FIELDWORK_FEATURE_PHOTO_DIRECTION_FIELDS.lines]
+    );
+    expect(directions[0].description).toBe('북쪽에서 본 조사 중 전경');
+  });
+
+  it('flushes a local photo annotation draft when the editor closes', () => {
+    const onUpdateResourceFields = jest.fn();
+    const { getByTestId } = render(
+      <KoreanFieldworkFeaturePitLinePanel
+        document={createDoc('feature-1', C.FEATURE, {
+          featurePhotoDirections: JSON.stringify([
+            createPhotoDirection(1),
+          ]),
+        })}
+        documents={[]}
+        mode="photoDirection"
+        onUpdateResourceFields={onUpdateResourceFields}
+      />
+    );
+
+    fireEvent.press(getByTestId('evidenceChip_photos'));
+    fireEvent.changeText(
+      getByTestId('featureAnnotationNoteInput_0'),
+      '닫을 때 남기는 현장 기록'
+    );
+    fireEvent.press(getByTestId('featurePitLineClose'));
+
+    const updates = onUpdateResourceFields.mock.calls[0][0];
+    const directions = JSON.parse(
+      updates[KOREAN_FIELDWORK_FEATURE_PHOTO_DIRECTION_FIELDS.lines]
+    );
+    expect(directions[0].description).toBe('닫을 때 남기는 현장 기록');
+  });
+
+  it('deletes the exact photo annotation with its note and renumbers the rest', () => {
+    const onUpdateResourceFields = jest.fn();
+    const { getAllByTestId, getByTestId } = render(
+      <KoreanFieldworkFeaturePitLinePanel
+        document={createDoc('feature-1', C.FEATURE, {
+          featurePhotoDirections: JSON.stringify([
+            createPhotoDirection(1, '첫 번째'),
+            createPhotoDirection(2, '삭제할 두 번째'),
+            createPhotoDirection(3, '세 번째'),
+          ]),
+        })}
+        documents={[]}
+        mode="photoDirection"
+        onUpdateResourceFields={onUpdateResourceFields}
+      />
+    );
+
+    fireEvent.press(getByTestId('evidenceChip_photos'));
+    fireEvent.changeText(
+      getByTestId('featureAnnotationNoteInput_2'),
+      '저장할 세 번째 수정 기록'
+    );
+    fireEvent.press(getByTestId('featureAnnotationNoteDelete_1'));
+
+    const updates = onUpdateResourceFields.mock.calls[0][0];
+    const directions = JSON.parse(
+      updates[KOREAN_FIELDWORK_FEATURE_PHOTO_DIRECTION_FIELDS.lines]
+    );
+    expect(directions).toHaveLength(2);
+    expect(directions.map((line: any) => line.id)).toEqual([
+      'photo-direction-1',
+      'photo-direction-2',
+    ]);
+    expect(directions.map((line: any) => line.label)).toEqual(['1', '2']);
+    expect(directions.map((line: any) => line.description)).toEqual([
+      '첫 번째',
+      '저장할 세 번째 수정 기록',
+    ]);
+    expect(directions[1].start).toEqual({ x: 30, y: 20 });
+    expect(getAllByTestId(/featureAnnotationNoteRow_/)).toHaveLength(2);
+  });
+
+  it('persists and deletes numbered pit-line notes with the same behavior', () => {
+    const onUpdateResourceFields = jest.fn();
+    const { getByTestId } = render(
+      <KoreanFieldworkFeaturePitLinePanel
+        document={createDoc('feature-1', C.FEATURE, {
+          featureSoilPitLines: JSON.stringify([
+            { ...createPitLine(1), description: '서쪽 피트선' },
+            { ...createPitLine(2), description: '동쪽 피트선' },
+          ]),
+        })}
+        documents={[]}
+        onUpdateResourceFields={onUpdateResourceFields}
+      />
+    );
+
+    fireEvent.press(getByTestId('featurePitLineOpen'));
+    fireEvent.changeText(
+      getByTestId('featureAnnotationNoteInput_1'),
+      '동쪽 피트선에서 목탄 확인'
+    );
+    fireEvent(getByTestId('featureAnnotationNoteInput_1'), 'blur');
+
+    let updates = onUpdateResourceFields.mock.calls.at(-1)[0];
+    let pitLines = JSON.parse(
+      updates[KOREAN_FIELDWORK_FEATURE_PIT_LINE_FIELDS.lines]
+    );
+    expect(pitLines[1].description).toBe('동쪽 피트선에서 목탄 확인');
+
+    fireEvent.press(getByTestId('featureAnnotationNoteDelete_0'));
+
+    updates = onUpdateResourceFields.mock.calls.at(-1)[0];
+    pitLines = JSON.parse(
+      updates[KOREAN_FIELDWORK_FEATURE_PIT_LINE_FIELDS.lines]
+    );
+    expect(pitLines).toHaveLength(1);
+    expect(pitLines[0]).toMatchObject({
+      description: '동쪽 피트선에서 목탄 확인',
+      id: 'soil-pit-line-1',
+      label: '1',
+      start: { x: 20, y: 20 },
+    });
+    expect(JSON.parse(
+      updates[KOREAN_FIELDWORK_FEATURE_PIT_LINE_FIELDS.line]
+    )).toMatchObject({
+      description: '동쪽 피트선에서 목탄 확인',
+      id: 'soil-pit-line-1',
+      label: '1',
+    });
   });
 
   it('continues to ignore a short tap in soil pit line mode', () => {
@@ -547,6 +805,16 @@ const createPitLine = (number: number) => ({
     { x: 10 * number, y: 20 },
     { x: 10 * number + 20, y: 70 },
   ],
+});
+
+const createPhotoDirection = (
+  number: number,
+  description?: string
+) => ({
+  ...createPitLine(number),
+  description,
+  id: `photo-direction-${number}`,
+  kind: 'direction',
 });
 
 const createDoc = (

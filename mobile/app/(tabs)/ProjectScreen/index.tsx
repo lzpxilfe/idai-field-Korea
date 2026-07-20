@@ -41,6 +41,7 @@ import KoreanFieldworkDesktopHandoffPanel from '@/components/Project/Sync/Korean
 import {
   KOREAN_FIELDWORK_CATEGORY_LABELS,
   getKoreanFieldworkDisplayIdentifier,
+  getKoreanFieldworkResourceDisplayIdentifier,
   getKoreanFieldworkCategoryLabel,
   KOREAN_FIELDWORK_CATEGORIES,
 } from '@/components/Project/korean-fieldwork-categories';
@@ -1814,8 +1815,10 @@ export const RecordRow: React.FC<{
   const config = useContext(ConfigurationContext);
   const lastPressTimeRef = useRef<number>();
   const category = config.getCategory(document.resource.category);
-  const title = getKoreanFieldworkDisplayIdentifier(document.resource.identifier)
-    || document.resource.id;
+  const title = getKoreanFieldworkResourceDisplayIdentifier(
+    document.resource,
+    document.resource.id
+  );
   const description = getRecordDescription(document);
   const statusChips = getKoreanFieldworkRecordStatusChips(document);
   const evidenceChips = getKoreanFieldworkEvidenceChips(document, documents);
@@ -2024,9 +2027,11 @@ export const RecordRow: React.FC<{
                     return (
                       <KoreanFieldworkFeaturePitLinePanel
                         key={`${title}-${chip.id}`}
+                        allowedAddCategoryNames={allowedAddCategoryNames}
                         document={document}
                         documents={documents}
                         mode="photoDirection"
+                        onAddPhotoRecord={onAddEvidence}
                         onOpenPhotoRecords={() => setActiveEvidenceChipId(chip.id)}
                         onUpdateResourceFields={onUpdateResourceFields}
                         photoRecordCount={chip.count}

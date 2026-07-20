@@ -40,6 +40,7 @@ describe('KoreanFieldworkSiteOverviewMap', () => {
       }),
       featureType: 'pit',
       identifier: '1호 수혈',
+      period: 'joseon',
     });
     const photo = createDocument(C.PHOTO, 'photo-1', {
       identifier: '현장 사진',
@@ -56,7 +57,7 @@ describe('KoreanFieldworkSiteOverviewMap', () => {
     expect(getAllByTestId('siteOverviewBoundaryLine')).toHaveLength(4);
     expect(getAllByTestId('siteOverviewReferenceLine')).toHaveLength(2);
     expect(getByTestId('siteOverviewFeatureShape_feature-1')).toBeTruthy();
-    expect(getByText('1호 수혈')).toBeTruthy();
+    expect(getByText('[조선] 1호 수혈')).toBeTruthy();
     expect(queryByText('현장 사진')).toBeNull();
 
     fireEvent.press(getByTestId('siteOverviewFeatureHitTarget_feature-1'));
@@ -98,7 +99,7 @@ describe('KoreanFieldworkSiteOverviewMap', () => {
 
     expect(getAllByTestId('siteOverviewBoundaryLine')).toHaveLength(4);
     expect(getAllByTestId('siteOverviewFeatureShape_feature-1')).toHaveLength(3);
-    expect(getByText('2호 유구')).toBeTruthy();
+    expect(getByText('[시기미상] 2호 유구')).toBeTruthy();
   });
 
   it('measures the approximate center distance between two selected features', () => {
@@ -143,12 +144,14 @@ describe('KoreanFieldworkSiteOverviewMap', () => {
 
     fireEvent.press(getByTestId('siteOverviewFeatureHitTarget_feature-1'));
     expect(getByTestId('siteOverviewDistanceMarker_1')).toBeTruthy();
-    expect(getByText('1호 유구 · 두 번째 유구 선택')).toBeTruthy();
+    expect(getByText('[시기미상] 1호 유구 · 두 번째 유구 선택')).toBeTruthy();
 
     fireEvent.press(getByTestId('siteOverviewFeatureHitTarget_feature-2'));
     expect(getByTestId('siteOverviewDistanceLine')).toBeTruthy();
     expect(getByTestId('siteOverviewDistanceMarker_2')).toBeTruthy();
-    expect(getByText('1호 유구 ↔ 2호 유구 · 중심 간 약 50 m')).toBeTruthy();
+    expect(getByText(
+      '[시기미상] 1호 유구 ↔ [시기미상] 2호 유구 · 중심 간 약 50 m'
+    )).toBeTruthy();
     expect(onOpenFeature).not.toHaveBeenCalled();
 
     fireEvent.press(getByTestId('siteOverviewDistanceClear'));
@@ -195,7 +198,9 @@ describe('KoreanFieldworkSiteOverviewMap', () => {
     fireEvent.press(getByTestId('siteOverviewFeatureHitTarget_feature-1'));
     fireEvent.press(getByTestId('siteOverviewFeatureHitTarget_feature-2'));
 
-    expect(getByText('서쪽 유구 ↔ 동쪽 유구 · 중심 간 약 89 m')).toBeTruthy();
+    expect(getByText(
+      '[시기미상] 서쪽 유구 ↔ [시기미상] 동쪽 유구 · 중심 간 약 89 m'
+    )).toBeTruthy();
   });
 
   it('zooms the overview map with a two-finger pinch gesture', () => {
@@ -312,7 +317,7 @@ describe('KoreanFieldworkSiteOverviewMap', () => {
 
     expect(getByTestId('siteOverviewFeatureShape_feature-geometry_0'))
       .toBeTruthy();
-    expect(getByText('좌표 유구')).toBeTruthy();
+    expect(getByText('[시기미상] 좌표 유구')).toBeTruthy();
   });
 
   it('shows an online satellite background without storing provider tile bytes', () => {

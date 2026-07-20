@@ -13,7 +13,7 @@ import {
   View,
 } from 'react-native';
 import {
-  getKoreanFieldworkDisplayIdentifier,
+  getKoreanFieldworkResourceDisplayIdentifier,
   KOREAN_FIELDWORK_CATEGORIES,
 } from './korean-fieldwork-categories';
 import {
@@ -1206,8 +1206,10 @@ const getSiteOverviewFeatures = (
 
       return {
         document,
-        label: getKoreanFieldworkDisplayIdentifier(document.resource.identifier)
-          || document.resource.id,
+        label: getKoreanFieldworkResourceDisplayIdentifier(
+          document.resource,
+          document.resource.id
+        ),
         sketch,
         ...(typeLabel ? { typeLabel } : {}),
       };

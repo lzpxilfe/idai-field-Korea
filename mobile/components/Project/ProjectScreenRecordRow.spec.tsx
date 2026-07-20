@@ -53,6 +53,7 @@ jest.mock('@/components/Project/korean-fieldwork-child-records', () => ({
   getKoreanFieldworkAllowedChildCategoryNames: () => [
     'FeatureSegment',
     'Find',
+    'Photo',
     'Sample',
     'SoilProfilePhoto',
   ],
@@ -64,6 +65,34 @@ jest.mock('expo-router', () => ({
 }));
 
 describe('ProjectScreen RecordRow', () => {
+  it('shows the feature period as display metadata before its unchanged name', () => {
+    const feature = createFeature();
+    (feature.resource as any).period = 'joseon';
+    const { getByText } = render(
+      <ConfigurationContext.Provider value={createConfiguration()}>
+        <RecordRow
+          categoryLabel="유구"
+          contextPath={undefined}
+          document={feature}
+          documents={[feature]}
+          isDeleting={false}
+          issueCount={0}
+          onAddChild={jest.fn()}
+          onAddEvidence={jest.fn()}
+          onDelete={jest.fn()}
+          onEdit={jest.fn()}
+          onOpen={jest.fn()}
+          onOpenEvidence={jest.fn()}
+          onUpdateResourceFields={jest.fn()}
+          selected={false}
+        />
+      </ConfigurationContext.Provider>
+    );
+
+    expect(getByText('[조선] 1호 유구')).toBeTruthy();
+    expect(feature.resource.identifier).toBe('1호 유구');
+  });
+
   it('opens straight pit-line drawing from a compact button', () => {
     const onUpdateResourceFields = jest.fn();
     const feature = createFeature();
@@ -146,6 +175,43 @@ describe('ProjectScreen RecordRow', () => {
     fireEvent.press(getByTestId('evidenceChip_featureSegments'));
     fireEvent.press(getByTestId('featurePitRecordsOpen'));
     expect(getByTestId('evidenceManagerCount').props.children).toBe(1);
+  });
+
+  it('combines photo stages, directions, and photo creation in one control', () => {
+    const onAddEvidence = jest.fn();
+    const feature = createFeature();
+    const { getByTestId } = render(
+      <ConfigurationContext.Provider value={createConfiguration()}>
+        <RecordRow
+          categoryLabel="유구"
+          contextPath={undefined}
+          document={feature}
+          documents={[feature]}
+          isDeleting={false}
+          issueCount={0}
+          onAddChild={jest.fn()}
+          onAddEvidence={onAddEvidence}
+          onDelete={jest.fn()}
+          onEdit={jest.fn()}
+          onOpen={jest.fn()}
+          onOpenEvidence={jest.fn()}
+          onUpdateResourceFields={jest.fn()}
+          selected
+        />
+      </ConfigurationContext.Provider>
+    );
+
+    fireEvent.press(getByTestId('evidenceChip_photos'));
+
+    expect(getByTestId('featurePhotoStageSection')).toBeTruthy();
+    expect(getByTestId('featurePitLineCanvas')).toBeTruthy();
+
+    fireEvent.press(getByTestId('featurePhotoRecordAdd'));
+
+    expect(onAddEvidence).toHaveBeenCalledWith(
+      feature,
+      KOREAN_FIELDWORK_CATEGORIES.PHOTO
+    );
   });
 
   it.each([

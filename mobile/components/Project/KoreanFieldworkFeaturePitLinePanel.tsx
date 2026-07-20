@@ -1,5 +1,8 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { Document } from 'idai-field-core';
+import {
+  Document,
+  getKoreanFieldworkFeaturePhotoProgress,
+} from 'idai-field-core';
 import React, {
   useMemo,
   useRef,
@@ -11,8 +14,10 @@ import {
   LayoutChangeEvent,
   Modal,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -48,6 +53,7 @@ interface FeatureLocationSketch {
 }
 
 interface FeatureSoilPitLine {
+  description?: string;
   end: SketchPoint;
   id: string;
   kind?: FeaturePhotoAnnotationKind;
@@ -63,11 +69,14 @@ interface Props {
   document: Document;
   documents: readonly Document[];
   mode?: 'pit' | 'photoDirection';
+  onAddPhotoRecord?: (parentDoc: Document, categoryName: string) => void;
   onAddPitRecord?: (parentDoc: Document, categoryName: string) => void;
   onAddSoilProfilePhoto?: (parentDoc: Document, categoryName: string) => void;
   onOpenPhotoRecords?: () => void;
   onOpenPitRecords?: () => void;
-  onUpdateResourceFields: (updates: Record<string, unknown>) => void;
+  onUpdateResourceFields: (
+    updates: Record<string, unknown>
+  ) => boolean | Promise<boolean | void> | void;
   photoRecordCount?: number;
   pitRecordCount?: number;
 }
@@ -96,6 +105,21 @@ const SHAPE_PREVIEW_TOP_PADDING = 22;
 const SHAPE_PREVIEW_BOTTOM_PADDING = 12;
 const MIN_LINE_DISTANCE = 3;
 const PHOTO_POINT_MAX_DISTANCE_PX = 12;
+const PHOTO_STAGE_OPTIONS = [
+  {
+    label: '\uc870\uc0ac \uc804',
+    value: 'preInvestigationPhotoTaken',
+  },
+  {
+    label: '\uc870\uc0ac \uc911',
+    value: 'inProgressPhotoTaken',
+  },
+  {
+    label: '\uc870\uc0ac \ud6c4',
+    value: 'completionPhotoTaken',
+  },
+] as const;
+type FeaturePhotoStageValue = typeof PHOTO_STAGE_OPTIONS[number]['value'];
 const VALID_SHAPES = new Set<FeatureLocationSketchShape>([
   'point',
   'polygon',
@@ -104,6 +128,7 @@ const VALID_SHAPES = new Set<FeatureLocationSketchShape>([
   'oval',
 ]);
 const TEXT = {
+  addPhotoRecord: '\uc0ac\uc9c4 \ucd94\uac00',
   addPitRecord: '\ud53c\ud2b8 \ucd94\uac00',
   addSoilProfilePhoto: '\ud1a0\uce35\uc0ac\uc9c4 \ucd94\uac00',
   clear: '\uc9c0\uc6b0\uae30',
@@ -114,15 +139,22 @@ const TEXT = {
   lineCount: '\ud53c\ud2b8\uc120',
   noSketch: '\uc720\uad6c \uc2a4\ucf00\uce58 \uc5c6\uc74c',
   photo: '\uc0ac\uc9c4',
+  photoRecordTitle: '\uc0ac\uc9c4 \uae30\ub85d',
+  photoStageHint:
+    '\ucd2c\uc601\ud55c \ub2e8\uacc4\ub97c \uccb4\ud06c\ud558\uace0, \uc544\ub798\uc5d0\uc11c \ucd2c\uc601 \uc704\uce58\uc640 \ubc29\ud5a5\uc744 \ud45c\uc2dc\ud558\uc138\uc694.',
+  photoStageTitle: '1. \uc870\uc0ac \uc804\u00b7\uc911\u00b7\ud6c4',
   photoDirectionHint:
     '\uc810\uc744 \ucc0d\uc73c\uba74 \ucd2c\uc601 \uc704\uce58\ub9cc, \uc704\uce58\uc5d0\uc11c \ub04c\uba74 \uc0ac\uc9c4\uc744 \ucc0d\uc740 \ubc29\ud5a5\uae4c\uc9c0 \uc800\uc7a5\ub429\ub2c8\ub2e4.',
   photoPointPending: '\uc774\ub300\ub85c \ub193\uc73c\uba74 \ucd2c\uc601 \uc704\uce58\ub9cc \uc800\uc7a5\ub429\ub2c8\ub2e4.',
   photoDirectionPending: '\uc190\uac00\ub77d\uc744 \ub5bc\uba74 \ucd2c\uc601 \uc704\uce58\uc640 \ubc29\ud5a5\uc774 \uc800\uc7a5\ub429\ub2c8\ub2e4.',
   photoDirectionReady: '\ucd2c\uc601 \uc704\uce58\ub97c \ud55c \ubc88 \ub204\ub974\uac70\ub098, \uadf8 \uc704\uce58\uc5d0\uc11c \ub300\uc0c1 \ubc29\ud5a5\uc73c\ub85c \ub04c\uc5b4\ubcf4\uc138\uc694.',
-  photoDirectionTitle: '\uc0ac\uc9c4 \uc704\uce58\u00b7\ubc29\ud5a5',
+  photoDirectionStepTitle: '2. \ucd2c\uc601 \uc704\uce58\u00b7\ubc29\ud5a5',
+  photoNoteTitle: '3. \uc704\uce58\u00b7\ubc29\ud5a5\ubcc4 \uc120\ud0dd \uae30\ub85d',
   openPitRecords: '\ud53c\ud2b8 \uae30\ub85d \ubcf4\uae30',
   pendingHint: '\uc190\uac00\ub77d\uc744 \ub5bc\uba74 \ud604\uc7ac \uc704\uce58\uae4c\uc9c0 \uc9c1\uc120\uc774 \ucd94\uac00\ub429\ub2c8\ub2e4.',
   pit: '\ud53c\ud2b8',
+  pitNoteTitle: '\ud53c\ud2b8\uc120\ubcc4 \uc120\ud0dd \uae30\ub85d',
+  recordOptional: '\ud544\uc218\uac00 \uc544\ub2cc \ud604\uc7a5 \uae30\ub85d\uc785\ub2c8\ub2e4.',
   readyHint: '\uc120\uc744 \uadf8\uc744 \uc2dc\uc791\uc810\uc744 \ub204\ub974\uc138\uc694.',
   title: '\ud53c\ud2b8\uc120',
   undo: '\ub9c8\uc9c0\ub9c9 \uc9c0\uc6b0\uae30',
@@ -133,6 +165,7 @@ const KoreanFieldworkFeaturePitLinePanel: React.FC<Props> = ({
   document,
   documents,
   mode = 'pit',
+  onAddPhotoRecord,
   onAddPitRecord,
   onAddSoilProfilePhoto,
   onOpenPhotoRecords,
@@ -165,7 +198,15 @@ const KoreanFieldworkFeaturePitLinePanel: React.FC<Props> = ({
         : resource[KOREAN_FIELDWORK_FEATURE_PIT_LINE_FIELDS.line]
     );
   }, [document.resource, isPhotoDirectionMode]);
-  const hasSavedLines = savedLines.length > 0;
+  const [editorLines, setEditorLines] = useState<FeatureSoilPitLine[]>([]);
+  const editorLinesRef = useRef<FeatureSoilPitLine[]>([]);
+  const hasDirtyDescriptionsRef = useRef(false);
+  const onUpdateResourceFieldsRef = useRef(onUpdateResourceFields);
+  const isResourceUpdateInFlightRef = useRef(false);
+  const pendingResourceUpdatesRef = useRef<Record<string, unknown>>();
+  onUpdateResourceFieldsRef.current = onUpdateResourceFields;
+  const activeLines = isEditorOpen ? editorLines : savedLines;
+  const hasSavedLines = activeLines.length > 0;
   const canClearLine = hasSavedLines || !!pendingStartPoint;
   const relatedSoilProfilePhotoCount = useMemo(
     () => documents.filter((candidate) =>
@@ -177,13 +218,20 @@ const KoreanFieldworkFeaturePitLinePanel: React.FC<Props> = ({
   const canAddSoilProfilePhoto =
     allowedAddCategoryNames.includes(KOREAN_FIELDWORK_CATEGORIES.SOIL_PROFILE_PHOTO)
     && !!onAddSoilProfilePhoto;
+  const canAddPhotoRecord =
+    allowedAddCategoryNames.includes(KOREAN_FIELDWORK_CATEGORIES.PHOTO)
+    && !!onAddPhotoRecord;
   const isCombinedPitControl = !isPhotoDirectionMode && pitRecordCount !== undefined;
   const canAddPitRecord =
     allowedAddCategoryNames.includes(KOREAN_FIELDWORK_CATEGORIES.FEATURE_SEGMENT)
     && !!onAddPitRecord;
-  const photoChecklistCount = getPhotoChecklistCount(
+  const featureInvestigationChecklist = getStringArray(
     (document.resource as Record<string, unknown>).featureInvestigationChecklist
   );
+  const featurePhotoProgress = getKoreanFieldworkFeaturePhotoProgress(
+    featureInvestigationChecklist
+  );
+  const photoChecklistCount = featurePhotoProgress.checkedCount;
   const isPendingPhotoDirection = isPhotoDirectionMode
     && !!pendingStartPoint
     && !!pendingEndPoint
@@ -206,9 +254,43 @@ const KoreanFieldworkFeaturePitLinePanel: React.FC<Props> = ({
     return null;
   }
 
+  const dispatchResourceUpdate = (updates: Record<string, unknown>) => {
+    if (isResourceUpdateInFlightRef.current) {
+      pendingResourceUpdatesRef.current = {
+        ...pendingResourceUpdatesRef.current,
+        ...updates,
+      };
+      return;
+    }
+
+    let result: boolean | Promise<boolean | void> | void;
+    try {
+      result = onUpdateResourceFieldsRef.current(updates);
+    } catch {
+      return;
+    }
+    if (!isPromiseLike(result)) return;
+
+    isResourceUpdateInFlightRef.current = true;
+    void Promise.resolve(result)
+      .catch(() => undefined)
+      .finally(() => {
+        isResourceUpdateInFlightRef.current = false;
+        const pendingUpdates = pendingResourceUpdatesRef.current;
+        pendingResourceUpdatesRef.current = undefined;
+        if (pendingUpdates) dispatchResourceUpdate(pendingUpdates);
+      });
+  };
   const updateCanvasSize = (event: LayoutChangeEvent) => {
     const { height, width } = event.nativeEvent.layout;
     if (height > 0 && width > 0) setCanvasSize({ height, width });
+  };
+  const openEditor = () => {
+    const nextLines = savedLines.map((line) => ({ ...line }));
+    editorLinesRef.current = nextLines;
+    hasDirtyDescriptionsRef.current = false;
+    setEditorLines(nextLines);
+    setIsEditorOpen(true);
   };
   const beginLine = (event: GestureResponderEvent) => {
     const point = getNormalizedPoint(event, canvasSize);
@@ -230,6 +312,9 @@ const KoreanFieldworkFeaturePitLinePanel: React.FC<Props> = ({
     setPendingEndPoint(undefined);
   };
   const closeEditor = () => {
+    if (hasDirtyDescriptionsRef.current) {
+      saveLines(editorLinesRef.current);
+    }
     cancelPendingLine();
     setIsEditorOpen(false);
   };
@@ -253,11 +338,11 @@ const KoreanFieldworkFeaturePitLinePanel: React.FC<Props> = ({
     const savedEnd = photoAnnotationKind === 'point' ? start : end;
 
     saveLines([
-      ...savedLines,
+      ...editorLinesRef.current,
       createFeatureSoilPitLine(
         start,
         savedEnd,
-        savedLines.length,
+        editorLinesRef.current.length,
         isPhotoDirectionMode ? 'photo-direction' : 'soil-pit-line',
         photoAnnotationKind
       ),
@@ -270,6 +355,7 @@ const KoreanFieldworkFeaturePitLinePanel: React.FC<Props> = ({
 
       return {
         ...line,
+        description: normalizeOptionalDescription(line.description),
         end: points[points.length - 1],
         id: createFeatureSoilPitLineId(
           index,
@@ -282,7 +368,10 @@ const KoreanFieldworkFeaturePitLinePanel: React.FC<Props> = ({
         version: 2 as const,
       };
     });
-    onUpdateResourceFields(isPhotoDirectionMode
+    editorLinesRef.current = updatedLines;
+    hasDirtyDescriptionsRef.current = false;
+    setEditorLines(updatedLines);
+    dispatchResourceUpdate(isPhotoDirectionMode
       ? {
         [KOREAN_FIELDWORK_FEATURE_PHOTO_DIRECTION_FIELDS.lines]:
           JSON.stringify(updatedLines),
@@ -303,11 +392,38 @@ const KoreanFieldworkFeaturePitLinePanel: React.FC<Props> = ({
     }
     if (!hasSavedLines) return;
 
-    saveLines(savedLines.slice(0, -1));
+    saveLines(editorLinesRef.current.slice(0, -1));
   };
   const clearLines = () => {
     cancelPendingLine();
     saveLines([]);
+  };
+  const updateLineDescription = (index: number, description: string) => {
+    const nextLines = editorLinesRef.current.map((line, candidateIndex) =>
+      candidateIndex === index ? { ...line, description } : line);
+    editorLinesRef.current = nextLines;
+    hasDirtyDescriptionsRef.current = true;
+    setEditorLines(nextLines);
+  };
+  const saveDirtyDescriptions = () => {
+    if (hasDirtyDescriptionsRef.current) {
+      saveLines(editorLinesRef.current);
+    }
+  };
+  const removeLine = (index: number) => {
+    saveLines(editorLinesRef.current.filter((_line, candidateIndex) =>
+      candidateIndex !== index));
+  };
+  const togglePhotoStage = (value: FeaturePhotoStageValue) => {
+    const nextChecklist = featureInvestigationChecklist.includes(value)
+      ? featureInvestigationChecklist.filter((entry) => entry !== value)
+      : [...featureInvestigationChecklist, value];
+    const nextProgress = getKoreanFieldworkFeaturePhotoProgress(nextChecklist);
+
+    dispatchResourceUpdate({
+      featureInvestigationChecklist: nextChecklist,
+      featureRecordingStatus: nextProgress.recordingStatus,
+    });
   };
 
   return (
@@ -322,12 +438,12 @@ const KoreanFieldworkFeaturePitLinePanel: React.FC<Props> = ({
       >
         <TouchableOpacity
           accessibilityLabel={isPhotoDirectionMode
-            ? `${TEXT.photoDirectionTitle}, ${photoChecklistCount}/3`
+            ? `${TEXT.photoRecordTitle}, ${photoChecklistCount}/3`
             : isCombinedPitControl
             ? `${TEXT.pit} ${pitRecordCount}\uac74, \ucd94\uac00\uc640 \uc704\uce58 \ud45c\uc2dc`
             : `${TEXT.title} ${savedLines.length}\uac1c`}
           activeOpacity={0.84}
-          onPress={() => setIsEditorOpen(true)}
+          onPress={openEditor}
           style={[
             styles.compactButton,
             (isCombinedPitControl || isPhotoDirectionMode)
@@ -399,7 +515,7 @@ const KoreanFieldworkFeaturePitLinePanel: React.FC<Props> = ({
               />
               <Text style={styles.modalTitle}>
                 {isPhotoDirectionMode
-                  ? TEXT.photoDirectionTitle
+                  ? TEXT.photoRecordTitle
                   : isCombinedPitControl ? TEXT.pit : TEXT.title}
               </Text>
               {isPhotoDirectionMode && (
@@ -411,7 +527,7 @@ const KoreanFieldworkFeaturePitLinePanel: React.FC<Props> = ({
                 </Text>
               )}
               {!isCombinedPitControl && !isPhotoDirectionMode && (
-                <Text style={styles.compactCount}>{savedLines.length}</Text>
+                <Text style={styles.compactCount}>{editorLines.length}</Text>
               )}
             </View>
             <TouchableOpacity
@@ -425,13 +541,92 @@ const KoreanFieldworkFeaturePitLinePanel: React.FC<Props> = ({
             </TouchableOpacity>
           </View>
 
+          <ScrollView
+            contentContainerStyle={styles.modalScrollContent}
+            keyboardDismissMode="on-drag"
+            keyboardShouldPersistTaps="handled"
+            nestedScrollEnabled
+            style={styles.modalScroll}
+            testID="featurePitLineScroll"
+          >
           <View style={styles.container} testID="featurePitLineEditor">
+            {isPhotoDirectionMode && (
+              <View
+                style={styles.photoStageSection}
+                testID="featurePhotoStageSection"
+              >
+                <View style={styles.photoStageHeader}>
+                  <View style={styles.photoStageHeaderText}>
+                    <Text style={styles.photoSectionTitle}>
+                      {TEXT.photoStageTitle}
+                    </Text>
+                    <Text style={styles.photoStageHint}>
+                      {TEXT.photoStageHint}
+                    </Text>
+                  </View>
+                  <Text style={styles.photoStageMetric}>
+                    {featurePhotoProgress.label} · {photoChecklistCount}/3
+                  </Text>
+                </View>
+                <View style={styles.photoStageRow}>
+                  {PHOTO_STAGE_OPTIONS.map((option, index) => {
+                    const checked = featureInvestigationChecklist.includes(
+                      option.value
+                    );
+
+                    return (
+                      <TouchableOpacity
+                        accessibilityRole="checkbox"
+                        accessibilityState={{ checked }}
+                        activeOpacity={0.84}
+                        key={option.value}
+                        onPress={() => togglePhotoStage(option.value)}
+                        style={[
+                          styles.photoStageButton,
+                          index > 0 && styles.photoStageButtonSpaced,
+                          checked && styles.photoStageButtonChecked,
+                        ]}
+                        testID={`featurePhotoStage_${option.value}`}
+                      >
+                        <MaterialIcons
+                          name={checked
+                            ? 'check-circle'
+                            : 'radio-button-unchecked'}
+                          size={18}
+                          color={checked ? '#067647' : '#667085'}
+                        />
+                        <Text
+                          style={[
+                            styles.photoStageButtonText,
+                            checked && styles.photoStageButtonTextChecked,
+                          ]}
+                        >
+                          {option.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
             <View style={styles.headerRow}>
-              <Text style={styles.countText}>
-                {isPhotoDirectionMode
-                  ? `\uc704\uce58 \ud45c\uc2dc ${savedLines.length}`
-                  : `${TEXT.connectedCount} ${relatedSoilProfilePhotoCount}`}
-              </Text>
+              <View>
+                {isPhotoDirectionMode && (
+                  <Text style={styles.photoSectionTitle}>
+                    {TEXT.photoDirectionStepTitle}
+                  </Text>
+                )}
+                <Text
+                  style={[
+                    styles.countText,
+                    isPhotoDirectionMode && styles.photoDirectionCount,
+                  ]}
+                >
+                  {isPhotoDirectionMode
+                    ? `\uc704\uce58 \ud45c\uc2dc ${editorLines.length}`
+                    : `${TEXT.connectedCount} ${relatedSoilProfilePhotoCount}`}
+                </Text>
+              </View>
               <View style={styles.actionRow}>
                 {isPhotoDirectionMode && photoRecordCount > 0 && !!onOpenPhotoRecords && (
                   <TouchableOpacity
@@ -447,6 +642,39 @@ const KoreanFieldworkFeaturePitLinePanel: React.FC<Props> = ({
                     <MaterialIcons name="list" size={15} color="#344054" />
                     <Text style={styles.recordsButtonText}>
                       {TEXT.photo} {photoRecordCount}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                {isPhotoDirectionMode && (
+                  <TouchableOpacity
+                    accessibilityLabel={TEXT.addPhotoRecord}
+                    activeOpacity={0.86}
+                    disabled={!canAddPhotoRecord}
+                    onPress={() => {
+                      closeEditor();
+                      onAddPhotoRecord?.(
+                        document,
+                        KOREAN_FIELDWORK_CATEGORIES.PHOTO
+                      );
+                    }}
+                    style={[
+                      styles.addButton,
+                      !canAddPhotoRecord && styles.addButtonDisabled,
+                    ]}
+                    testID="featurePhotoRecordAdd"
+                  >
+                    <MaterialIcons
+                      name="add-a-photo"
+                      size={15}
+                      color={canAddPhotoRecord ? '#2f5f4a' : '#98a2b3'}
+                    />
+                    <Text
+                      style={[
+                        styles.addButtonText,
+                        !canAddPhotoRecord && styles.addButtonTextDisabled,
+                      ]}
+                    >
+                      {TEXT.addPhotoRecord}
                     </Text>
                   </TouchableOpacity>
                 )}
@@ -589,7 +817,7 @@ const KoreanFieldworkFeaturePitLinePanel: React.FC<Props> = ({
                     <Text style={styles.emptyPreviewText}>{TEXT.noSketch}</Text>
                   </View>
                 )}
-              {savedLines.map((line, index) => {
+              {editorLines.map((line, index) => {
                 const points = getPitLinePoints(line);
                 const isPhotoPoint = isPhotoDirectionMode
                   && isPhotoPositionPoint(line);
@@ -679,7 +907,73 @@ const KoreanFieldworkFeaturePitLinePanel: React.FC<Props> = ({
                 </>
               )}
             </View>
+            {editorLines.length > 0 && (
+              <View
+                style={styles.annotationNoteList}
+                testID="featureAnnotationNoteList"
+              >
+                <View style={styles.annotationNoteHeader}>
+                  <View style={styles.annotationNoteHeaderText}>
+                    <Text style={styles.annotationNoteTitle}>
+                      {isPhotoDirectionMode
+                        ? TEXT.photoNoteTitle
+                        : TEXT.pitNoteTitle}
+                    </Text>
+                    <Text style={styles.annotationNoteHint}>
+                      {TEXT.recordOptional}
+                    </Text>
+                  </View>
+                  <Text style={styles.annotationNoteCount}>
+                    {editorLines.length}
+                  </Text>
+                </View>
+                {editorLines.map((line, index) => (
+                  <View
+                    key={`feature-annotation-note-${line.id}-${index}`}
+                    style={styles.annotationNoteRow}
+                    testID={`featureAnnotationNoteRow_${index}`}
+                  >
+                    <View style={styles.annotationNoteNumber}>
+                      <Text style={styles.annotationNoteNumberText}>
+                        {line.label}
+                      </Text>
+                    </View>
+                    <TextInput
+                      maxLength={1000}
+                      multiline
+                      onBlur={saveDirtyDescriptions}
+                      onChangeText={(description) =>
+                        updateLineDescription(index, description)}
+                      placeholder={isPhotoDirectionMode
+                        ? `${line.label}\ubc88 \ucd2c\uc601 \uc704\uce58\u00b7\ubc29\ud5a5 \uae30\ub85d`
+                        : `${line.label}\ubc88 \ud53c\ud2b8\uc120 \uae30\ub85d`}
+                      placeholderTextColor="#98a2b3"
+                      style={styles.annotationNoteInput}
+                      testID={`featureAnnotationNoteInput_${index}`}
+                      textAlignVertical="top"
+                      value={line.description ?? ''}
+                    />
+                    <TouchableOpacity
+                      accessibilityLabel={`${line.label}\ubc88 ${
+                        isPhotoDirectionMode ? '\ucd2c\uc601 \ud45c\uc2dc' : '\ud53c\ud2b8\uc120'
+                      }\uc640 \uae30\ub85d \ud568\uaed8 \uc0ad\uc81c`}
+                      activeOpacity={0.86}
+                      onPress={() => removeLine(index)}
+                      style={styles.annotationNoteDelete}
+                      testID={`featureAnnotationNoteDelete_${index}`}
+                    >
+                      <MaterialIcons
+                        name="delete-outline"
+                        size={17}
+                        color="#b42318"
+                      />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
+          </ScrollView>
         </SafeAreaView>
       </Modal>
     </>
@@ -796,6 +1090,7 @@ const normalizeFeatureSoilPitLine = (
     : [start, end];
 
   return {
+    description: normalizeOptionalDescription(rawValue.description),
     end: points[points.length - 1],
     id: typeof rawValue.id === 'string'
       ? rawValue.id
@@ -858,18 +1153,20 @@ const createFeatureSoilPitLineId = (
   idPrefix = 'soil-pit-line'
 ): string => `${idPrefix}-${index + 1}`;
 
-const getPhotoChecklistCount = (value: unknown): number => {
-  if (!Array.isArray(value)) return 0;
+const getStringArray = (value: unknown): string[] =>
+  Array.isArray(value)
+    ? [...new Set(
+      value.filter((entry): entry is string => typeof entry === 'string')
+    )]
+    : [];
 
-  const photoSteps = new Set([
-    'preInvestigationPhotoTaken',
-    'inProgressPhotoTaken',
-    'completionPhotoTaken',
-  ]);
+const normalizeOptionalDescription = (
+  value: unknown
+): string | undefined => {
+  if (typeof value !== 'string') return undefined;
 
-  return value.filter((entry) =>
-    typeof entry === 'string' && photoSteps.has(entry)
-  ).length;
+  const description = value.trim();
+  return description || undefined;
 };
 
 const getLineMidpoint = (line: FeatureSoilPitLine): SketchPoint => {
@@ -1223,12 +1520,104 @@ const clamp = (value: number, min: number, max: number): number =>
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   !!value && typeof value === 'object' && !Array.isArray(value);
 
+const isPromiseLike = (
+  value: unknown
+): value is PromiseLike<unknown> =>
+  !!value
+  && (
+    typeof value === 'object'
+    || typeof value === 'function'
+  )
+  && typeof (value as PromiseLike<unknown>).then === 'function';
+
 const styles = StyleSheet.create({
   actionRow: {
     alignItems: 'center',
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'flex-end',
+  },
+  annotationNoteCount: {
+    backgroundColor: '#eef2f6',
+    borderRadius: 6,
+    color: '#344054',
+    fontSize: 11,
+    fontWeight: '900',
+    minWidth: 24,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    textAlign: 'center',
+  },
+  annotationNoteDelete: {
+    alignItems: 'center',
+    borderColor: '#fecdca',
+    borderRadius: 6,
+    borderWidth: 1,
+    height: 42,
+    justifyContent: 'center',
+    marginLeft: 7,
+    width: 40,
+  },
+  annotationNoteHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 7,
+  },
+  annotationNoteHeaderText: {
+    flex: 1,
+    paddingRight: 10,
+  },
+  annotationNoteHint: {
+    color: '#667085',
+    fontSize: 10,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  annotationNoteInput: {
+    backgroundColor: '#ffffff',
+    borderColor: '#d0d5dd',
+    borderRadius: 6,
+    borderWidth: 1,
+    color: '#1d2939',
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 17,
+    minHeight: 42,
+    paddingHorizontal: 9,
+    paddingVertical: 7,
+  },
+  annotationNoteList: {
+    borderTopColor: '#e4e7ec',
+    borderTopWidth: 1,
+    marginTop: 12,
+    paddingTop: 11,
+  },
+  annotationNoteNumber: {
+    alignItems: 'center',
+    backgroundColor: '#eff8ff',
+    borderColor: '#b2ddff',
+    borderRadius: 8,
+    borderWidth: 1,
+    height: 28,
+    justifyContent: 'center',
+    marginRight: 8,
+    width: 28,
+  },
+  annotationNoteNumberText: {
+    color: '#175cd3',
+    fontSize: 11,
+    fontWeight: '900',
+  },
+  annotationNoteRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    marginTop: 7,
+  },
+  annotationNoteTitle: {
+    color: '#344054',
+    fontSize: 12,
+    fontWeight: '900',
   },
   addButton: {
     alignItems: 'center',
@@ -1466,6 +1855,74 @@ const styles = StyleSheet.create({
     marginLeft: 5,
     marginTop: -18,
   },
+  photoDirectionCount: {
+    marginLeft: 0,
+    marginTop: 2,
+  },
+  photoSectionTitle: {
+    color: '#344054',
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  photoStageButton: {
+    alignItems: 'center',
+    backgroundColor: '#f9fafb',
+    borderColor: '#d0d5dd',
+    borderRadius: 7,
+    borderWidth: 1,
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    minHeight: 42,
+    paddingHorizontal: 8,
+  },
+  photoStageButtonChecked: {
+    backgroundColor: '#ecfdf3',
+    borderColor: '#6ce9a6',
+  },
+  photoStageButtonSpaced: {
+    marginLeft: 8,
+  },
+  photoStageButtonText: {
+    color: '#475467',
+    fontSize: 12,
+    fontWeight: '800',
+    marginLeft: 5,
+  },
+  photoStageButtonTextChecked: {
+    color: '#067647',
+  },
+  photoStageHeader: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  photoStageHeaderText: {
+    flex: 1,
+    paddingRight: 10,
+  },
+  photoStageHint: {
+    color: '#667085',
+    fontSize: 10,
+    fontWeight: '700',
+    lineHeight: 14,
+    marginTop: 3,
+  },
+  photoStageMetric: {
+    color: '#175cd3',
+    fontSize: 11,
+    fontWeight: '900',
+  },
+  photoStageRow: {
+    flexDirection: 'row',
+    marginTop: 9,
+  },
+  photoStageSection: {
+    borderBottomColor: '#e4e7ec',
+    borderBottomWidth: 1,
+    marginBottom: 10,
+    paddingBottom: 10,
+  },
   modalCloseButton: {
     alignItems: 'center',
     height: 40,
@@ -1496,6 +1953,12 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
     marginLeft: 7,
+  },
+  modalScroll: {
+    flex: 1,
+  },
+  modalScrollContent: {
+    paddingBottom: 28,
   },
   recordsButton: {
     alignItems: 'center',
