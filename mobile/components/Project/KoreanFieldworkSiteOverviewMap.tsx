@@ -177,7 +177,7 @@ const KoreanFieldworkSiteOverviewMap: React.FC<Props> = ({
 }) => {
   const [canvasSize, setCanvasSize] = useState(CANVAS_DEFAULT_SIZE);
   const [backgroundMode, setBackgroundMode] =
-    useState<SiteOverviewBackground>('satellite');
+    useState<SiteOverviewBackground>('plan');
   const [brushColor, setBrushColor] = useState(DEFAULT_FIELDWORK_BRUSH_COLOR);
   const [brushWidth, setBrushWidth] = useState(DEFAULT_FIELDWORK_BRUSH_WIDTH);
   const [distanceFeatureIds, setDistanceFeatureIds] = useState<string[]>([]);
@@ -192,7 +192,6 @@ const KoreanFieldworkSiteOverviewMap: React.FC<Props> = ({
   const [satelliteStatus, setSatelliteStatus] =
     useState<'error' | 'loaded' | 'loading' | 'partial'>('loading');
   const [viewport, setViewport] = useState(SITE_OVERVIEW_DEFAULT_VIEWPORT);
-  const hasSelectedBackgroundRef = useRef(false);
   const failedSatelliteTileKeysRef = useRef<Set<string>>(new Set());
   const loadedSatelliteTileKeysRef = useRef<Set<string>>(new Set());
   const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
@@ -286,12 +285,6 @@ const KoreanFieldworkSiteOverviewMap: React.FC<Props> = ({
   useEffect(() => {
     if (backgroundMode === 'satellite' && satelliteTiles.length === 0) {
       setBackgroundMode('plan');
-    } else if (
-      satelliteTiles.length > 0
-      && !hasSelectedBackgroundRef.current
-      && backgroundMode !== 'satellite'
-    ) {
-      setBackgroundMode('satellite');
     }
   }, [backgroundMode, satelliteTiles.length]);
 
@@ -497,11 +490,8 @@ const KoreanFieldworkSiteOverviewMap: React.FC<Props> = ({
             }}
             activeOpacity={0.84}
             disabled={satelliteTiles.length === 0}
-            onPress={() => {
-              hasSelectedBackgroundRef.current = true;
-              setBackgroundMode((current) =>
-                current === 'satellite' ? 'plan' : 'satellite');
-            }}
+            onPress={() => setBackgroundMode((current) =>
+              current === 'satellite' ? 'plan' : 'satellite')}
             style={[
               styles.headerToolButton,
               backgroundMode === 'satellite' && styles.headerToolButtonActive,
@@ -510,12 +500,12 @@ const KoreanFieldworkSiteOverviewMap: React.FC<Props> = ({
             testID="siteOverviewBackgroundToggle"
           >
             <MaterialIcons
-              name={backgroundMode === 'satellite' ? 'satellite-alt' : 'grid-on'}
+              name={backgroundMode === 'satellite' ? 'grid-on' : 'satellite-alt'}
               size={17}
               color="#f8fafc"
             />
             <Text style={styles.headerToolButtonText}>
-              {backgroundMode === 'satellite' ? '위성' : '약도'}
+              {backgroundMode === 'satellite' ? '흰 배경' : '위성'}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity

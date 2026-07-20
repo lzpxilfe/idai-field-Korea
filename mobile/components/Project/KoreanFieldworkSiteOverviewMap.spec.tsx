@@ -320,7 +320,7 @@ describe('KoreanFieldworkSiteOverviewMap', () => {
     expect(getByText('[시기미상] 좌표 유구')).toBeTruthy();
   });
 
-  it('shows an online satellite background without storing provider tile bytes', () => {
+  it('starts on a white plan and loads satellite tiles only after the user asks', () => {
     const boundary = createDocument(C.SURVEY_BOUNDARY, 'boundary-1', {
       geometry: {
         type: 'LineString',
@@ -337,9 +337,16 @@ describe('KoreanFieldworkSiteOverviewMap', () => {
       <KoreanFieldworkSiteOverviewMap documents={[boundary]} />
     );
 
+    expect(queryByTestId('siteOverviewSatelliteTile')).toBeNull();
+    expect(getByText('위성')).toBeTruthy();
+    expect(getByTestId('siteOverviewBackgroundToggle').props.accessibilityState)
+      .toMatchObject({ disabled: false, selected: false });
+
+    fireEvent.press(getByTestId('siteOverviewBackgroundToggle'));
+
     const tiles = getAllByTestId('siteOverviewSatelliteTile');
     expect(tiles.length).toBeGreaterThan(0);
-    expect(getByText('위성')).toBeTruthy();
+    expect(getByText('흰 배경')).toBeTruthy();
     tiles.forEach((tile, index) => fireEvent(tile, index === 0 ? 'load' : 'error'));
     expect(getByText('일부 위성 타일이 누락되었습니다. 네트워크를 확인해 주세요.'))
       .toBeTruthy();
@@ -348,7 +355,7 @@ describe('KoreanFieldworkSiteOverviewMap', () => {
     fireEvent.press(getByTestId('siteOverviewBackgroundToggle'));
 
     expect(queryByTestId('siteOverviewSatelliteTile')).toBeNull();
-    expect(getByText('약도')).toBeTruthy();
+    expect(getByText('위성')).toBeTruthy();
   });
 
   it('renders and updates the project-wide sketch stored on the survey boundary', async () => {
