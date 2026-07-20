@@ -3,7 +3,8 @@ import {
     createNextFeatureIdentifier,
     createKoreanFieldworkDraftRelations,
     createKoreanFieldworkDraftResource,
-    getKoreanFieldworkContinuationActions
+    getKoreanFieldworkContinuationActions,
+    getKoreanFieldworkMostRecentSiblingFeaturePeriod
 } from '../../../src/app/util/korean-fieldwork-document-drafts';
 
 
@@ -98,6 +99,104 @@ describe('Korean fieldwork document drafts', () => {
             featureType: 'kiln',
             featureInterpretationType: ['kiln']
         });
+    });
+
+
+    it('inherits the most recently saved period from a sibling feature', () => {
+
+        const operationDoc = createDoc('operation-1', 'Operation');
+        const config = createConfig({
+            'Feature:Operation': ['isRecordedIn', 'liesWithin']
+        });
+        const olderFeature = withModified(
+            createDoc(
+                'feature-1',
+                'Feature',
+                { isRecordedIn: ['operation-1'], liesWithin: ['operation-1'] },
+                { period: 'bronzeAge' }
+            ),
+            '2026-07-18T08:00:00.000Z'
+        );
+        const newerFeature = withModified(
+            createDoc(
+                'feature-2',
+                'Feature',
+                { isRecordedIn: ['operation-1'], liesWithin: ['operation-1'] },
+                { period: { value: 'threeKingdoms', endValue: 'unifiedSilla' } }
+            ),
+            '2026-07-19T08:00:00.000Z'
+        );
+
+        const draft = createKoreanFieldworkDraftResource(operationDoc, 'Feature', config, {
+            existingDocuments: [olderFeature, newerFeature]
+        });
+
+        expect(draft.period).toEqual({
+            value: 'threeKingdoms',
+            endValue: 'unifiedSilla'
+        });
+    });
+
+
+    it('finds only the most recent valid period from features under the same direct parent', () => {
+
+        const operationDoc = createDoc('operation-1', 'Operation');
+        const olderSibling = withModified(
+            createDoc(
+                'feature-1',
+                'Feature',
+                { isRecordedIn: ['operation-1'], liesWithin: ['operation-1'] },
+                { period: 'bronzeAge' }
+            ),
+            '2026-07-17T08:00:00.000Z'
+        );
+        const newestSibling = withModified(
+            createDoc(
+                'feature-2',
+                'Feature',
+                { isRecordedIn: ['operation-1'], liesWithin: ['operation-1'] },
+                { period: { value: 'joseon' } }
+            ),
+            '2026-07-18T08:00:00.000Z'
+        );
+        const nestedFeature = withModified(
+            createDoc(
+                'feature-3',
+                'Feature',
+                { isRecordedIn: ['operation-1'], liesWithin: ['feature-group-1'] },
+                { period: { value: 'modernContemporary' } }
+            ),
+            '2026-07-20T08:00:00.000Z'
+        );
+        const otherParentFeature = withModified(
+            createDoc(
+                'feature-4',
+                'Feature',
+                { isRecordedIn: ['operation-2'], liesWithin: ['operation-2'] },
+                { period: { value: 'paleolithic' } }
+            ),
+            '2026-07-21T08:00:00.000Z'
+        );
+        const invalidSibling = withModified(
+            createDoc(
+                'feature-5',
+                'Feature',
+                { isRecordedIn: ['operation-1'], liesWithin: ['operation-1'] },
+                { period: { value: 'goryeo', endValue: 42 } }
+            ),
+            '2026-07-22T08:00:00.000Z'
+        );
+
+        expect(getKoreanFieldworkMostRecentSiblingFeaturePeriod(
+            operationDoc,
+            [
+                olderSibling,
+                newestSibling,
+                nestedFeature,
+                otherParentFeature,
+                invalidSibling
+            ]
+        )).toEqual({ value: 'joseon' });
     });
 
 
@@ -382,6 +481,7 @@ const createFields = (categoryName: string) => {
             ];
         case 'Feature':
             return [
+                field('period'),
                 field('featureType'),
                 field('featureInterpretationType'),
                 field('featureRecordingStatus', 'KoreanFieldwork-featureRecordingStatus'),
@@ -426,4 +526,11 @@ const createFields = (categoryName: string) => {
 const field = (name: string, valuelistId?: string) => ({
     name,
     ...(valuelistId ? { valuelist: { id: valuelistId } } : {})
+});
+
+
+const withModified = (document: any, isoDate: string) => ({
+    ...document,
+    created: { user: 'tester', date: new Date(isoDate) },
+    modified: [{ user: 'tester', date: new Date(isoDate) }]
 });

@@ -141,6 +141,87 @@ describe('Korean fieldwork document drafts', () => {
     });
   });
 
+  it('inherits the most recently saved period from a sibling Feature', () => {
+    const trenchDoc = createDoc('trench-1', C.TRENCH, {
+      isRecordedIn: ['operation-1'],
+    });
+    const olderFeature = createDoc('feature-older', C.FEATURE, {
+      liesWithin: ['trench-1'],
+      isRecordedIn: ['operation-1'],
+    });
+    const latestFeature = createDoc('feature-latest', C.FEATURE, {
+      liesWithin: ['trench-1'],
+      isRecordedIn: ['operation-1'],
+    });
+    const otherTrenchFeature = createDoc('feature-other', C.FEATURE, {
+      liesWithin: ['trench-2'],
+      isRecordedIn: ['operation-1'],
+    });
+    const invalidLatestFeature = createDoc('feature-invalid', C.FEATURE, {
+      liesWithin: ['trench-1'],
+      isRecordedIn: ['operation-1'],
+    });
+    olderFeature.resource.period = 'bronzeAge';
+    olderFeature.created = {
+      date: new Date('2026-07-18T00:00:00.000Z'),
+      user: 'test',
+    };
+    latestFeature.resource.period = {
+      value: 'joseon',
+      endValue: 'modernContemporary',
+    };
+    latestFeature.created = {
+      date: new Date('2026-07-19T00:00:00.000Z'),
+      user: 'test',
+    };
+    latestFeature.modified = [{
+      date: new Date('2026-07-20T00:00:00.000Z'),
+      user: 'test',
+    }];
+    otherTrenchFeature.resource.period = { value: 'paleolithic' };
+    otherTrenchFeature.created = {
+      date: new Date('2026-07-21T00:00:00.000Z'),
+      user: 'test',
+    };
+    invalidLatestFeature.resource.period = {
+      value: 'goryeo',
+      endValue: 42,
+    };
+    invalidLatestFeature.created = {
+      date: new Date('2026-07-22T00:00:00.000Z'),
+      user: 'test',
+    };
+    const config = {
+      ...allowRelations({
+        [`${C.FEATURE}:${C.TRENCH}`]: ['liesWithin'],
+      }),
+      getCategory: () => ({
+        groups: [{ fields: [{ name: 'period' }] }],
+        name: C.FEATURE,
+      }),
+    } as any;
+
+    const draft = createKoreanFieldworkDraftResource(
+      trenchDoc,
+      C.FEATURE,
+      config,
+      {
+        existingDocuments: [
+          olderFeature,
+          latestFeature,
+          otherTrenchFeature,
+          invalidLatestFeature,
+        ],
+        featureType: 'pit',
+      }
+    );
+
+    expect(draft.period).toEqual({
+      value: 'joseon',
+      endValue: 'modernContemporary',
+    });
+  });
+
   it('restores validated measurements from the Feature creation route', () => {
     const trenchDoc = createDoc('trench-1', C.TRENCH, {
       isRecordedIn: ['operation-1'],

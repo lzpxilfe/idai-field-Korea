@@ -36,7 +36,7 @@ describe('KoreanFieldworkFeatureGuidancePanelComponent', () => {
             {
                 name: 'period',
                 editable: true,
-                inputType: 'dropdown',
+                inputType: 'dropdownRange',
                 label: '시대/시기'
             },
             {
@@ -109,16 +109,35 @@ describe('KoreanFieldworkFeatureGuidancePanelComponent', () => {
 
     it('sets period values inside the feature guidance flow', () => {
 
+        component.document.resource.period = { value: 'bronzeAge' };
+
         expect(component.canRenderPeriodField()).toBe(true);
         expect(component.getChoiceValueIds(component.getPeriodFieldName())).toEqual([
             'bronzeAge',
             'threeKingdoms'
         ]);
+        expect(component.isChoiceValueActive(component.getPeriodFieldName(), 'bronzeAge')).toBe(true);
 
         component.toggleChoiceValue(component.getPeriodFieldName(), 'threeKingdoms');
 
-        expect(component.document.resource.period).toBe('threeKingdoms');
+        expect(component.document.resource.period).toEqual({ value: 'threeKingdoms' });
         expect(component.isChoiceValueActive(component.getPeriodFieldName(), 'threeKingdoms')).toBe(true);
+
+        component.toggleChoiceValue(component.getPeriodFieldName(), 'threeKingdoms');
+
+        expect(component.document.resource.period).toBeUndefined();
+    });
+
+
+    it('keeps legacy string periods readable before rewriting them as optional ranges', () => {
+
+        component.document.resource.period = 'bronzeAge';
+
+        expect(component.isChoiceValueActive(component.getPeriodFieldName(), 'bronzeAge')).toBe(true);
+
+        component.toggleChoiceValue(component.getPeriodFieldName(), 'threeKingdoms');
+
+        expect(component.document.resource.period).toEqual({ value: 'threeKingdoms' });
     });
 
 

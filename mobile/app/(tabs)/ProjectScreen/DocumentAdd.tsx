@@ -28,9 +28,15 @@ import KoreanFieldworkFindSpotPanel
   from '@/components/Project/KoreanFieldworkFindSpotPanel';
 import KoreanFieldworkFeatureSketchReferencePanel
   from '@/components/Project/KoreanFieldworkFeatureSketchReferencePanel';
+import KoreanFieldworkFeatureFreeSketchModal, {
+  mergeKoreanFieldworkFeatureFreeSketch,
+} from '@/components/Project/KoreanFieldworkFeatureFreeSketchModal';
 import KoreanFieldworkFreeDrawingPanel, {
   getKoreanFieldworkFreeDrawingConfig,
 } from '@/components/Project/KoreanFieldworkFreeDrawingPanel';
+import {
+  getKoreanFieldworkFeatureSketchDrawingBackground,
+} from '@/components/Project/korean-fieldwork-feature-sketch-background';
 import KoreanFieldworkPenMemoTranscriptionPanel
   from '@/components/Project/KoreanFieldworkPenMemoTranscriptionPanel';
 import FieldworkPhotoAnnotationPanel, {
@@ -96,6 +102,10 @@ const DocumentAdd: React.FC = () => {
   const [investigationModeId, setInvestigationModeId] =
     useState<KoreanFieldworkInvestigationModeId>();
   const [isFreeDrawingActive, setIsFreeDrawingActive] = useState(false);
+  const [isParentFeatureSketchOpen, setIsParentFeatureSketchOpen] =
+    useState(false);
+  const [parentFeatureSketchDocument, setParentFeatureSketchDocument] =
+    useState<Document>();
   const [soilProfileSampleRequest, setSoilProfileSampleRequest] =
     useState<SoilProfileLayerSampleRequest>();
   const projectId = preferencesContext.preferences.currentProject;
@@ -105,6 +115,11 @@ const DocumentAdd: React.FC = () => {
   useEffect(() => {
     documentsRef.current = documents;
   }, [documents]);
+
+  useEffect(() => {
+    setIsParentFeatureSketchOpen(false);
+    setParentFeatureSketchDocument(undefined);
+  }, [parentDocId]);
 
   const setResourceToDefault = useCallback(
     () => {
@@ -253,9 +268,11 @@ const DocumentAdd: React.FC = () => {
   }
 
   const freeDrawingConfig = getKoreanFieldworkFreeDrawingConfig(categoryName);
+  const featureSketchDocument = parentFeatureSketchDocument ?? parentDoc;
 
   return (
-    <DocumentForm
+    <>
+      <DocumentForm
       titleBarRight={
         <Button
           variant="success"
@@ -286,8 +303,9 @@ const DocumentAdd: React.FC = () => {
             && parentDoc.resource.category === KOREAN_FIELDWORK_CATEGORIES.FEATURE
             && (
               <KoreanFieldworkFeatureSketchReferencePanel
-                document={parentDoc}
+                document={featureSketchDocument}
                 documents={documents ?? [parentDoc]}
+                onOpenFreeSketch={() => setIsParentFeatureSketchOpen(true)}
               />
             )}
           <KoreanFieldworkFindSpotPanel
@@ -326,6 +344,11 @@ const DocumentAdd: React.FC = () => {
       formFooter={freeDrawingConfig ? (
         <View>
           <KoreanFieldworkFreeDrawingPanel
+            background={categoryName === KOREAN_FIELDWORK_CATEGORIES.FEATURE
+              ? getKoreanFieldworkFeatureSketchDrawingBackground(
+                newResource.featureLocationSketch
+              )
+              : undefined}
             initiallyFullscreen={shouldOpenFreeSketch}
             onDrawingActiveChange={setIsFreeDrawingActive}
             strokesValue={newResource[freeDrawingConfig.strokesField]}
@@ -360,7 +383,32 @@ const DocumentAdd: React.FC = () => {
         () => setSoilProfileSampleRequest(undefined),
         preferencesContext.preferences.username
       )}
-    />
+      />
+      {categoryName === KOREAN_FIELDWORK_CATEGORIES.PEN_MEMO
+        && featureSketchDocument.resource.category
+          === KOREAN_FIELDWORK_CATEGORIES.FEATURE
+        && !!repository
+        && (
+          <KoreanFieldworkFeatureFreeSketchModal
+            document={featureSketchDocument}
+            isVisible={isParentFeatureSketchOpen}
+            onClose={(savedDocument) => {
+              if (savedDocument) setParentFeatureSketchDocument(savedDocument);
+              setIsParentFeatureSketchOpen(false);
+            }}
+            onSave={async (updatedDocument) => {
+              const latestDocument = await repository.get(
+                updatedDocument.resource.id
+              );
+
+              return repository.update(mergeKoreanFieldworkFeatureFreeSketch(
+                latestDocument,
+                updatedDocument
+              ));
+            }}
+          />
+        )}
+    </>
   );
 };
 

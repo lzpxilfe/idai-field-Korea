@@ -8,6 +8,7 @@ import {
 import {
   CategoryForm,
   createCategory,
+  Document,
   Forest,
   IdGenerator,
   Labels,
@@ -378,8 +379,18 @@ describe('DocumentAdd', () => {
     } as NewDocument);
   });
 
-  it('adds a sketch canvas to new pen memo records instead of exposing raw memo JSON', async () => {
+  it('keeps a new pen memo intact while editing its parent Feature sketch', async () => {
     cleanup();
+    const latestFeature = {
+      ...si1,
+      resource: {
+        ...si1.resource,
+        description: '데스크톱에서 나중에 저장한 설명',
+        period: { value: 'joseon' },
+      },
+    } as Document;
+    jest.spyOn(repository, 'get').mockImplementation(async (resourceId: string) =>
+      resourceId === si1.resource.id ? latestFeature : t2);
     mockUseGlobalSearchParams.mockReturnValue({
       parentDocId: si1.resource.id,
       categoryName: 'PenMemo',
@@ -416,9 +427,46 @@ describe('DocumentAdd', () => {
       }
     );
     fireEvent.press(renderAPI.getByTestId('fieldworkFreeDrawingFullscreenClose'));
+    fireEvent.press(renderAPI.getByTestId('featureShapeSketchPreview'));
+    fireEvent.press(renderAPI.getByTestId('featureShapeSketchPreview'));
+    const featureSketchCanvas = await waitFor(() =>
+      renderAPI.getByTestId('featureParentSketchFullscreenCanvas'));
+    fireEvent(featureSketchCanvas, 'message', {
+      nativeEvent: {
+        data: JSON.stringify({
+          payload: [{
+            color: '#dc2626',
+            points: [
+              { x: 2500, y: 2500 },
+              { x: 7500, y: 7500 },
+            ],
+            tool: 'pen',
+            width: 5,
+          }],
+          type: 'strokes',
+        }),
+      },
+    });
+    fireEvent.press(
+      renderAPI.getByTestId('featureParentSketchFullscreenClose')
+    );
+    await waitFor(() => expect(repository.update).toHaveBeenCalledTimes(1));
     fireEvent.press(renderAPI.getByTestId('saveDocBtn'));
 
     await waitFor(() => expect(repository.create).toHaveBeenCalledTimes(1));
+    expect(repository.update).toHaveBeenCalledWith(expect.objectContaining({
+      resource: expect.objectContaining({
+        id: si1.resource.id,
+        category: 'Feature',
+        featureFreeDrawingStrokes: expect.stringContaining('"strokes"'),
+      }),
+    }));
+    const updatedFeature = (repository.update as jest.Mock).mock.calls[0][0];
+    expect(updatedFeature.resource.featureLocationSketch)
+      .toBe(si1.resource.featureLocationSketch);
+    expect(updatedFeature.resource.description)
+      .toBe('데스크톱에서 나중에 저장한 설명');
+    expect(updatedFeature.resource.period).toEqual({ value: 'joseon' });
     expect(repository.create).toHaveBeenCalledWith({
       resource: expect.objectContaining({
         category: 'PenMemo',

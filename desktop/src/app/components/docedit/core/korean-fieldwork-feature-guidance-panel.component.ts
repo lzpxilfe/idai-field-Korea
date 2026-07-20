@@ -1,5 +1,14 @@
 import { Component, EventEmitter, Input, OnChanges, Output } from '@angular/core';
-import { Condition, Datastore, Document, Field, Labels, Valuelist, ValuelistUtil } from 'idai-field-core';
+import {
+    Condition,
+    Datastore,
+    Document,
+    Field,
+    Labels,
+    OptionalRange,
+    Valuelist,
+    ValuelistUtil
+} from 'idai-field-core';
 import {
     applyKoreanFieldworkFeatureGuidancePreset,
     getKoreanFieldworkActiveFeatureGuidancePreset,
@@ -113,7 +122,7 @@ export class KoreanFieldworkFeatureGuidancePanelComponent implements OnChanges {
 
         return this.isMultiValueChoiceField(fieldName)
             ? this.getStringArrayValue(fieldName).includes(valueId)
-            : this.document?.resource?.[fieldName] === valueId;
+            : this.getSingleChoiceValue(fieldName) === valueId;
     }
 
 
@@ -123,8 +132,12 @@ export class KoreanFieldworkFeatureGuidancePanelComponent implements OnChanges {
 
         if (this.isMultiValueChoiceField(fieldName)) {
             this.toggleArrayValue(fieldName, valueId);
-        } else if (this.document.resource[fieldName] === valueId) {
+        } else if (this.getSingleChoiceValue(fieldName) === valueId) {
             delete this.document.resource[fieldName];
+        } else if (this.isOptionalRangeChoiceField(fieldName)) {
+            this.document.resource[fieldName] = {
+                value: valueId
+            } as OptionalRange<string>;
         } else {
             this.document.resource[fieldName] = valueId;
         }
@@ -317,6 +330,7 @@ export class KoreanFieldworkFeatureGuidancePanelComponent implements OnChanges {
         return field.editable === true
             && (
                 field.inputType === 'dropdown'
+                || field.inputType === 'dropdownRange'
                 || field.inputType === 'radio'
                 || field.inputType === 'checkboxes'
                 || field.inputType === 'valuelistMultiInput'
@@ -332,7 +346,7 @@ export class KoreanFieldworkFeatureGuidancePanelComponent implements OnChanges {
         this.valuelists[field.name] = ValuelistUtil.getValuelist(
             field,
             projectDocument,
-            this.document.resource[field.name]
+            this.getChoiceValues(field.name)
         );
     }
 
@@ -342,6 +356,51 @@ export class KoreanFieldworkFeatureGuidancePanelComponent implements OnChanges {
         const inputType = this.getField(fieldName)?.inputType;
 
         return inputType === 'checkboxes' || inputType === 'valuelistMultiInput';
+    }
+
+
+    private isOptionalRangeChoiceField(fieldName: string): boolean {
+
+        return this.getField(fieldName)?.inputType === 'dropdownRange';
+    }
+
+
+    private getSingleChoiceValue(fieldName: string): string|undefined {
+
+        const value = this.document?.resource?.[fieldName];
+        if (typeof value === 'string') return value;
+        if (!this.isOptionalRangeChoiceField(fieldName)
+            || !value
+            || typeof value !== 'object'
+            || Array.isArray(value)) {
+            return undefined;
+        }
+
+        const startValue = (value as Record<string, unknown>).value;
+
+        return typeof startValue === 'string' && startValue.trim().length > 0
+            ? startValue
+            : undefined;
+    }
+
+
+    private getChoiceValues(fieldName: string): string[] {
+
+        if (this.isMultiValueChoiceField(fieldName)) return this.getStringArrayValue(fieldName);
+
+        const value = this.document?.resource?.[fieldName];
+        if (typeof value === 'string') return value.trim().length > 0 ? [value] : [];
+        if (!this.isOptionalRangeChoiceField(fieldName)
+            || !value
+            || typeof value !== 'object'
+            || Array.isArray(value)) {
+            return [];
+        }
+
+        const range = value as Record<string, unknown>;
+
+        return [range.value, range.endValue]
+            .filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0);
     }
 
 

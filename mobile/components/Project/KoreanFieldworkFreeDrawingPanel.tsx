@@ -28,6 +28,7 @@ import KoreanFieldworkFullscreenDrawingModal, {
   DEFAULT_FIELDWORK_BRUSH_COLOR,
   DEFAULT_FIELDWORK_BRUSH_WIDTH,
   DEFAULT_FIELDWORK_DRAWING_TOOL,
+  FieldworkFullscreenDrawingBackground,
   KoreanFieldworkBrushControls,
 } from './KoreanFieldworkFullscreenDrawingModal';
 import {
@@ -68,6 +69,7 @@ interface PreviewTransform {
 }
 
 interface Props {
+  background?: FieldworkFullscreenDrawingBackground;
   fullscreenRequestId?: number;
   initiallyFullscreen?: boolean;
   onDrawingActiveChange?: (isActive: boolean) => void;
@@ -127,6 +129,7 @@ export const getKoreanFieldworkFreeDrawingConfig = (
 };
 
 const KoreanFieldworkFreeDrawingPanel: React.FC<Props> = ({
+  background,
   fullscreenRequestId = 0,
   initiallyFullscreen = false,
   onDrawingActiveChange,
@@ -174,6 +177,17 @@ const KoreanFieldworkFreeDrawingPanel: React.FC<Props> = ({
   const previewTransform = writingGuides
     ? getInfiniteGridPreviewTransform(previewStrokes, canvasSize)
     : undefined;
+  const fullscreenBackground = useMemo(
+    () => writingGuides
+      ? {
+        ...background,
+        aspectRatio: KOREAN_FIELDWORK_PEN_MEMO_PAGE_ASPECT_RATIO,
+        canvasMode: 'penMemoInfiniteGrid' as const,
+        writingGuides: true,
+      }
+      : background,
+    [background, writingGuides]
+  );
   const strokeCount = strokes.length;
   const setDrawingInteractionActive = useCallback((isActive: boolean) => {
     if (isDrawingInteractionActiveRef.current === isActive) return;
@@ -519,11 +533,7 @@ const KoreanFieldworkFreeDrawingPanel: React.FC<Props> = ({
         )}
       </View>
       <KoreanFieldworkFullscreenDrawingModal
-        background={writingGuides ? {
-          aspectRatio: KOREAN_FIELDWORK_PEN_MEMO_PAGE_ASPECT_RATIO,
-          canvasMode: 'penMemoInfiniteGrid',
-          writingGuides: true,
-        } : undefined}
+        background={fullscreenBackground}
         brushColor={brushColor}
         brushWidth={brushWidth}
         drawingTool={drawingTool}

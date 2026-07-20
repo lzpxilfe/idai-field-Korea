@@ -10,6 +10,10 @@ import {
   View,
 } from 'react-native';
 import { KOREAN_FIELDWORK_CATEGORIES } from './korean-fieldwork-categories';
+import {
+  applyKoreanFieldworkHandwritingErasers,
+  KoreanFieldworkHandwritingStroke,
+} from './korean-fieldwork-handwriting';
 
 type FeatureLocationSketchShape =
   'point' | 'polygon' | 'rectangle' | 'circle' | 'oval';
@@ -101,6 +105,12 @@ const KoreanFieldworkFeatureSketchReferencePanel: React.FC<Props> = ({
     ),
     [document.resource]
   );
+  const freeSketchStrokes = useMemo(
+    () => applyKoreanFieldworkHandwritingErasers(
+      (document.resource as Record<string, unknown>).featureFreeDrawingStrokes
+    ),
+    [document.resource]
+  );
   const boundaryViewport = useMemo(
     () => getSquarePlanViewport(boundaryCanvasSize),
     [boundaryCanvasSize]
@@ -173,7 +183,10 @@ const KoreanFieldworkFeatureSketchReferencePanel: React.FC<Props> = ({
               'featureShapeSketchShape',
               false
             )
-            : <EmptyPreviewText text={TEXT.noSketch} />}
+            : freeSketchStrokes.length === 0
+              ? <EmptyPreviewText text={TEXT.noSketch} />
+              : null}
+          {renderFeatureFreeSketch(freeSketchStrokes, shapeCanvasSize)}
         </SketchCard>
       </View>
     </View>
@@ -327,6 +340,49 @@ const renderFeatureSketch = (
     </>
   );
 };
+
+const renderFeatureFreeSketch = (
+  strokes: readonly KoreanFieldworkHandwritingStroke[],
+  canvasSize: CanvasSize
+) => strokes.flatMap((stroke, strokeIndex) => {
+  const points = stroke.points.map((point) => ({
+    x: clamp(point.x / 100, 0, 100),
+    y: clamp(point.y / 100, 0, 100),
+  }));
+  const color = stroke.color ?? '#172b4d';
+  const width = clamp((stroke.width ?? 5) * 0.45, 1, 5);
+
+  if (points.length === 1) {
+    const point = denormalizePoint(points[0], canvasSize);
+
+    return [(
+      <View
+        key={`feature-free-sketch-dot-${strokeIndex}`}
+        pointerEvents="none"
+        style={{
+          backgroundColor: color,
+          borderRadius: width,
+          height: width * 2,
+          left: point.x - width,
+          position: 'absolute',
+          top: point.y - width,
+          width: width * 2,
+        }}
+        testID="featureFreeDrawingStroke"
+      />
+    )];
+  }
+
+  return toLineSegments({
+    canvasSize,
+    closePath: false,
+    color,
+    keyPrefix: `feature-free-sketch-${strokeIndex}`,
+    points,
+    testID: 'featureFreeDrawingStroke',
+    width,
+  });
+});
 
 const getVisibleFeatureSketchPoints = (
   sketch: FeatureLocationSketch

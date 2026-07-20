@@ -2,6 +2,7 @@ import {
   createKoreanFieldworkDraftBaseResource,
   createKoreanFieldworkDraftIdentifier,
   createKoreanFieldworkDraftRelations as createCoreKoreanFieldworkDraftRelations,
+  CategoryForm,
   getKoreanFieldworkFeatureDraftValues,
   parseKoreanFieldworkFeatureGeometryOption,
   Document,
@@ -41,6 +42,16 @@ export const createKoreanFieldworkDraftResource = (
   const featureTypeOption = categoryName === C.FEATURE
     ? getKoreanFieldworkFeatureTypeOption(options.featureType)
     : undefined;
+  const featureCategory = categoryName === C.FEATURE
+    ? getCategorySafely(config, categoryName)
+    : undefined;
+  const inheritedFeaturePeriod = featureCategory
+    && CategoryForm.getField(featureCategory, 'period')
+    ? getKoreanFieldworkInheritedFeaturePeriod(
+      parentDoc,
+      options.existingDocuments ?? []
+    )
+    : undefined;
   const resource = createKoreanFieldworkDraftBaseResource(
     parentDoc,
     categoryName,
@@ -78,6 +89,9 @@ export const createKoreanFieldworkDraftResource = (
         geometryConfidence: normalizedGeometryConfidence,
         geometrySource: normalizedGeometrySource,
       }),
+      ...(inheritedFeaturePeriod
+        ? { period: inheritedFeaturePeriod }
+        : {}),
       ...(normalizedGeometryConfidence
         ? { geometryConfidence: normalizedGeometryConfidence }
         : {}),
@@ -192,3 +206,115 @@ const isFeatureWorkflowCategory = (categoryName: string): boolean =>
   categoryName === C.FEATURE
   || categoryName === C.FEATURE_GROUP
   || categoryName === C.FEATURE_SEGMENT;
+
+export const getKoreanFieldworkInheritedFeaturePeriod = (
+  parentDoc: Document,
+  existingDocuments: readonly Document[]
+): { value: string; endValue?: string } | undefined => {
+  const parentId = parentDoc.resource.id;
+  if (!parentId) return undefined;
+
+  let latest: {
+    index: number;
+    period: { value: string; endValue?: string };
+    timestamp: number;
+  } | undefined;
+
+  existingDocuments.forEach((document, index) => {
+    if (
+      document.resource.category !== C.FEATURE
+      || !isDirectChildOf(document, parentId)
+    ) {
+      return;
+    }
+
+    const period = normalizeFeaturePeriod(document.resource.period);
+    if (!period) return;
+
+    const timestamp = getDocumentTimestamp(document);
+    if (
+      !latest
+      || timestamp > latest.timestamp
+      || (timestamp === latest.timestamp && index > latest.index)
+    ) {
+      latest = { index, period, timestamp };
+    }
+  });
+
+  return latest
+    ? {
+      value: latest.period.value,
+      ...(latest.period.endValue
+        ? { endValue: latest.period.endValue }
+        : {}),
+    }
+    : undefined;
+};
+
+const normalizeFeaturePeriod = (
+  value: unknown
+): { value: string; endValue?: string } | undefined => {
+  if (typeof value === 'string') {
+    const normalizedValue = value.trim();
+    return normalizedValue ? { value: normalizedValue } : undefined;
+  }
+  if (!value || typeof value !== 'object') return undefined;
+
+  const range = value as { value?: unknown; endValue?: unknown };
+  if (typeof range.value !== 'string' || !range.value.trim()) return undefined;
+  if (
+    Object.prototype.hasOwnProperty.call(range, 'endValue')
+    && (typeof range.endValue !== 'string' || !range.endValue.trim())
+  ) {
+    return undefined;
+  }
+  const endValue = typeof range.endValue === 'string'
+    ? range.endValue.trim()
+    : '';
+
+  return {
+    value: range.value.trim(),
+    ...(endValue ? { endValue } : {}),
+  };
+};
+
+const isDirectChildOf = (document: Document, parentId: string): boolean => {
+  const relations = document.resource.relations as
+    | Record<string, unknown>
+    | undefined;
+  const liesWithin = getRelationTargets(relations?.liesWithin);
+  if (liesWithin.length > 0) return liesWithin.includes(parentId);
+
+  return getRelationTargets(relations?.isRecordedIn).includes(parentId);
+};
+
+const getRelationTargets = (value: unknown): string[] =>
+  Array.isArray(value)
+    ? value.filter((target): target is string => typeof target === 'string')
+    : [];
+
+const getDocumentTimestamp = (document: Document): number => {
+  const modifications = Array.isArray(document.modified)
+    ? document.modified
+    : [];
+  const dateValue = modifications[modifications.length - 1]?.date
+    ?? document.created?.date;
+  const timestamp = dateValue instanceof Date
+    ? dateValue.getTime()
+    : typeof dateValue === 'string' || typeof dateValue === 'number'
+      ? new Date(dateValue).getTime()
+      : Number.NEGATIVE_INFINITY;
+
+  return Number.isFinite(timestamp) ? timestamp : Number.NEGATIVE_INFINITY;
+};
+
+const getCategorySafely = (
+  config: ProjectConfiguration,
+  categoryName: string
+): CategoryForm | undefined => {
+  try {
+    return config.getCategory(categoryName);
+  } catch {
+    return undefined;
+  }
+};

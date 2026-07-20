@@ -274,6 +274,76 @@ describe('KoreanFieldworkFreeDrawingPanel', () => {
     expect(getByTestId('fieldworkFreeDrawingFullscreenCanvas')).toBeTruthy();
   });
 
+  it('renders guide paths below freehand strokes without storing them as ink', () => {
+    const handleUpdateStrokes = jest.fn();
+    const { getByTestId } = render(
+      <KoreanFieldworkFreeDrawingPanel
+        background={{
+          guidePaths: [{
+            closed: true,
+            points: [
+              { x: 1000, y: 2000 },
+              { x: 9000, y: 2000 },
+              { x: 5000, y: 8000 },
+            ],
+            strokeColor: '#f97316',
+          }],
+        }}
+        onUpdateStrokes={handleUpdateStrokes}
+      />
+    );
+
+    fireEvent.press(getByTestId('fieldworkFreeDrawingFullscreen'));
+    const fullscreenCanvas = getByTestId('fieldworkFreeDrawingFullscreenCanvas');
+    const html = fullscreenCanvas.props.source.html as string;
+
+    expect(html).toContain('"guidePaths":[{"closed":true');
+    expect(html).toContain('"x":1000,"y":2000');
+    expect(html).toContain('function drawGuidePaths()');
+    expect(html.indexOf('drawGuidePaths();'))
+      .toBeLessThan(html.indexOf("strokes.forEach((stroke)=>drawStroke"));
+
+    fireEvent(fullscreenCanvas, 'message', {
+      nativeEvent: {
+        data: JSON.stringify({
+          payload: [{
+            points: [{ x: 2500, y: 3000 }, { x: 3500, y: 4000 }],
+            tool: 'pen',
+          }],
+          type: 'strokes',
+        }),
+      },
+    });
+
+    expect(handleUpdateStrokes).toHaveBeenCalledTimes(1);
+    expect(handleUpdateStrokes.mock.calls[0][0]).not.toContain('guidePaths');
+  });
+
+  it('keeps guide paths when the infinite memo grid overrides canvas settings', () => {
+    const { getByTestId } = render(
+      <KoreanFieldworkFreeDrawingPanel
+        background={{
+          aspectRatio: 2,
+          canvasMode: 'bounded',
+          guidePaths: [{
+            points: [{ x: 5000, y: 5000 }],
+          }],
+        }}
+        onUpdateStrokes={jest.fn()}
+        writingGuides
+      />
+    );
+
+    fireEvent.press(getByTestId('fieldworkFreeDrawingFullscreen'));
+    const html = getByTestId('fieldworkFreeDrawingFullscreenCanvas')
+      .props.source.html as string;
+
+    expect(html).toContain('"aspectRatio":1');
+    expect(html).toContain('"canvasMode":"penMemoInfiniteGrid"');
+    expect(html).toContain('"guidePaths":[{"points":[{"x":5000,"y":5000}]}]');
+    expect(html).toContain('"writingGuides":true');
+  });
+
   it('shows pen memos on a repeating 5-by-5 grouped infinite grid', () => {
     const handleUpdateStrokes = jest.fn();
     const { getByTestId, getByText } = render(

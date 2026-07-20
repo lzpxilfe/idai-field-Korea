@@ -297,7 +297,7 @@ const KoreanFieldworkQuickRecordPanel: React.FC<KoreanFieldworkQuickRecordPanelP
             activeValues={getSingleValue(resource, FIELDWORK_QUICK_FIELDS.period)}
             onPress={(value) => onUpdateResourceField(
               FIELDWORK_QUICK_FIELDS.period,
-              value
+              getPeriodQuickUpdateValue(category, value)
             )}
             singleChoice
           />
@@ -787,6 +787,8 @@ const OptionRow: React.FC<{
         return (
           <TouchableOpacity
             key={option.value}
+            accessibilityRole={singleChoice ? 'radio' : 'checkbox'}
+            accessibilityState={{ selected: isActive }}
             activeOpacity={0.84}
             testID={`quickRecordOption_${option.value}`}
             onPress={() => onPress(option.value)}
@@ -823,8 +825,26 @@ const getSingleValue = (
 ): string[] => {
   const fieldValue = getResourceFieldValue(resource, fieldName);
 
-  return typeof fieldValue === 'string' ? [fieldValue] : [];
+  if (typeof fieldValue === 'string') return [fieldValue];
+  if (
+    fieldValue
+    && typeof fieldValue === 'object'
+    && typeof (fieldValue as { value?: unknown }).value === 'string'
+  ) {
+    return [(fieldValue as { value: string }).value];
+  }
+
+  return [];
 };
+
+const getPeriodQuickUpdateValue = (
+  category: CategoryForm,
+  value: string
+): string | { value: string } =>
+  CategoryForm.getField(category, FIELDWORK_QUICK_FIELDS.period)?.inputType
+    === 'dropdownRange'
+    ? { value }
+    : value;
 
 const getQuickOptionLabel = (
   options: readonly KoreanFieldworkQuickOption[],

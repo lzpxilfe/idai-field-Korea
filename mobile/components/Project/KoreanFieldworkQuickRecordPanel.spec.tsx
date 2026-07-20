@@ -255,12 +255,54 @@ describe('KoreanFieldworkQuickRecordPanel', () => {
         category={createCategoryForm([
           FIELDWORK_QUICK_FIELDS.period,
         ])}
-        resource={createResource(C.FEATURE, { period: 'undated' })}
+        resource={createResource(C.FEATURE, {
+          period: { value: 'undated' },
+        })}
         onUpdateResourceField={handleUpdateResourceField}
       />
     );
 
     expect(getByText('시대/시기')).toBeTruthy();
+    expect(
+      getByTestId('quickRecordOption_undated').props.accessibilityState.selected
+    ).toBe(true);
+
+    fireEvent.press(getByTestId('quickRecordOption_joseon'));
+
+    expect(handleUpdateResourceField).toHaveBeenCalledWith(
+      FIELDWORK_QUICK_FIELDS.period,
+      { value: 'joseon' }
+    );
+  });
+
+  it('still displays a legacy string period as selected', () => {
+    const { getByTestId } = render(
+      <KoreanFieldworkQuickRecordPanel
+        category={createCategoryForm([
+          FIELDWORK_QUICK_FIELDS.period,
+        ])}
+        resource={createResource(C.FEATURE, { period: 'bronzeAge' })}
+        onUpdateResourceField={jest.fn()}
+      />
+    );
+
+    expect(
+      getByTestId('quickRecordOption_bronzeAge').props.accessibilityState.selected
+    ).toBe(true);
+  });
+
+  it('keeps a regular dropdown period as a string', () => {
+    const handleUpdateResourceField = jest.fn();
+    const { getByTestId } = render(
+      <KoreanFieldworkQuickRecordPanel
+        category={createCategoryForm(
+          [FIELDWORK_QUICK_FIELDS.period],
+          { [FIELDWORK_QUICK_FIELDS.period]: 'dropdown' }
+        )}
+        resource={createResource(C.FEATURE, { period: 'undated' })}
+        onUpdateResourceField={handleUpdateResourceField}
+      />
+    );
 
     fireEvent.press(getByTestId('quickRecordOption_joseon'));
 
@@ -580,11 +622,21 @@ describe('KoreanFieldworkQuickRecordPanel', () => {
   });
 });
 
-const createCategoryForm = (fieldNames: string[]): CategoryForm => ({
+const createCategoryForm = (
+  fieldNames: string[],
+  inputTypes: Record<string, string> = {}
+): CategoryForm => ({
   groups: [
     {
       name: 'fieldwork',
-      fields: fieldNames.map((name) => ({ name })),
+      fields: fieldNames.map((name) => ({
+        name,
+        ...(inputTypes[name]
+          ? { inputType: inputTypes[name] }
+          : name === FIELDWORK_QUICK_FIELDS.period
+            ? { inputType: 'dropdownRange' }
+            : {}),
+      })),
     },
   ],
 } as CategoryForm);

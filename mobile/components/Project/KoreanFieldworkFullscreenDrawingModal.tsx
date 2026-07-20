@@ -44,10 +44,19 @@ export type FieldworkDrawingInteractionTool =
   | 'hand'
   | 'lasso';
 
+export interface FieldworkFullscreenDrawingGuidePath {
+  closed?: boolean;
+  fillColor?: string;
+  points: { x: number; y: number }[];
+  strokeColor?: string;
+  width?: number;
+}
+
 export interface FieldworkFullscreenDrawingBackground {
   aspectRatio?: number;
   boundaryPoints?: { x: number; y: number }[];
   canvasMode?: 'bounded' | 'penMemoInfiniteGrid';
+  guidePaths?: FieldworkFullscreenDrawingGuidePath[];
   label?: string;
   satelliteAttribution?: string;
   satelliteTiles?: {
@@ -1225,28 +1234,75 @@ function drawBackground(){
   const points=Array.isArray(background.boundaryPoints)
     ? background.boundaryPoints.map(toScreenPoint)
     : [];
-  if(points.length<3) return;
-  ctx.save();
-  ctx.strokeStyle='#175cd3';
-  ctx.fillStyle='rgba(23,92,211,0.08)';
-  ctx.lineWidth=2;
-  ctx.beginPath();
-  ctx.moveTo(points[0].x,points[0].y);
-  points.slice(1).forEach((point)=>ctx.lineTo(point.x,point.y));
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
-  ctx.fillStyle='#175cd3';
-  points.forEach((point)=>{
+  if(points.length>=3){
+    ctx.save();
+    ctx.strokeStyle='#175cd3';
+    ctx.fillStyle='rgba(23,92,211,0.08)';
+    ctx.lineWidth=2;
     ctx.beginPath();
-    ctx.arc(point.x,point.y,4,0,Math.PI*2);
+    ctx.moveTo(points[0].x,points[0].y);
+    points.slice(1).forEach((point)=>ctx.lineTo(point.x,point.y));
+    ctx.closePath();
     ctx.fill();
-  });
-  if(background.label){
-    ctx.font='700 13px sans-serif';
-    ctx.fillText(background.label,12,24);
+    ctx.stroke();
+    ctx.fillStyle='#175cd3';
+    points.forEach((point)=>{
+      ctx.beginPath();
+      ctx.arc(point.x,point.y,4,0,Math.PI*2);
+      ctx.fill();
+    });
+    if(background.label){
+      ctx.font='700 13px sans-serif';
+      ctx.fillText(background.label,12,24);
+    }
+    ctx.restore();
   }
-  ctx.restore();
+  drawGuidePaths();
+}
+function drawGuidePaths(){
+  const guidePaths=Array.isArray(background.guidePaths)
+    ?background.guidePaths: [];
+  guidePaths.forEach((path)=>{
+    const pathPoints=(Array.isArray(path&&path.points)?path.points:[])
+      .filter((point)=>point&&Number.isFinite(point.x)&&Number.isFinite(point.y))
+      .map(toScreenPoint);
+    if(pathPoints.length===0) return;
+    const strokeColor=typeof path.strokeColor==='string'
+      ?path.strokeColor:'#f97316';
+    const fillColor=typeof path.fillColor==='string'
+      ?path.fillColor:'rgba(249,115,22,0.12)';
+    const lineWidth=Math.max(1,Math.min(12,Number(path.width)||3))
+      *Math.sqrt(viewport.scale);
+    ctx.save();
+    ctx.strokeStyle=strokeColor;
+    ctx.fillStyle=fillColor;
+    ctx.lineCap='round';
+    ctx.lineJoin='round';
+    ctx.lineWidth=lineWidth;
+    if(pathPoints.length===1){
+      ctx.beginPath();
+      ctx.arc(
+        pathPoints[0].x,
+        pathPoints[0].y,
+        Math.max(4,lineWidth*1.5),
+        0,
+        Math.PI*2
+      );
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+      return;
+    }
+    ctx.beginPath();
+    ctx.moveTo(pathPoints[0].x,pathPoints[0].y);
+    pathPoints.slice(1).forEach((point)=>ctx.lineTo(point.x,point.y));
+    if(path.closed===true&&pathPoints.length>=3){
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.stroke();
+    ctx.restore();
+  });
 }
 function drawWritingGuidePaper(){
   const size=getCssSize();

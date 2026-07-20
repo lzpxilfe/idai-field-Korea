@@ -10,6 +10,7 @@ import {
     getKoreanFieldworkFeatureDraftValues,
     KoreanFieldworkContinuationAction,
     NewResource,
+    OptionalRange,
     ProjectConfiguration,
     Resource
 } from 'idai-field-core';
@@ -81,6 +82,14 @@ export function createKoreanFieldworkDraftResource(
     const featurePreset = categoryName === CATEGORIES.FEATURE
         ? getFeatureGuidancePreset(options.featureType ?? 'unknown')
         : undefined;
+    const inheritedPeriod = categoryName === CATEGORIES.FEATURE
+        && category
+        && CategoryForm.getField(category, 'period')
+        ? getKoreanFieldworkMostRecentSiblingFeaturePeriod(
+            parentDoc,
+            options.existingDocuments ?? []
+        )
+        : undefined;
     const baseResource = createCoreKoreanFieldworkDraftBaseResource(
         parentDoc,
         categoryName,
@@ -103,6 +112,7 @@ export function createKoreanFieldworkDraftResource(
         }),
         ...getKoreanFieldworkFeatureTraceDraftValues(category),
         ...getFeatureGuidanceDraftValues(category, featurePreset),
+        ...(inheritedPeriod ? { period: inheritedPeriod } : {}),
         ...getRecordMemoDraftValues(
             category,
             parentDoc,
@@ -152,12 +162,129 @@ export function createNextFeatureIdentifier(featureType: string|undefined,
 }
 
 
+export function getKoreanFieldworkMostRecentSiblingFeaturePeriod(
+        parentDoc: Document,
+        existingDocuments: readonly Document[]
+): OptionalRange<string>|undefined {
+
+    const parentId = parentDoc?.resource?.id;
+    if (!parentId) return undefined;
+
+    let mostRecent: {
+        documentIndex: number;
+        period: OptionalRange<string>;
+        timestamp?: number;
+    }|undefined;
+
+    existingDocuments.forEach((document, documentIndex) => {
+        if (document?.resource?.category !== CATEGORIES.FEATURE
+            || !isDirectChildOf(document, parentId)) {
+            return;
+        }
+
+        const period = normalizeFeaturePeriod(document.resource.period);
+        if (!period) return;
+
+        const timestamp = getDocumentLastModifiedTimestamp(document);
+        if (!mostRecent || isMoreRecentDocument(
+            timestamp,
+            documentIndex,
+            mostRecent.timestamp,
+            mostRecent.documentIndex
+        )) {
+            mostRecent = { documentIndex, period, timestamp };
+        }
+    });
+
+    return mostRecent?.period;
+}
+
+
 function getLinkedIdentifierLabel(categoryName: string): string|undefined {
 
     if (categoryName === CATEGORIES.PHOTO) return '사진';
     if (categoryName === CATEGORIES.SOIL_PROFILE_PHOTO) return '토층사진';
 
     return undefined;
+}
+
+
+function isDirectChildOf(document: Document, parentId: string): boolean {
+
+    const relations = document.resource.relations ?? {};
+    const liesWithin = getRelationTargets(relations.liesWithin);
+    if (liesWithin.length > 0) return liesWithin.includes(parentId);
+
+    return getRelationTargets(relations.isRecordedIn).includes(parentId);
+}
+
+
+function getRelationTargets(value: unknown): string[] {
+
+    return Array.isArray(value)
+        ? value.filter((target): target is string => typeof target === 'string')
+        : [];
+}
+
+
+function normalizeFeaturePeriod(value: unknown): OptionalRange<string>|undefined {
+
+    if (typeof value === 'string') {
+        const startValue = value.trim();
+
+        return startValue ? { value: startValue } : undefined;
+    }
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+
+    const range = value as Record<string, unknown>;
+    if (typeof range.value !== 'string' || !range.value.trim()) return undefined;
+    if (
+        Object.prototype.hasOwnProperty.call(range, 'endValue')
+        && (typeof range.endValue !== 'string' || !range.endValue.trim())
+    ) {
+        return undefined;
+    }
+
+    return {
+        value: range.value.trim(),
+        ...(typeof range.endValue === 'string'
+            ? { endValue: range.endValue.trim() }
+            : {})
+    };
+}
+
+
+function getDocumentLastModifiedTimestamp(document: Document): number|undefined {
+
+    const action = document.modified?.length > 0
+        ? document.modified[document.modified.length - 1]
+        : document.created;
+    const date = action?.date;
+    const timestamp = date instanceof Date
+        ? date.getTime()
+        : typeof date === 'string' || typeof date === 'number'
+            ? new Date(date).getTime()
+            : NaN;
+
+    return Number.isFinite(timestamp) ? timestamp : undefined;
+}
+
+
+function isMoreRecentDocument(
+        candidateTimestamp: number|undefined,
+        candidateIndex: number,
+        currentTimestamp: number|undefined,
+        currentIndex: number
+): boolean {
+
+    if (candidateTimestamp !== undefined && currentTimestamp !== undefined) {
+        return candidateTimestamp > currentTimestamp
+            || (candidateTimestamp === currentTimestamp && candidateIndex > currentIndex);
+    }
+    if (candidateTimestamp !== undefined) return true;
+    if (currentTimestamp !== undefined) return false;
+
+    return candidateIndex > currentIndex;
 }
 
 

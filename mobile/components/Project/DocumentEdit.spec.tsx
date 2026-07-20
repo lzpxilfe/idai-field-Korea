@@ -8,6 +8,7 @@ import {
 import {
   CategoryForm,
   createCategory,
+  Document,
   Forest,
   IdGenerator,
   Labels,
@@ -316,6 +317,89 @@ describe('DocumentEdit', () => {
       .toBe(si1.resource.featureLocationSketch);
   });
 
+  it('edits the parent Feature sketch in place without saving or leaving the pen memo', async () => {
+    cleanup();
+    const latestFeature = {
+      ...si1,
+      resource: {
+        ...si1.resource,
+        description: '동기화로 들어온 최신 유구 설명',
+        period: { value: 'threeKingdoms' },
+      },
+    } as Document;
+    const penMemo = {
+      ...t2,
+      _id: 'pen-memo-1',
+      resource: {
+        id: 'pen-memo-1',
+        identifier: 'SU1 메모 1',
+        category: 'PenMemo',
+        relations: {
+          liesWithin: [si1.resource.id],
+          isRecordedIn: [t2.resource.id],
+        },
+        penMemoStrokes: JSON.stringify({
+          strokes: [{
+            points: [{ x: 1000, y: 1000 }, { x: 2000, y: 2000 }],
+            tool: 'pen',
+            width: 5,
+          }],
+          version: 1,
+        }),
+      },
+    } as Document;
+    jest.spyOn(repository, 'get').mockImplementation(async (resourceId: string) => {
+      if (resourceId === penMemo.resource.id) return penMemo;
+      if (resourceId === si1.resource.id) return latestFeature;
+      return t2;
+    });
+    mockUseGlobalSearchParams.mockReturnValue({
+      docId: penMemo.resource.id,
+      categoryName: 'PenMemo',
+    });
+    renderAPI = renderDocumentEditScreen(
+      preferences,
+      createProjectConfiguration([
+        createCategory('PenMemo'),
+        createCategory('Feature'),
+      ]),
+      repository,
+      [t2, si1, penMemo]
+    );
+
+    await waitFor(() => renderAPI.getByTestId('featureShapeSketchPreview'));
+    fireEvent.press(renderAPI.getByTestId('featureShapeSketchPreview'));
+    fireEvent.press(renderAPI.getByTestId('featureShapeSketchPreview'));
+    const canvas = await waitFor(() =>
+      renderAPI.getByTestId('featureParentSketchFullscreenCanvas'));
+    fireEvent(canvas, 'message', {
+      nativeEvent: {
+        data: JSON.stringify({
+          payload: [{
+            points: [{ x: 2500, y: 2500 }, { x: 7000, y: 7000 }],
+            tool: 'pen',
+            width: 5,
+          }],
+          type: 'strokes',
+        }),
+      },
+    });
+    fireEvent.press(
+      renderAPI.getByTestId('featureParentSketchFullscreenClose')
+    );
+
+    await waitFor(() => expect(repository.update).toHaveBeenCalledTimes(1));
+    const updatedFeature = (repository.update as jest.Mock).mock.calls[0][0];
+    expect(updatedFeature.resource.id).toBe(si1.resource.id);
+    expect(updatedFeature.resource.featureFreeDrawingStrokes)
+      .toContain('"strokes"');
+    expect(updatedFeature.resource.description)
+      .toBe('동기화로 들어온 최신 유구 설명');
+    expect(updatedFeature.resource.period).toEqual({ value: 'threeKingdoms' });
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(renderAPI.getByTestId('fieldworkFreeDrawingCanvas')).toBeTruthy();
+  });
+
   it('keeps tablet edit saves quiet even when later HWP handoff will need review', async () => {
     cleanup();
     mockUseGlobalSearchParams.mockReturnValue({
@@ -340,7 +424,8 @@ describe('DocumentEdit', () => {
 const renderDocumentEditScreen = (
   preferences: Preferences,
   config: ProjectConfiguration,
-  repository: DocumentRepository
+  repository: DocumentRepository,
+  documents?: Document[]
 ): RenderAPI => render(
   <ToastProvider>
     <PreferencesContext.Provider
@@ -358,7 +443,7 @@ const renderDocumentEditScreen = (
     >
       <LabelsContext.Provider value={{ labels: new Labels(() => ['en']) }}>
         <ConfigurationContext.Provider value={config}>
-          <ProjectContext.Provider value={{ repository } as any}>
+          <ProjectContext.Provider value={{ documents, repository } as any}>
             <DocumentEdit />
           </ProjectContext.Provider>
         </ConfigurationContext.Provider>

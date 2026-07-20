@@ -94,6 +94,44 @@ describe('KoreanFieldworkFeatureSketchReferencePanel', () => {
       .toBeGreaterThan(100);
   });
 
+  it('shows saved free sketch strokes on the feature-shape card', () => {
+    const feature = createDoc('feature-1', C.FEATURE, {
+      featureLocationSketch: JSON.stringify({
+        version: 1,
+        shape: 'oval',
+        center: { x: 50, y: 50 },
+        points: [{ x: 50, y: 50 }],
+        rotation: 0,
+        scale: 100,
+      }),
+      featureFreeDrawingStrokes: JSON.stringify({
+        version: 1,
+        strokes: [{
+          color: '#dc2626',
+          points: [
+            { x: 2000, y: 3000 },
+            { x: 7000, y: 8000 },
+          ],
+          tool: 'pen',
+          width: 6,
+        }],
+      }),
+    });
+    const { getAllByTestId } = render(
+      <KoreanFieldworkFeatureSketchReferencePanel
+        document={feature}
+        documents={[feature]}
+      />
+    );
+
+    const stroke = StyleSheet.flatten(
+      getAllByTestId('featureFreeDrawingStroke')[0].props.style
+    );
+
+    expect(stroke.backgroundColor).toBe('#dc2626');
+    expect(stroke.width).toBeGreaterThan(0);
+  });
+
   it('stays hidden outside feature edit screens', () => {
     const { queryByTestId } = render(
       <KoreanFieldworkFeatureSketchReferencePanel
